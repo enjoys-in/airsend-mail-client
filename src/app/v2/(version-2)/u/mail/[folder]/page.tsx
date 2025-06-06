@@ -1,7 +1,7 @@
 import ClientMailCard from "./_components/ClientMailCard"
 
 
-export default function EmailInterface() {
+export default async function EmailInterface() {
   return <ClientMailCard />
 }
 

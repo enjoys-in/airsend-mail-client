@@ -1,10 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { Paperclip, Wand2, Pen, Send, ChevronDown, Eye, Clock, Bot } from 'lucide-react';
+import { Paperclip, Wand2, Pen, Send, ChevronDown, Eye, Clock, Bot, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Dropdown from '@/components/ui/dropdown';
 import { airsendDB } from '@/db';
 import { useAppSelector } from '@/store/hooks';
-
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 import {
     Popover,
@@ -12,17 +19,14 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 const ComposeFooter: React.FC = () => {
-    const currAccount = useAppSelector((state) => state.accounts.currAccount);
-    const [isSignatureOpen, setIsSignatureOpen] = useState(false);
-    const [isSendOptionsOpen, setIsSendOptionsOpen] = useState(false);
-    const [signatures, setSignatures] = useState<any[]>([]);
-    const signatureBtnRef = useRef<HTMLButtonElement>(null);
-    const sendBtnRef = useRef<HTMLButtonElement>(null);
+    const { currAccount, accounts } = useAppSelector((state) => state.accounts)
 
-    const sendOptions = [
-        { id: 'preview', label: 'Preview', icon: Eye },
-        { id: 'schedule', label: 'Schedule send', icon: Clock },
-    ];
+    const [selectedAccount, setSelectedAccount] = useState({
+        email: currAccount?.email || '',
+        name: currAccount?.name || '',
+    });
+    const [signatures, setSignatures] = useState<any[]>([]);
+
     const fetchSignatures = async () => {
         if (!currAccount?.email) {
             return
@@ -36,114 +40,141 @@ const ComposeFooter: React.FC = () => {
         if (signatures.length === 0) {
             fetchSignatures()
         }
+        setSelectedAccount({
+            email: currAccount?.email || '',
+            name: currAccount?.name || '',
+        })
     }, [currAccount?.email])
     return (
-        <div className="border-t border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 px-4 sm:px-6 py-0">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
 
-                {/* Left controls (attachments, wand, signature) */}
-                <div className="flex items-center space-x-2">
-                    <Button variant="ghost">
-                        <Paperclip size={18} className="text-neutral-700 dark:text-neutral-300" />
+        <div className="px-3 border-t border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            {/* Left: Account Dropdown (Always on left) */}
+            <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                {/* Avatar + Account dropdown */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger className="flex items-center gap-2 dark:hover:bg-[#2a2a2a] hover:bg-neutral-200 px-2 py-1 rounded transition-colors">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs bg-neutral-400 text-white">
+                            {selectedAccount.name[0]}
+                        </div>
+                        <div className="hidden sm:flex flex-col items-start text-sm">
+                            <span>{selectedAccount.name}</span>
+                            <span className="text-xs text-gray-400">{selectedAccount.email}</span>
+                        </div>
+                        <ChevronUp size={14} className="hidden sm:block ml-2 text-gray-400" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="dark:bg-neutral-900 bg-neutral-100 border-none text-slate-900 dark:text-gray-200">
+                        {accounts.map((address) => (
+                            <DropdownMenuItem
+                                key={address.email}
+                                className="flex items-center gap-2 dark:hover:bg-neutral-800 hover:bg-neutral-200 cursor-pointer"
+                                onClick={() => setSelectedAccount({ email: address.email, name: address.name })}
+                            >
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs bg-neutral-400 text-white">
+                                    {address.name[0]}
+                                </div>
+                                <div className="flex flex-col items-start text-sm">
+                                    <span>{address.name}</span>
+                                    <span className="text-xs text-gray-400">{address.email}</span>
+                                </div>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Mobile-only right side: send + menu */}
+                <div className="sm:hidden flex items-center gap-2">
+                    <Button size="icon" variant="ghost">
+                        <Send size={18} className="text-blue-600" />
                     </Button>
 
-                    <Button variant="ghost">
-                        <Wand2 size={18} className="text-neutral-700 dark:text-neutral-300" />
-                    </Button>
-                    <div
-                        className="absolute z-40 opacity-50 hover:opacity-100 transition-opacity"
-                    //   style={{
-                    //     left: `${position.x}px`,
-                    //     top: `${position.y}px`,
-                    //   }}
-                    >
-                        <button
-                            // onClick={onPrompt}
-                            className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors"
-                            title="Get AI assistance"
-                        >
-                            <Bot className="w-5 h-5" />
-                        </button>
-                    </div>
+                    {/* Mobile menu dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost">
+                                <ChevronUp size={18} className="text-gray-500" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="dark:bg-neutral-900 bg-neutral-100 border-none text-slate-900 dark:text-gray-200">
+                            <DropdownMenuItem>
+                                <Paperclip size={16} />
+                                <span>Attach</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <Wand2 size={16} />
+                                <span>AI</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <Pen size={16} />
+                                <span>Signatures</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </div>
 
-                    <div>
-                        <Popover
+            {/* Right Section (hidden on mobile) */}
+            <div className="hidden sm:flex gap-2 items-center justify-end mt-2 sm:mt-0">
+                <Button variant="ghost" type="button">
+                    <Paperclip size={18} className="text-neutral-700 dark:text-neutral-300" />
+                </Button>
+                <Button variant="ghost" type="button">
+                    <Wand2 size={18} className="text-neutral-700 dark:text-neutral-300" />
+                </Button>
+                <Button variant="ghost" className="text-purple-500 hover:text-purple-400 dark:hover:bg-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-100 flex items-center gap-1 p-2 rounded transition-colors">
+                AI
+                </Button>
 
-                        >
-                            <PopoverTrigger asChild>
-                                <Button
-                                    ref={signatureBtnRef}
-                                    variant="ghost"
-                                    onClick={() => setIsSignatureOpen(!isSignatureOpen)}
-                                >
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost">
+                            <Pen size={18} className="text-neutral-700 dark:text-neutral-300" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-neutral-50 dark:bg-neutral-900">
+                        {signatures.length > 0 ? (
+                            signatures.map((signature, index) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                    <Button variant="ghost">
+                                        <Pen size={18} className="text-neutral-700 dark:text-neutral-300" />
+                                    </Button>
+                                    <span>{signature}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex items-center space-x-2">
+                                <Button variant="ghost">
                                     <Pen size={18} className="text-neutral-700 dark:text-neutral-300" />
                                 </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className='w-80 bg-neutral-50 dark:bg-neutral-900'>
-                                {signatures.length > 0 ?
-                                    signatures.map((signature, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
-                                            <Button variant="ghost">
-                                                <Pen size={18} className="text-neutral-700 dark:text-neutral-300" />
-                                            </Button>
-                                            <span>{signature}</span>
-                                        </div>
-                                    )
-                                    ) :
-                                    <div className="flex items-center space-x-2">
-                                        <Button variant="ghost">
-                                            <Pen size={18} className="text-neutral-700 dark:text-neutral-300" />
-                                        </Button>
-                                        <span>No signature found</span>
-                                    </div>
-                                }
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                </div>
+                                <span>No signature found</span>
+                            </div>
+                        )}
+                    </PopoverContent>
+                </Popover>
 
-                {/* Send button and options */}
-                <div className="flex items-center">
-                    <div className="relative flex">
-                        <Button
-                            className="rounded-r-none border-r border-neutral-300 dark:border-neutral-600"
-                            onClick={() => console.log('Send email')}
-                        >
-                            <Send size={16} className="mr-2" />
-                            Send
-                        </Button>
-
-                        <Button
-                            ref={sendBtnRef}
-                            className="rounded-l-none px-2"
-                            onClick={() => setIsSendOptionsOpen(!isSendOptionsOpen)}
-                        >
-                            <ChevronDown size={16} />
-                        </Button>
-                    </div>
-
-                    {isSendOptionsOpen && (
-                        <Dropdown
-                            items={sendOptions.map(option => ({
-                                id: option.id,
-                                content: (
-                                    <div className="flex items-center">
-                                        <option.icon size={16} className="mr-2" />
-                                        <span>{option.label}</span>
-                                    </div>
-                                )
-                            }))}
-                            onSelect={(id) => {
-                                console.log(`Selected option: ${id}`);
-                                setIsSendOptionsOpen(false);
-                            }}
-                            onClickOutside={() => setIsSendOptionsOpen(false)}
-                            anchorEl={sendBtnRef.current}
-                            position="top"
-                            align="end"
-                        />
-                    )}
-                </div>
+                {/* Send Mail Dropdown */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 transition-colors flex items-center gap-2">
+                            <Send size={16} />
+                            Send Mail
+                            <ChevronUp size={14} />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-[#2a2a2a] border-gray-700 text-white">
+                        <DropdownMenuItem className="flex items-center gap-2 hover:bg-[#3a3a3a] cursor-pointer">
+                            <Eye size={16} />
+                            <span>Preview Email</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="flex items-center gap-2 hover:bg-[#3a3a3a] cursor-pointer">
+                            <Clock size={16} />
+                            <span>Schedule Email</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="flex items-center gap-2 hover:bg-[#3a3a3a] cursor-pointer">
+                            <Send size={16} />
+                            <span>Send Immediately</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
 

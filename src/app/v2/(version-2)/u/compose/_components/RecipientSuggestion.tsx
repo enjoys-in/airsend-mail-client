@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, } from "@/components/ui/avatar"
 
 import { Contact } from './types';
 
@@ -14,7 +14,9 @@ const RecipientSuggestion: React.FC<RecipientSuggestionProps> = ({ contact, onSe
       className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer transition-colors"
       onClick={() => onSelect(contact)}
     >
-      <Avatar name={contact.name} imageUrl={contact.imageUrl} size="sm" />
+      <Avatar>
+        <AvatarFallback>{contact.name[0]}</AvatarFallback>
+      </Avatar>
       <div className="ml-2">
         <div className="font-medium text-gray-800">{contact.name}</div>
         <div className="text-sm text-gray-500">{contact.email}</div>

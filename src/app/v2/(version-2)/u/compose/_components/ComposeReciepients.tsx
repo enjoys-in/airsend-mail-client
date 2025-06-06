@@ -1,171 +1,141 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
-import RecipientChip from './RecipientChip';
-import RecipientSuggestion from './RecipientSuggestion';
-import { Contact } from './types';
+"use client"
 
-function isValidEmail(email: string) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
+import type React from "react"
+import { useState, type KeyboardEvent } from "react"
+import { X } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import ProfileCardComponent from "./ProfileCardComponent"
+import { toast } from "sonner"
+
+type ComposeRecipientsProps = {
+  type: "to" | "cc" | "bcc"
+  removeRecipient: (type: "to" | "cc" | "bcc", value: string) => void
+  addRecipient: (type: "to" | "cc" | "bcc", value: string) => void
+  recipients: { id: string; name?: string; email: string; color: string }[]
 }
 
-const ComposeRecipients: React.FC = () => {
-  const [toRecipients, setToRecipients] = useState<Contact[]>([]);
-  const [ccRecipients, setCcRecipients] = useState<Contact[]>([]);
-  const [bccRecipients, setBccRecipients] = useState<Contact[]>([]);
+export default function ComposeRecipients({
+  type,
+  addRecipient,
+  removeRecipient,
+  recipients,
+}: ComposeRecipientsProps) {
 
-  const [inputValue, setInputValue] = useState('');
-  const [activeField, setActiveField] = useState<'to' | 'cc' | 'bcc'>('to');
-  const [isFocused, setIsFocused] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState<Contact[]>([]);
+  const [inputValue, setInputValue] = useState("")
 
-  const [showCC, setShowCC] = useState(false);
-  const [showBCC, setShowBCC] = useState(false);
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email.trim())
+  }
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const getRandomColor = (email: string) => {
+    const colors = [
+      "bg-red-500", "bg-blue-500", "bg-green-500", "bg-yellow-500",
+      "bg-purple-500", "bg-pink-500", "bg-indigo-500", "bg-orange-500",
+      "bg-teal-500", "bg-cyan-500"
+    ]
+    const index = email
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length
+    return colors[index]
+  }
 
-  const allContacts: Contact[] = []; // Replace with actual contact list
+  const getInitial = (email: string) => email.charAt(0).toUpperCase()
 
-  useEffect(() => {
-    if (inputValue.trim()) {
-      const filtered = allContacts.filter(contact =>
-        contact.name.toLowerCase().includes(inputValue.toLowerCase()) ||
-        contact.email.toLowerCase().includes(inputValue.toLowerCase())
-      );
-      setFilteredSuggestions(filtered);
-      setShowSuggestions(filtered.length > 0);
-    } else {
-      setShowSuggestions(false);
+  const addTag = (value: string) => {
+    const trimmedValue = value.trim()
+    if (trimmedValue && recipients.every((recipient) => recipient.email !== trimmedValue) && isValidEmail(trimmedValue)) {
+
+      if (!isValidEmail(trimmedValue)) return toast.error("Invalid email");
+      addRecipient(type, trimmedValue)  
+      setInputValue("")
     }
-  }, [inputValue]);
+  }
 
-  const getActiveList = () => {
-    if (activeField === 'cc') return ccRecipients;
-    if (activeField === 'bcc') return bccRecipients;
-    return toRecipients;
+  const removeTag = (tagToRemove: string) => removeRecipient(type, tagToRemove)
+
+  const handleKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key === "Enter" || e.key === "," || e.key === " ") {
+      e.preventDefault();
+      let value = "";
+
+      if (type === "to") value = inputValue.trim().replace(",", "");
+      else if (type === "cc") value = inputValue.trim().replace(",", "");
+      else if (type === "bcc") value = inputValue.trim().replace(",", "");
+
+      if (!isValidEmail(value)) return toast.error("Invalid email");
+
+      // addRecipient(type, value);
+    }
   };
 
-  const setActiveList = (list: Contact[]) => {
-    if (activeField === 'cc') setCcRecipients(list);
-    else if (activeField === 'bcc') setBccRecipients(list);
-    else setToRecipients(list);
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
+    const value = e.target.value
 
-  const addEmail = (email: string) => {
-    const clean = email.trim().replace(',', '');
-    if (!isValidEmail(clean)) return;
-    const currentList = getActiveList();
-    if (currentList.some(r => r.email === clean)) return;
-
-    const newContact: Contact = {
-      id: `new-${Date.now()}`,
-      name: clean.split('@')[0],
-      email: clean,
-    };
-
-    setActiveList([...currentList, newContact]);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if ((e.key === 'Enter' || e.key === ',' || e.key === ' ') && inputValue.trim()) {
-      e.preventDefault();
-      addEmail(inputValue);
-      setInputValue('');
-    } else if (e.key === 'Backspace' && !inputValue && getActiveList().length > 0) {
-      setActiveList(getActiveList().slice(0, -1));
+    if (value.includes(",") || value.includes(" ")) {
+      const parts = value.split(/[, ]+/).filter((part) => part.trim())
+      parts.forEach((part) => addTag(part))
+    } else {
+      setInputValue(value)
     }
-  };
+  }
 
-  const handleAddRecipient = (contact: Contact) => {
-    const currentList = getActiveList();
-    if (!currentList.some(r => r.id === contact.id)) {
-      setActiveList([...currentList, contact]);
+  const handleBlur = () => {
+    const trimmed = inputValue.trim()
+    if (trimmed) {
+      addTag(trimmed)
     }
-    setInputValue('');
-    setShowSuggestions(false);
-    inputRef.current?.focus();
-  };
-
-  const handleRemoveRecipient = (id: string, field: 'to' | 'cc' | 'bcc') => {
-    const listSetter = field === 'cc' ? setCcRecipients : field === 'bcc' ? setBccRecipients : setToRecipients;
-    const list = field === 'cc' ? ccRecipients : field === 'bcc' ? bccRecipients : toRecipients;
-    listSetter(list.filter(r => r.id !== id));
-  };
-
-  const renderRecipientField = (label: string, list: Contact[], field: 'to' | 'cc' | 'bcc') => (
-    <div className="flex items-start gap-2 mb-2">
-      <div className="w-10 pt-2 text-sm text-neutral-700 dark:text-neutral-300">{label}</div>
-      <div
-        className={`flex flex-wrap items-center flex-1 min-h-[38px] px-2 py-[3px] rounded-md border bg-neutral-50 dark:bg-neutral-800 transition-all duration-200 ${
-          isFocused && activeField === field
-            ? 'border-blue-500 ring-1 ring-blue-500'
-            : 'border-neutral-300 dark:border-neutral-600'
-        }`}
-        onClick={() => {
-          setActiveField(field);
-          inputRef.current?.focus();
-        }}
-      >
-        {list.map(recipient => (
-          <RecipientChip
-            key={recipient.id}
-            contact={recipient}
-            onRemove={() => handleRemoveRecipient(recipient.id, field)}
-          />
-        ))}
-        {activeField === field && (
-          <Input
-            ref={inputRef}
-            type="text"
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              setIsFocused(true);
-              setActiveField(field);
-            }}
-            onBlur={() => {
-              setIsFocused(false);
-              setTimeout(() => setShowSuggestions(false), 150);
-            }}
-            placeholder={list.length === 0 ? `Enter ${label}` : ''}
-          className="flex-1 outline-none placeholder:text-neutral-500 dark:placeholder:text-neutral-400 bg-transparent focus:outline-none"
-          />
-        )}
-      </div>
-    </div>
-  );
+  }
 
   return (
-    <div className="relative max-w-2xl">
-      {renderRecipientField('To:', toRecipients, 'to')}
+    <div className="space-y-2 flex flex-col">
+      <div className="max-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-0 focus-within:none focus-within:ring-offset-0">
+        <div className="flex flex-wrap gap-1 items-center">
+          {recipients.map((tag, index) => (
 
-      {showCC ? renderRecipientField('Cc:', ccRecipients, 'cc') : (
-        <button className="ml-10 text-xs text-blue-600 hover:underline" onClick={() => setShowCC(true)}>Add Cc</button>
-      )}
+            <Badge
+              key={index}
+              variant={isValidEmail(tag.email) ? "secondary" : "destructive"}
+              className="flex items-center gap-2 px-2 py-00 h-6"
+            >
+              <ProfileCardComponent>
 
-      {showBCC ? renderRecipientField('Bcc:', bccRecipients, 'bcc') : (
-        <button className="ml-2 text-xs text-blue-600 hover:underline" onClick={() => setShowBCC(true)}>Add Bcc</button>
-      )}
 
-      {showSuggestions && (
-        <div className="absolute z-10 mt-1 w-full max-w-2xl bg-neutral-50 dark:bg-neutral-800 rounded-md shadow-lg border border-neutral-200 dark:border-neutral-600 py-1 max-h-60 overflow-y-auto">
-          {filteredSuggestions.map(contact => (
-            <RecipientSuggestion
-              key={contact.id}
-              contact={contact}
-              onSelect={handleAddRecipient}
-            />
+                <Avatar className={`h-4 w-4 rounded-md ${getRandomColor(tag.email)}`}>
+                  <AvatarFallback
+                    className={`h-4 w-4 rounded-md text-xs font-medium text-white ${getRandomColor(tag.email)}`}
+                  >
+                    {getInitial(tag.email)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs">{tag.email}</span>
+              </ProfileCardComponent>
+              <button
+                type="button"
+                onClick={() => removeTag(tag.email)}
+                className="ml-1 hover:bg-background/20 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
           ))}
+          <Input
+            id="email-input"
+            type="text"
+            value={inputValue}
+            onBlur={handleBlur}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={recipients.length === 0 ? "Add recipients" : ""}
+            className="flex-1 min-w-[120px] border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
+          />
         </div>
-      )}
+      </div>
     </div>
-  );
-};
-
-export default ComposeRecipients;
+  )
+}

@@ -2,11 +2,11 @@ import axios from "axios";
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { IUser } from "@/lib/types/user.interface";
 import { __config } from "@/constants/config"
-
 export const fetchCurrentUser = createAsyncThunk<IUser>(
   "account/fetchCurrentUser",
   async (_, { rejectWithValue }) => {
     try {
+
       const { data } = await axios.get(`${__config.APP.BASE_URL}/api/v1/profile`, {
         withCredentials: true,
         method: "GET",

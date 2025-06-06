@@ -11,8 +11,8 @@ export default function GlobalError({
 }) {
   return (
     <html>
-      <body>       
-        <Error500  onClick={() => reset()}/>        
+      <body>
+        <Error500 onClick={reset} />
       </body>
     </html>
   )

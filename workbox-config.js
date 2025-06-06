@@ -8,16 +8,16 @@ module.exports = {
   skipWaiting: true,
 
   runtimeCaching: [
-    // {
-    //   urlPattern: ({ request }) => request.mode === "navigate",
-    //   handler: "CacheFirst",
-    //   options: {
-    //     cacheName: "pages-cache",
-    //   },
-    // },
+    {
+      urlPattern: ({ request }) => request.mode === "navigate",
+      handler: "CacheFirst",
+      options: {
+        cacheName: "pages-cache",
+      },
+    },
     {
       urlPattern: /\.(?:js|css|png|jpg|jpeg|svg)$/,
-      
+
       handler: "StaleWhileRevalidate",
       options: {
         cacheName: "assets-cache",
@@ -29,7 +29,7 @@ module.exports = {
       options: {
         cacheName: "api-cache-v1",
         expiration: {
-          maxAgeSeconds: 60 * 10, 
+          maxAgeSeconds: 60 * 10,
         },
       },
     },
