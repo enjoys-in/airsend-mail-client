@@ -110,28 +110,28 @@ export function SignatureEditor({ value, onChange }: SignatureEditorProps) {
         />
 
         <div className="bg-black border-t border-gray-700 p-1 flex items-center gap-1 overflow-x-auto">
-          <button onClick={wrapWith("strong")} className="p-1 hover:bg-gray-800 rounded"><Bold className="h-4 w-4" /></button>
-          <button onClick={wrapWith("em")} className="p-1 hover:bg-gray-800 rounded"><Italic className="h-4 w-4" /></button>
-          <button onClick={wrapWith("u")} className="p-1 hover:bg-gray-800 rounded"><Underline className="h-4 w-4" /></button>
-          <button onClick={wrapWith("s")} className="p-1 hover:bg-gray-800 rounded"><Strikethrough className="h-4 w-4" /></button>
-          <button onClick={wrapWith("sub")} className="p-1 hover:bg-gray-800 rounded"><Subscript className="h-4 w-4" /></button>
-          <button onClick={wrapWith("sup")} className="p-1 hover:bg-gray-800 rounded"><Superscript className="h-4 w-4" /></button>
+          <button onClick={wrapWith("strong")} className="p-1 hover:bg-gray-800 rounded"  type="button" ><Bold className="h-4 w-4" /></button>
+          <button onClick={wrapWith("em")} className="p-1 hover:bg-gray-800 rounded" type="button" ><Italic className="h-4 w-4" /></button>
+          <button onClick={wrapWith("u")} className="p-1 hover:bg-gray-800 rounded" type="button" ><Underline className="h-4 w-4" /></button>
+          <button onClick={wrapWith("s")} className="p-1 hover:bg-gray-800 rounded" type="button" ><Strikethrough className="h-4 w-4" /></button>
+          <button onClick={wrapWith("sub")} className="p-1 hover:bg-gray-800 rounded" type="button" ><Subscript className="h-4 w-4" /></button>
+          <button onClick={wrapWith("sup")} className="p-1 hover:bg-gray-800 rounded" type="button" ><Superscript className="h-4 w-4" /></button>
 
           <div className="h-4 border-r border-gray-700 mx-1"></div>
 
-          <button onClick={() => insertList(false)} className="p-1 hover:bg-gray-800 rounded"><List className="h-4 w-4" /></button>
-          <button onClick={() => insertList(true)} className="p-1 hover:bg-gray-800 rounded"><ListOrdered className="h-4 w-4" /></button>
+          <button onClick={() => insertList(false)} className="p-1 hover:bg-gray-800 rounded" type="button" ><List className="h-4 w-4" /></button>
+          <button onClick={() => insertList(true)} className="p-1 hover:bg-gray-800 rounded" type="button" ><ListOrdered className="h-4 w-4" /></button>
 
           <div className="h-4 border-r border-gray-700 mx-1"></div>
 
-          <button onClick={() => justify("left")} className="p-1 hover:bg-gray-800 rounded"><AlignLeft className="h-4 w-4" /></button>
-          <button onClick={() => justify("center")} className="p-1 hover:bg-gray-800 rounded"><AlignCenter className="h-4 w-4" /></button>
-          <button onClick={() => justify("right")} className="p-1 hover:bg-gray-800 rounded"><AlignRight className="h-4 w-4" /></button>
+          <button onClick={() => justify("left")} className="p-1 hover:bg-gray-800 rounded" type="button" ><AlignLeft className="h-4 w-4" /></button>
+          <button onClick={() => justify("center")} className="p-1 hover:bg-gray-800 rounded" type="button" ><AlignCenter className="h-4 w-4" /></button>
+          <button onClick={() => justify("right")} className="p-1 hover:bg-gray-800 rounded" type="button" ><AlignRight className="h-4 w-4" /></button>
 
           <div className="h-4 border-r border-gray-700 mx-1"></div>
 
-          <button onClick={applyLink} className="p-1 hover:bg-gray-800 rounded"><Link2 className="h-4 w-4" /></button>
-          <button onClick={insertImage} className="p-1 hover:bg-gray-800 rounded"><ImageIcon className="h-4 w-4" /></button>
+          <button onClick={applyLink} className="p-1 hover:bg-gray-800 rounded" type="button" ><Link2 className="h-4 w-4" /></button>
+          <button onClick={insertImage} className="p-1 hover:bg-gray-800 rounded" type="button" ><ImageIcon className="h-4 w-4" /></button>
         </div>
       </div>
     </div>

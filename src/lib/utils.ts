@@ -34,7 +34,7 @@ export function filterNameAndEmail(inputString: string, email: string) {
 
 
 export function encryptData(data: string) {
-  return AES.encrypt(data, __config.ENCRYPTION_KEY || "987dfdfd44sdfs").toString();
+  return AES.encrypt(data, __config.APP.APP_SECRET || "987dfdfd44sdfs").toString();
 }
 export const manualDelay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export function html2markdown(html: string): string {
