@@ -10,8 +10,8 @@ import { useAppSelector } from "@/store/hooks";
 
 const data: NavItem[] = [
   {
-    route: "/temp-mail",
-    label: "Temp Mail",
+    route: "/pricing",
+    label: "Pricing",
   },
   {
     route: "/features",

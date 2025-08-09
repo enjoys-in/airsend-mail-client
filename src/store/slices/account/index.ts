@@ -16,7 +16,12 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
           'x-api-key': __config.APP.API_KEY as string,
         }
       });
-      if (!data.success) throw new Error("Unauthorized");
+      if (!data.success) {
+        document.cookie = "access_token=; Max-Age=0; path=/";
+
+
+        window.location.href = "/auth/login";
+      }
 
       if (!data.success) {
         throw new Error(data.message || "Failed to fetch user profile")
@@ -72,7 +77,7 @@ const accountSlice = createSlice({
     setAccounts: (state, action: PayloadAction<EmailAccount[]>) => {
       state.accounts = action.payload;
     },
-    
+
     setLogout: (state) => {
       state.currAccount = null;
       state.loading = false;
@@ -97,5 +102,5 @@ const accountSlice = createSlice({
   },
 });
 
-export const { setCurrAccount, setMyDomains, setLogout,setAccounts } = accountSlice.actions;
+export const { setCurrAccount, setMyDomains, setLogout, setAccounts } = accountSlice.actions;
 export default accountSlice.reducer;

@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 import { jwtDecode, JwtPayload } from 'jwt-decode'
 import { IUser, ROLE } from './lib/types/user.interface';
 import { validateTokenExpiry } from './lib/utils';
- 
+
 const regex = /^\/u\/(.+)/;
 const hPanelRegex = /^\/h-panel\/(.+)/;
 
@@ -13,7 +13,6 @@ export async function middleware(request: NextRequest) {
 
     const isLoginPage = pathname === '/v2';
     const isProtectedPath = pathname.startsWith('/v2/u');
-
     // Case 1: Logged in user accessing login page — redirect to dashboard
     if (access_token && isLoginPage) {
         return NextResponse.redirect(new URL('/v2/u/mail', request.url));

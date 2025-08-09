@@ -5,11 +5,15 @@ import { FeaturedSection } from "./featured-section";
 import FAQ from "./FaqSection";
 import Features from "./features";
 import { Feedback } from "./feedback";
+import HeroSection2 from "./hero-section2";
+
 
 export function LandingPage() {
     return (
-        <div >
+        <div>
+            
             <HeroSection />
+            <HeroSection2 />
             <FeaturedSection />
             <Features />
             <Feedback />

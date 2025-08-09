@@ -7,7 +7,7 @@ import Link from "next/link";
 
 export const HeroSection = () => {
     return (
-        <div className="text-center space-y-8 mx-auto dark:bg-[#1d1e24fe] bg-neutral-100 p-6 md:p-16">
+        <div className="text-center space-y-8 mx-auto  bg-gradient-to-b dark:from-[#201B39] dark:bg-[#18142b] bg-neutral-100 p-6 md:p-16">
             <motion.div
                 initial={{ opacity: 0, y: -50 }}
                 animate={{ opacity: 1, y: 0 }}

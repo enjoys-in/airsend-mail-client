@@ -1,4 +1,3 @@
-
 import { Archive, File, Inbox, Send, Trash, Folder, Mailbox } from "lucide-react";
 
 export const MailBoxIcon = ({name}:{name: string}) => {

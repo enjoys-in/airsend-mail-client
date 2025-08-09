@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 
 export async function UserLogout() {
     try {
-        (await cookies()).delete("_access_token")
+        (await cookies()).delete("access_token")
         // const { data } = await serverAxios.post("/send-mail",input)
 
         // return data

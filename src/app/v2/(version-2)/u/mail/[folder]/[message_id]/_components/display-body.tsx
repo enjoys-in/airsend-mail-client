@@ -6,20 +6,10 @@ import {
     Lock,
     MoreVertical,
     Reply,
-    Star,
     Trash2,
 } from "lucide-react";
 
-import {
-    DropdownMenuContent,
-    DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
     Popover,
     PopoverContent,

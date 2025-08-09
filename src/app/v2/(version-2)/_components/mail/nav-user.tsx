@@ -37,9 +37,9 @@ export function NavUserV2() {
   const { isMobile } = useSidebar()
   const router = useRouter()
   const currAccount = useAppSelector(state => state.accounts.currAccount)
-  const handleLogout = () => {
+  const handleLogout = async() => {
 
-    UserLogout()
+   await UserLogout()
     router.push("/v2")
   }
   return (

@@ -15,12 +15,12 @@ const serverAxios = axios.create({
 });
 
 serverAxios.interceptors.request.use(async (config) => {
-    // const cookieStore = await cookies();
-    // const toGet = (config.url as string).includes('/admin') ? 'admin_access_token' : 'access_token';
-    // const token = cookieStore.get(toGet)?.value;
-    // if (token) {
-    //     config.headers['Authorization'] = `Bearer ${token}`
-    // }
+    const cookieStore = await cookies();
+    const toGet = (config.url as string).includes('/admin') ? 'admin_access_token' : 'access_token';
+    const token = cookieStore.get(toGet)?.value;
+    if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`
+    }
 
     security.GenerateSignature((config.method as string).toUpperCase(), config.baseURL as string, config.data).then((signature) => {
         config.headers['X-Signature'] = signature

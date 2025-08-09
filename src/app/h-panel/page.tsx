@@ -20,7 +20,7 @@ import { __config } from "@/constants/config"
 export default function LoginPage() {
     const searchParams = useSearchParams()
     const dispatch = useAppDispatch()
- 
+
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
     const { toast } = useToast()

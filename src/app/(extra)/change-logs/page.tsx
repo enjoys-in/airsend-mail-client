@@ -1,6 +1,22 @@
 import { Info } from "lucide-react"
 
 const CHANGE_LOGS = [
+     {
+        date: "Aug 1, 2025",
+        version: "1.3",
+        color: "from-yellow-600 to-red-400",
+        versionNumber: "1.1",
+        improvements: [
+            "Fixing the on going Bugs",
+            "Enabled sending mails to  Outlook/Microsoft",
+            "Added E2E encryption -  OpenPGP",
+        ],
+        bugfixes: [
+            "Replace Lexical with PlateJS in the editor",
+            "Fixed some issues related to the editor",
+            "Fixed API Last Usage and count"
+        ]
+    },
     {
         date: "May 1, 2025",
         version: "1.2",
