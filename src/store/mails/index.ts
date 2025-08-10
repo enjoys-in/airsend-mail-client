@@ -47,8 +47,8 @@ interface State {
     mailboxes: { name: string }[]
     setMailboxes: (mailboxes: { name: string }) => void
 
-    selectedMail: MailData & Record<string, any> | null
-    setSelectedMail: (id: Record<string, any> & MailData) => void
+    selectedMail: GetAllMailsPayload & Record<string, any> | null
+    setSelectedMail: (id: Record<string, any> & GetAllMailsPayload) => void
 
     checkedItems: string[]
     setCheckedItems: (items: string[]) => void

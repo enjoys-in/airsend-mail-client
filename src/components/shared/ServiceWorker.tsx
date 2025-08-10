@@ -21,11 +21,13 @@ export function ServiceWorker() {
     // }, []);
 
 
-    return <Fragment>
-        <SonnerToaster visibleToasts={5} />
-        <Toaster />
-        <ModeToggle />
-        <ReportButton />
-        <ConfirmationModal title="Confirmation" message="It's Under Development" onConfirm={() => { }} />
-    </Fragment>;
+    return (
+        <Fragment>
+            <SonnerToaster visibleToasts={5} />
+            <Toaster />
+            <ModeToggle />
+            <ReportButton />
+            <ConfirmationModal title="Confirmation" message="It's Under Development" onConfirm={() => { }} />
+        </Fragment>
+    );
 }

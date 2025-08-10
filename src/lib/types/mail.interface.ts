@@ -103,12 +103,12 @@ interface Answer {
 export interface GetAllMailsPayload  {
         from_email: string;
         message_id: string;
+        receipient: string;
         subject: string;
         flags: string[];
-        folder: {
-            id:number
-            slug:string
-        };
+        folder_id: string;
+        folder: string;
+        labels:string[]
         tags: string[];
         is_read: boolean;
         is_replied: boolean;

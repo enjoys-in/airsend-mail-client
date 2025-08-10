@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Star, Trash2, Archive, Flag, MoreVertical } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 
-import { cn, dateToFromNowDaily, encryptData, filterNameAndEmail, formattedName } from '@/lib/utils';
+import { cn, dateToFromNowDaily, filterNameAndEmail, formattedName } from '@/lib/utils';
 import { useMailStore } from '@/store/mails';
 import { RiAttachment2 } from '@remixicon/react';
 
@@ -14,6 +14,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { EmailContextMenu } from './EmailContextMenu';
 
 import { GetAllMailsPayload } from '@/lib/types/mail.interface';
+import { Security } from '@/lib/security';
 
 export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
     const router = useRouter()
@@ -55,24 +56,26 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
 
                 <div className="flex justify-between items-center py-0 px-2">
                     <div className="flex items-center">
-                        {(hovered || anyChecked) && (
+                        {(hovered || anyChecked) ? (
                             <Checkbox
                                 className="mr-2 rounded-none transition-all duration-300 ease-in-out "
                                 checked={checkedItems.includes(item.message_id)}
                                 onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(isChecked) => handleCheckChange(item.message_id, !!isChecked)}
                             />
-                        )}
+                        ) :
+                            <div className="h-4 w-4 mr-2" />
+                        }
                         <div className="relative z-0 mr-2">
                             <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-green-500 text-sm bg-muted-foreground/50 dark:bg-neutral-700" >{formattedName(filterNameAndEmail(item.from_email,item.from_email))}</AvatarFallback>
+                                <AvatarFallback className="text-green-500 text-sm bg-muted-foreground/50 dark:bg-neutral-700" >{formattedName(filterNameAndEmail(Security.DecryptFromString(item.from_email), Security.DecryptFromString(item.from_email)))}</AvatarFallback>
                             </Avatar>
                         </div>
-                        <div className='flex items-center  text-sm'>
+                        <div className='flex items-center text-sm'>
                             <span className="font-medium flex items-center justify-center gap-2">
                                 {!item.is_read && <span className="inline-block w-2 h-2 bg-green-500 rounded-full mx-2"></span>}
 
-                                {filterNameAndEmail(item.from_email,item.from_email)}
+                                {filterNameAndEmail(Security.DecryptFromString(item.from_email), Security.DecryptFromString(item.from_email))}
                             </span>
                             <span className="text-gray-500 ml-1">(4)</span>
                         </div>
@@ -81,7 +84,7 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
                                 {item?.subject}
                             </div>
                             <div className="text-sm text-gray-500 truncate max-w-[30rem]">
-                                {item?.plain_text}
+                                {Security.DecryptFromString(item?.plain_text) || item?.plain_text}
                             </div>
                         </div>
                         <div>
@@ -119,16 +122,28 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
                                             }}>
                                                 <Star size={16} />
                                             </button>
-                                            <button className="hover:text-blue-500 transition-colors duration-200">
+                                            <button className="hover:text-blue-500 transition-colors duration-200" onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleHoveredIconClick("Flag");
+                                            }}>
                                                 <Flag size={16} />
                                             </button>
-                                            <button className="hover:text-green-500 transition-colors duration-200">
+                                            <button className="hover:text-green-500 transition-colors duration-200" onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleHoveredIconClick("Archive");
+                                            }}>
                                                 <Archive size={16} />
                                             </button>
-                                            <button className="hover:text-red-500 transition-colors duration-200">
+                                            <button className="hover:text-red-500 transition-colors duration-200" onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleHoveredIconClick("Trash2");
+                                            }}>
                                                 <Trash2 size={16} />
                                             </button>
-                                            <button className="hover:text-cyan-500 transition-colors duration-200">
+                                            <button className="hover:text-cyan-500 transition-colors duration-200" onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleHoveredIconClick("more");
+                                            }}>
                                                 <MoreVertical size={16} />
                                             </button>
                                         </div>

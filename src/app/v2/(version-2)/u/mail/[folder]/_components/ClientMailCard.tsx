@@ -1,7 +1,7 @@
 "use client"
-import React, { Fragment, Suspense, useEffect } from 'react'
+import React, { Suspense, useEffect } from 'react'
 
-import { airsendDB } from '@/db'
+import { airsendDB, db } from '@/db'
 import { useParams } from 'next/navigation'
 import { useMailStore } from '@/store/mails'
 
@@ -9,18 +9,20 @@ import { API } from '@/lib/api/handler'
 import { MailCard } from '@/app/v2/(version-2)/_components/mail/MailCard'
 import Loading from '../loading'
 import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event'
+import { useAppSelector } from '@/store/hooks'
 
 
 const ClientMailCard = () => {
-    const { folder } = useParams() as { folder: string[] }
+    const { folder } = useParams() as { folder: string }
     const { all_emails, setAllEmails, loading, setLoading } = useMailStore()
     const { listen } = useCustomEvent(CustomEventKey.SyncMail)
+    const currAccount = useAppSelector(state => state.accounts.currAccount)
 
 
     const storeInDB = async () => {
         try {
             setLoading(true)
-            const { data } = await API.getAllMailData()
+            const { data } = await API.getAllMailData(`?is_refresh=1&folder=${folder}`)
             if (!data.success) {
                 throw new Error("Error fetching emails")
             }
@@ -33,15 +35,27 @@ const ClientMailCard = () => {
         }
     }
     const loadMailFromDB = async () => {
-        const item = await airsendDB.getItemsByIndex("mails","folder", "inbox")
-        console.log(item)
-        // if (item.length === 0) {
-        //     return storeInDB()
-        // }
-        // setAllEmails(item as any)
+        db.mails
+            .where("[folder+receipient]")
+            .equals([folder, currAccount?.email!])
+            .toArray()
+            // db.mails
+            //     .where("receipient")
+            //     .equals(currAccount?.email!)
+            //     .and(mails => mails.folder === folder)
+            //     .toArray()
+            .then(items => {
+                if (items.length === 0) {
+                    return storeInDB()
+                }
+                setAllEmails(items as any)
+            });
+
     }
     useEffect(() => {
-        loadMailFromDB()
+        if (currAccount?.email!) {
+            loadMailFromDB()
+        }
     }, [])
 
     useEffect(() => {

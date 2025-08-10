@@ -58,8 +58,8 @@ export class API {
     static getSingleMailData(id: string) {
         return instance.get(`/api/v1/get-mail/${id}`)
     }
-    static getAllMailData() {
-        return instance.get(`/api/v1/get-mails`)
+    static getAllMailData(query: string = "") {
+        return instance.get(`/api/v1/get-mails${query}`)
     }
 
     static handleGoogleLogin() {

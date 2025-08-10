@@ -7,7 +7,7 @@ if (isClient) {
 }
 import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie, { type EntityTable, Table } from "dexie";
-import { BaseMailData, GetAllMailsPayload, MailData } from "@/lib/types/mail.interface";
+import { BaseMailData, GetAllMailsPayload } from "@/lib/types/mail.interface";
 import { UserMailAccountSettings } from "@/lib/types/account-settings.interface";
 import { MailBoxListResponse } from "@/lib/types/MailBoxListResponse.interface";
 import dot from "dot-object";
@@ -201,7 +201,7 @@ type TableSchema = {
   [tableName in TableKeys]: string;
 };
 const tables: TableSchema = {
-  mails: "message_id, to,from_email",
+  mails: "message_id,receipient,folder,uid,[message_id+folder],[message_id+folder+receipient],[folder+receipient]",
   mailboxes: "++id, path",
   temp_mails: "message_id, to",
   settings: "email",
@@ -209,7 +209,7 @@ const tables: TableSchema = {
 };
 
 const db = new Dexie("airsend") as Dexie & Tables;
-db.version(2)
+db.version(2.1)
   .stores(tables)
   .upgrade((tx) => {
     // tx. objectStore('mails').index('message_id');
@@ -714,7 +714,7 @@ class AirsendDB {
       return { success: false, path, value: undefined };
     }
   }
-  
+
   async getMultiNestedItem<
     T extends keyof Tables,
     P extends NestedKeys<TableValue<Tables[T]>>
@@ -1063,7 +1063,7 @@ function useDBWithActions<
 
 const airsendDB = new AirsendDB();
 
- 
+
 
 export { db, airsendDB, useDBWithActions };
 

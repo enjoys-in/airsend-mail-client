@@ -1,5 +1,8 @@
 import { __config } from '@/constants/config';
 import * as crypto from 'crypto'
+import CryptoJS  from 'crypto-js'
+const ENCRYPTION_KEY: string = "enjoys_encrption_key!@#%^&*()_NJ";
+
 export class Security {
     /**
     * Generates a signature for the given method, URI, body, and client secret.
@@ -102,4 +105,7 @@ export class Security {
             return "%" + c.charCodeAt(0).toString(16).toUpperCase();
         });
     };
+    static DecryptFromString = (data: string, secret: string | undefined = ENCRYPTION_KEY) => {
+        return CryptoJS.AES.decrypt(data, secret).toString(CryptoJS.enc.Utf8);
+    }
 }
