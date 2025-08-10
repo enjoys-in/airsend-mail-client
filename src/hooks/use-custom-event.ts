@@ -5,6 +5,7 @@ export enum CustomEventKey {
     SyncSettings = 'sync-settings',
     RefreshView = 'refresh-view',
     UserLoggedIn = 'user-logged-in',
+    MailEvents = 'mail-events',
 }
 
 type Callback<T> = (data: T) => void;

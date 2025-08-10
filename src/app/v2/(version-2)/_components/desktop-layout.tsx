@@ -25,7 +25,7 @@ export default function DesktopLayoutV2({ children }: { children: React.ReactNod
                 <HeaderV2 />
                 {children}
             </SidebarInset>
-            <SidebarRightV2 />
+            {/* <SidebarRightV2 /> */}
         </SidebarProvider>
     )
 }

@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Archive, Check, ChevronDown, Flag, MoreHorizontal, RefreshCw, Shield, Trash2 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { useMailStore } from "@/store/mails"
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { toast } from "sonner"
 import { API } from "@/lib/api/handler"
 import { ApiResponse } from "@/lib/types"
@@ -14,7 +14,7 @@ import { CustomEventKey, useCustomEvent } from "@/hooks/use-custom-event"
 
 export function SpotToolbar() {
   const { checkedItems, all_emails, setCheckedItems, selected_mailbox } = useMailStore()
-  
+  const { listen } = useCustomEvent(CustomEventKey.MailEvents)
   const handleImapEvents = useCallback(
     async (event: string) => {
       try {
@@ -91,7 +91,10 @@ export function SpotToolbar() {
   )
   const handleUnselecteAll = useCallback(() => {
     setCheckedItems([])
-  },[])
+  }, [])
+  useEffect(() => {
+    listen(handleImapEvents)
+  }, [])
   return checkedItems.length > 0 ? (
     <div className="flex z-10 fixed items-center justify-between w-full bg:[#333333] dark:bg-[#333333] border-b text-white px-4 ">
       <div className="flex items-center space-x-1">
@@ -130,7 +133,7 @@ export function SpotToolbar() {
             <DropdownMenuItem>Flag as important</DropdownMenuItem>
             <DropdownMenuItem>Flag for follow-up</DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>      
+        </DropdownMenu>
         <Button variant="ghost" size="sm" className="text-white hover:bg-neutral-600 rounded-none">
           <svg
             className="w-5 h-5 mr-2"
@@ -193,7 +196,7 @@ export function SpotToolbar() {
                 Mark All as Unread
               </Button>
             </DropdownMenuItem>
-            <DropdownMenuItem  className="p-0">
+            <DropdownMenuItem className="p-0">
               <Button variant="ghost" size="sm" className="text-white ounded-none">
                 <svg
                   className="w-5 h-5 mr-2"
@@ -212,7 +215,7 @@ export function SpotToolbar() {
             </DropdownMenuItem>
             <DropdownMenuItem className="p-0" disabled={checkedItems.length > 1}>
               <Button variant="ghost" size="sm" className="text-white   rounded-none">
-              <svg
+                <svg
                   className="w-5 h-5 mr-2"
                   viewBox="0 0 24 24"
                   fill="none"
@@ -224,12 +227,12 @@ export function SpotToolbar() {
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </svg>
-                Move All 
+                Move All
               </Button>
             </DropdownMenuItem>
             <DropdownMenuItem className="p-0" disabled={checkedItems.length > 1}>
               <Button variant="ghost" size="sm" className="text-white   rounded-none">
-              <svg
+                <svg
                   className="w-5 h-5 mr-2"
                   viewBox="0 0 24 24"
                   fill="none"
@@ -241,10 +244,10 @@ export function SpotToolbar() {
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </svg>
-                Copy All 
+                Copy All
               </Button>
             </DropdownMenuItem>
-            <DropdownMenuItem  className="p-0">
+            <DropdownMenuItem className="p-0">
               <Button variant="ghost" size="sm" className="text-white  rounded-none" onClick={() => handleImapEvents("delete")}>
                 <Trash2 className="w-5 h-5 mr-2" />
                 Delete
@@ -252,7 +255,7 @@ export function SpotToolbar() {
             </DropdownMenuItem>
             <DropdownMenuItem className="p-0" disabled={checkedItems.length > 1}>
               <Button variant="ghost" size="sm" className="text-white   rounded-none">
-              <svg
+                <svg
                   className="w-5 h-5 mr-2"
                   viewBox="0 0 24 24"
                   fill="none"
@@ -264,10 +267,10 @@ export function SpotToolbar() {
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </svg>
-                Delete All 
+                Delete All
               </Button>
             </DropdownMenuItem>
-            <DropdownMenuItem  className="p-0">
+            <DropdownMenuItem className="p-0">
               <Button variant="ghost" size="sm" className="text-white  rounded-none">
                 <Archive className="w-5 h-5 mr-2" />
                 Archive

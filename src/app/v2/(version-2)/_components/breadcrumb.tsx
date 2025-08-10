@@ -25,6 +25,9 @@ const BreadcrumbInfo = () => {
 
     const { emit } = useCustomEvent(CustomEventKey.SyncSettings);
     const pathname = usePathname();
+    const pattern = /^\/v2\/u\/mail\/(?!settings\/)[^\/]+\/[^\/]+$/;
+    const match = pathname.match(pattern);
+
     return (
         <Fragment>
             <Breadcrumb>
@@ -53,12 +56,13 @@ const BreadcrumbInfo = () => {
                                 >
                                     <RefreshCcw />
                                 </Button>
+
                             </>
                         )}
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>
-            {pathname.includes("/v2/u/mail") && <SyncButton />}
+            {pathname.includes("/v2/u/mail") && !match && <SyncButton />}
         </Fragment>
     );
 };
