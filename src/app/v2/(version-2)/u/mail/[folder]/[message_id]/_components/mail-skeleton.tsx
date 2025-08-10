@@ -1,14 +1,14 @@
-import { Archive, Copy, Maximize2, Minimize2, X, Reply, MoreVertical } from 'lucide-react';
+import { Archive, Copy, Maximize2, Minimize2, X, Reply, MoreVertical, ChevronLeft, Link } from 'lucide-react';
 
 
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Fragment } from 'react';
 
 export const MailDisplaySkeleton = ({ isFullscreen }: { isFullscreen?: boolean }) => {
   return (
-    <>
- 
+    <Fragment>
       <div
         className={cn(
           'relative flex-1 overflow-hidden p-4',
@@ -50,18 +50,24 @@ export const MailDisplaySkeleton = ({ isFullscreen }: { isFullscreen?: boolean }
         </div>
       </div>
 
-    </>
+    </Fragment>
   );
 };
 
-export const MailHeaderSkeleton = ({ isFullscreen }: { isFullscreen?: boolean }) => {
+export const MailHeaderSkeleton = ({ isFullscreen, folder = "inbox" }: { folder?: string, isFullscreen?: boolean }) => {
   return (
     <div className="flex items-center border-b p-[7px]">
       <div className="flex flex-1 items-center gap-2">
-        <Button variant="ghost" className="md:h-fit md:px-2" disabled={true}>
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </Button>
+        <Link href={`/v2/u/mail/${folder}`} className="md:h-fit md:px-2">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full"
+
+          >
+            <ChevronLeft />
+          </Button>
+        </Link>
         <Skeleton className="w-[150px] max-w-[300px] flex-1 truncate text-sm font-medium" />
       </div>
       <div className="flex items-center gap-2">

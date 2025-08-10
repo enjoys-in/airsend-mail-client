@@ -28,7 +28,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useEffect, useMemo, useRef } from "react";
+import React, { Fragment, useEffect, useMemo, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -48,7 +48,7 @@ import { MailIframe } from '@/components/common/mail-iframe';
 import { API } from '@/lib/api/handler';
 import { AxiosResponse } from 'axios';
 
-import { MailDisplaySkeleton } from "./mail-skeleton";
+import { MailDisplaySkeleton, MailHeaderSkeleton } from "./mail-skeleton";
 import { useMailStore } from "@/store/mails";
 import { airsendDB, db } from "@/db";
 import { useAppSelector } from "@/store/hooks";
@@ -69,23 +69,34 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
         }
 
     }, [selectedMail])
-    if (!selectedMail) return <MailDisplaySkeleton />
+    if (!selectedMail) return (
+        <Fragment>
+            <MailHeaderSkeleton folder={folder} />
+            <MailDisplaySkeleton />
+        </Fragment>
+    )
+
 
     return (
-        <div
-            className="flex-1 md:flex-none flex flex-col overflow-auto"
-            style={{ height: "calc(100dvh - 80px)" }}
-        >
-            <div className="flex ml-1 items-center gap-4">
-                <Button size={"icon"} variant={"ghost"} className='bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full'
+        <Fragment>
+            <div className="flex ml-1 items-center gap-4 py-2">
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    className="bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full"
                     onClick={() => router.back()}
                 >
                     <ChevronLeft />
                 </Button>
-                <h2 className="pl-4 text-2xl font-bold p-4">{selectedMail?.subject}</h2>
-                {moment(selectedMail?.date).format("MMM DD, YYYY hh:mm A")}
 
+                <div className="flex items-baseline gap-3">
+                    <h2 className="text-2xl font-bold">{selectedMail?.subject}</h2>
+                    <span className="text-sm text-muted-foreground">
+                        {moment(selectedMail?.date).format("MMM DD, YYYY hh:mm A")}
+                    </span>
+                </div>
             </div>
+
             <Separator className="my-2" />
             <div className="flex flex-col lg:flex-row justify-between items-start md:px-4 pb-2 md:pl-1">
                 <div className="flex items-center text-sm flex-1 md:gap-2">
@@ -223,8 +234,7 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                 </div>
             </div>
 
-
-        </div>
+        </Fragment>
     )
 }
 
