@@ -1,5 +1,5 @@
 "use client"
-import React, { Suspense, useEffect } from 'react'
+import React, { Fragment, Suspense, useEffect } from 'react'
 
 import { airsendDB } from '@/db'
 import { useParams } from 'next/navigation'
@@ -28,14 +28,17 @@ const ClientMailCard = () => {
             setAllEmails(data.result)
             setLoading(false)
         } catch (error) {
-
+            console.log(error)
 
         }
     }
     const loadMailFromDB = async () => {
-        const item = await airsendDB.getAllItems("mails")
-
-        setAllEmails(item as any)
+        const item = await airsendDB.getItemsByIndex("mails","folder", "inbox")
+        console.log(item)
+        // if (item.length === 0) {
+        //     return storeInDB()
+        // }
+        // setAllEmails(item as any)
     }
     useEffect(() => {
         loadMailFromDB()
@@ -46,8 +49,8 @@ const ClientMailCard = () => {
         return unsubscribe
     }, [])
 
-    return loading ? <Loading /> : <Suspense fallback={<Loading />}>
-        {
+    return <Suspense fallback={<Loading />}>
+        {loading ? <Loading /> :
             all_emails && all_emails.length > 0 ? all_emails.map((item, index) => (
                 <MailCard key={index} item={item} />
             )) : (

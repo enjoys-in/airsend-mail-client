@@ -1,5 +1,5 @@
 import { SingleEmailResponse } from '@/lib/types/EmailResponse'
-import { MailData } from '@/lib/types/mail.interface'
+import { GetAllMailsPayload, MailData } from '@/lib/types/mail.interface'
 import { QuotaResponse } from '@/lib/types/QuotaResponse'
 import { create } from 'zustand'
 
@@ -56,8 +56,8 @@ interface State {
     lables: { name: string; color: string, isActive: boolean, id: string }[]
     setLables: (items: { name: string; color: string, isActive: boolean, id: string }) => void
 
-    all_emails: MailData[] | null
-    setAllEmails: (list: MailData[]) => void
+    all_emails: GetAllMailsPayload[] | null
+    setAllEmails: (list: GetAllMailsPayload[]) => void
 }
 // devtools((set) => ({
 //     selectedMail: null,

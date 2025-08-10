@@ -17,7 +17,11 @@ export const fetchAdminFromServer = createAsyncThunk<IAdmin>(
           'x-api-key': __config.APP.API_KEY as string,
         }
       });
-      if (!data.success) throw new Error("Unauthorized");
+      if (!data.success) {
+        document.cookie = "admin_access_token=; Max-Age=0; path=/";
+        window.location.href = "/h-panel";
+      }
+
 
       if (!data.success) {
         throw new Error(data.message || "Failed to fetch admin profile")

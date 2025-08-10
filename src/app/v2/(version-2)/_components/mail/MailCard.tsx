@@ -13,9 +13,9 @@ import { RiAttachment2 } from '@remixicon/react';
 import { useParams, useRouter } from 'next/navigation';
 import { EmailContextMenu } from './EmailContextMenu';
 
-import { MailData } from '@/lib/types/mail.interface';
+import { GetAllMailsPayload } from '@/lib/types/mail.interface';
 
-export const MailCard = ({ item }: { item: MailData }) => {
+export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
     const router = useRouter()
     const params = useParams()
     const { setSelectedMail } = useMailStore()
@@ -65,23 +65,23 @@ export const MailCard = ({ item }: { item: MailData }) => {
                         )}
                         <div className="relative z-0 mr-2">
                             <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-green-500 text-sm bg-muted-foreground/50 dark:bg-neutral-700" >{formattedName(filterNameAndEmail(item.from, item?.display_name || item.to))}</AvatarFallback>
+                                <AvatarFallback className="text-green-500 text-sm bg-muted-foreground/50 dark:bg-neutral-700" >{formattedName(filterNameAndEmail(item.from_email,item.from_email))}</AvatarFallback>
                             </Avatar>
                         </div>
                         <div className='flex items-center  text-sm'>
                             <span className="font-medium flex items-center justify-center gap-2">
-                                {!item.synced && <span className="inline-block w-2 h-2 bg-green-500 rounded-full mx-2"></span>}
+                                {!item.is_read && <span className="inline-block w-2 h-2 bg-green-500 rounded-full mx-2"></span>}
 
-                                {filterNameAndEmail(item.from, item.display_name || item.to)}
+                                {filterNameAndEmail(item.from_email,item.from_email)}
                             </span>
                             <span className="text-gray-500 ml-1">(4)</span>
                         </div>
                         <div className="flex items-center gap-2 w-[50rem] overflow-hidden text-sm ml-4">
                             <div className="font-medium  truncate">
-                                {item.subject}
+                                {item?.subject}
                             </div>
                             <div className="text-sm text-gray-500 truncate max-w-[30rem]">
-                                {item?.content}
+                                {item?.plain_text}
                             </div>
                         </div>
                         <div>
@@ -137,7 +137,7 @@ export const MailCard = ({ item }: { item: MailData }) => {
                                             <div className="flex items-center gap-2">
                                                 <Badge className="text-xs font-bold">personal</Badge>
                                             </div>
-                                            <span className='ml-2'>{dateToFromNowDaily(new Date(item.timestamp as string))}</span>
+                                            <span className='ml-2'>{dateToFromNowDaily(new Date(item?.timestamp as string))}</span>
                                         </>
                                     }
                                 </div>

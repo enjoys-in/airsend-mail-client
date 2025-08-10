@@ -2,10 +2,10 @@ import { Info } from "lucide-react"
 
 const CHANGE_LOGS = [
      {
-        date: "Aug 1, 2025",
+        date: "Aug 20, 2025",
         version: "1.3",
         color: "from-yellow-600 to-red-400",
-        versionNumber: "1.1",
+        versionNumber: "1.3",
         improvements: [
             "Fixing the on going Bugs",
             "Enabled sending mails to  Outlook/Microsoft",
@@ -21,7 +21,7 @@ const CHANGE_LOGS = [
         date: "May 1, 2025",
         version: "1.2",
         color: "from-red-600 to-blue-400",
-        versionNumber: "1.1",
+        versionNumber: "1.2",
         improvements: [
             "Update the UI, Added Logo, and Changelog",
             "Calender in Upcoming Releases",

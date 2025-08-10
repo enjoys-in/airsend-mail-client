@@ -7,7 +7,7 @@ if (isClient) {
 }
 import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie, { type EntityTable, Table } from "dexie";
-import { BaseMailData, MailData } from "@/lib/types/mail.interface";
+import { BaseMailData, GetAllMailsPayload, MailData } from "@/lib/types/mail.interface";
 import { UserMailAccountSettings } from "@/lib/types/account-settings.interface";
 import { MailBoxListResponse } from "@/lib/types/MailBoxListResponse.interface";
 import dot from "dot-object";
@@ -27,7 +27,7 @@ export type IdbHooks =
   }
 
 type Tables = {
-  mails: EntityTable<Partial<MailData>, "message_id">;
+  mails: EntityTable<Partial<GetAllMailsPayload>, "message_id">;
   temp_mails: EntityTable<BaseMailData, "message_id">;
   mailboxes: EntityTable<MailBoxListResponse, "path">;
   settings: EntityTable<UserMailAccountSettings, "email">;
@@ -201,7 +201,7 @@ type TableSchema = {
   [tableName in TableKeys]: string;
 };
 const tables: TableSchema = {
-  mails: "message_id, to",
+  mails: "message_id, to,from_email",
   mailboxes: "++id, path",
   temp_mails: "message_id, to",
   settings: "email",
@@ -714,6 +714,7 @@ class AirsendDB {
       return { success: false, path, value: undefined };
     }
   }
+  
   async getMultiNestedItem<
     T extends keyof Tables,
     P extends NestedKeys<TableValue<Tables[T]>>
