@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { requestNotificationPermission } from '@/lib/helper'
-
+ 
 import { useAppSelector } from '@/store/hooks'
 const publicKey = 'BJw086bmrTdcixl4bO_ep7kPMevfXiot27XyBoccCaeOH_eQZL_X3ml8TvFSKlfgsI6joi43-m3efwL4D8YXX0'
 function urlBase64ToUint8Array(base64String: string) {
@@ -63,7 +62,7 @@ export default function NotificationRequest() {
     const handleAllow = () => {
         localStorage.setItem('notificationPreference', 'allowed')
         setIsVisible(false)
-        requestNotificationPermission()
+       
     }
 
     const handleConfirmDeny = () => {
