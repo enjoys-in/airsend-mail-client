@@ -11,68 +11,82 @@ import { API } from "@/lib/api/handler"
 import { ApiResponse } from "@/lib/types"
 import { FaToolbox } from "react-icons/fa"
 import { CustomEventKey, useCustomEvent } from "@/hooks/use-custom-event"
+import { MailEventData } from "@/lib/types/update-mail-events.interface"
+import { airsendDB } from "@/db"
 
 export function SpotToolbar() {
-  const { checkedItems, all_emails, setCheckedItems, selected_mailbox } = useMailStore()
+  const { checkedItems, all_emails, setCheckedItems, selected_mailbox ,setAllEmails} = useMailStore()
   const { listen } = useCustomEvent(CustomEventKey.MailEvents)
   const handleImapEvents = useCallback(
-    async (event: string) => {
+    async (data: MailEventData) => {
+
       try {
         let response
-        switch (event) {
+        switch (data.action) {
           case "delete":
-            // response = await API.deleteMail(selected_mailbox!, checkedItems)
+            response = await API.handleMailEvents(data)
             break
           case "delete_all":
-            // response = await API.deleteMail(selected_mailbox!, checkedItems, true)
+            response = await API.handleMailEvents(data)
             break
           case "mark_as_read":
-            // response = await API.markAsReadOrUnread(selected_mailbox!, checkedItems, "mark_as_read")
+            response = await API.handleMailEvents(data)
+
             break
           case "mark_as_unread":
-            // response = await API.markAsReadOrUnread(selected_mailbox!, checkedItems, "mark_as_unread")
+            response = await API.handleMailEvents(data)
             break
           case "mark_all_as_read":
-            // response = await API.markAsReadOrUnread(selected_mailbox!, checkedItems, "mark_all_as_read")
+            response = await API.handleMailEvents(data)
             break
           case "mark_all_as_unread":
-            // response = await API.markAsReadOrUnread(selected_mailbox!, checkedItems, "mark_all_as_unread")
+            response = await API.handleMailEvents(data)
             break
           case "block":
+            response = await API.handleMailEvents(data)
+
             break
+            response = await API.handleMailEvents(data)
+
           case "report":
             break
           case "move":
-            // response = await API.moveEmailToAnotherMailbox(selected_mailbox!, checkedItems, "mark_all_as_unread")
+            response = await API.handleMailEvents(data)
+
             break
           case "copy":
-            // response = await API.copymailToAnotherMailbox(selected_mailbox!, checkedItems, "mark_all_as_unread")
+            response = await API.handleMailEvents(data)
+
             break
           case "move_all":
-            // response = await API.moveEmailToAnotherMailbox(selected_mailbox!, checkedItems, "destination_folder", true)
+            response = await API.handleMailEvents(data)
+
             break
           case "copy_all":
-            // response = await API.copymailToAnotherMailbox(selected_mailbox!, checkedItems, "destination_folder", true)
+            response = await API.handleMailEvents(data)
+
             break
           default:
             toast.error("Invalid action.")
             break
         }
         if (response) {
-          // const data = response.data as ApiResponse<any>
-          // if (!data.success) {
-          //   return toast.error(data.message)
-          // }
-          // if (event === "delete" || event === "move" || event === "archive") {
+          const res = response.data as ApiResponse<any>
+          if (!res.success) {
+            return toast.error(res.message)
+          }
+          if (data.action === "delete" || data.action === "move" || data.action === "archive") {
 
-          //   const udpatedEmails = all_emails?.emails.filter((item) => !checkedItems.includes(item.uid))
-          //   // setCheckedItems(udpatedEmails)
+            const udpatedEmails = all_emails && all_emails?.filter((item) => !checkedItems.includes(item.message_id))
+            udpatedEmails && setAllEmails(udpatedEmails)
+            await airsendDB.bulkDeleteItems("mails", checkedItems)
+            setCheckedItems([])
 
-          // }
-          // if (event === "move_all" || event === "delete_all") {
-          //   setCheckedItems([])
-          // }
-          // toast.success(data.message)
+          }
+          if (data.action === "move_all" || data.action === "delete_all") {
+            setCheckedItems([])
+          }
+          toast.success(res.message)
 
         }
       } catch (error: any) {
@@ -248,7 +262,10 @@ export function SpotToolbar() {
               </Button>
             </DropdownMenuItem>
             <DropdownMenuItem className="p-0">
-              <Button variant="ghost" size="sm" className="text-white  rounded-none" onClick={() => handleImapEvents("delete")}>
+              <Button variant="ghost" size="sm" className="text-white  rounded-none" onClick={() => handleImapEvents({
+                action: "delete",
+                message_id: checkedItems
+              })}>
                 <Trash2 className="w-5 h-5 mr-2" />
                 Delete
               </Button>

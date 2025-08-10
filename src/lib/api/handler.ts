@@ -1,6 +1,7 @@
 import axios from "axios";
 import { instance } from "./api.instance";
 import { __config } from "@/constants/config";
+import { MailEventData } from "../types/update-mail-events.interface";
 
 const adminRoutes = (url: string) => `/api/v1/admin${url}`
 
@@ -141,6 +142,9 @@ export class API {
     }
     static handleUpdateMailUserSetting(data: any) {
         return instance.put(`/api/v1/update-user-settings`, data)
+    }
+    static handleMailEvents(data: MailEventData) {
+        return instance.patch(`/api/v1/update-mail-event`,data)
     }
 }
 

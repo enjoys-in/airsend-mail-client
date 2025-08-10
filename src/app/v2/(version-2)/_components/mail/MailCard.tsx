@@ -42,7 +42,7 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
         }
         router.push(`/v2/u/mail/${params?.folder}/${item.message_id}`,)
     }
-    const handleHoveredIconClick = (action: string, message_id: string) => emit({ action, message_id })
+    const handleHoveredIconClick = (action: string, id: string|number) => emit({ action, id:[id] })
     useEffect(() => { }, [checkedItems])
 
     return (
@@ -117,7 +117,7 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
                                             className={`flex gap-2.5 transition-opacity duration-300 ease-in-out ${hovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                                             <button className="hover:text-yellow-500 transition-colors duration-200" onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleHoveredIconClick("starred", item.message_id);
+                                                handleHoveredIconClick("starred", item.id);
                                             }}>
                                                 <Star size={16} />
                                             </button>

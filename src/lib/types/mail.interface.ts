@@ -101,6 +101,7 @@ interface Answer {
     status: boolean;
 }
 export interface GetAllMailsPayload {
+    id: number|string;
     from_email: string;
     message_id: string;
     receipient: string;
