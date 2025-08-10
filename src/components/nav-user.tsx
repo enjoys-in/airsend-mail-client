@@ -41,6 +41,7 @@ export function NavUser() {
 
   const handleLogout = async () => {
     await AdminLogout()
+     router.replace("/h-panel")
 
   }
   return (
