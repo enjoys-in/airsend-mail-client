@@ -123,19 +123,19 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
                                             </button>
                                             <button className="hover:text-blue-500 transition-colors duration-200" onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleHoveredIconClick("mark_as_important", item.message_id);
+                                                handleHoveredIconClick("mark_as_important", item.id);
                                             }}>
                                                 <Flag size={16} />
                                             </button>
                                             <button className="hover:text-green-500 transition-colors duration-200" onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleHoveredIconClick("archive", item.message_id);
+                                                handleHoveredIconClick("archive", item.id);
                                             }}>
                                                 <Archive size={16} />
                                             </button>
                                             <button className="hover:text-red-500 transition-colors duration-200" onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleHoveredIconClick("delete", item.message_id);
+                                                handleHoveredIconClick("delete", item.id);
                                             }}>
                                                 <Trash2 size={16} />
                                             </button>
