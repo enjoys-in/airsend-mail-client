@@ -19,9 +19,6 @@ const page = async ({ params }: any) => {
           <ServerMailBody folder={folder} message_id={message_id} />
         </Suspense>
       </MailDisplay>
-
-
-
     </div>
 
   )

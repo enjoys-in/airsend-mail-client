@@ -100,37 +100,47 @@ interface Answer {
     type: number;
     status: boolean;
 }
-export interface GetAllMailsPayload  {
-        from_email: string;
-        message_id: string;
-        receipient: string;
-        subject: string;
-        flags: string[];
-        folder_id: string;
-        folder: string;
-        labels:string[]
-        tags: string[];
-        is_read: boolean;
-        is_replied: boolean;
-        in_replied_to: string;
-        references: string | string[];
-        trackersDetected: number;
-        plain_text: string;
-        thread_id: null;
-        uid: string | undefined;
-        content: string;
-        hasAttachment: boolean | {
-            related: boolean;
-            type: "attachment";
-            contentType: string;
-            contentDisposition: string;
-            filename?: string | undefined;
-            headers: Headers;
-            headerLines: any;
-            checksum: string;
-            size: number;
-            contentId?: string | undefined;
-            cid?: string | undefined;
-        }[];
-        timestamp: string | undefined;
-    }
+export interface GetAllMailsPayload {
+    from_email: string;
+    message_id: string;
+    receipient: string;
+    subject: string;
+    flags: string[];
+    folder_id: string;
+    folder: string;
+    labels: string[]
+    tags: string[];
+    is_read: boolean;
+    is_replied: boolean;
+    in_replied_to: string;
+    references: string | string[];
+    trackersDetected: number;
+    plain_text: string;
+    thread_id: null;
+    uid: string | undefined;
+    content: string;
+    hasAttachment: boolean | {
+        related: boolean;
+        type: "attachment";
+        contentType: string;
+        contentDisposition: string;
+        filename?: string | undefined;
+        headers: Headers;
+        headerLines: any;
+        checksum: string;
+        size: number;
+        contentId?: string | undefined;
+        cid?: string | undefined;
+    }[];
+    timestamp: string | undefined;
+}
+
+export interface PGPKeyPair {
+    publicKey: string;
+    privateKey: string;
+    revocationCertificate?: string;
+}
+
+export interface EncodedMessageResponse {
+    chiper_text: string, k: string, open_pgp: PGPKeyPair
+}

@@ -3,18 +3,20 @@ import serverAxios from '@/lib/api/serverAxios'
 import { ApiResponse } from '@/lib/types'
 import { AxiosResponse } from 'axios'
 import { Skeleton } from '@/components/ui/skeleton'
+import { MailIframe } from '@/components/common/mail-iframe'
+import { EncodedMessageResponse } from '@/lib/types/mail.interface'
+
+
 
 const ServerMailBody = async ({ folder, message_id }: { message_id: string, folder: string }) => {
     try {
-        const { data } = await serverAxios.get(`/api/v1/get-encoded-mail/${message_id}`) as AxiosResponse<ApiResponse<{ chiper_text: string }>>
+        const { data } = await serverAxios.get(`/api/v1/get-encoded-mail/${message_id}`) as AxiosResponse<ApiResponse<EncodedMessageResponse>>
 
         if (!data.success) {
             throw new Error(data.message)
         }
 
-        return (
-            <div>{data.result.chiper_text}</div>
-        )
+        return <MailIframe data={data.result}></MailIframe>
     } catch (error) {
         return (
             <div className="space-y-4 p-4">

@@ -8,17 +8,24 @@ import { useTheme } from 'next-themes';
 import DOMPurify from 'dompurify';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { EncodedMessageResponse } from '@/lib/types/mail.interface';
+import { DecryptEncryptedMail } from '@/lib/pgp-service';
+import { useKeyStore } from '@/store/keys';
 
-export function MailIframe({ html, senderEmail }: { html: string; senderEmail: string }) {
-
-
+export function MailIframe({ data }: { data: EncodedMessageResponse }) {
+  const { setEncryptedData } = useKeyStore()
   const [cspViolation, setCspViolation] = useState(false);
   const [imagesEnabled, setImagesEnabled] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(300);
   const { resolvedTheme } = useTheme();
-
-
+  const html = ''
+  const rawEmail = DecryptEncryptedMail({
+    encrypted: data.chiper_text,
+    privateKeyArmored: data.k,
+    publicKeyArmored: data.open_pgp.publicKey,
+    password: data.k
+  })
   const iframeDoc = useMemo(() => template(html, imagesEnabled), [html, imagesEnabled]);
 
 
@@ -65,6 +72,7 @@ export function MailIframe({ html, senderEmail }: { html: string; senderEmail: s
   }, [resolvedTheme]);
 
   useEffect(() => {
+    setEncryptedData(data)
     const ctrl = new AbortController();
     window.addEventListener(
       'message',
