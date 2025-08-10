@@ -317,16 +317,12 @@ const MailDisplay = ({ emailData, isMuted, index, totalEmails, demo }:any ) => {
               ) : null}
   
               <div className="h-fit w-full p-0">
-                {emailData?.decodedBody ? (
-                  <MailIframe html={emailData?.decodedBody} senderEmail={emailData.sender.email} />
-                ) : (
-                  <div
+                 <div
                     className="flex h-[500px] w-full items-center justify-center"
                     style={{ minHeight: '500px' }}
                   >
                     <div className="bg-secondary h-32 w-32 animate-pulse rounded-full" />
                   </div>
-                )}
               </div>
             </div>
           </div>
