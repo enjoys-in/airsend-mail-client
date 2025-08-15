@@ -5,20 +5,9 @@ import EditorClient from '@/components/editor/EditorClient'
 import ComposeFooter from './_components/ComposeFooter'
 import ComposeHeader from './_components/ComposeHeader'
 import ComposeRecipients from './_components/ComposeReciepients'
-import { formatBytes,getFileIcon } from '@/lib/utils';
+import { formatBytes, getFileIcon } from '@/lib/utils';
 
-// const page = () => {
-//     return (
-//         <div className='p-8 flex flex-col gap-1 '>
-//             <ComposeHeader />
-//             <ComposeRecipients/>
-//             <EditorClient />
-//             <ComposeFooter />
-//         </div>
-//     )
-// }
 
-// export default page
 
 
 
@@ -154,7 +143,7 @@ export default function EnhancedEmailComposer() {
 
 
     return (
-        <div className="flex items-center justify-center bg-black/50">
+        <div className="flex items-center justify-center bg-black/50 mx-auto">
             <div className="w-full dark:bg-[#1e1e1e] bg-neutral-100  dark:text-neutral-200 text-gray-900 rounded-lg shadow-xl flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-700">

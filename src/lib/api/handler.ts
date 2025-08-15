@@ -2,6 +2,8 @@ import axios from "axios";
 import { instance } from "./api.instance";
 import { __config } from "@/constants/config";
 import { MailEventData } from "../types/update-mail-events.interface";
+import { ApiResponse } from "../types";
+import { MailBoxListAPIResponse, MailLablesType } from "../types/MailBoxListResponse.interface";
 
 const adminRoutes = (url: string) => `/api/v1/admin${url}`
 
@@ -144,7 +146,13 @@ export class API {
         return instance.put(`/api/v1/update-user-settings`, data)
     }
     static handleMailEvents(data: MailEventData) {
-        return instance.patch(`/api/v1/update-mail-event`,data)
+        return instance.patch(`/api/v1/update-mail-event`, data)
+    }
+    static getMailboxUnReadCount(current_mailbox: string) {
+        return instance.get(`/api/v1/get-mail-event?current_mailbox=${current_mailbox}`)
+    }
+    static fetchUserFolderLabels(type?: MailLablesType) {
+        return instance.get<ApiResponse<MailBoxListAPIResponse[]>>(`/api/v1/get-folder-labels?type=${type}`)
     }
 }
 

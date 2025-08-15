@@ -4,11 +4,11 @@ import { decode } from "@msgpack/msgpack";
 import { useSockets } from "@/hooks/useSockets";
 import { SocketEventConstants } from "@/lib/sockets/socket-constants";
 import { Loader2 } from "lucide-react";
-import useAudio from "@/hooks/useAudio"; 
+import useAudio from "@/hooks/useAudio";
 import { airsendDB } from "@/db";
-import {  GetAllMailsPayload } from "@/lib/types/mail.interface";
+import { GetAllMailsPayload } from "@/lib/types/mail.interface";
 import { useMailStore } from '../../store/mails/index';
- 
+
 
 const NewMailRecived = () => {
     const { socket } = useSockets()
@@ -23,14 +23,12 @@ const NewMailRecived = () => {
     const [isNewReceived, setIsNewReceived] = React.useState(false)
     React.useEffect(() => {
         setOgTitle(document.title)
-        socket.on(SocketEventConstants.NEW_MAIL_RECEIVED, async (data: Uint8Array) => {
+        socket.on(SocketEventConstants.NEW_MAIL_RECEIVED, async (data: Uint8Array) => {          
             const obj = decode(data) as GetAllMailsPayload;
             setIsNewReceived(true);
             setHasNewMessage(true);
             audio.play()
             setAllEmails([obj as any, ...(all_emails || [])])
-
-           
             await airsendDB.addItem("mails", obj)
         })
         const handleChangeToDefault = () => {

@@ -1,4 +1,4 @@
- 
+
 type DotPathValue = Record<string, any>
 
 export class SettingsMapper {

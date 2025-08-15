@@ -12,25 +12,56 @@ import { RefreshCcw } from "lucide-react"
 import { useMailStore } from "@/store/mails"
 import { sentenceCase } from 'change-case'
 import { MailBoxIcon } from "./MailboxIcons"
-import { useCacheStorage } from "@/hooks/useCacheStorage"
+
 import { API } from "@/lib/api/handler"
-import { airsendDB } from "@/db"
+import { airsendDB, db } from "@/db"
 import { usePathname } from "next/navigation"
+import { MailLablesType } from "@/lib/types/MailBoxListResponse.interface"
 
 
 export function ListFolders() {
     const [hoveredPath, setHoveredPath] = useState<string | null>(null);
-    const { all_mailbox, selected_mailbox, setSelectedMailbox, setAllMailbox, setError } = useMailStore()
-    const { addItem } = useCacheStorage()
+    const { all_mailbox, selected_mailbox, setSelectedMailbox, setAllMailbox, setError, setAllFolders, setAllLabels } = useMailStore()
+
     const pathname = usePathname()
 
     const fetchMailboxData = useCallback(async (current_mailbox: string) => {
         try {
             // sync with db as well
-         
+            const { data } = await API.getMailboxUnReadCount(current_mailbox)
+            if (!data.success) return
+
+            await db.mailboxes
+                .where("path")
+                .equals(current_mailbox)
+                .modify({
+                    total_count: data.result.total_count,
+                    unseen_count: data.result.unseen_count
+                });
+
+        } catch (error) {
+            console.log(error)
+
+        }
+    }, [])
+    const syncMailboxAndLables = async () => {
+        try {
+            const { data } = await API.fetchUserFolderLabels(MailLablesType.ALL)
+            if (!data.success) return
+            await airsendDB.bulkPutItems("mailboxes", data.result as any)
+            setAllMailbox(data.result.filter((item: any) => item.type === MailLablesType.MAILBOX) as any[])
+            setAllLabels(data.result.filter((item: any) => item.type === MailLablesType.LABEL) as any[])
+            setAllFolders(data.result.filter((item: any) => item.type === MailLablesType.FOLDER) as any[])
         } catch (error) {
 
         }
+    }
+    useEffect(() => {
+        airsendDB.getAllItems("mailboxes").then((data) => {
+            if (data.length === 0) {
+                syncMailboxAndLables()
+            }
+        })
     }, [])
 
     return (
@@ -51,16 +82,19 @@ export function ListFolders() {
                         onMouseEnter={() => setHoveredPath(folder.path)}
                         onMouseLeave={() => setHoveredPath(null)}
                     >
-                        <Link href={`${folder.path.toLowerCase()}`} onClick={() => setSelectedMailbox(folder.path.toLowerCase())} className="flex items-center gap-2">
+                        <Link href={`${folder.path.toLowerCase()}`} onClick={() => setSelectedMailbox(folder.path.toLowerCase())} className="flex items-center  gap-2">
                             <MailBoxIcon name={folder.name} key={folder.special_use} />
-                            <span
-                                className={cn(
-                                    "text-sm truncate",
-                                    isSelected ? "dark:text-[#5a61ff] font-bold" : "dark:text-zinc-300"
-                                )}
-                            >
-                                {sentenceCase(folder.name)}
-                            </span>
+                            <div className="w-full flex items-center justify-between">
+                                <span
+                                    className={cn(
+                                        "text-sm truncate",
+                                        isSelected ? "dark:text-[#5a61ff] font-bold" : "dark:text-zinc-300"
+                                    )}
+                                >
+                                    {sentenceCase(folder.name)}
+                                </span>
+                                <Badge text={String(folder.unseen_count)} variant="blue" className="w-6 h-6 flex items-center justify-center text-xs" />
+                            </div>
                         </Link>
 
                         <div className="flex items-center gap-2">
@@ -77,7 +111,9 @@ export function ListFolders() {
                                 </span>
 
                             )}
-                            <Badge text={String(folder.unseen_count)} variant="blue" className="w-6 h-6 flex items-center justify-center text-xs" />
+
+
+                            <span className="ml-auto text-gray-400 text-xs">  {String(folder.total_count)}</span>
                         </div>
                     </div>
 

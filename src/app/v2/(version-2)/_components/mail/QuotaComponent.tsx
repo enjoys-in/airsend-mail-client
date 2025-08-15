@@ -13,22 +13,23 @@ import { airsendDB } from '@/db';
 import { useAppSelector } from '@/store/hooks';
 import { useSockets } from '@/hooks/useSockets';
 import { SocketEventConstants } from '@/lib/sockets/socket-constants';
+import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event';
 
 const QuotaComponent = () => {
     const quota = useMailStore(state => state.quota);
     const setQuota = useMailStore(state => state.setQuota);
     const { socket } = useSockets()
     const currAccount = useAppSelector(state => state.accounts.currAccount)
+    const { listen } = useCustomEvent(CustomEventKey.SyncMail);
 
-
-    const fetchQuota = async () => {
+    const fetchQuota = async (from_db = true) => {
         try {
             const item = await airsendDB.getMultiNestedItem("settings", currAccount?.email as string, [
                 "settings.usage",
                 "settings.mailbox_size",
             ])
 
-            if (item.success && item.value && item.value.settings.usage) {
+            if (from_db && item.success && item.value && item.value.settings.usage) {
                 setQuota({
                     usage: item.value.settings.usage,
                     limit: item.value.settings.mailbox_size,
@@ -82,9 +83,12 @@ const QuotaComponent = () => {
         };
 
         socket.on(SocketEventConstants.MAIL_USAGED, updateQuota);
+        const unsubscribe = listen(() => fetchQuota(false))
         return () => {
             socket.off(SocketEventConstants.MAIL_USAGED, updateQuota);
+            unsubscribe()
         };
+
     }, [currAccount?.email]);
 
 

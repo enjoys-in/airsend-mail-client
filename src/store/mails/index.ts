@@ -1,5 +1,6 @@
 import { SingleEmailResponse } from '@/lib/types/EmailResponse'
 import { GetAllMailsPayload, MailData } from '@/lib/types/mail.interface'
+import { MailBoxListAPIResponse, MailLablesType } from '@/lib/types/MailBoxListResponse.interface'
 import { QuotaResponse } from '@/lib/types/QuotaResponse'
 import { create } from 'zustand'
 
@@ -7,15 +8,15 @@ import { create } from 'zustand'
 
 const ALLOWED_SPECIAL_USE = [
     { name: "All Mail", path: "INBOX", special_use: "\\All", unseen_count: 0, total_count: 0 },
-    { name: "Inbox", path: "INBOX", special_use: "\\Inbox", unseen_count: 0, total_count: 0 },
-    { name: "Sent", path: "Sent", special_use: "\\Sent", unseen_count: 0, total_count: 0 },
-    { name: "Drafts", path: "Drafts", special_use: "\\Drafts", unseen_count: 0, total_count: 0 },
-    { name: "Trash", path: "Trash", special_use: "\\Trash", unseen_count: 0, total_count: 0 },
-    { name: "Spam", path: "Spam", special_use: "\\Junk", unseen_count: 0, total_count: 0 },
-    { name: "Archive", path: "Archive", special_use: "\\Archive", unseen_count: 0, total_count: 0 },
-
+    { name: "Inbox", path: "inbox", special_use: "\\Inbox", unseen_count: 0, total_count: 0 },
+    { name: "Sent", path: "sent", special_use: "\\Sent", unseen_count: 0, total_count: 0 },
+    { name: "Drafts", path: "drafts", special_use: "\\Drafts", unseen_count: 0, total_count: 0 },
+    { name: "Deleted", path: "deleted", special_use: "\\Trash", unseen_count: 0, total_count: 0 },
+    { name: "Spam", path: "spam", special_use: "\\Junk", unseen_count: 0, total_count: 0 },
+    { name: "Archive", path: "archive", special_use: "\\Archive", unseen_count: 0, total_count: 0 },
 ]
-
+type Labels =( Omit<MailBoxListAPIResponse, "type"> & { type: MailLablesType.LABEL })[]
+type Folders =( Omit<MailBoxListAPIResponse, "type"> & { type: MailLablesType.FOLDER })[]
 interface State {
     loading: boolean
     setLoading: (loading: boolean) => void
@@ -31,6 +32,12 @@ interface State {
 
     all_mailbox: typeof ALLOWED_SPECIAL_USE
     setAllMailbox: (list: typeof ALLOWED_SPECIAL_USE) => void
+
+    all_folders: Folders | null
+    setAllFolders: (list: Folders | null) => void
+
+    all_labels: Labels | null
+    setAllLabels: (list: Labels | null) => void
 
     config: Record<string, any>
     setConfig: (config: Record<string, any>) => void
@@ -107,5 +114,11 @@ export const useMailStore = create<State>()((set) => ({
 
     quota: null,
     setQuota: (quota) => set({ quota }),
+
+    all_folders: null,
+    setAllFolders: (list) => set({ all_folders: list }),
+
+    all_labels: null,
+    setAllLabels: (list) => set({ all_labels: list }),
 })
 )

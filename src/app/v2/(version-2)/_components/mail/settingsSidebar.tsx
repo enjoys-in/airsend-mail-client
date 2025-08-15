@@ -18,7 +18,7 @@ export function SettingsMenuSidebar() {
       <SidebarFooter className="border-t">
         <div className="flex flex-row items-center mx-auto w-full p-2">
           <small>
-            Airsend Mail Client 1.0.1.1
+            Airsend Mail Client 1.0.1.2
           </small>
         </div>
       </SidebarFooter>

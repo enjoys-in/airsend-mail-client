@@ -114,7 +114,7 @@ const LeftSidebar = () => {
             {/* <DisplayLeftSidebarCard /> */}
           </div>
         )}
-        
+
       </div>
 
     </aside>
@@ -285,7 +285,7 @@ const Storage = ({
           <span className="text-xs text-zinc-400"> / {formatBytes(total)}</span>
         </div>
         <CustomDialog triggerComponent={<span className="text-xs text-orange-500 cursor-pointer">View</span>}>
-          <StorageCard used={used} total={total}   />
+          <StorageCard used={used} total={total} />
         </CustomDialog>
       </div>
       <div className="h-[4px] mt-1 flex w-full items-center rounded-full bg-zinc-300 dark:bg-zinc-300">

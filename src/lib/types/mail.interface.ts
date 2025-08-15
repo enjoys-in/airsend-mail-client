@@ -107,9 +107,8 @@ export interface GetAllMailsPayload {
     receipient: string;
     subject: string;
     flags: string[];
-    folder_id: string;
     folder: string;
-    labels: string[]
+    folder_path: string;
     tags: string[];
     is_read: boolean;
     is_replied: boolean;

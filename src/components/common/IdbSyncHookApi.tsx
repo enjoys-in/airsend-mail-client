@@ -8,7 +8,7 @@ import { API } from '@/lib/api/handler';
 import { toast } from 'sonner';
 
 const IdbSyncHookApi = () => {
-    const {  setSettings } = useSettingsStore()
+    const { setSettings } = useSettingsStore()
     React.useEffect(() => {
         const handler = async (changes: any) => {
             for (const e of changes) {
@@ -20,6 +20,9 @@ const IdbSyncHookApi = () => {
                     if (Object.keys(modifications).length === 0) {
                         return toast.info("Nothing to Update")
                     }
+                    if (usage || mailbox_size || quota_in_percent) {
+                        return
+                    }
                     const res = toast.promise(API.handleUpdateMailUserSetting({
                         email,
                         settings: payload
@@ -29,7 +32,7 @@ const IdbSyncHookApi = () => {
                         error: 'Error while updating settings',
                     })
                     res.unwrap().then(({ data }: any) => {
-                        // setSettings(e.obj.settings)
+
                         if (!data.success) {
                             toast.error("Something went wrong, Restoring old settings")
                             setSettings(e?.oldObj?.settings)

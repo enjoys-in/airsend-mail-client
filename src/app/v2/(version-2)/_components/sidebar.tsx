@@ -139,7 +139,7 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                 </SidebarFooter>
             </Sidebar>
             {pathname.includes("/v2/u/settings") && <SettingsMenuSidebar />}
-            {(pathname.includes("/v2/u/mail")|| pathname.includes("/v2/u/compose") )&& <Mailboxes />}
+            {(pathname.includes("/v2/u/mail") || pathname.includes("/v2/u/compose")) && <Mailboxes />}
             {(pathname === "/v2/calender") && <SidebarCalendar />}
             {/* {  ( pathname === "/v2/teams") &&  <ChannelList />     } */}
             {(pathname === "/v2/workspace") && <ChannelList />}

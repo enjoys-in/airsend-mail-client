@@ -47,7 +47,7 @@ export function AccountSwitcherV2() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex w-full items-center justify-between py-2 px-1">
+              <div className="flex w-full items-center justify-between py-0 px-1">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full border border-black bg-black flex items-center justify-center" >
                     <FavIcon w={24} />

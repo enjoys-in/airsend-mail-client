@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'
 import { useMailStore } from '@/store/mails'
 
 import { API } from '@/lib/api/handler'
-import { MailCard } from '@/app/v2/(version-2)/_components/mail/MailCard'
+import { MailCard } from './MailCard'
 import Loading from '../loading'
 import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event'
 import { useAppSelector } from '@/store/hooks'
@@ -19,10 +19,10 @@ const ClientMailCard = () => {
     const currAccount = useAppSelector(state => state.accounts.currAccount)
 
 
-    const storeInDB = async () => {
+    const storeInDB = async (is_refresh: number = 0) => {
         try {
             setLoading(true)
-            const { data } = await API.getAllMailData(`?is_refresh=1&folder=${folder}`)
+            const { data } = await API.getAllMailData(`?is_refresh=${is_refresh}&folder=${folder}`)
             if (!data.success) {
                 throw new Error("Error fetching emails")
             }
@@ -36,14 +36,9 @@ const ClientMailCard = () => {
     }
     const loadMailFromDB = async () => {
         db.mails
-            .where("[folder+receipient]")
+            .where("[folder_path+receipient]")
             .equals([folder, currAccount?.email!])
             .toArray()
-            // db.mails
-            //     .where("receipient")
-            //     .equals(currAccount?.email!)
-            //     .and(mails => mails.folder === folder)
-            //     .toArray()
             .then(items => {
                 if (items.length === 0) {
                     return storeInDB()
@@ -59,7 +54,7 @@ const ClientMailCard = () => {
     }, [])
 
     useEffect(() => {
-        const unsubscribe = listen(storeInDB)
+        const unsubscribe = listen(() => storeInDB(1))
         return unsubscribe
     }, [])
 

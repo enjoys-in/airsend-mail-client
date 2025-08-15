@@ -7,9 +7,9 @@ if (isClient) {
 }
 import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie, { type EntityTable, Table } from "dexie";
-import { BaseMailData, GetAllMailsPayload } from "@/lib/types/mail.interface";
+import { GetAllMailsPayload } from "@/lib/types/mail.interface";
 import { UserMailAccountSettings } from "@/lib/types/account-settings.interface";
-import { MailBoxListResponse } from "@/lib/types/MailBoxListResponse.interface";
+import { MailBoxListAPIResponse, MailBoxListResponse } from "@/lib/types/MailBoxListResponse.interface";
 import dot from "dot-object";
 import { Prettify } from '@/lib/types';
 
@@ -28,8 +28,7 @@ export type IdbHooks =
 
 type Tables = {
   mails: EntityTable<Partial<GetAllMailsPayload>, "message_id">;
-  temp_mails: EntityTable<BaseMailData, "message_id">;
-  mailboxes: EntityTable<MailBoxListResponse, "path">;
+  mailboxes: EntityTable<MailBoxListAPIResponse, "path">;
   settings: EntityTable<UserMailAccountSettings, "email">;
 };
 
@@ -201,10 +200,10 @@ type TableSchema = {
   [tableName in TableKeys]: string;
 };
 const tables: TableSchema = {
-  mails: "message_id,receipient,folder,uid,[message_id+folder],[message_id+folder+receipient],[folder+receipient]",
-  mailboxes: "++id, path",
-  temp_mails: "message_id, to",
+  mails: "message_id,receipient,folder_path,uid,[message_id+folder_path],[message_id+folder_path+receipient],[folder_path+receipient]",
+  mailboxes: "++id, path,type,[path+type]",
   settings: "email",
+
   // attachments: "message_id"
 };
 

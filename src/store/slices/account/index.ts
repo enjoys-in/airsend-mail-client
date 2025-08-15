@@ -20,7 +20,7 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
         document.cookie = "access_token=; Max-Age=0; path=/";
 
 
-        window.location.href = "/login";
+        window.location.href = "/v2";
       }
 
       if (!data.success) {

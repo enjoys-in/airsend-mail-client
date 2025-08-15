@@ -12,6 +12,9 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 
 
 import { ServiceWorker } from "@/components/shared/ServiceWorker";
+import PingletWidget from "@/components/widget/pinglet";
+import { LogoImage } from "@/components/logo-image";
+import CustomWidget from "@/components/common/custom-widget";
 
 const jakarta = Plus_Jakarta_Sans({
   weight: ['600',],
@@ -86,14 +89,16 @@ export default async function RootLayout({
       <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
       <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
       <link rel="manifest" href="/site.webmanifest"></link>
-      <body
-        className={cn(jakarta.className,)} >
+
+      <body className={cn(jakarta.className,)} >
         <NextTopLoader color="#5a61ff" />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           disableTransitionOnChange
         >
+          <CustomWidget />
+          <PingletWidget />
           <StoreProvider>
             <IndexDbProvider>
               <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
