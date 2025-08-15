@@ -19,7 +19,14 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
       if (!data.success) {
         document.cookie = "access_token=; Max-Age=0; path=/";
 
-
+        await axios.get(`${__config.APP.BASE_URL}/api/v1/auth/logout`, {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            'x-api-key': __config.APP.API_KEY as string,
+          }
+        });
         window.location.href = "/v2";
       }
 

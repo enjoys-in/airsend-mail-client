@@ -18,6 +18,14 @@ export const fetchAdminFromServer = createAsyncThunk<IAdmin>(
         }
       });
       if (!data.success) {
+        await axios.get(`${__config.APP.BASE_URL}/api/v1/admin/logout`, {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            'x-api-key': __config.APP.API_KEY as string,
+          }
+        });
         document.cookie = "admin_access_token=; Max-Age=0; path=/";
         window.location.href = "/h-panel";
       }
