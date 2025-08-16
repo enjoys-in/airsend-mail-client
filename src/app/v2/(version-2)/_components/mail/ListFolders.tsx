@@ -67,23 +67,23 @@ export function ListFolders() {
     return (
         <Suspense fallback={<SkeletonMenuItem />}>
             {all_mailbox.map((folder) => {
-                const isSelected = selected_mailbox === folder.path;
-                const isHovered = hoveredPath === folder.path;
+                const isSelected = selected_mailbox === folder?.path;
+                const isHovered = hoveredPath === folder?.path;
 
                 return (
                     <div
-                        key={folder.name}
+                        key={folder?.name}
                         className={cn(
                             buttonVariants({ variant: "outline", size: "sm" }),
                             "flex justify-between items-center px-2  group rounded-none",
-                            (isSelected || pathname.includes(folder.path.toLowerCase())) ? "dark:bg-[#5a61ff22]" : "bg-neutral-800"
+                            (isSelected || pathname.includes(folder?.path?.toLowerCase())) ? "dark:bg-[#5a61ff22]" : "bg-neutral-800"
                         )}
 
-                        onMouseEnter={() => setHoveredPath(folder.path)}
+                        onMouseEnter={() => setHoveredPath(folder?.path)}
                         onMouseLeave={() => setHoveredPath(null)}
                     >
                         <Link href={`${folder.path.toLowerCase()}`} onClick={() => setSelectedMailbox(folder.path.toLowerCase())} className="flex items-center  gap-2">
-                            <MailBoxIcon name={folder.name} key={folder.special_use} />
+                            <MailBoxIcon name={folder?.name} key={folder?.name} />
                             <div className="w-full flex items-center justify-between">
                                 <span
                                     className={cn(
@@ -91,9 +91,9 @@ export function ListFolders() {
                                         isSelected ? "dark:text-[#5a61ff] font-bold" : "dark:text-zinc-300"
                                     )}
                                 >
-                                    {sentenceCase(folder.name)}
+                                    {sentenceCase(folder?.name)}
                                 </span>
-                                <Badge text={String(folder.unseen_count)} variant="blue" className="w-6 h-6 flex items-center justify-center text-xs" />
+                                <Badge text={String(folder?.unseen_count)} variant="blue" className="w-6 h-6 flex items-center justify-center text-xs" />
                             </div>
                         </Link>
 
@@ -104,7 +104,7 @@ export function ListFolders() {
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        fetchMailboxData(folder.path);
+                                        fetchMailboxData(folder?.path);
                                     }}
                                 >
                                     <RefreshCcw size={14} />
@@ -113,7 +113,7 @@ export function ListFolders() {
                             )}
 
 
-                            <span className="ml-auto text-gray-400 text-xs">  {String(folder.total_count)}</span>
+                            <span className="ml-auto text-gray-400 text-xs">  {String(folder?.total_count)}</span>
                         </div>
                     </div>
 

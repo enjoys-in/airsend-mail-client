@@ -7,7 +7,7 @@ import { create } from 'zustand'
 
 
 const ALLOWED_SPECIAL_USE = [
-    { name: "All Mail", path: "INBOX", special_use: "\\All", unseen_count: 0, total_count: 0 },
+    // { name: "All Mail", path: "INBOX", special_use: "\\All", unseen_count: 0, total_count: 0 },
     { name: "Inbox", path: "inbox", special_use: "\\Inbox", unseen_count: 0, total_count: 0 },
     { name: "Sent", path: "sent", special_use: "\\Sent", unseen_count: 0, total_count: 0 },
     { name: "Drafts", path: "drafts", special_use: "\\Drafts", unseen_count: 0, total_count: 0 },
@@ -106,7 +106,7 @@ export const useMailStore = create<State>()((set) => ({
     selected_mailbox: null,
     setSelectedMailbox: (name) => set({ selected_mailbox: name }),
 
-    all_mailbox: ALLOWED_SPECIAL_USE.slice(1, ALLOWED_SPECIAL_USE.length),
+    all_mailbox: ALLOWED_SPECIAL_USE,
     setAllMailbox: (list) => set({ all_mailbox: list }),
 
     all_emails: null,
