@@ -29,7 +29,7 @@ import { useToast } from "./ui/use-toast";
 import { CustomMailOptions } from "@/lib/types/mail.interface";
 
 import { useAppSelector } from "@/store/hooks";
-import EditorClient from "./editor/EditorClient";
+ 
 import { Card } from "./ui/card";
 import { X } from "lucide-react";
 export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
@@ -110,7 +110,7 @@ export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
             >
               <X className="h-4 w-4" />
             </Button>
-            <EditorClient />
+          
 
           </Card>}
       </>
@@ -122,7 +122,7 @@ export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
       <DrawerTrigger asChild>{children}</DrawerTrigger>
       <DrawerContent className="p-4 min-h-[85dvh] flex flex-col">
         <DrawerTitle className="mb-5">New Message</DrawerTitle>
-        <Content value={mailOptions} handleInputChange={handleInputChange} />
+       
         <DrawerFooter className="flex flex-row justify-end">
           <SendButton onClick={sendMail} />
         </DrawerFooter>

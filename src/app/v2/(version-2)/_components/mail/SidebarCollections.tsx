@@ -99,6 +99,7 @@ const SidebarCollections: React.FC<SidebarCollectionsProps> = ({ text }) => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex flex-row gap-2 my-2 items-center text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-full text-left"
       >
+
         {isFolder ? <Folder size={16} /> : <Tag size={16} />}
         {text}
         <ChevronUp

@@ -61,23 +61,28 @@ const QuotaComponent = () => {
 
     useEffect(() => {
         const updateQuota = async (value: string) => {
-            const data = JSON.parse(value) as { message: string };
+            const data = JSON.parse(value) as number | string
+            if (!data) return
+
             const item = await airsendDB.getMultiNestedItem("settings", currAccount?.email as string, [
                 "settings.usage",
                 "settings.mailbox_size",
             ])
+
             if (item.success && item.value) {
-                const totalUsage = (item?.value.settings.usage || 0) + Number(data.message);
-                const { success, updates } = await airsendDB.updateMultipleNestedItems("settings", currAccount?.email!, {
+                const totalUsage = +(Number(item?.value?.settings?.usage) || 0) + Number(data);
+                const quota_in_percent = Number(totalUsage / item.value.settings.mailbox_size * 100).toFixed(2);
+                const { success } = await airsendDB.updateMultipleNestedItems("settings", currAccount?.email!, {
                     "settings.usage": totalUsage,
-                    "settings.quota_in_percent": Number(totalUsage / item.value.settings.mailbox_size * 100).toFixed(2),
+                    "settings.quota_in_percent": quota_in_percent,
                 });
+
                 if (success) {
                     setQuota({
-                        ...quota,
-                        usage: updates.settings.usage,
-                        quota_in_percent: updates.settings.quota_in_percent,
-                    } as any);
+                        limit: item.value.settings.mailbox_size,
+                        usage: totalUsage,
+                        quota_in_percent: quota_in_percent,
+                    });
                 }
             }
         };

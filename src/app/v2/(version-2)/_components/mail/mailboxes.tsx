@@ -17,9 +17,7 @@ import SidebarCollections from "./SidebarCollections"
 import QuotaComponent from "./QuotaComponent"
 import ShowMeetings from "./ShowMeetings"
 import { AccountSwitcherV2 } from "./AccountSwitcher"
-
-import { ComposeEmailDrawerSheet } from "@/components/compose-email-sheet-dialog"
-import Link from "next/link"
+import MultiTabSystem from "./composeMail"
 
 export function Mailboxes() {
 
@@ -41,12 +39,7 @@ export function Mailboxes() {
         </SidebarGroup>
       </SidebarContent>
       <div className="flex flex-row items-center w-full p-2">
-        <Link prefetch href="/v2/u/compose"
-          className="flex items-center  justify-center gap-2 w-full px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer transition"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="text-sm font-medium">New Mail</span>
-        </Link>
+        <MultiTabSystem />
       </div>
       <SidebarFooter className="border-t">
         <QuotaComponent />

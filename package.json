@@ -87,6 +87,7 @@
     "jotai": "^2.12.5",
     "js-cookie": "^3.0.5",
     "jwt-decode": "^4.0.0",
+    "lexical": "^0.34.0",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.482.0",
     "moment": "^2.30.1",

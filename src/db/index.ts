@@ -25,11 +25,15 @@ export type IdbHooks =
     obj: Record<string, any>
     rev: number
   }
-
+interface StoredFiles {
+  email: string;       // key
+  files: { blob: Blob; name: string; type: string }[]; // store blob + metadata
+}
 type Tables = {
   mails: EntityTable<Partial<GetAllMailsPayload>, "message_id">;
   mailboxes: EntityTable<MailBoxListAPIResponse, "path">;
   settings: EntityTable<UserMailAccountSettings, "email">;
+  files: EntityTable<StoredFiles, "email">
 };
 
 type TableValue<T> = T extends Table<infer U, any> ? U : never;
@@ -203,6 +207,7 @@ const tables: TableSchema = {
   mails: "message_id,receipient,folder_path,uid,[message_id+folder_path],[message_id+folder_path+receipient],[folder_path+receipient]",
   mailboxes: "++id, path,type,[path+type]",
   settings: "email",
+  files: "email",
 
   // attachments: "message_id"
 };

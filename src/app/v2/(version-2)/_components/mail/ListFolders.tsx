@@ -82,7 +82,7 @@ export function ListFolders() {
                         onMouseEnter={() => setHoveredPath(folder?.path)}
                         onMouseLeave={() => setHoveredPath(null)}
                     >
-                        <Link href={`${folder.path.toLowerCase()}`} onClick={() => setSelectedMailbox(folder.path.toLowerCase())} className="flex items-center  gap-2">
+                        <Link href={`/v2/u/mail/${folder.path.toLowerCase()}`} onClick={() => setSelectedMailbox(folder.path.toLowerCase())} className="flex items-center  gap-2">
                             <MailBoxIcon name={folder?.name} key={folder?.name} />
                             <div className="w-full flex items-center justify-between">
                                 <span

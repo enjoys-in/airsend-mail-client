@@ -6,15 +6,15 @@ import { Badge } from "@/components/ui/badge"
 import { MapPin, Calendar, Users, MessageCircle } from "lucide-react"
 
 export default function ProfileCardComponent({
-    children,
+  children,
 }: {
-    children: React.ReactNode
+  children: React.ReactNode
 }) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-8">
       <Popover>
         <PopoverTrigger asChild>
- {children}
+          {children}
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" side="top" align="center">
           <Card className="border-0 shadow-xl">

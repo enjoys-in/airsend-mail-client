@@ -154,5 +154,12 @@ export class API {
     static fetchUserFolderLabels(type?: MailLablesType) {
         return instance.get<ApiResponse<MailBoxListAPIResponse[]>>(`/api/v1/get-folder-labels?type=${type}`)
     }
+    static sendMailOG(data: any) {
+        return instance.post(`/api/v1/send-mail`, data, {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        })
+    }
 }
 

@@ -15,6 +15,8 @@ export enum SocketEventConstants {
   REJECTED = "@@REJECTED",
   MAIL_USAGED = "@@MAIL_USAGE",
   SENT_MAIL = "@@SENT_MAIL",
+
+
 }
 export enum SOCKET_ROOMS {
   GLOBAL = "GLOBAL::SEND:MAILBOX",

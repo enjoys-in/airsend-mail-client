@@ -1,5 +1,4 @@
-import { SingleEmailResponse } from '@/lib/types/EmailResponse'
-import { GetAllMailsPayload, MailData } from '@/lib/types/mail.interface'
+import { GetAllMailsPayload } from '@/lib/types/mail.interface'
 import { MailBoxListAPIResponse, MailLablesType } from '@/lib/types/MailBoxListResponse.interface'
 import { QuotaResponse } from '@/lib/types/QuotaResponse'
 import { create } from 'zustand'

@@ -30,7 +30,35 @@ export function filterNameAndEmail(inputString: string, email: string) {
   return email;  // Return null if the format doesn't match
 }
 
+export const fileToArrayBuffer = (file: File): Promise<{ filename: string; content: ArrayBuffer; contentType: string }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        filename: file.name,
+        contentType: file.type,
+        content: reader.result as ArrayBuffer,
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+};
 
+export const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+};
+
+// Convert an array of Files to Base64
+export const attachmentsToBase64 = async (files: File[]) => {
+  const base64Array = await Promise.all(files.map(file => fileToBase64(file)));
+  return base64Array;
+};
 
 
 export function encryptData(data: string) {
