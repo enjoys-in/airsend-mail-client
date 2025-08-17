@@ -11,30 +11,29 @@ import { useAppSelector } from '@/store/hooks'
 
 
 export const DisplayTabComponent = () => {
-    const { activeItem, setSettings, settings } = useSettingsStore()
+    const { activeItem, setSettings, settings ,keys} = useSettingsStore()
     const currAccount = useAppSelector((state) => state.accounts.currAccount)
 
     const { listen } = useCustomEvent(CustomEventKey.SyncSettings)
 
     const componentMap: Record<string, any> = {
-        "Account and password": lazy(() => import("./profileSettings")),
+        "account-and-password": lazy(() => import("./profileSettings")),
+        "signatures": lazy(() => import("./signatures/display-signature")),
         // "Language and time": lazy(() => import("./mailLanguageAndTime")),
-        "Notifications": lazy(() => import("./notificationsSettings")),
+        "notifications": lazy(() => import("./notificationsSettings")),
         // "Security and privacy": lazy(() => import("./mailSecurityAndPrivacy")),
         // "Recovery": lazy(() => import("./mailRecovery")),
-        "Appearance": lazy(() => import("./mailAppearance")),
-        "Identity and addresses": lazy(() => import("./identitySection")),
-        "Import via Easy Switch": lazy(() => import("./importViaEasySwitch")),
-        "Messages and composing": lazy(() => import("./emailSettings")),
-        "Email Forwarding": lazy(() => import("./emailForwarding")),
-        "Folders and labels": lazy(() => import("./folderLabels")),
-        "Encryption and keys": lazy(() => import("./encryptionSettings")),
-        "Email privacy": lazy(() => import("./configuration/emailPrivacy")),
+        "appearance": lazy(() => import("./mailAppearance")),
+        "identity-and-addresses": lazy(() => import("./identitySection")),
+        "import-via-easy-switch": lazy(() => import("./importViaEasySwitch")),
+        "messages-and-composing": lazy(() => import("./emailSettings")),
+        "email-forwarding": lazy(() => import("./emailForwarding")),
+        "folders-and-labels": lazy(() => import("./folderLabels")),
+        "encryption-and-keys": lazy(() => import("./encryptionSettings")),
+        "email-privacy": lazy(() => import("./configuration/emailPrivacy")),
 
-        "Filters": lazy(() => import("./filters/emailFilter")),
-        "Email Config": lazy(() => import("./configuration/emailConfig")),
-
-
+        "filters": lazy(() => import("./filters/emailFilter")),
+        "email-config": lazy(() => import("./configuration/emailConfig")),
     }
     const TabComponent = componentMap[activeItem]
     const updateSettingsToStore = React.useCallback(
@@ -78,8 +77,8 @@ export const DisplayTabComponent = () => {
         return unsubscribe
     }, [listen])
     return (
-        <React.Suspense fallback={<FallbackSkelton activeItem={activeItem} />}>
-            {TabComponent ? <TabComponent email={currAccount?.email} /> : <FallbackSkelton activeItem={activeItem} />}
+        <React.Suspense fallback={<FallbackSkelton activeItem={keys[activeItem]} />}>
+            {TabComponent ? <TabComponent email={currAccount?.email} /> : <FallbackSkelton activeItem={keys[activeItem]} />}
         </React.Suspense>
     )
 }

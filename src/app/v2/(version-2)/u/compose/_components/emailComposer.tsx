@@ -163,64 +163,87 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
             <span className="text-sm text-gray-600 dark:text-gray-400 w-12">
               From
             </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-auto px-0 pb-1 pt-0 justify-start gap-3 w-full border-0 border-b border-gray-300 dark:border-gray-700 
+            {
+              accounts.length > 0 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="h-auto px-0 pb-1 pt-0 justify-start gap-3 w-full border-0 border-b border-gray-300 dark:border-gray-700 
              rounded-none shadow-none focus-visible:ring-0 focus-visible:outline-none hover:bg-transparent"
-                >
-                  <div className="flex items-center flex-1 min-w-0">
-                    <span
-                      className="flex items-center gap-2 pl-1 pr-2 py-0.5 rounded-full border border-gray-300 dark:border-gray-700 
-       bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs font-medium truncate max-w-full"
                     >
-                      {/* Avatar inside pill, no separate border so it aligns */}
-                      <div className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-300 dark:bg-gray-700 text-white text-[10px]">
-                        {selectedAccount.name.charAt(0).toUpperCase()}
+                      <div className="flex items-center flex-1 min-w-0">
+                        <span
+                          className="flex items-center gap-2 pl-1 pr-2 py-0.5 rounded-full border border-gray-300 dark:border-gray-700 
+       bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs font-medium truncate max-w-full"
+                        >
+                          {/* Avatar inside pill, no separate border so it aligns */}
+                          <div className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-300 dark:bg-gray-700 text-white text-[10px]">
+                            {selectedAccount.name.charAt(0).toUpperCase()}
+                          </div>
+
+                          {/* Name + email */}
+                          <span className="truncate">
+                            {selectedAccount.name}{" "}
+                            <span className="text-gray-600 dark:text-gray-400 truncate">
+                              {`<${selectedAccount.email}>`}
+                            </span>
+                          </span>
+                        </span>
                       </div>
 
-                      {/* Name + email */}
-                      <span className="truncate">
-                        {selectedAccount.name}{" "}
-                        <span className="text-gray-600 dark:text-gray-400 truncate">
-                          {`<${selectedAccount.email}>`}
-                        </span>
-                      </span>
-                    </span>
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </Button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent
+                    align="start"
+                    className="dark:bg-neutral-900 bg-neutral-100 border-none text-slate-900 dark:text-gray-200 w-64"
+                  >
+                    {accounts.map((account) => (
+                      <DropdownMenuItem
+                        key={account.email}
+                        onClick={() => setSelectedAccount(account)}
+                        className="flex items-center gap-2 dark:hover:bg-neutral-800 hover:bg-neutral-200 cursor-pointer"
+                      >
+                        <Avatar className="w-8 h-8">
+                          <AvatarFallback className="text-sm">
+                            {account.name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-medium truncate">
+                            {account.name}
+                          </span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                            {account.email}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : <div className="flex items-center flex-1 min-w-0">
+                <span
+                  className="flex items-center gap-2 pl-1 pr-2 py-0.5 rounded-full border border-gray-300 dark:border-gray-700 
+       bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs font-medium truncate max-w-full"
+                >
+                  {/* Avatar inside pill, no separate border so it aligns */}
+                  <div className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-300 dark:bg-gray-700 text-white text-[10px]">
+                    {selectedAccount.name.charAt(0).toUpperCase()}
                   </div>
 
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                </Button>
-              </DropdownMenuTrigger>
+                  {/* Name + email */}
+                  <span className="truncate">
+                    {selectedAccount.name}{" "}
+                    <span className="text-gray-600 dark:text-gray-400 truncate">
+                      {`<${selectedAccount.email}>`}
+                    </span>
+                  </span>
+                </span>
+              </div>
+            }
 
-              <DropdownMenuContent
-                align="start"
-                className="dark:bg-neutral-900 bg-neutral-100 border-none text-slate-900 dark:text-gray-200 w-64"
-              >
-                {accounts.map((account) => (
-                  <DropdownMenuItem
-                    key={account.email}
-                    onClick={() => setSelectedAccount(account)}
-                    className="flex items-center gap-2 dark:hover:bg-neutral-800 hover:bg-neutral-200 cursor-pointer"
-                  >
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback className="text-sm">
-                        {account.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-medium truncate">
-                        {account.name}
-                      </span>
-                      <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                        {account.email}
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
             <div className="flex gap-2">
               <Button
                 variant="ghost"
@@ -444,7 +467,7 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
       <HtmlEditor
         onChange={(html) => setBody(html)}
         footerElement={<ComposeFooter data={{
-          from: selectedAccount.email,
+          from: `${selectedAccount?.name} <${selectedAccount.email}>`,
           to: toChips.map((chip) => chip.email),
           cc: ccChips.map((chip) => chip.email),
           bcc: bccChips.map((chip) => chip.email),

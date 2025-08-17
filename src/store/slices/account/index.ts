@@ -49,11 +49,7 @@ interface EmailAccount {
   limit: string;
 }
 // dummyData.ts
-const emailAccounts: EmailAccount[] = [
-  { domain: "airsend.in", email: "mullayam06@airsend.in", name: "Mullayam", usage: "2GB", limit: "10GB" },
-  { domain: "airsend.in", email: "lalu@airsend.in", name: "Lalu", usage: "3GB", limit: "10GB" },
-  { domain: "airsend.in", email: "mayawati@airsend.in", name: "Mayawati", usage: "5GB", limit: "10GB" },
-];
+const emailAccounts: EmailAccount[] = [];
 
 interface AccountState {
   currAccount: Account | null;

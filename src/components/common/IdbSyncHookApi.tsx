@@ -20,7 +20,7 @@ const IdbSyncHookApi = () => {
                     if (Object.keys(modifications).length === 0) {
                         return toast.info("Nothing to Update")
                     }
-                    if (usage || mailbox_size || quota_in_percent) {
+                    if ("usage" in modifications || "mailbox_size" in modifications || "quota_in_percent" in modifications) {
                         return
                     }
                     const res = toast.promise(API.handleUpdateMailUserSetting({

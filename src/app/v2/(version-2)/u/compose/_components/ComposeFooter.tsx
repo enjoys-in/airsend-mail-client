@@ -16,10 +16,10 @@ import {
 } from "@/components/ui/popover";
 import { useHtmlEditor } from "./plain-editor/htmlEditor";
 import AiPromptButton from "./plain-editor/aiPromptButton";
-import { SendMail } from "@/components/server-actions/send-mail";
+
 import { toast } from "sonner";
-import { fileToArrayBuffer } from '@/lib/utils';
-import axios, { AxiosError } from "axios";
+
+import { AxiosError } from "axios";
 import { useMultiTabStore } from "@/store/settings/multiTabSystem";
 import { API } from "@/lib/api/handler";
 interface EmailData {
@@ -44,6 +44,7 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
             currAccount.email as string,
             "settings.signatures"
         );
+
         if (success && value) setSignatures(value);
     };
     const handleInsertSignature = (signature: string) => {
@@ -92,7 +93,7 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
             }
 
             toast.success("Email sent successfully");
-            closeTab(focusedTab)
+            // closeTab(focusedTab)
         } catch (error: any) {
 
             if (error instanceof AxiosError && error.response?.data.message === "Validation Error") {
@@ -114,35 +115,57 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
                 <AiPromptButton />
             </div>
 
-            <div className="flex items-center gap-1">
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" title="Signatures">
-                            <Pen size={18} />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent side="top" className="w-72">
-                        <h4 className="text-sm font-medium mb-2">Signatures</h4>
-                        {signatures.length > 0 ? (
-                            <div className="space-y-2">
-                                {signatures.map((signature, index) => (
-                                    <div
-                                        onClick={() => handleInsertSignature(signature)}
-                                        key={index}
-                                        className="p-2 rounded-md hover:bg-accent cursor-pointer text-sm"
-                                    >
-                                        {signature}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-muted-foreground">
-                                No signatures found
-                            </p>
-                        )}
-                    </PopoverContent>
-                </Popover>
+           <div className="flex items-center gap-1">
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Signatures"
+        className="hover:bg-accent rounded-lg h-8 w-8"
+      >
+        <Pen size={16} />
+      </Button>
+    </PopoverTrigger>
+
+    <PopoverContent
+      side="top"
+      align="start"
+      className="w-64 p-2 rounded-lg shadow-sm border bg-popover"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-semibold">Signatures</h4>
+        <span className="text-[10px] text-muted-foreground">
+          {signatures?.length ?? 0}
+        </span>
+      </div>
+
+      {signatures?.length > 0 ? (
+        <div className="space-y-1">
+          {signatures.map((signature, index) => (
+            <div
+              key={index}
+              onClick={() => handleInsertSignature(signature.line)}
+              className="px-2 py-1.5 rounded-md border hover:bg-accent cursor-pointer text-xs transition-colors"
+            >
+              <p className="font-medium truncate">{signature.name}</p>
+              {signature.preview && (
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {signature.preview}
+                </p>
+              )}
             </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground text-center py-2">
+          No signatures found
+        </p>
+      )}
+    </PopoverContent>
+  </Popover>
+</div>
+
 
             {/* RIGHT: Send Button with dropdown */}
             <DropdownMenu>

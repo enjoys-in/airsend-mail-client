@@ -16,33 +16,36 @@ import {
     Forward,
     Globe2,
     Key,
-    Server,
+
     Bell,
+    Pen,
 } from "lucide-react"
 import { useSettingsStore } from "@/store/settings"
 import { EnvelopeOpenIcon } from "@radix-ui/react-icons"
 
 const accountItems = [
-    { icon: <User size={18} />, label: "Account and password" },
+    { icon: <User size={18} />, label: "Account and password", key: "account-and-password" },
+    { icon: <Pen size={18} />, label: "Signatures", key: "signatures" },
+
     // { icon: <Globe size={18} />, label: "Language and time" },
-    { icon: <Paintbrush size={18} />, label: "Appearance" },
-    { icon: <Bell size={18} />, label: "Notifications" },
+    { icon: <Paintbrush size={18} />, label: "Appearance", key: "appearance" },
+    { icon: <Bell size={18} />, label: "Notifications", key: "notifications" },
 
     // { icon: <Shield size={18} />, label: "Security and privacy" },
-    { icon: <Import size={18} />, label: "Import via Easy Switch" },
+    { icon: <Import size={18} />, label: "Import via Easy Switch", key: "import-via-easy-switch" },
     // { icon: <RotateCcw size={18} />, label: "Recovery", notification: true },
 ]
 
 const mailItems = [
-    { icon: <Filter size={18} />, label: "Filters" },
+    { icon: <Filter size={18} />, label: "Filters", key: "filters" },
     // { icon: <Server size={18} />, label: "IMAP/SMTP" },
-    { icon: <EnvelopeOpenIcon height={18} width={18} />, label: "Email Config" },
-    { icon: <Lock size={18} />, label: "Email privacy" },
-    { icon: <Key size={18} />, label: "Encryption and keys" },
-    { icon: <Folder size={18} />, label: "Folders and labels" },
-    { icon: <Forward size={18} />, label: "Email Forwarding" },
-    { icon: <UserCircle size={18} />, label: "Identity and addresses" },
-    { icon: <MessageSquare size={18} />, label: "Messages and composing" },
+    { icon: <EnvelopeOpenIcon height={18} width={18} />, label: "Email Config", key: "email-config" },
+    { icon: <Lock size={18} />, label: "Email privacy", key: "email-privacy" },
+    { icon: <Key size={18} />, label: "Encryption and keys", key: "encryption-and-keys" },
+    { icon: <Folder size={18} />, label: "Folders and labels", key: "folders-and-labels" },
+    { icon: <Forward size={18} />, label: "Email Forwarding", key: "email-forwarding" },
+    { icon: <UserCircle size={18} />, label: "Identity and addresses", key: "identity-and-addresses" },
+    { icon: <MessageSquare size={18} />, label: "Messages and composing", key: "messages-and-composing" },
 ]
 
 export const SettingsMenu = () => {
@@ -52,7 +55,7 @@ export const SettingsMenu = () => {
         const updateTabFromHash = () => {
             const hash = decodeURIComponent(window.location.hash.replace("#", ""))
             if (hash) {
-                // setActiveItem(hash)
+                setActiveItem(hash)
             }
         }
 
@@ -61,6 +64,7 @@ export const SettingsMenu = () => {
         return () => window.removeEventListener("hashchange", updateTabFromHash)
     }, [])
     useEffect(() => {
+
         if (activeItem) {
             window.location.hash = encodeURIComponent(activeItem.toLocaleLowerCase().replaceAll(" ", "-"))
         }
@@ -73,9 +77,9 @@ export const SettingsMenu = () => {
                     {accountItems.map((item) => (
                         <button
                             key={item.label}
-                            className={`flex items-center w-full px-3 py-2 text-sm rounded-md ${activeItem === item.label ? "bg-gray-800" : "hover:bg-gray-900"
+                            className={`flex items-center w-full px-3 py-2 text-sm rounded-md ${activeItem === item.key ? "bg-gray-800" : "hover:bg-gray-900"
                                 }`}
-                            onClick={activeItem === item.label ? undefined : () => setActiveItem(item.label)}
+                            onClick={activeItem === item.label ? undefined : () => setActiveItem(item.key)}
                         >
                             <span className="mr-3 text-gray-400">{item.icon}</span>
                             <span>{item.label}</span>
@@ -95,9 +99,9 @@ export const SettingsMenu = () => {
                     {mailItems.map((item) => (
                         <button
                             key={item.label}
-                            className={`flex items-center w-full px-3 py-2 text-sm rounded-md ${activeItem === item.label ? "bg-gray-800" : "hover:bg-gray-900"
+                            className={`flex items-center w-full px-3 py-2 text-sm rounded-md ${activeItem === item.key ? "bg-gray-800" : "hover:bg-gray-900"
                                 }`}
-                            onClick={activeItem === item.label ? undefined : () => setActiveItem(item.label)}
+                            onClick={activeItem === item.key ? undefined : () => setActiveItem(item.key)}
 
                         >
                             <span className="mr-3 text-gray-400">{item.icon}</span>

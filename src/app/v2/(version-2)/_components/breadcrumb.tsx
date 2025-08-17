@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { CustomEventKey, useCustomEvent } from "@/hooks/use-custom-event";
 const BreadcrumbInfo = () => {
     const { selected_mailbox } = useMailStore();
-    const { activeItem } = useSettingsStore();
+    const { activeItem,keys } = useSettingsStore();
 
     const { emit } = useCustomEvent(CustomEventKey.SyncSettings);
     const pathname = usePathname();
@@ -46,7 +46,7 @@ const BreadcrumbInfo = () => {
                             <>
                                 <BreadcrumbLink href="/v2/u/mail">Settings</BreadcrumbLink>
                                 <BreadcrumbSeparator />
-                                <BreadcrumbPage>{activeItem}</BreadcrumbPage>
+                                <BreadcrumbPage>{keys[activeItem]}</BreadcrumbPage>
                                 <BreadcrumbSeparator />
                                 <Button
                                     onClick={emit}
