@@ -3,7 +3,7 @@ import serverAxios from '@/lib/api/serverAxios'
 import { ApiResponse } from '@/lib/types'
 import { AxiosResponse } from 'axios'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MailIframe } from '@/components/common/mail-iframe'
+import { MailIframe } from '@/app/v2/(version-2)/u/mail/[folder]/[message_id]/_components/mail-iframe'
 import { EncodedMessageResponse } from '@/lib/types/mail.interface'
 
 
@@ -16,7 +16,7 @@ const ServerMailBody = async ({ folder, message_id }: { message_id: string, fold
             throw new Error(data.message)
         }
 
-        return <MailIframe data={data.result}></MailIframe>
+        return <MailIframe message_id={message_id} data={data.result}></MailIframe>
     } catch (error) {
         return (
             <div className="space-y-4 p-4">

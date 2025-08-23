@@ -15,7 +15,7 @@ import { MailBoxIcon } from "./MailboxIcons"
 
 import { API } from "@/lib/api/handler"
 import { airsendDB, db } from "@/db"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { MailLablesType } from "@/lib/types/MailBoxListResponse.interface"
 
 
@@ -24,6 +24,7 @@ export function ListFolders() {
     const { all_mailbox, selected_mailbox, setSelectedMailbox, setAllMailbox, setError, setAllFolders, setAllLabels } = useMailStore()
 
     const pathname = usePathname()
+    const router = useRouter()
 
     const fetchMailboxData = useCallback(async (current_mailbox: string) => {
         try {
@@ -72,17 +73,21 @@ export function ListFolders() {
 
                 return (
                     <div
+                        onClick={() => {
+                            setSelectedMailbox(folder.path.toLowerCase())
+                            router.push(`/v2/u/mail/${folder.path.toLowerCase()}`)
+                        }}
                         key={folder?.name}
                         className={cn(
                             buttonVariants({ variant: "outline", size: "sm" }),
-                            "flex justify-between items-center px-2  group rounded-none",
+                            "flex justify-between items-center px-2  group rounded-none cursor-pointer",
                             (isSelected || pathname.includes(folder?.path?.toLowerCase())) ? "dark:bg-[#5a61ff22]" : "bg-neutral-800"
                         )}
 
                         onMouseEnter={() => setHoveredPath(folder?.path)}
                         onMouseLeave={() => setHoveredPath(null)}
                     >
-                        <Link href={`/v2/u/mail/${folder.path.toLowerCase()}`} onClick={() => setSelectedMailbox(folder.path.toLowerCase())} className="flex items-center  gap-2">
+                        <Link prefetch href={`/v2/u/mail/${folder.path.toLowerCase()}`} className="flex items-center w-40 gap-2">
                             <MailBoxIcon name={folder?.name} key={folder?.name} />
                             <div className="w-full flex items-center justify-between">
                                 <span

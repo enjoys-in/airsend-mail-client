@@ -13,7 +13,7 @@ import { Fragment } from "react";
 import { useMailStore } from "@/store/mails";
 import { capitalCase } from "change-case";
 import { SyncButton } from "./syncButton";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { useSettingsStore } from "@/store/settings";
 
 import { RefreshCcw } from "lucide-react";
@@ -21,7 +21,9 @@ import { Button } from "@/components/ui/button";
 import { CustomEventKey, useCustomEvent } from "@/hooks/use-custom-event";
 const BreadcrumbInfo = () => {
     const { selected_mailbox } = useMailStore();
-    const { activeItem,keys } = useSettingsStore();
+    const params = useParams();
+
+    const { activeItem, keys } = useSettingsStore();
 
     const { emit } = useCustomEvent(CustomEventKey.SyncSettings);
     const pathname = usePathname();
@@ -38,7 +40,7 @@ const BreadcrumbInfo = () => {
                                 <BreadcrumbLink href="/v2/u/mail">Mail</BreadcrumbLink>
                                 <BreadcrumbSeparator />
                                 <BreadcrumbPage>
-                                    {capitalCase(selected_mailbox || "Inbox")}
+                                    {capitalCase(selected_mailbox || (params as any)["folder"] || "Inbox")}
                                 </BreadcrumbPage>
                             </>
                         )}

@@ -12,7 +12,6 @@ const page = async ({ params }: any) => {
       className="flex-1 md:flex-none flex flex-col overflow-auto"
       style={{ height: "calc(100dvh - 80px)" }}
     >
-
       <ClientDisplay folder={folder} message_id={message_id} />
       <MailDisplay folder={folder} message_id={message_id} >
         <Suspense fallback={<MailDisplaySkeleton />}>

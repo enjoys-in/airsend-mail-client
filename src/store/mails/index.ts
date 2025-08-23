@@ -26,6 +26,9 @@ interface State {
     error: string | null
     setError: (error: string | null) => void
 
+    rawData:Record<string, any>
+    setRawData: (html: Record<string, any>) => void
+
     selected_mailbox: string | null
     setSelectedMailbox: (name: string | null) => void
 
@@ -119,5 +122,8 @@ export const useMailStore = create<State>()((set) => ({
 
     all_labels: null,
     setAllLabels: (list) => set({ all_labels: list }),
+
+    rawData: {},
+    setRawData: (html) => set({ rawData: html }),
 })
 )

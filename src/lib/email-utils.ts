@@ -1,6 +1,6 @@
 import { parseFrom as _parseFrom, parseAddressList as _parseAddressList } from 'email-addresses';
- 
- 
+
+
 import Color from 'color';
 import { EMAIL_HTML_TEMPLATE } from './email.contants';
 
@@ -202,7 +202,7 @@ export const parseFrom = (fromHeader: string) => {
   return { name, email };
 };
 
-export const parseAddressList = (header: string): Record<string,string>[] => {
+export const parseAddressList = (header: string): Record<string, string>[] => {
   const parsedAddressList = _parseAddressList(header);
   if (!parsedAddressList) return [FALLBACK_SENDER];
 

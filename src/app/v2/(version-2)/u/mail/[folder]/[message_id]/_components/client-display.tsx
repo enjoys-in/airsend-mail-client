@@ -3,9 +3,12 @@ import {
     ChevronDown,
     ChevronLeft,
     Forward,
+    Layout,
     Lock,
+    Moon,
     MoreVertical,
     Reply,
+    Sun,
     Trash2,
 } from "lucide-react";
 
@@ -44,7 +47,7 @@ import {
 import { FileAttachmentInterface, MailData } from "@/lib/types/mail.interface";
 import { ApiResponse } from '@/lib/types';
 import FileAttachment from '../../../_components/file-attachment';
-import { MailIframe } from '@/components/common/mail-iframe';
+import { MailIframe } from '@/app/v2/(version-2)/u/mail/[folder]/[message_id]/_components/mail-iframe';
 import { API } from '@/lib/api/handler';
 import { AxiosResponse } from 'axios';
 
@@ -55,12 +58,14 @@ import { useAppSelector } from "@/store/hooks";
 import { MailDropdown } from "./menu-dropdown";
 import { SendMail } from "@/components/server-actions/send-mail";
 import { Security } from "@/lib/security";
+import { useMailRenderSettings } from "@/store/mails/mail-render-settings";
+import { RiLayout2Fill } from "@remixicon/react";
 
 
 const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: string }) => {
     const router = useRouter();
     const currAccount = useAppSelector(state => state.accounts.currAccount)
-
+    const { setRenderStyle, renderStyle, setRenderMode, renderMode } = useMailRenderSettings()
 
     const { selectedMail, setSelectedMail, setLoading } = useMailStore()
     useEffect(() => {
@@ -84,7 +89,7 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                     size="icon"
                     variant="ghost"
                     className="bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full"
-                    onClick={() => router.back()}
+                    onClick={() => router.push(`/v2/u/mail/${folder}`)}
                 >
                     <ChevronLeft />
                 </Button>
@@ -103,10 +108,7 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                     <Avatar>
                         <AvatarImage alt={formatEmail(Security.DecryptFromString(selectedMail?.from_email)).toLocaleUpperCase()} />
                         <AvatarFallback className='flex items-center justify-center h-10 w-10 bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full'>
-                            {selectedMail?.from_email && formatEmail(Security.DecryptFromString(selectedMail?.from_email)).toLocaleUpperCase()
-                                .split(" ")
-                                .map((chunk) => chunk[0])
-                                .join("")}
+                            {selectedMail?.from_email && formatEmail(Security.DecryptFromString(selectedMail?.from_email)).toLocaleUpperCase()[0]}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col ml-2 md:ml-0">
@@ -114,7 +116,13 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                             <div className="font-semibold">{selectedMail?.from_email && formatEmail(Security.DecryptFromString(selectedMail?.from_email))}</div>
                         </div>
                         <div className="flex flex-row gap-2 items-center">
-                            <span className="text-xs text-zinc-500">To me</span>
+                            <span className="group relative text-xs text-zinc-500 cursor-pointer">
+                                To me
+                                <span className="absolute left-0 top-full mt-1 hidden group-hover:block rounded-md bg-black text-white text-[10px] px-2 py-1 whitespace-nowrap shadow-md z-10">
+                                    {selectedMail?.receipient}
+                                </span>
+                            </span>
+
                             <Tooltip>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -163,9 +171,25 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                     </div>
                 </div>
                 <div className="w-full lg:w-auto flex justify-end">
+                    {/* <Button onClick={() => setRenderStyle("light")}
+                        variant="ghost" size={"icon"}>
+                        {renderStyle === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                    </Button>
+                    {renderMode === "iframe" ?
+                        <Button onClick={() => setRenderMode("dynamicIframe")}
+                            variant="ghost" size={"icon"}>
+                            <Layout className="h-4 w-4" />
+                        </Button>
+                        : <Button onClick={() => setRenderMode("iframe")}
+                            variant="ghost" size={"icon"}>
+                            <RiLayout2Fill className="h-4 w-4" />
+                        </Button>
+                    } */}
+
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
+                            onClick={() => { }}
                                 variant="ghost"
                                 size="icon"
                                 disabled={!selectedMail}
@@ -229,8 +253,6 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                             <span className="sr-only">More</span>
                         </Button>
                     </MailDropdown>
-
-
                 </div>
             </div>
 

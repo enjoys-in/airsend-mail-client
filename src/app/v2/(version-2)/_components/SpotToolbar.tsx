@@ -15,7 +15,7 @@ import { MailEventData } from "@/lib/types/update-mail-events.interface"
 import { airsendDB } from "@/db"
 
 export function SpotToolbar() {
-  const { checkedItems, all_emails, setCheckedItems, selected_mailbox ,setAllEmails} = useMailStore()
+  const { checkedItems, all_emails, setCheckedItems, selected_mailbox, setAllEmails } = useMailStore()
   const { listen } = useCustomEvent(CustomEventKey.MailEvents)
   const handleImapEvents = useCallback(
     async (data: MailEventData) => {
@@ -76,9 +76,10 @@ export function SpotToolbar() {
             return toast.error(res.message)
           }
           if (data.action === "delete" || data.action === "move" || data.action === "archive") {
-
             const udpatedEmails = all_emails && all_emails?.filter((item) => !checkedItems.includes(item.message_id))
-            udpatedEmails && setAllEmails(udpatedEmails)
+
+
+            setAllEmails(udpatedEmails || [])
             await airsendDB.bulkDeleteItems("mails", checkedItems)
             setCheckedItems([])
 
