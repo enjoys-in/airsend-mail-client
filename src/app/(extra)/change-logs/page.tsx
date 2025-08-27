@@ -1,6 +1,22 @@
 import { Info } from "lucide-react"
 
 const CHANGE_LOGS = [
+    {
+        date: "Aug 27, 2025",
+        version: "1.4",
+        color: "from-orange-600 to-yellow-400",
+        versionNumber: "1.4",
+        improvements: [
+            "User Can Now Send Mails",
+            "Can See Mail, Decrypted and Read it",
+            "Adding User Events (Delete, Move, Star, Unstar etc)",
+        ],
+        bugfixes: [
+            "Used Custom Plain Text Editor",
+            "Shadcn UI Lexical Editor Version",
+            "Update the Mail usage while sending and receiving mails",
+        ]
+    },
      {
         date: "Aug 20, 2025",
         version: "1.3",
