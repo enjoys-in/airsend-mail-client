@@ -7,11 +7,11 @@ import { redirect } from "next/navigation";
 
 export async function AdminLogout() {
     try {
-        (await cookies()).delete("admin_access_token")
-        await serverAxios.get("/api/v1/auth/admin/logout")
-
-        
-        return  redirect("/")
+        const { data } = await serverAxios.get("/api/v1/auth/admin/logout")
+        if (data.success) {
+            (await cookies()).delete("admin_access_token")
+        }
+        return redirect("/")
     } catch (error) {
 
     }

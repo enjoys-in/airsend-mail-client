@@ -13,8 +13,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 
 import { ServiceWorker } from "@/components/shared/ServiceWorker";
 import PingletWidget from "@/components/widget/pinglet";
-import { LogoImage } from "@/components/logo-image";
-import CustomWidget from "@/components/common/custom-widget";
+
 
 const jakarta = Plus_Jakarta_Sans({
   weight: ['600',],
@@ -97,7 +96,6 @@ export default async function RootLayout({
           defaultTheme="dark"
           disableTransitionOnChange
         >
-          {/* <CustomWidget /> */}
           <PingletWidget />
           <StoreProvider>
             <IndexDbProvider>

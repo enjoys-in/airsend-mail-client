@@ -10,6 +10,7 @@ import { CalendarProvider } from "./(home)/calender/_components/event-calendar/c
 import { MobileLayoutV2 } from "./_components/mobile-layout";
 import { fetchCurrentUser } from "@/store/slices/account";
 import SentMailToast from "@/components/common/sent-mail";
+import CustomWidget from "@/components/common/custom-widget";
 
 function MainLayout({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
@@ -17,7 +18,9 @@ function MainLayout({ children }: { children: ReactNode }) {
     dispatch(fetchCurrentUser());
   }, []);
   return (
-    <SocketContextProvider>     
+    <SocketContextProvider>
+      <CustomWidget />
+
       <CalendarProvider>
         <Suspense fallback={<Spinner />}>
           <div className="flex md:hidden flex-1 bg-[#111315]">

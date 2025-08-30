@@ -15,7 +15,6 @@ export const makeStore = () => {
       labels: labelsReducer,
       folders: foldersReducer,
       mailboxes: foldersReducer,
-
       admin: adminReducer
     },
   });

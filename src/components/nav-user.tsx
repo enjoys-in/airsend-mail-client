@@ -33,57 +33,93 @@ import { useAppSelector } from "@/store/hooks"
 import { formatNameInParts } from "@/lib/utils"
 import { AdminLogout } from "./server-actions/logout-admin"
 import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 export function NavUser() {
   const { isMobile } = useSidebar()
   const router = useRouter()
+  const [avatar, setAvatar] = useState<string>()
   const user = useAppSelector(state => state.admin.user)
+  async function cacheImage(url: string, key: string) {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    const reader = new FileReader()
 
+    return new Promise<string>((resolve) => {
+      reader.onloadend = () => {
+        localStorage.setItem(key, reader.result as string)
+        resolve(reader.result as string)
+      }
+      reader.readAsDataURL(blob) // convert blob → base64
+    })
+  }
 
   const handleLogout = async () => {
     await AdminLogout()
     router.push("/h-panel")
 
   }
+  useEffect(() => {
+    if (user) {
+      const key = `avatar-${user?.mid}`
+      const cached = localStorage.getItem(key)
+      if (cached) {
+        setAvatar(cached)
+      } else if (user?.picture) {
+        cacheImage(user.picture, key).then(setAvatar)
+      }
+    }
+
+  }, [user?.picture])
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground md:h-8 md:p-0"
-            >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg">{user?.name && formatNameInParts(user?.name as string) || "AE"}</AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user?.name}</span>
-                <span className="truncate text-xs">{user?.email}</span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
-          >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                onClick={() => router.push(`/h-panel/settings/${user?.name}`)}
+        {
+          user &&
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuButton
+                size="lg"
+                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground md:h-8 md:p-0"
               >
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg">{formatNameInParts(user?.name as string || "AE")}</AvatarFallback>
+                  {user?.picture ?
+                    <AvatarImage src={avatar} alt={user?.name} /> :
+                    <AvatarFallback className="rounded-lg">{formatNameInParts(user?.name as string || "AE")}</AvatarFallback>
+                  }
+
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{user?.name}</span>
                   <span className="truncate text-xs">{user?.email}</span>
                 </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {/* <DropdownMenuGroup>
+                <ChevronsUpDown className="ml-auto size-4" />
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+              side={isMobile ? "bottom" : "right"}
+              align="end"
+              sideOffset={4}
+            >
+              <DropdownMenuLabel className="p-0 font-normal">
+                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  onClick={() => router.push(`/h-panel/settings/${user?.name}`)}
+                >
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    {user?.picture ?
+                      <AvatarImage src={avatar} alt={user?.name} /> :
+                      <AvatarFallback className="rounded-lg">{formatNameInParts(user?.name as string || "AE")}</AvatarFallback>
+                    }
+
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">{user?.name}</span>
+                    <span className="truncate text-xs">{user?.email}</span>
+                  </div>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {/* <DropdownMenuGroup>
               <DropdownMenuItem>
                 <Sparkles className="mr-2 w-4 h-4" />
                 Upgrade to Pro
@@ -105,12 +141,14 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator /> */}
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 w-4 h-4" />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 w-4 h-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+
       </SidebarMenuItem>
     </SidebarMenu>
   )

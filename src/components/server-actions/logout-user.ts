@@ -8,9 +8,10 @@ import { redirect } from "next/navigation";
 
 export async function UserLogout() {
     try {
-        (await cookies()).delete("access_token")
-        await serverAxios.get("/api/v1/auth/logout")
-
+        const { data } = await serverAxios.get("/api/v1/auth/logout")
+        if (data.success) {
+            (await cookies()).delete("access_token")
+        }
 
         return redirect("/v2")
     } catch (error) {

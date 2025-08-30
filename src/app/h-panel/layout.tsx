@@ -1,8 +1,12 @@
-import  { Suspense } from 'react'
+import CustomWidget from '@/components/common/custom-widget'
+import { Suspense } from 'react'
 
 const layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <Suspense>{children}</Suspense>
+    <Suspense>
+      <CustomWidget />
+      {children}
+    </Suspense>
   )
 }
 

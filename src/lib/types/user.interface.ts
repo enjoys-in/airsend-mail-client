@@ -3,6 +3,7 @@ export interface IAdmin {
     email: string;
     name: string;
     role: ROLE_TYPE;
+    picture: string | null
 }
 export interface IUser {
     mid: string;
@@ -18,7 +19,7 @@ export enum ROLE {
     GUEST = "GUEST",
     ADMIN = "ADMIN"
 }
-interface BaseAuthState {  
+interface BaseAuthState {
     isLoggedIn: boolean;
 }
 export interface UserAuthState extends BaseAuthState {

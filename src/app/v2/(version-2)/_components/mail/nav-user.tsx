@@ -38,7 +38,6 @@ export function NavUserV2() {
   const router = useRouter()
   const currAccount = useAppSelector(state => state.accounts.currAccount)
   const handleLogout = async() => {
-
    await UserLogout()
     router.push("/v2")
   }

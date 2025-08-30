@@ -10,13 +10,13 @@ const CustomWidget = () => {
         let timer: NodeJS.Timeout
         const handleLoad = () => {
             if (splash) {
-                timer = setTimeout(() => splash.remove(), 1000);
+                splash.remove()
 
             }
             return
         };
         if (document.readyState === "complete") {
-            handleLoad();
+            timer = setTimeout(() => handleLoad(), 500);
         }
         return () => timer && clearTimeout(timer)
     }, []);

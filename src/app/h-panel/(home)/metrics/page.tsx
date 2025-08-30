@@ -9,6 +9,7 @@ const page = async () => {
     const { data } = await serverAxios.get("/api/v1/admin/track-records", {
       withCredentials: true
     })
+    
     if (!data.success) {
       throw new Error(data.message)
     }

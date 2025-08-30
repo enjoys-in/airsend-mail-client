@@ -21,7 +21,8 @@ import { Card } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Plus, Trash2Icon } from 'lucide-react'
+import { validateMailboxSize } from '@/lib/utils'
+
 
 
 const userSchema = z.object({
@@ -31,20 +32,22 @@ const userSchema = z.object({
         .regex(/^[a-zA-Z0-9.-]+$/, "Username can only contain letters, numbers, dots, and hyphens"),
     domain_name_id: z.string(),
     password: z.string().min(8, "Password must be at least 8 characters"),
-    mailbox_size: z.number().optional(),
+    mailbox_size: z.number().optional().default(0),
     // limit_per_minute: z.number().int().positive("Limit per minute must be a positive integer").optional(),
     // usage_alert: z.number().min(0).max(100, "Usage alert must be between 0 and 100").optional(),
     // aliases: z.array(z.object({ alias: z.string().email("Invalid email address") })).optional(),
     // catch_all: z.string().email("Invalid catch-all email address").optional(),
     // forward_to: z.string().email("Invalid forward-to email address").optional(),
+
 })
 type UserFormData = z.infer<typeof userSchema>
-const sizes = ["KB", "MB", "GB"]
+const sizes = ["MB", "GB"]
 const page = () => {
     const { toast } = useToast()
     const router = useRouter()
     const [myDomains, setMyDomains] = useState<any[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [selectedSize, setSelectedSize] = useState("MB")
     const form = useForm<UserFormData>({
         resolver: zodResolver(userSchema),
         defaultValues: {
@@ -67,12 +70,16 @@ const page = () => {
     const onSubmit: SubmitHandler<UserFormData> = (input) => handleAddUser(input)
     const handleAddUser = async (input: UserFormData) => {
         try {
+
+            if (!validateMailboxSize(input.mailbox_size, selectedSize)) {
+                throw new Error(`❌ Mailbox size exceeds limit is 1GB.`)
+            }
             setIsSubmitting(true)
             if (!input.domain_name_id) {
                 throw new Error("Domain name is required")
             }
             const selectedDomain = myDomains.find((domain: any) => domain.id === input.domain_name_id)
- 
+
             if (input.username.includes("@")) {
                 input.username = input.username.split("@")[0]
             }
@@ -124,7 +131,7 @@ const page = () => {
         <div className="bg-background">
             <div className="container mx-auto p-4 space-y-6">
                 <div className="flex items-center justify-between">
-                    <Link href="/h-panel/domains" className="btn btn-primary"><Button className="rounded-none">Go Back</Button></Link>
+                    <Link href="/h-panel/accounts" className="btn btn-primary"><Button className="rounded-none">Go Back</Button></Link>
                     <h1 className="text-2xl font-semibold text-gray-300">Add New User</h1>
                 </div>
                 <Card className='container mx-auto p-4 rounded-none mt-4'>
@@ -177,21 +184,24 @@ const page = () => {
                                 />
                                 {errors.password && <p className="text-sm  text-red-500">{errors.password.message}</p>}
                             </div>
-                            <div className='w-1/3 flex flex-row'>
-                                <Input id="mailbox_size" className="rounded-none" type="number" placeholder='(leave blank/0 for unlimited)' {...register("mailbox_size", { valueAsNumber: true })} />
+                            <div className='w-full flex flex-col'>
+                                <div className='flex flex-row'>
+                                    <Input id="mailbox_size" className="rounded-none w-28" type="number" placeholder='(leave blank/0 for unlimited)' {...register("mailbox_size", { valueAsNumber: true })} />
 
-                                <Select onValueChange={field => form.setValue("domain_name_id", field)}>
-                                    <SelectTrigger className="bg-transparent border-white/20 text-white rounded-none w-18">
-                                        <SelectValue placeholder="Size" />
-                                    </SelectTrigger>
-                                    <SelectContent>
+                                    <Select onValueChange={field => setSelectedSize(field)}>
+                                        <SelectTrigger className="bg-transparent border-white/20 text-white rounded-none w-28">
+                                            <SelectValue placeholder="Select Size" defaultValue={selectedSize} />
+                                        </SelectTrigger>
                                         <SelectContent>
-                                            {sizes.map((size: any) => (
-                                                <SelectItem value={size} key={size}>{size}</SelectItem>
-                                            ))}
+                                            <SelectContent>
+                                                {sizes.map((size: any) => (
+                                                    <SelectItem value={size} key={size}>{size}</SelectItem>
+                                                ))}
+                                            </SelectContent>
                                         </SelectContent>
-                                    </SelectContent>
-                                </Select>
+                                    </Select>
+                                </div>
+                                <small className='text-xs text-purple-400'>(leave blank/0 for unlimited)</small>
                             </div>
                         </div>
 

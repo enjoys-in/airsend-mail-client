@@ -5,6 +5,8 @@ const nextConfig = {
   },
   devIndicators: false,
   images: {
+    domains: ["lh3.googleusercontent.com", "avatars.githubusercontent.com"],
+
     remotePatterns: [
       {
         protocol: "https",
@@ -18,7 +20,7 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "randomuser.me",
-      }
+      },
     ],
   },
 };
