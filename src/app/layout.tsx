@@ -97,7 +97,7 @@ export default async function RootLayout({
           defaultTheme="dark"
           disableTransitionOnChange
         >
-          <CustomWidget />
+          {/* <CustomWidget /> */}
           <PingletWidget />
           <StoreProvider>
             <IndexDbProvider>
