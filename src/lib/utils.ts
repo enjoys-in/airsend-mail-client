@@ -17,23 +17,23 @@ moment.updateLocale('en', {
       return isLowercase ? 'am' : 'AM';
   }
 });
-   export function validateMailboxSize(value: number, unit: string) {
-        let sizeInBytes;
+export function validateMailboxSize(value: number, unit: string) {
+  let sizeInBytes;
 
-        if (unit === "GB") {
-            sizeInBytes = value * 1024 * 1024 * 1024;
-        } else if (unit === "MB") {
-            sizeInBytes = value * 1024 * 1024;
-        } else {
-            throw new Error("Invalid unit, must be MB or GB");
-        }
+  if (unit === "GB") {
+    sizeInBytes = value * 1024 * 1024 * 1024;
+  } else if (unit === "MB") {
+    sizeInBytes = value * 1024 * 1024;
+  } else {
+    throw new Error("Invalid unit, must be MB or GB");
+  }
 
-        if (sizeInBytes > 1024 * 1024 * 1024 * 1) {
+  if (sizeInBytes > 1024 * 1024 * 1024 * 1) {
 
-            return false;
-        }
-        return true;
-    }
+    return false;
+  }
+  return true;
+}
 export async function loadUserImage(url: string) {
   const res = await fetch(url)
   const blob = await res.blob()

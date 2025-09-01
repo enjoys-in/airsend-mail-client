@@ -48,7 +48,7 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
 
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
-
+  const [attachments, setAttachments] = useState<any[]>([]);
   function validateEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -312,6 +312,8 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
 
                 {/* Input */}
                 <input
+                  type="email"
+                  id="to-input"
                   value={toInput}
                   onChange={(e) => setToInput(e.target.value)}
                   onKeyDown={(e) => handleKeyDown(e, "to")}
@@ -465,6 +467,8 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
         <div className=""></div>
       </div>
       <HtmlEditor
+        attachments={attachments}
+        setAttachments={setAttachments}
         onChange={(html) => setBody(html)}
         footerElement={<ComposeFooter data={{
           from: `${selectedAccount?.name} <${selectedAccount.email}>`,
@@ -473,7 +477,7 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
           bcc: bccChips.map((chip) => chip.email),
           subject,
           html: body,
-          attachments: [],
+          attachments,
         }} />}
         defaultValue={``}
       />

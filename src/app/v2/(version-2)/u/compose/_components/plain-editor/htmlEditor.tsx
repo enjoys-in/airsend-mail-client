@@ -40,6 +40,13 @@ import {
 import AttachmentCard from "./attachmentCard";
 import { ofss } from "@/db/ofs";
 import { useAppSelector } from "@/store/hooks";
+import { API } from "@/lib/api/handler";
+import { __config } from "@/constants/config";
+import moment from "moment";
+import { useMultiTabStore } from "@/store/settings/multiTabSystem";
+
+
+
 const textPalette = Array.from(
   new Set(
     [
@@ -63,6 +70,7 @@ export interface AttachmentWithProgress {
   progress: number; // 0-100
   uploaded: boolean;
   id: string;
+  abort?: AbortController;
 }
 
 export interface EditorContextType {
@@ -101,6 +109,10 @@ export interface HtmlEditorProps {
   toolbarPoistion?: "top" | "bottom";
   sticky?: boolean;
   onChange?: (html: string) => void;
+  attachments: AttachmentWithProgress[];
+  setAttachments: React.Dispatch<
+    React.SetStateAction<AttachmentWithProgress[]>
+  >;
 }
 
 export const HtmlEditor: React.FC<HtmlEditorProps> = ({
@@ -114,9 +126,14 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
   toolbarPoistion = "top",
   sticky = false,
   onChange,
+  attachments,
+  setAttachments
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
+
+  const { nextTabId } = useMultiTabStore()
   const [htmlContent, setHtmlContent] = useState<string>(defaultValue);
+  const [isDragOver, setIsDragOver] = useState(false);
   const currAccount = useAppSelector(state => state.accounts.currAccount)
   const [showFloatingToolbar, setShowFloatingToolbar] =
     useState<boolean>(false);
@@ -128,7 +145,7 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
   const [linkUrl, setLinkUrl] = useState<string>("");
   const [linkTarget, setLinkTarget] = useState<"_blank" | "_self">("_blank");
   const [selectedText, setSelectedText] = useState<string>("");
-  const [attachments, setAttachments] = useState<AttachmentWithProgress[]>([]);
+
 
   useEffect(() => {
     if (editorRef.current) {
@@ -163,71 +180,121 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
     return () =>
       document.removeEventListener("selectionchange", handleSelectionChange);
   }, []);
+  const handleOnDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length === 0) return;
+    sendFilesToServer(files)
+
+
+
+  }
 
   const handleFileUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
-      await ofss.storeFiles(currAccount!.email, files);
-      files.forEach((file) => {
-        const attachment: AttachmentWithProgress = {
-          file,
-          progress: 0,
-          uploaded: false,
-          id: `attachment-${Date.now()}-${Math.random()}`,
-        };
-
-        setAttachments((prev) => [...prev, attachment]);
-
-        // Simulate upload progress
-        const interval = window.setInterval(() => {
-          setAttachments((prev) =>
-            prev.map((att) => {
-              if (att.id === attachment.id) {
-                const newProgress = Math.min(
-                  att.progress + Math.random() * 30,
-                  100
-                );
-                return {
-                  ...att,
-                  progress: newProgress,
-                  uploaded: newProgress >= 100,
-                };
-              }
-              return att;
-            })
-          );
-        }, 200);
-
-        window.setTimeout(() => {
-          window.clearInterval(interval);
-          setAttachments((prev) =>
-            prev.map((att) =>
-              att.id === attachment.id
-                ? { ...att, progress: 100, uploaded: true }
-                : att
-            )
-          );
-        }, 2000);
-      });
-
-      // Reset input value to allow re-uploading the same file if needed
-      event.target.value = "";
+      await ofss.storeFiles(currAccount!.email, { tabId: nextTabId.toString(), files });
+      await sendFilesToServer(files)
+      event.target.value = ""; // reset input
     },
     []
   );
 
-  const removeAttachment = useCallback((attachmentId: string) => {
-    setAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
-    if (attachments) {
-      ofss.deleteFile(currAccount!.email, attachments.filter(att => att.id === attachmentId)[0].file.name)
+  const cancelUpload = (id: string) => {
+    setAttachments((prev) => {
+      const upload = prev.find((u) => u.id === id);
+      if (upload?.abort) {
+        upload.abort.abort();
+      }
+      return prev.filter((u) => u.id !== id);
+    });
+  };
+
+  const sendFilesToServer = async (files: any[]) => {
+    try {
+      files.forEach((file) => {
+        const id = `attachment-${file.name}-${moment().format("YYYYMMDD")}`;
+        const abort = new AbortController();
+
+        const newAttachment: AttachmentWithProgress = {
+          file,
+          progress: 0,
+          uploaded: false,
+          id,
+          abort,
+        };
+
+        setAttachments((prev) => [...prev, newAttachment]);
+
+        const fd = new FormData();
+        fd.append("attachments", file, file.name);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", __config.APP.BASE_URL + "/api/v1/attachment/upload");
+
+
+        xhr.withCredentials = true;
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percent = (e.loaded / e.total) * 100;
+            setAttachments((prev) =>
+              prev.map((u) =>
+                u.id === id ? { ...u, progress: percent } : u
+              )
+            );
+          }
+        };
+
+        xhr.onload = () => {
+          setAttachments((prev) =>
+            prev.map((u) =>
+              u.id === id ? { ...u, progress: 100, uploaded: true } : u
+            )
+          );
+        };
+
+        xhr.onerror = () => {
+          console.error("Upload failed:", file.name);
+        };
+
+
+        abort.signal.addEventListener("abort", () => xhr.abort());
+
+        xhr.send(fd);
+      });
+
+
+    } catch (error) {
+
+    }
+  }
+  const removeAttachment = async (attachmentId: string) => {
+    try {
+
+      if (attachments.length > 0) {
+        const file = attachments.filter(att => att.id === attachmentId)[0]
+
+        if (file) {
+          const fileName = file.file.name
+          const { data } = await API.uploadDelete({ id: attachmentId, index: fileName })
+          if (data.success) {
+            ofss.deleteFile(currAccount!.email, nextTabId.toString(), fileName)
+            setAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
+          }
+
+        }
+      }
+    } catch (error) {
+
     }
 
 
-  }, []);
+  }
   const fetchUploadedFiles = React.useCallback(async () => {
     if (!currAccount?.email) return;
-    const value: File[] = await ofss.getFiles(currAccount!.email);
-
+    const value: File[] = await ofss.getFiles(currAccount!.email, nextTabId.toString());
     if (value.length > 0) setAttachments(value.map(file => ({ file, progress: 100, uploaded: true, id: `attachment-${Date.now()}-${Math.random()}` })));
   }, [])
   const insertAdvancedList: EditorContextType["insertAdvancedList"] =
@@ -404,170 +471,190 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
         removeAttachment,
       }}
     >
-      {headerElement && headerElement}
-      <div className="w-full border rounded-lg overflow-hidden bg-transparent relative">
-        {toolbarPoistion === "top" && (children || <PlainTextEditorToolbar />)}
+      <div
+        className={`w-full border border-dashed rounded-lg overflow-hidden bg-transparent relative flex items-center justify-center transition-opacity ${isDragOver ? "opacity-50" : "opacity-100"
+          }`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={handleOnDragOver}
+      >
 
-        <div
-          ref={editorRef}
-          contentEditable
-          className="w-full p-4 text-sm leading-relaxed break-words whitespace-pre-wrap prose prose-sm max-w-none focus:outline-none font-normal "
-          style={{
-            fontFamily,
-            minHeight: height,
-            maxHeight: "500px",
-            overflowY: "auto",
-            wordBreak: "break-word",
-            overflowWrap: "anywhere",
-          }}
-          data-placeholder={placeholder}
-          onInput={handleInput}
-          onPaste={handlePaste}
 
-          suppressContentEditableWarning
-        />
-
-        {/* Attachments Panel */}
-        {attachments.length > 0 && (
-          <AttachmentCard
-            attachments={attachments}
-            removeAttachment={removeAttachment}
-          />
-        )}
-
-        {/* Floating Toolbar */}
-        {showFloatingToolbar && (
-          <div
-            className="fixed z-50 bg-background border rounded-lg shadow-lg p-2 flex items-center gap-1"
-            style={{
-              left: toolbarPosition.x,
-              top: toolbarPosition.y,
-              maxWidth: 300,
-            }}
-          >
-            <Button
-              variant={
-                document.queryCommandState("bold") ? "secondary" : "ghost"
-              }
-              size="sm"
-              onClick={() => formatText("bold")}
-            >
-              <Bold className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant={
-                document.queryCommandState("italic") ? "secondary" : "ghost"
-              }
-              size="sm"
-              onClick={() => formatText("italic")}
-            >
-              <Italic className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant={
-                document.queryCommandState("underline") ? "secondary" : "ghost"
-              }
-              size="sm"
-              onClick={() => formatText("underline")}
-            >
-              <Underline className="w-4 h-4" />
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <Palette className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <div className="p-2">
-                  <div className="grid grid-cols-12 gap-1 mb-2">
-                    {textPalette.map((color) => (
-                      <button
-                        key={color}
-                        className="w-5 h-5 rounded border"
-                        style={{ backgroundColor: color }}
-                        onClick={() => formatText("foreColor", color)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLinkDialog(true)}
-            >
-              <LinkIcon className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFloatingToolbar(false)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
+        {isDragOver && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity animate-fadeIn">
+            <span className="text-lg font-medium text-white tracking-wide">
+              Drop file here to upload
+            </span>
           </div>
         )}
+        {headerElement && headerElement}
+        <div className="w-full border rounded-lg overflow-hidden bg-transparent relative">
+          {toolbarPoistion === "top" && (children || <PlainTextEditorToolbar />)}
 
-        {/* Link Dialog */}
-        <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Insert Link</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="url">URL</Label>
-                <Input
-                  id="url"
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  placeholder="https://example.com"
-                />
-              </div>
+          <div
+            ref={editorRef}
+            contentEditable
+            className="w-full p-4 text-sm leading-relaxed break-words whitespace-pre-wrap prose prose-sm max-w-none focus:outline-none font-normal "
+            style={{
+              fontFamily,
+              minHeight: height,
+              maxHeight: "500px",
+              overflowY: "auto",
+              wordBreak: "break-word",
+              overflowWrap: "anywhere",
+            }}
+            data-placeholder={placeholder}
+            onInput={handleInput}
+            onPaste={handlePaste}
 
-              <div className="space-y-2">
-                <Label>Open in</Label>
-                <RadioGroup
-                  value={linkTarget}
-                  onValueChange={(v) => setLinkTarget(v as "_blank" | "_self")}
-                  className="grid grid-cols-2 gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem id="new-window" value="_blank" />
-                    <Label htmlFor="new-window">New window</Label>
+            suppressContentEditableWarning
+          />
+
+          {/* Attachments Panel */}
+          {attachments.length > 0 && (
+            <AttachmentCard
+              cancelUpload={cancelUpload}
+              attachments={attachments}
+              removeAttachment={removeAttachment}
+            />
+          )}
+
+          {/* Floating Toolbar */}
+          {showFloatingToolbar && (
+            <div
+              className="fixed z-50 bg-background border rounded-lg shadow-lg p-2 flex items-center gap-1"
+              style={{
+                left: toolbarPosition.x,
+                top: toolbarPosition.y,
+                maxWidth: 300,
+              }}
+            >
+              <Button
+                variant={
+                  document.queryCommandState("bold") ? "secondary" : "ghost"
+                }
+                size="sm"
+                onClick={() => formatText("bold")}
+              >
+                <Bold className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant={
+                  document.queryCommandState("italic") ? "secondary" : "ghost"
+                }
+                size="sm"
+                onClick={() => formatText("italic")}
+              >
+                <Italic className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant={
+                  document.queryCommandState("underline") ? "secondary" : "ghost"
+                }
+                size="sm"
+                onClick={() => formatText("underline")}
+              >
+                <Underline className="w-4 h-4" />
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Palette className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <div className="p-2">
+                    <div className="grid grid-cols-12 gap-1 mb-2">
+                      {textPalette.map((color) => (
+                        <button
+                          key={color}
+                          className="w-5 h-5 rounded border"
+                          style={{ backgroundColor: color }}
+                          onClick={() => formatText("foreColor", color)}
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem id="same-window" value="_self" />
-                    <Label htmlFor="same-window">Same window</Label>
-                  </div>
-                </RadioGroup>
-              </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowLinkDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleLinkInsert}>Insert Link</Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLinkDialog(true)}
+              >
+                <LinkIcon className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFloatingToolbar(false)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-      {toolbarPoistion === "bottom" && (
-        <div className={`${sticky && "sticky"} top-0 bottom-10 z-10 shadow-md`}>
-          {children || <PlainTextEditorToolbar />}
-        </div>
-      )}
+          )}
 
+          {/* Link Dialog */}
+          <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Insert Link</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="url">URL</Label>
+                  <Input
+                    id="url"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    placeholder="https://example.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Open in</Label>
+                  <RadioGroup
+                    value={linkTarget}
+                    onValueChange={(v) => setLinkTarget(v as "_blank" | "_self")}
+                    className="grid grid-cols-2 gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem id="new-window" value="_blank" />
+                      <Label htmlFor="new-window">New window</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem id="same-window" value="_self" />
+                      <Label htmlFor="same-window">Same window</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowLinkDialog(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleLinkInsert}>Insert Link</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+        {toolbarPoistion === "bottom" && (
+          <div className={`${sticky && "sticky"} top-0 bottom-10 z-10 shadow-md`}>
+            {children || <PlainTextEditorToolbar />}
+          </div>
+        )}
+      </div>
       {footerElement && footerElement}
     </EditorContext.Provider>
   );

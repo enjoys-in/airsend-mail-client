@@ -48,7 +48,7 @@ interface EmailAccount {
   usage: string;
   limit: string;
 }
-// dummyData.ts
+
 const emailAccounts: EmailAccount[] = [];
 
 interface AccountState {

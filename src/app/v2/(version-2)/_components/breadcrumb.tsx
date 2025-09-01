@@ -37,7 +37,7 @@ const BreadcrumbInfo = () => {
                     <BreadcrumbItem>
                         {pathname.includes("/v2/u/mail") && (
                             <>
-                                <BreadcrumbLink href="/v2/u/mail">Mail</BreadcrumbLink>
+                                <BreadcrumbLink href="/v2/u/mail/inbox">Mail</BreadcrumbLink>
                                 <BreadcrumbSeparator />
                                 <BreadcrumbPage>
                                     {capitalCase(selected_mailbox || (params as any)["folder"] || "Inbox")}

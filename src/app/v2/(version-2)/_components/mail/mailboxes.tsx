@@ -1,4 +1,3 @@
-import { Plus } from "lucide-react"
 import SidbarTabs from "./SidbarTabs"
 import { Separator } from "@/components/ui/separator"
 import {

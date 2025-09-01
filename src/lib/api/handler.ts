@@ -155,7 +155,27 @@ export class API {
         return instance.get<ApiResponse<MailBoxListAPIResponse[]>>(`/api/v1/get-folder-labels?type=${type}`)
     }
     static sendMailOG(data: any) {
-        return instance.post(`/api/v1/send-mail`, data, {
+        return instance.post<ApiResponse<{uid:string,message_id:string,thread_id:string}>>(`/api/v1/send-mail`, data)
+    }
+    static uploadFiles(data: any) {
+        return instance.post(`/api/v1/attachment/upload`, data, {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        })
+    }
+    static uploadDelete(data: { id: string, index: string }) {
+        return instance.get(`/api/v1/attachment/delete?id=${data.id}&index=${data.index}`)
+    }
+    static uploadCancel(data: any) {
+        return instance.post(`/api/v1/attachment/cancel`, data, {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        })
+    }
+    static downloadFiles(data: any) {
+        return instance.post(`/api/v1/attachment/download`, data, {
             headers: {
                 "Content-Type": "multipart/form-data"
             }

@@ -2,7 +2,7 @@
 import React, { Suspense, useEffect } from 'react'
 
 import { airsendDB, db } from '@/db'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useMailStore } from '@/store/mails'
 
 import { API } from '@/lib/api/handler'
@@ -14,8 +14,10 @@ import { useAppSelector } from '@/store/hooks'
 
 const ClientMailCard = () => {
     const { folder } = useParams() as { folder: string }
+    const searchParams = useSearchParams()
     const { all_emails, setAllEmails, loading, setLoading } = useMailStore()
     const { listen } = useCustomEvent(CustomEventKey.SyncMail)
+    const { emit } = useCustomEvent(CustomEventKey.MailEvents)
     const currAccount = useAppSelector(state => state.accounts.currAccount)
 
 
@@ -30,7 +32,7 @@ const ClientMailCard = () => {
             setAllEmails(data.result)
             setLoading(false)
         } catch (error) {
-            console.log(error)
+
 
         }
     }
@@ -40,8 +42,9 @@ const ClientMailCard = () => {
             .equals([folder, currAccount?.email!])
             .toArray()
             .then(items => {
+
                 if (items.length === 0) {
-                    return storeInDB()
+                    return storeInDB(1)
                 }
                 setAllEmails(items as any)
             });
@@ -55,6 +58,9 @@ const ClientMailCard = () => {
 
     useEffect(() => {
         const unsubscribe = listen(() => storeInDB(1))
+        if (searchParams.get('no_data')) {
+            searchParams.has('message_id') && emit({ action: "delete", message_id: [searchParams.get('message_id')] })
+        }
         return unsubscribe
     }, [])
 

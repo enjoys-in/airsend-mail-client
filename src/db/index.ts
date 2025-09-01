@@ -9,7 +9,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie, { type EntityTable, Table } from "dexie";
 import { GetAllMailsPayload } from "@/lib/types/mail.interface";
 import { UserMailAccountSettings } from "@/lib/types/account-settings.interface";
-import { MailBoxListAPIResponse, MailBoxListResponse } from "@/lib/types/MailBoxListResponse.interface";
+import { MailBoxListAPIResponse } from "@/lib/types/MailBoxListResponse.interface";
 import dot from "dot-object";
 import { Prettify } from '@/lib/types';
 
@@ -28,6 +28,7 @@ export type IdbHooks =
 interface StoredFiles {
   email: string;       // key
   files: { blob: Blob; name: string; type: string }[]; // store blob + metadata
+  tabId: string
 }
 type Tables = {
   mails: EntityTable<Partial<GetAllMailsPayload>, "message_id">;
@@ -207,7 +208,7 @@ const tables: TableSchema = {
   mails: "message_id,receipient,folder_path,uid,[message_id+folder_path],[message_id+folder_path+receipient],[folder_path+receipient]",
   mailboxes: "++id, path,type,[path+type]",
   settings: "email",
-  files: "email",
+  files: "email,[email+tabId]",
 
   // attachments: "message_id"
 };

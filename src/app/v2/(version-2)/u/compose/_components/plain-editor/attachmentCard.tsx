@@ -7,6 +7,7 @@ import {
   Mail,
   FileIcon,
   Trash2,
+  X,
 } from "lucide-react"
 import { AttachmentWithProgress } from './htmlEditor'
 
@@ -17,13 +18,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { formatBytes } from '@/lib/utils'
 
 const AttachmentCard = ({
   attachments,
   removeAttachment,
+  cancelUpload
 }: {
   removeAttachment: (id: string) => void
   attachments: AttachmentWithProgress[]
+  cancelUpload: (id: string) => void
 }) => {
   return (
     <div className="border-t p-2 bg-muted/30">
@@ -64,32 +68,46 @@ const AttachmentCard = ({
               {/* Icon with circular progress */}
               <div className="relative w-10 h-10 flex items-center justify-center">
                 {attachment.progress < 100 ? (
-                  <svg
-                    className="absolute top-0 left-0 w-10 h-10"
-                    viewBox="0 0 36 36"
-                  >
-                    <path
-                      className="text-muted stroke-current"
-                      strokeWidth="3"
-                      fill="none"
-                      d="M18 2.0845
-                        a 15.9155 15.9155 0 0 1 0 31.831
-                        a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path
-                      className="text-orange-500 stroke-current"
-                      strokeWidth="3"
-                      fill="none"
-                      strokeDasharray={`${attachment.progress}, 100`}
-                      d="M18 2.0845
-                        a 15.9155 15.9155 0 0 1 0 31.831
-                        a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                  </svg>
+                  <>
+                    {/* Background Circle */}
+                    <svg
+                      className="absolute inset-0 w-10 h-10"
+                      viewBox="0 0 36 36"
+                    >
+                      <path
+                        className="text-muted stroke-current"
+                        strokeWidth="3"
+                        fill="none"
+                        d="M18 2.0845
+            a 15.9155 15.9155 0 0 1 0 31.831
+            a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="text-orange-500 stroke-current"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeDasharray={`${attachment.progress}, 100`}
+                        strokeLinecap="round"
+                        d="M18 2.0845
+            a 15.9155 15.9155 0 0 1 0 31.831
+            a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+
+                    {/* X button centered */}
+                    <button
+                      type="button"
+                      onClick={() => cancelUpload(attachment.id)}
+                      className="absolute inset-0 flex items-center justify-center"
+                    >
+                      <X className="w-5 h-5 text-muted-foreground hover:text-red-500" />
+                    </button>
+                  </>
                 ) : (
                   <Icon className="w-8 h-8 text-orange-500" />
                 )}
               </div>
+
 
               {/* File name with Tooltip */}
               <TooltipProvider>
@@ -109,7 +127,7 @@ const AttachmentCard = ({
               <p className="text-[10px] text-muted-foreground text-center">
                 {attachment.progress < 100
                   ? `${Math.round(attachment.progress)}%`
-                  : `${(attachment.file.size / 1024).toFixed(1)} KB`}
+                  :  formatBytes(attachment.file.size)}
               </p>
 
               {/* Hover delete button */}

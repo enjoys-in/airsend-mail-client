@@ -16,11 +16,11 @@ function MainLayout({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
   React.useEffect(() => {
     dispatch(fetchCurrentUser());
+ 
   }, []);
   return (
     <SocketContextProvider>
       <CustomWidget />
-
       <CalendarProvider>
         <Suspense fallback={<Spinner />}>
           <div className="flex md:hidden flex-1 bg-[#111315]">

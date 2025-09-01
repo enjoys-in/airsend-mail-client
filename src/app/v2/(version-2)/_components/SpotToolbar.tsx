@@ -76,11 +76,13 @@ export function SpotToolbar() {
             return toast.error(res.message)
           }
           if (data.action === "delete" || data.action === "move" || data.action === "archive") {
+
+
             const udpatedEmails = all_emails && all_emails?.filter((item) => !checkedItems.includes(item.message_id))
 
 
             setAllEmails(udpatedEmails || [])
-            await airsendDB.bulkDeleteItems("mails", checkedItems)
+            await airsendDB.bulkDeleteItems("mails", data.message_id || data.id as any)
             setCheckedItems([])
 
           }

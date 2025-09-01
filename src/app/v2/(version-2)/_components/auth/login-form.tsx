@@ -69,7 +69,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             })
             router.push("/v2/u/mail/inbox")
         } catch (error) {
-
+            setIsLoading(false);
             toast({
                 title: "Error",
                 description: "Something went wrong. Please try again.",

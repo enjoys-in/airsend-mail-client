@@ -42,7 +42,7 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
         }
         router.push(`/v2/u/mail/${params?.folder}/${item.message_id}`,)
     }
-    const handleHoveredIconClick = (action: string, id: string|number) => emit({ action, id:[id] })
+    const handleHoveredIconClick = (action: string, id: string|number) => emit({ action, message_id:[id] })
     useEffect(() => { }, [checkedItems])
 
     return (
@@ -117,25 +117,25 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
                                             className={`flex gap-2.5 transition-opacity duration-300 ease-in-out ${hovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                                             <button className="hover:text-yellow-500 transition-colors duration-200" onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleHoveredIconClick("starred", item.id);
+                                                handleHoveredIconClick("starred", item.message_id);
                                             }}>
                                                 <Star size={16} />
                                             </button>
                                             <button className="hover:text-blue-500 transition-colors duration-200" onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleHoveredIconClick("mark_as_important", item.id);
+                                                handleHoveredIconClick("mark_as_important", item.message_id);
                                             }}>
                                                 <Flag size={16} />
                                             </button>
                                             <button className="hover:text-green-500 transition-colors duration-200" onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleHoveredIconClick("archive", item.id);
+                                                handleHoveredIconClick("archive", item.message_id);
                                             }}>
                                                 <Archive size={16} />
                                             </button>
                                             <button className="hover:text-red-500 transition-colors duration-200" onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleHoveredIconClick("delete", item.id);
+                                                handleHoveredIconClick("delete", item.message_id);
                                             }}>
                                                 <Trash2 size={16} />
                                             </button>

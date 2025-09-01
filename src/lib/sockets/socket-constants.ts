@@ -16,6 +16,10 @@ export enum SocketEventConstants {
   MAIL_USAGED = "@@MAIL_USAGE",
   SENT_MAIL = "@@SENT_MAIL",
 
+  UPLOAD_PROGRESS = "@@UPLOAD_PROGRESS",
+  UPLOAD_COMPLETE = "@@UPLOAD_COMPLETE",
+  UPLOAD_ERROR = "@@UPLOAD_ERROR",
+
 
 }
 export enum SOCKET_ROOMS {

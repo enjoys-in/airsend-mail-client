@@ -107,7 +107,7 @@ export interface GetAllMailsPayload {
     receipient: string;
     subject: string;
     flags: string[];
-    folder: string;
+    folder: number;
     folder_path: string;
     tags: string[];
     is_read: boolean;
