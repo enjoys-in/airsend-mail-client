@@ -205,7 +205,7 @@ type TableSchema = {
   [tableName in TableKeys]: string;
 };
 const tables: TableSchema = {
-  mails: "message_id,receipient,folder_path,uid,[message_id+folder_path],[message_id+folder_path+receipient],[folder_path+receipient]",
+  mails: "message_id,receipient,folder_path,uid,[message_id+folder],[message_id+folder+receipient],[folder+receipient]",
   mailboxes: "++id, path,type,[path+type]",
   settings: "email",
   files: "email,[email+tabId]",
@@ -214,7 +214,7 @@ const tables: TableSchema = {
 };
 
 const db = new Dexie("airsend") as Dexie & Tables;
-db.version(2.1)
+db.version(2.2)
   .stores(tables)
   .upgrade((tx) => {
     // tx. objectStore('mails').index('message_id');

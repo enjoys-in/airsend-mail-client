@@ -10,6 +10,7 @@ import { MailCard } from './MailCard'
 import Loading from '../loading'
 import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event'
 import { useAppSelector } from '@/store/hooks'
+import { sentenceCase } from 'change-case'
 
 
 const ClientMailCard = () => {
@@ -38,7 +39,7 @@ const ClientMailCard = () => {
     }
     const loadMailFromDB = async () => {
         db.mails
-            .where("[folder_path+receipient]")
+            .where("[folder+receipient]")
             .equals([folder, currAccount?.email!])
             .toArray()
             .then(items => {
@@ -70,7 +71,7 @@ const ClientMailCard = () => {
                 <MailCard key={index} item={item} />
             )) : (
                 <div className='flex items-center justify-center h-full bg-background'>
-                    <h1 className='text-2xl text-gray-500 items-center'>{folder} is empty</h1>
+                    <h1 className='text-2xl text-gray-500 items-center'>{sentenceCase(folder)} is empty</h1>
                 </div>
             )
         }

@@ -39,17 +39,17 @@ export async function loadUserImage(url: string) {
   const blob = await res.blob()
   return URL.createObjectURL(blob)
 }
-export function filterNameAndEmail(inputString: string, email: string) {
-  const regex = /"([^"]+)"\s<([^>]+)>/;
-  const match = inputString.match(regex);
+export function filterNameAndEmail(inputString: string, email: string, onlyEmail = true) {
+  const regex = /['"]?([^'"]+)['"]?\s*<([^>]+)>/;
+  const match = inputString.match(regex)
 
-  if (match) {
+  if (match && onlyEmail) {
     const name = match[1];  // Extracted name
-    const email = match[2];  // Extracted email
+    const email = match[2];
     return `${name} <${email}>`;
   }
-
-  return email;  // Return null if the format doesn't match
+  email = match && match[2] ? match[2] : email
+  return email;
 }
 
 export const fileToArrayBuffer = (file: File): Promise<{ filename: string; content: ArrayBuffer; contentType: string }> => {

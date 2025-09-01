@@ -3,7 +3,7 @@ import { airsendDB } from '@/db';
 import React, { useCallback, useEffect } from 'react'
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Star, Trash2, Archive, Flag, MoreVertical } from "lucide-react";
+import { Star, Trash2, Archive, Flag, MoreVertical, Pencil } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 
 import { cn, dateToFromNowDaily, filterNameAndEmail, formattedName } from '@/lib/utils';
@@ -42,7 +42,7 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
         }
         router.push(`/v2/u/mail/${params?.folder}/${item.message_id}`,)
     }
-    const handleHoveredIconClick = (action: string, id: string|number) => emit({ action, message_id:[id] })
+    const handleHoveredIconClick = (action: string, id: string | number) => emit({ action, message_id: [id] })
     useEffect(() => { }, [checkedItems])
 
     return (
@@ -66,23 +66,45 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
                             <div className="h-4 w-4 mr-2" />
                         }
                         <div className="relative z-0 mr-2">
-                            <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-green-500 text-sm bg-muted-foreground/50 dark:bg-neutral-700" >{formattedName(filterNameAndEmail(Security.DecryptFromString(item.from_email), Security.DecryptFromString(item.from_email)))}</AvatarFallback>
-                            </Avatar>
-                        </div>
-                        <div className='flex items-center text-sm'>
-                            <span className="font-medium flex items-center justify-center gap-2">
-                                {!item.is_read && <span className="inline-block w-2 h-2 bg-green-500 rounded-full mx-2"></span>}
+                            {
+                                item.folder === "sent" ? (<Avatar className="h-8 w-8">
+                                    <AvatarFallback className="text-green-500 text-sm bg-muted-foreground/50 dark:bg-neutral-700" >
+                                        {formattedName(filterNameAndEmail(item.receipients[0], item.receipients[0]))}
+                                    </AvatarFallback>
+                                </Avatar>) : (<Avatar className="h-8 w-8">
+                                    <AvatarFallback className="text-green-500 text-sm bg-muted-foreground/50 dark:bg-neutral-700" >
+                                        {formattedName(filterNameAndEmail(Security.DecryptFromString(item.from_email), Security.DecryptFromString(item.from_email)))}
+                                    </AvatarFallback>
+                                </Avatar>
+                                )
+                            }
 
-                                {filterNameAndEmail(Security.DecryptFromString(item.from_email), Security.DecryptFromString(item.from_email))}
-                            </span>
-                            <span className="text-gray-500 ml-1">(4)</span>
                         </div>
-                        <div className="flex items-center gap-2 w-[50rem] overflow-hidden text-sm ml-4">
-                            <div className="font-medium  truncate">
+                        <div className="flex items-center text-sm gap-2">
+                            {item.folder === "sent" ? (
+                                <span className="font-normal flex items-center gap-2">
+                                    <span className="text-gray-500">To:</span>
+                                    {filterNameAndEmail(item.receipients[0], item.receipients[0])}  {item.receipients.length > 1 && `+${item.receipients.length - 1}`}
+                                </span>
+                            ) : (
+                                <span className="font-medium flex items-center gap-2">
+                                    {!item.is_read && (
+                                        <span className="w-2 h-2 bg-green-500 rounded-full" />
+                                    )}
+                                    {filterNameAndEmail(
+                                        Security.DecryptFromString(item.from_email),
+                                        Security.DecryptFromString(item.from_email)
+                                    )}
+                                </span>
+                            )}
+                            <span className="text-gray-500">(4)</span>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full max-w-[40rem] overflow-hidden text-sm ml-4">
+                            <div className="font-medium truncate max-w-full sm:max-w-[12rem] md:max-w-[15rem] lg:max-w-[18rem]">
                                 {item?.subject}
                             </div>
-                            <div className="text-sm text-gray-500 truncate max-w-[30rem]">
+                            <div className="text-sm text-gray-500 truncate flex-1 min-w-0">
                                 {Security.DecryptFromString(item?.plain_text) || item?.plain_text}
                             </div>
                         </div>

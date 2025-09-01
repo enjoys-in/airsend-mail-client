@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import {
     ChevronDown,
     ChevronLeft,
@@ -18,8 +18,8 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { Avatar, AvatarFallback, AvatarImage } from '@radix-ui/react-avatar'
-import { cn, formatEmail } from '@/lib/utils'
+import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
+import { cn, formatEmail } from "@/lib/utils";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -31,56 +31,55 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import React, { Fragment, useEffect, useMemo, useRef } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import Image from "next/image";
+import React, { Fragment, useEffect } from "react";
+
 import { useRouter } from "next/navigation";
 import moment from "moment";
-import { ROLE } from "@/lib/types/user.interface";
+
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FileAttachmentInterface, MailData } from "@/lib/types/mail.interface";
-import { ApiResponse } from '@/lib/types';
-import FileAttachment from '../../../_components/file-attachment';
-import { MailIframe } from '@/app/v2/(version-2)/u/mail/[folder]/[message_id]/_components/mail-iframe';
-import { API } from '@/lib/api/handler';
-import { AxiosResponse } from 'axios';
 
 import { MailDisplaySkeleton, MailHeaderSkeleton } from "./mail-skeleton";
 import { useMailStore } from "@/store/mails";
-import { airsendDB, db } from "@/db";
-import { useAppSelector } from "@/store/hooks";
+import { db } from "@/db";
+ 
 import { MailDropdown } from "./menu-dropdown";
-import { SendMail } from "@/components/server-actions/send-mail";
 import { Security } from "@/lib/security";
 import { useMailRenderSettings } from "@/store/mails/mail-render-settings";
-import { RiLayout2Fill } from "@remixicon/react";
 
+const ClientDisplay = ({
+    folder,
+    message_id,
+}: {
+    folder: string;
+    message_id: string;
+}) => {
+    const router = useRouter();   
+    const { setRenderStyle, renderStyle, setRenderMode, renderMode } =
+        useMailRenderSettings();
 
-const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: string }) => {
-    const router = useRouter();
-    const currAccount = useAppSelector(state => state.accounts.currAccount)
-    const { setRenderStyle, renderStyle, setRenderMode, renderMode } = useMailRenderSettings()
-
-    const { selectedMail, setSelectedMail, setLoading } = useMailStore()
+    const { selectedMail, setSelectedMail, setLoading } = useMailStore();
     useEffect(() => {
         if (!selectedMail) {
-            db.mails.where("message_id").equals(message_id).first().then(item => setSelectedMail(item as any))
+            db.mails
+                .where("message_id")
+                .equals(message_id)
+                .first()
+                .then((item) => setSelectedMail(item as any));
         }
-
-    }, [selectedMail])
-    if (!selectedMail) return (
-        <Fragment>
-            <MailHeaderSkeleton folder={folder} />
-            <MailDisplaySkeleton />
-        </Fragment>
-    )
-
+    }, [selectedMail]);
+    if (!selectedMail)
+        return (
+            <Fragment>
+                <MailHeaderSkeleton folder={folder} />
+                <MailDisplaySkeleton />
+            </Fragment>
+        );
 
     return (
         <Fragment>
@@ -106,23 +105,40 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
             <div className="flex flex-col lg:flex-row justify-between items-start md:px-4 pb-2 md:pl-1">
                 <div className="flex items-center text-sm flex-1 md:gap-2">
                     <Avatar>
-                        <AvatarImage alt={formatEmail(Security.DecryptFromString(selectedMail?.from_email)).toLocaleUpperCase()} />
-                        <AvatarFallback className='flex items-center justify-center h-10 w-10 bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full'>
-                            {selectedMail?.from_email && formatEmail(Security.DecryptFromString(selectedMail?.from_email)).toLocaleUpperCase()[0]}
+                        <AvatarImage
+                            alt={formatEmail(
+                                Security.DecryptFromString(selectedMail?.from_email)
+                            ).toLocaleUpperCase()}
+                        />
+                        <AvatarFallback className="flex items-center justify-center h-10 w-10 bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full">
+                            {selectedMail?.from_email &&
+                                formatEmail(
+                                    Security.DecryptFromString(selectedMail?.from_email)
+                                ).toLocaleUpperCase()[0]}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col ml-2 md:ml-0">
                         <div className="flex flex-col sm:flex-row gap-2 align-text-bottom">
-                            <div className="font-semibold">{selectedMail?.from_email && formatEmail(Security.DecryptFromString(selectedMail?.from_email))}</div>
+                            <div className="font-semibold">
+                                {selectedMail?.from_email &&
+                                    formatEmail(
+                                        Security.DecryptFromString(selectedMail?.from_email)
+                                    )}
+                            </div>
                         </div>
                         <div className="flex flex-row gap-2 items-center">
-                            <span className="group relative text-xs text-zinc-500 cursor-pointer">
-                                To me
-                                <span className="absolute left-0 top-full mt-1 hidden group-hover:block rounded-md bg-black text-white text-[10px] px-2 py-1 whitespace-nowrap shadow-md z-10">
-                                    {selectedMail?.receipient}
+                            {selectedMail.folder === "sent" ? (
+                                <div className="text-sm text-muted-foreground">
+                                    To: {selectedMail?.receipients}
+                                </div>
+                            ) : (
+                                <span className="group relative text-xs text-zinc-500 cursor-pointer">
+                                    To me
+                                    <span className="absolute left-0 top-full mt-1 hidden group-hover:block rounded-md bg-black text-white text-[10px] px-2 py-1 whitespace-nowrap shadow-md z-10">
+                                        {selectedMail?.receipient}
+                                    </span>
                                 </span>
-                            </span>
-
+                            )}
                             <Tooltip>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -150,11 +166,23 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                                             {/* Right Column */}
                                             <div className="flex flex-col">
                                                 <div>
-                                                    <strong>{selectedMail?.from_email && formatEmail(Security.DecryptFromString(selectedMail?.from_email))}</strong>
-
+                                                    <strong>
+                                                        {selectedMail?.from_email &&
+                                                            formatEmail(
+                                                                Security.DecryptFromString(
+                                                                    selectedMail?.from_email
+                                                                )
+                                                            )}
+                                                    </strong>
                                                 </div>
-                                                <div>{selectedMail?.receipient}</div>
-                                                <div>{moment(selectedMail?.timestamp).format("lll")}</div>
+                                                <div>
+                                                    {selectedMail.folder === "sent"
+                                                        ? selectedMail?.receipients
+                                                        : selectedMail?.receipient}
+                                                </div>
+                                                <div>
+                                                    {moment(selectedMail?.timestamp).format("lll")}
+                                                </div>
                                                 <div>{selectedMail?.subject}</div>
                                                 <div>{selectedMail?.receipient?.split("@")[1]}</div>
                                                 <div className="flex items-center gap-1">
@@ -189,11 +217,10 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
-                            onClick={() => { }}
+                                onClick={() => { }}
                                 variant="ghost"
                                 size="icon"
                                 disabled={!selectedMail}
-
                             >
                                 <Reply className="h-4 w-4" />
                                 <span className="sr-only">Reply</span>
@@ -211,12 +238,9 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                         <TooltipContent>Forward</TooltipContent>
                     </Tooltip>
 
-
                     <AlertDialog>
                         <AlertDialogTrigger
-                            className={cn(
-                                buttonVariants({ variant: "ghost", size: "sm" })
-                            )}
+                            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
                         >
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -238,10 +262,7 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-
-                                    className="bg-red-500 hover:bg-red-600 text-white"
-                                >
+                                <AlertDialogAction className="bg-red-500 hover:bg-red-600 text-white">
                                     Continue
                                 </AlertDialogAction>
                             </AlertDialogFooter>
@@ -255,9 +276,8 @@ const ClientDisplay = ({ folder, message_id }: { folder: string, message_id: str
                     </MailDropdown>
                 </div>
             </div>
-
         </Fragment>
-    )
-}
+    );
+};
 
-export default ClientDisplay
+export default ClientDisplay;

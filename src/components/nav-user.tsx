@@ -34,6 +34,7 @@ import { formatNameInParts } from "@/lib/utils"
 import { AdminLogout } from "./server-actions/logout-admin"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { API } from "@/lib/api/handler"
 export function NavUser() {
   const { isMobile } = useSidebar()
   const router = useRouter()
@@ -54,8 +55,13 @@ export function NavUser() {
   }
 
   const handleLogout = async () => {
-    await AdminLogout()
-    router.push("/h-panel")
+
+    const { data } = await API.handleAdminLogout()
+    if (data) {
+      await AdminLogout()
+      router.push("/h-panel")
+    }
+
 
   }
   useEffect(() => {

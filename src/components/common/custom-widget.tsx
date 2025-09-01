@@ -6,12 +6,12 @@ import { LogoImage } from '../logo-image';
 const CustomWidget = () => {
 
     useEffect(() => {
-        const splash = document.getElementById("splash");
+
         let timer: NodeJS.Timeout
         const handleLoad = () => {
+            const splash = document.getElementById("splash");
             if (splash) {
                 splash.remove()
-
             }
             return
         };

@@ -16,7 +16,7 @@ function MainLayout({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
   React.useEffect(() => {
     dispatch(fetchCurrentUser());
- 
+
   }, []);
   return (
     <SocketContextProvider>

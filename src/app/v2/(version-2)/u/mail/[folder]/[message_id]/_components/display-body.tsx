@@ -97,11 +97,7 @@ export const MailDisplay = ({
   return (
     <Fragment>
       <Separator />
-      <ScrollArea className="flex-1 flex flex-col overflow-auto border-t border-gray-300 dark:border-gray-800">
-        {/* {Array.isArray(selectedMail?.hasAttachment) && selectedMail?.hasAttachment.length > 0 && 
-                (<FileAttachment attachments={selectedMail?.hasAttachment} messageId={selectedMail?.message_id} />
-
-                )} */}
+      <ScrollArea className="flex-1 flex flex-col overflow-auto border-t border-gray-300 dark:border-gray-800">       
         {selectedMail && children}
       </ScrollArea>
       <Separator className="mt-auto" />

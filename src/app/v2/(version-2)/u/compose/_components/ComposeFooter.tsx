@@ -56,7 +56,7 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
   const handleSend = async () => {
     try {
       const newHTML = getHTML();
-
+ 
       const newObjct = Object.assign(
         {},
         data,
@@ -101,8 +101,7 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
         attachments: newObjct.attachments.length > 0,
         trackers_detected: 0,
         flags: ["sent", "inbox"],
-        folder: "10",
-        folder_path: "sent",
+        folder: "sent",
         from_email: encryptData(newObjct.from),
         has_attachments: false,
         id: Date.now(),
@@ -114,9 +113,10 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
         is_starred: false,
         message_id: res.data.result.message_id,
         priority: "normal",
-        receipient: filterNameAndEmail(newObjct.from ,newObjct.from),
+        receipient: filterNameAndEmail(newObjct.from ,newObjct.from,false),
         thread_id: res.data.result.thread_id,
         timestamp: new Date().toString(),
+        plain_text: encryptData(newObjct.html),
         uid: res.data.result.uid,
       };
       await airsendDB.addNestedItem("mails", res.data.result.message_id, obj as any);

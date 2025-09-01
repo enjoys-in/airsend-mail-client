@@ -3,26 +3,26 @@ import serverAxios from '@/lib/api/serverAxios'
 import { ApiResponse } from '@/lib/types'
 import { AxiosResponse } from 'axios'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MailIframe } from '@/app/v2/(version-2)/u/mail/[folder]/[message_id]/_components/mail-iframe'
 import { EncodedMessageResponse } from '@/lib/types/mail.interface'
 import { redirect, RedirectType } from 'next/navigation'
+import DecodingComponent from './decoding-component'
 
 
 
 const ServerMailBody = async ({ folder, message_id }: { message_id: string, folder: string }) => {
     try {
         const { data } = await serverAxios.get(`/api/v1/get-encoded-mail/${message_id}`) as AxiosResponse<ApiResponse<EncodedMessageResponse>>
-        console.log(data)
         if (!data.success) {
             if (data.message.includes("No data found")) {
                 return redirect(`/v2/u/mail/${folder}?message_id=${message_id}&no_data=true`, RedirectType.replace);
             } else {
                 throw new Error(data.message)
-
             }
         }
 
-        return <MailIframe message_id={message_id} data={data.result}></MailIframe>
+        return <DecodingComponent message_id={message_id} data={data.result} />
+
+
     } catch (error) {
         return (
             <div className="space-y-4 p-4">

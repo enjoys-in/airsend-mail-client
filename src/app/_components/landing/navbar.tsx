@@ -122,7 +122,7 @@ export const Navbar = () => {
                   {label}
                 </Link>
               ))}
-              <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+              <Link href="/v2" onClick={() => setIsMenuOpen(false)}>
                 <Button className="w-full rounded-full bg-blue-700 dark:text-white dark:bg-pink-500 hover:bg-blue-500 text-sm font-medium py-2">
                   Login
                 </Button>

@@ -33,13 +33,17 @@ import { formatNameInParts } from "@/lib/utils"
 
 import { useRouter } from "next/navigation"
 import { UserLogout } from "@/components/server-actions/logout-user"
+import { API } from "@/lib/api/handler"
 export function NavUserV2() {
   const { isMobile } = useSidebar()
   const router = useRouter()
   const currAccount = useAppSelector(state => state.accounts.currAccount)
-  const handleLogout = async() => {
-   await UserLogout()
-    router.push("/v2")
+  const handleLogout = async () => {
+    const { data } = await API.handleLogout()
+    if (data.success) {
+      await UserLogout()
+      router.push("/v2")
+    }
   }
   return (
     <SidebarMenu>

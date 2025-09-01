@@ -32,7 +32,7 @@ export interface MailData extends BaseMailData {
 export interface FileAttachmentInterface {
     type: string;
     content: Buffer;
-    contentType: string;
+    mimeType: string;
     partId: string;
     release: string | null;
     contentDisposition: string;
@@ -105,10 +105,10 @@ export interface GetAllMailsPayload {
     from_email: string;
     message_id: string;
     receipient: string;
+    receipients: string;
     subject: string;
     flags: string[];
-    folder: number;
-    folder_path: string;
+    folder: string;
     tags: string[];
     is_read: boolean;
     is_replied: boolean;
@@ -116,9 +116,8 @@ export interface GetAllMailsPayload {
     references: string | string[];
     trackersDetected: number;
     plain_text: string;
-    thread_id: null;
+    thread_id: string;
     uid: string | undefined;
-    content: string;
     hasAttachment: boolean | {
         related: boolean;
         type: "attachment";

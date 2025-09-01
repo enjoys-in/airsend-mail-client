@@ -11,6 +11,7 @@ interface MailRenderSettingsState {
     imagesEnabled: boolean;
     setImagesEnabled: (enabled: boolean) => void;
     // reply
+
 }
 
 export const useMailRenderSettings = create<MailRenderSettingsState>()((set) => ({
@@ -23,5 +24,5 @@ export const useMailRenderSettings = create<MailRenderSettingsState>()((set) => 
     imagesEnabled: false,
     setImagesEnabled: (enabled) => set({ imagesEnabled: enabled }),
 
-    
+
 }))

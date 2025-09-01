@@ -1,54 +1,30 @@
-"use client"
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+"use client";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
-import { fixNonReadableColors, template } from '@/lib/email-utils'
+import { fixNonReadableColors, template } from "@/lib/email-utils";
 
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-import { EncodedMessageResponse } from '@/lib/types/mail.interface';
-import { DecryptEncryptedMail } from '@/lib/pgp-service';
-import { useKeyStore } from '@/store/keys';
-import { Security } from '@/lib/security';
-import { useMailStore } from '@/store/mails';
-import PostalMime from "postal-mime"
-import { DynamicIframe } from './dynamic-iframe';
-import { useMailRenderSettings } from '@/store/mails/mail-render-settings';
-export function MailIframe({ data, message_id }: { data: EncodedMessageResponse, message_id: string }) {
-  const { setEncryptedData } = useKeyStore()
-  const { rawData, setRawData } = useMailStore()
-  const { renderStyle,  renderMode,  cspViolation, setCspViolation, imagesEnabled, setImagesEnabled } = useMailRenderSettings()
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
+import { DynamicIframe } from "./dynamic-iframe";
+import { useMailRenderSettings } from "@/store/mails/mail-render-settings";
+export function MailIframe({ html }: { html: string }) {
+  const {
+    renderStyle,
+    renderMode,
+    cspViolation,
+    setCspViolation,
+    imagesEnabled,
+    setImagesEnabled,
+  } = useMailRenderSettings();
 
-  const [html, setHtml] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(400);
 
-
-  const handleDecryptiion = async (data: EncodedMessageResponse) => {
-    try {
-      if (rawData[message_id]) {
-        const email = await PostalMime.parse(rawData[message_id]);
-        return setHtml(email.html! || "No HTML content")
-
-      }
-      const decrypted = await DecryptEncryptedMail({
-        encrypted: data.chiper_text,
-        privateKeyArmored: Security.DecryptFromString(data.open_pgp.privateKey),
-        publicKeyArmored: Security.DecryptFromString(data.open_pgp.publicKey),
-        password: data.k
-      })
-      const email = await PostalMime.parse(decrypted);
-      setRawData((prev: any) => ({ ...prev, [message_id]: decrypted }))
-
-      return setHtml(email.html! || "No HTML content")
-    } catch (e) {
-      return setHtml("Error decrypting message")
-    }
-  }
-
-
-  const iframeDoc = useMemo(() => template(html, imagesEnabled), [html, imagesEnabled]);
-
+  const iframeDoc = useMemo(
+    () => template(html, imagesEnabled),
+    [html, imagesEnabled]
+  );
 
   const calculateAndSetHeight = useCallback(() => {
     if (!iframeRef.current?.contentWindow?.document.body) return;
@@ -63,7 +39,9 @@ export function MailIframe({ data, message_id }: { data: EncodedMessageResponse,
 
   useEffect(() => {
     if (!iframeRef.current) return;
-    const url = URL.createObjectURL(new Blob([iframeDoc], { type: 'text/html' }));
+    const url = URL.createObjectURL(
+      new Blob([iframeDoc], { type: "text/html" })
+    );
     iframeRef.current.src = url;
     const handler = async () => {
       if (iframeRef.current?.contentWindow?.document.body) {
@@ -83,7 +61,7 @@ export function MailIframe({ data, message_id }: { data: EncodedMessageResponse,
     if (iframeRef.current?.contentWindow?.document.body) {
       const body = iframeRef.current.contentWindow.document.body;
       body.style.backgroundColor =
-        renderStyle === 'dark' ? 'rgb(10, 10, 10)' : 'rgb(245, 245, 245)';
+        renderStyle === "dark" ? "rgb(10, 10, 10)" : "rgb(245, 245, 245)";
       requestAnimationFrame(() => {
         fixNonReadableColors(body);
       });
@@ -91,18 +69,15 @@ export function MailIframe({ data, message_id }: { data: EncodedMessageResponse,
   }, [renderStyle]);
 
   useEffect(() => {
-
-    setEncryptedData(data)
-    handleDecryptiion(data)
     const ctrl = new AbortController();
     window.addEventListener(
-      'message',
+      "message",
       (event) => {
-        if (event.data.type === 'csp-violation') {
+        if (event.data.type === "csp-violation") {
           setCspViolation(true);
         }
       },
-      { signal: ctrl.signal },
+      { signal: ctrl.signal }
     );
     return () => ctrl.abort();
   }, []);
@@ -119,7 +94,9 @@ export function MailIframe({ data, message_id }: { data: EncodedMessageResponse,
           </button>
           <button
             onClick={() => {
-              toast.error('Images from this sender are blocked. Please enable them in settings.');
+              toast.error(
+                "Images from this sender are blocked. Please enable them in settings."
+              );
             }}
             className="ml-2 cursor-pointer underline"
           >
@@ -127,24 +104,31 @@ export function MailIframe({ data, message_id }: { data: EncodedMessageResponse,
           </button>
         </div>
       )}
-      {
-        renderMode === 'iframe' ? <iframe
+
+      {renderMode === "iframe" ? (
+        <iframe
           onClick={calculateAndSetHeight}
           height={height}
           ref={iframeRef}
-          className={cn('w-full flex-1 overflow-hidden transition-opacity duration-200')}
+          className={cn(
+            "w-full flex-1 overflow-hidden transition-opacity duration-200"
+          )}
           title="Email Content"
           // allow-scripts is safe, because the CSP will prevent scripts from running that don't have our unique nonce.
           sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-scripts"
           style={{
-            width: '100%',
-            overflow: 'hidden',
+            width: "100%",
+            overflow: "hidden",
           }}
-        /> : <DynamicIframe html={html} className={cn('w-full flex-1 overflow-hidden transition-opacity duration-200')} />
-
-      }
-
+        />
+      ) : (
+        <DynamicIframe
+          html={html}
+          className={cn(
+            "w-full flex-1 overflow-hidden transition-opacity duration-200"
+          )}
+        />
+      )}
     </>
   );
 }
-

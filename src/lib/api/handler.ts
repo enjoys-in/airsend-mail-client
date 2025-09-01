@@ -51,6 +51,9 @@ export class API {
     static handleLogout() {
         return instance.post('/api/v1/auth/logout')
     }
+    static handleAdminLogout() {
+        return instance.get('/api/v1/auth/admin/logout')
+    }
     static getDomains() {
         return instance.get('/api/v1/domains')
     }
@@ -155,7 +158,7 @@ export class API {
         return instance.get<ApiResponse<MailBoxListAPIResponse[]>>(`/api/v1/get-folder-labels?type=${type}`)
     }
     static sendMailOG(data: any) {
-        return instance.post<ApiResponse<{uid:string,message_id:string,thread_id:string}>>(`/api/v1/send-mail`, data)
+        return instance.post<ApiResponse<{ uid: string, message_id: string, thread_id: string }>>(`/api/v1/send-mail`, data)
     }
     static uploadFiles(data: any) {
         return instance.post(`/api/v1/attachment/upload`, data, {
