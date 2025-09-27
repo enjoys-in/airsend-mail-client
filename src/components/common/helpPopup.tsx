@@ -20,10 +20,15 @@ const HelpPopup = () => {
         setIsVisible(false);
     };
     useEffect(() => {
-        const splashElement = document.getElementById('splash');
-        if (splashElement) {
-            setIsVisible(true);
-        }
+         
+        const timer = setTimeout(() => {
+            const splashElement = document.getElementById('splash');
+            if (splashElement) {
+                setIsVisible(true);
+            }
+        }, 2500);
+
+        return () => clearTimeout(timer);
 
     }, []);
     if (!isVisible) return null;
@@ -42,7 +47,7 @@ const HelpPopup = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleDismiss}
-                                className="h-6 w-6 p-0 hover:bg-gray-100"
+                                className="h-6 w-8 p-2 hover:bg-gray-600"
                             >
                                 <X className="h-4 w-4" />
                             </Button>
@@ -56,6 +61,7 @@ const HelpPopup = () => {
                         </Button>
                     </div>
                 </div>
+            <p className="text-xs text-help-popup-foreground mt-2">Sorry for the inconvenience. we're working on it as we dont have any FE team</p>
             </div>
         </div>
     );
