@@ -13,11 +13,12 @@ import { use, useEffect, useState } from "react"
 import { Check, CheckCircle, Loader2Icon, RefreshCw } from "lucide-react"
 import { useMailStore } from "@/store/mails"
 import { API } from "@/lib/api/handler"
-import { encryptData, manualDelay } from "@/lib/utils"
+import {  manualDelay } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useCacheStorage } from "@/hooks/useCacheStorage"
 import { useIndexDb } from "@/hooks/useIndexDb"
-
+import { Security } from "@/lib/security"
+const s  = new Security()
 const domainRegex =
   /^(?=.{1,255}$)(?!:\/\/)([a-zA-Z0-9-_]+\.)+[a-zA-Z]{2,}$/
 // Define the form schema with Zod
@@ -110,12 +111,12 @@ export function ConfigForm() {
         "imap_port": values.imapConfig.port,
         "imap_secure": values.imapConfig.imap_secure,
         "imap_username": values.imapConfig.username,
-        "imap_password": encryptData(values.imapConfig.password),
+        "imap_password": s.encryptAES(values.imapConfig.password),
         "smtp_host": values.smtpConfig.host,
         "smtp_port": values.smtpConfig.port,
         "smtp_secure": values.smtpConfig.smtp_secure,
         "smtp_username": values.smtpConfig.username,
-        "smtp_password": encryptData(values.smtpConfig.password),
+        "smtp_password": s.encryptAES(values.smtpConfig.password),
         "uses_same_credentials": values.smtpConfig.uses_same_credentials
       })
     } catch (e: any) {

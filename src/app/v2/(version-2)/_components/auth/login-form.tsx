@@ -3,22 +3,20 @@
 import type React from "react"
 import { useState } from "react"
 
-import { cn, encryptData } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
-import { ConfigForm } from "./config-form"
 import { API } from "@/lib/api/handler"
 import { LogoImage } from "@/components/logo-image"
-import { useMailStore } from "@/store/mails"
 import { useRouter } from "next/navigation"
 
 import { setCurrAccount } from "@/store/slices/account"
 import { useAppDispatch } from "@/store/hooks"
 import Link from "next/link"
-
+import { Security } from "@/lib/security"
+const s = new Security()
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
     const router = useRouter()
     const { toast } = useToast()
@@ -49,7 +47,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             // Make API call
             const { data } = await API.handleLogin({
                 email,
-                password: encryptData(password)
+                password: s.encryptAES(password)
             })
             if (!data.success) {
                 setIsLoading(false);

@@ -1,7 +1,7 @@
 import { __config } from '@/constants/config';
 import * as crypto from 'crypto'
-import CryptoJS  from 'crypto-js'
-const ENCRYPTION_KEY: string = "enjoys_encrption_key!@#%^&*()_NJ";
+import CryptoJS from 'crypto-js'
+const ENCRYPTION_KEY: string = "pY8rGx4JmZqK9nVtB2dE6fWcL1sQ3uHa";
 
 export class Security {
     /**
@@ -107,5 +107,60 @@ export class Security {
     };
     static DecryptFromString = (data: string, secret: string | undefined = ENCRYPTION_KEY) => {
         return CryptoJS.AES.decrypt(data, secret).toString(CryptoJS.enc.Utf8);
+    }
+    encryptAES(plaintext: string, secret?: string): string {
+        const key = CryptoJS.enc.Utf8.parse(secret || ENCRYPTION_KEY);
+        const iv = CryptoJS.lib.WordArray.random(16);
+
+        const encrypted = CryptoJS.AES.encrypt(plaintext, key, {
+            iv,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7,
+        });
+        const ivB64 = CryptoJS.enc.Base64.stringify(iv);
+        const cipherB64 = encrypted.ciphertext.toString(CryptoJS.enc.Base64);
+
+        return `${ivB64}:${cipherB64}`;
+    }
+    /**
+     * Decrypts the given ciphertext using AES decryption with the given IV and secret key.
+     *
+     * @param {string} ciphertextB64 - The base64-encoded ciphertext to decrypt.  
+     * @param {string} [secret] - The secret key used for decryption. If not provided, the default encryption key will be used.
+     * @return {string} The decrypted plaintext as a UTF-8 encoded string.
+     */
+
+
+    /**
+     * Decrypts the given ciphertext using AES decryption with the given IV and secret key.
+     *
+     * @param {string} ciphertextB64 - The base64-encoded ciphertext to decrypt.
+     * @param {string} [secret] - The secret key used for decryption. If not provided, the default encryption key will be used.
+     * @return {string} The decrypted plaintext as a UTF-8 encoded string.
+     * @throws {Error} If decryption fails, an error will be thrown.
+     */
+    decryptAES(ciphertextB64: string, secret?: string): string {
+        try {
+            const [ivB64, cipherB64] = ciphertextB64.split(":");
+
+            const key = CryptoJS.enc.Utf8.parse(secret || ENCRYPTION_KEY);
+
+            const decrypted = CryptoJS.AES.decrypt(
+                {
+                    ciphertext: CryptoJS.enc.Base64.parse(cipherB64),
+                } as any,
+                key,
+                {
+                    iv: CryptoJS.enc.Base64.parse(ivB64),
+                    mode: CryptoJS.mode.CBC,
+                    padding: CryptoJS.pad.Pkcs7,
+                }
+            );
+
+            return decrypted.toString(CryptoJS.enc.Utf8);
+        } catch (error) {
+
+            return "";
+        }
     }
 }

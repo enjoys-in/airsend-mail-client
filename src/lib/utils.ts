@@ -83,9 +83,7 @@ export const attachmentsToBase64 = async (files: File[]) => {
 };
 
 
-export function encryptData(data: string) {
-  return AES.encrypt(data, __config.APP.APP_SECRET || "987dfdfd44sdfs").toString();
-}
+
 export const manualDelay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export function html2markdown(html: string): string {
   // Basic HTML to Markdown conversion

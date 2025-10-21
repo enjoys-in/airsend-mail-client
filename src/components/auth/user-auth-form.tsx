@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState } from "react"
-import { cn, encryptData } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,11 +13,11 @@ import { LogoImage } from "@/components/logo-image"
 
 import { useRouter } from "next/navigation"
 import { useIndexDb } from "@/hooks/useIndexDb"
-import { useCacheStorage } from "@/hooks/useCacheStorage"
 import Link from "next/link"
 import { useAppDispatch } from "@/store/hooks"
 import { setCurrAccount } from "@/store/slices/account"
-
+import { Security } from '@/lib/security';
+const s = new Security()
 
 export function UserAuthForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
     const router = useRouter()
@@ -26,7 +26,6 @@ export function UserAuthForm({ className, ...props }: React.ComponentPropsWithou
     const dispatch = useAppDispatch()
 
     const [email, setEmail] = useState("")
-    const cacheStorage = useCacheStorage()
     const [password, setPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
 
@@ -48,10 +47,10 @@ export function UserAuthForm({ className, ...props }: React.ComponentPropsWithou
         setIsLoading(true)
 
         try {
-            // Make API call            
+            // Make API call
             const { data } = await API.handleLogin({
                 email: email,
-                password: encryptData(password)
+                password: s.encryptAES(password)
             })
             if (!data.success) {
                 throw new Error(data.message)
@@ -61,7 +60,6 @@ export function UserAuthForm({ className, ...props }: React.ComponentPropsWithou
                 title: "Login Successfull",
                 description: "Please Wait,Redirecting...", duration: 1500
             })
-            const Data = JSON.stringify(data.result)
             dispatch(setCurrAccount(data.result))
             return router.push("/u/inbox")
         } catch (error) {

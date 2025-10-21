@@ -22,8 +22,9 @@ import { toast } from "sonner";
 import { AxiosError } from "axios";
 import { useMultiTabStore } from "@/store/settings/multiTabSystem";
 import { API } from "@/lib/api/handler";
-import { encryptData, filterNameAndEmail } from "@/lib/utils";
-
+import {   filterNameAndEmail } from "@/lib/utils";
+import { Security } from "@/lib/security"
+const s  = new Security()
 interface EmailData {
   from: string;
   to: string[];
@@ -100,9 +101,9 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
         html: newObjct.html,
         attachments: newObjct.attachments.length > 0,
         trackers_detected: 0,
-        flags: ["sent", "inbox"],
+        flags: ["\\Unseen", "\\Recent"],
         folder: "sent",
-        from_email: encryptData(newObjct.from),
+        from_email: s.encryptAES(newObjct.from),
         has_attachments: false,
         id: Date.now(),
         is_forwarded: false,
@@ -116,7 +117,7 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
         receipient: filterNameAndEmail(newObjct.from ,newObjct.from,false),
         thread_id: res.data.result.thread_id,
         timestamp: new Date().toString(),
-        plain_text: encryptData(newObjct.html),
+        plain_text: s.encryptAES(newObjct.html),
         uid: res.data.result.uid,
       };
       await airsendDB.addNestedItem("mails", res.data.result.message_id, obj as any);
