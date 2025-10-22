@@ -31,10 +31,12 @@ export type MailBoxListAPIResponse = {
     type: string
     is_system: boolean
     is_deleted: boolean
-    created_at: string
-    updated_at: string
-    deleted_at: any
+    created_at: Date
+    updated_at: Date
+    deleted_at: Date
+    color: any
 } & {
     total_count: number;
-    unseen_count: number;
+    unread_count: number;
+    read_count: number;
 } 

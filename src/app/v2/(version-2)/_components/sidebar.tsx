@@ -32,7 +32,7 @@ import { SettingsMenuSidebar } from "./mail/settingsSidebar"
 const navMain = [
     {
         title: "Mailbox",
-        url: "/v2/u/mail/inbox",
+        url: "/v2/u/mail/",
         icon: Inbox,
         isActive: true,
     },

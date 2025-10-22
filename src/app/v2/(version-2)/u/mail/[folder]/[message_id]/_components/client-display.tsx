@@ -51,6 +51,7 @@ import { db } from "@/db";
 import { MailDropdown } from "./menu-dropdown";
 import { Security } from "@/lib/security";
 import { useMailRenderSettings } from "@/store/mails/mail-render-settings";
+const s = new Security()
 
 const ClientDisplay = ({
     folder,
@@ -107,13 +108,13 @@ const ClientDisplay = ({
                     <Avatar>
                         <AvatarImage
                             alt={formatEmail(
-                                Security.DecryptFromString(selectedMail?.from_email)
+                                s.decryptAES(selectedMail?.from_email)
                             ).toLocaleUpperCase()}
                         />
                         <AvatarFallback className="flex items-center justify-center h-10 w-10 bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full">
                             {selectedMail?.from_email &&
                                 formatEmail(
-                                    Security.DecryptFromString(selectedMail?.from_email)
+                                    s.decryptAES(selectedMail?.from_email)
                                 ).toLocaleUpperCase()[0]}
                         </AvatarFallback>
                     </Avatar>
@@ -122,7 +123,7 @@ const ClientDisplay = ({
                             <div className="font-semibold">
                                 {selectedMail?.from_email &&
                                     formatEmail(
-                                        Security.DecryptFromString(selectedMail?.from_email)
+                                        s.decryptAES(selectedMail?.from_email)
                                     )}
                             </div>
                         </div>
@@ -169,7 +170,7 @@ const ClientDisplay = ({
                                                     <strong>
                                                         {selectedMail?.from_email &&
                                                             formatEmail(
-                                                                Security.DecryptFromString(
+                                                                s.decryptAES(
                                                                     selectedMail?.from_email
                                                                 )
                                                             )}

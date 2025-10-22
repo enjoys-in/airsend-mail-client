@@ -1,9 +1,12 @@
 "use client"
-
-import { toast } from "@/components/ui/use-toast"
+import { MailBoxListAPIResponse, MailLablesType } from "@/lib/types/MailBoxListResponse.interface"
 import { useMailStore } from "@/store/mails"
 import { ChevronUp, Plus, Check, X, Folder, Tag } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
+
+import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 type TailwindBgColor =
   | "bg-purple-500"
@@ -28,33 +31,24 @@ export interface CollectionItem {
 
 interface SidebarCollectionsProps {
   text: string
+  list: MailBoxListAPIResponse[]
 }
 
-const SidebarCollections: React.FC<SidebarCollectionsProps> = ({ text }) => {
-  const { all_folders, all_labels } = useMailStore()
+const SidebarCollections: React.FC<SidebarCollectionsProps> = ({ text, list }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [showAll, setShowAll] = useState<boolean>(false)
   const [isCreating, setIsCreating] = useState<boolean>(false)
   const [newItemName, setNewItemName] = useState<string>("")
-  const { setAllFolders, setAllLabels } = useMailStore()
+  const { setAllFolders, setAllLabels, setSelectedMailbox, selected_mailbox } = useMailStore()
 
   const isFolder = text.toLowerCase().includes("folder")
-  const [items, setItems] = useState<CollectionItem[]>([
-    { id: "1", name: "Important", count: 32, color: "bg-purple-500" },
-    { id: "2", name: "Shared", count: 42, color: "bg-cyan-500" },
-    { id: "3", name: "Applications", count: 12, color: "bg-yellow-500" },
-    { id: "4", name: "Work", count: 8, color: "bg-green-500" },
-    { id: "5", name: "Personal", count: 15, color: "bg-red-500" },
-    { id: "11", name: "Updates", count: 24, color: "bg-indigo-500" },
-    { id: "12", name: "Promotions", count: 18, color: "bg-teal-500" },
-  ])
+  const [items, setItems] = useState<Partial<MailBoxListAPIResponse>[]>(list)
+  const pathname = usePathname();
 
+  const router = useRouter()
   const handleCreateItem = (): void => {
-    toast({
-      title: "Feature coming soon",
 
-    })
-    return
+
     if (newItemName.trim()) {
       const colors: TailwindBgColor[] = [
         "bg-purple-500",
@@ -66,11 +60,11 @@ const SidebarCollections: React.FC<SidebarCollectionsProps> = ({ text }) => {
         "bg-orange-500",
         "bg-pink-500",
       ]
-      const newItem: CollectionItem = {
-        id: Date.now().toString(),
-        name: newItemName.trim(),
-        count: 0,
+      const newItem: Partial<MailBoxListAPIResponse> = {
+        title: newItemName.trim(),
+        total_count: 0,
         color: colors[Math.floor(Math.random() * colors.length)],
+        type: isFolder ? MailLablesType.FOLDER : MailLablesType.LABEL,
       }
       const updated = [...items, newItem]
       setItems(updated)
@@ -114,18 +108,32 @@ const SidebarCollections: React.FC<SidebarCollectionsProps> = ({ text }) => {
       >
         <div className="space-y-1">
           <div className="max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent cursor-pointer">
-            {visibleItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center py-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md px-1 transition-colors cursor-pointer"
-              >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
+            {(visibleItems as MailBoxListAPIResponse[])?.map((item) => {
+              const isSelected = selected_mailbox === item?.path;
+              return (
+                <div
+                  onClick={() => {
+                    setSelectedMailbox(item?.path.toLowerCase());
+                    router.push(`/v2/u/mail/${item?.path.toLowerCase()}`);
+                  }}
+                  key={item.id}
+                  className={cn(
+                    "flex justify-between items-center px-2  group rounded-none cursor-pointer",
+
+                    isSelected || pathname.includes(item?.path?.toLowerCase())
+                      ? "dark:bg-[#5a61ff22]"
+                      : "bg-neutral-800"
+                  )}
+                >
+                  <Link   prefetch
+                            href={`/v2/u/mail/${item.path.toLowerCase()}`} className="w-6 h-6 flex items-center justify-center">
+                    <div className={`w-3 h-3 rounded-full bg-${item.color}`}></div>
+                  <span className="ml-2 text-sm flex-1 dark:text-gray-200">{item.title}</span>
+                  </Link>
+                  <span className={`ml-auto text-gray-500 dark:text-gray-400 text-xs ${item?.unread_count > item?.read_count ? "font-bold" : ""}`}>{item.total_count}</span>
                 </div>
-                <span className="ml-2 text-sm flex-1 dark:text-gray-200">{item.name}</span>
-                <span className="ml-auto text-gray-500 dark:text-gray-400 text-xs">{item.count}</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {isCreating && (

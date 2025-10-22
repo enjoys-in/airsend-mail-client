@@ -13,63 +13,18 @@ import { FaToolbox } from "react-icons/fa"
 import { CustomEventKey, useCustomEvent } from "@/hooks/use-custom-event"
 import { MailEventData } from "@/lib/types/update-mail-events.interface"
 import { airsendDB } from "@/db"
+import { useParams } from "next/navigation"
 
 export function SpotToolbar() {
+  const params = useParams()
   const { checkedItems, all_emails, setCheckedItems, selected_mailbox, setAllEmails } = useMailStore()
   const { listen } = useCustomEvent(CustomEventKey.MailEvents)
+  const { emit } = useCustomEvent(CustomEventKey.SyncMailCounts)
   const handleImapEvents = useCallback(
     async (data: MailEventData) => {
 
       try {
-        let response
-        switch (data.action) {
-          case "delete":
-            response = await API.handleMailEvents(data)
-            break
-          case "delete_all":
-            response = await API.handleMailEvents(data)
-            break
-          case "mark_as_read":
-            response = await API.handleMailEvents(data)
-
-            break
-          case "mark_as_unread":
-            response = await API.handleMailEvents(data)
-            break
-          case "mark_all_as_read":
-            response = await API.handleMailEvents(data)
-            break
-          case "mark_all_as_unread":
-            response = await API.handleMailEvents(data)
-            break
-          case "block":
-            response = await API.handleMailEvents(data)
-
-            break
-            response = await API.handleMailEvents(data)
-
-          case "report":
-            break
-          case "move":
-            response = await API.handleMailEvents(data)
-
-            break
-          case "copy":
-            response = await API.handleMailEvents(data)
-
-            break
-          case "move_all":
-            response = await API.handleMailEvents(data)
-
-            break
-          case "copy_all":
-            response = await API.handleMailEvents(data)
-
-            break
-          default:
-            toast.error("Invalid action.")
-            break
-        }
+        let response = await API.handleMailEvents(data, selected_mailbox || params.folder as string)
         if (response) {
           const res = response.data as ApiResponse<any>
           if (!res.success) {
@@ -80,7 +35,7 @@ export function SpotToolbar() {
 
             const udpatedEmails = all_emails && all_emails?.filter((item) => !checkedItems.includes(item.message_id))
 
-
+            emit(selected_mailbox || params.folder as string)
             setAllEmails(udpatedEmails || [])
             await airsendDB.bulkDeleteItems("mails", data.message_id || data.id as any)
             setCheckedItems([])
@@ -110,7 +65,8 @@ export function SpotToolbar() {
     setCheckedItems([])
   }, [])
   useEffect(() => {
-    listen(handleImapEvents)
+    const unsubscribe = listen(handleImapEvents)
+    return () => { unsubscribe() }
   }, [])
   return checkedItems.length > 0 ? (
     <div className="flex z-10 fixed items-center justify-between w-full bg:[#333333] dark:bg-[#333333] border-b text-white px-4 ">

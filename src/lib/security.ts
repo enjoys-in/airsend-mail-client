@@ -105,9 +105,7 @@ export class Security {
             return "%" + c.charCodeAt(0).toString(16).toUpperCase();
         });
     };
-    static DecryptFromString = (data: string, secret: string | undefined = ENCRYPTION_KEY) => {
-        return CryptoJS.AES.decrypt(data, secret).toString(CryptoJS.enc.Utf8);
-    }
+    
     encryptAES(plaintext: string, secret?: string): string {
         const key = CryptoJS.enc.Utf8.parse(secret || ENCRYPTION_KEY);
         const iv = CryptoJS.lib.WordArray.random(16);

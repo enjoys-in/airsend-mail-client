@@ -10,11 +10,9 @@ const SidbarTabs = () => {
     const activeTab = useAppSelector((state) => state.layout.sidebarTab);
     return (
         <div>
-          
-            <div className="group flex flex-col gap-1 py-2">
-            <ListFolders />
-               
 
+            <div className="group flex flex-col gap-1 py-2">
+                <ListFolders />
             </div>
         </div>
     )

@@ -9,7 +9,7 @@ import { Security } from '@/lib/security';
 import { DecryptEncryptedMail } from '@/lib/pgp-service';
 import FileAttachment from '../../../_components/file-attachment'
 import { Separator } from '@/components/ui/separator'
-
+const s = new Security()
 const DecodingComponent = ({ message_id, data }: { message_id: string, data: EncodedMessageResponse }) => {
     const { setEncryptedData } = useKeyStore()
     const { rawData, setRawData } = useMailStore()
@@ -18,16 +18,19 @@ const DecodingComponent = ({ message_id, data }: { message_id: string, data: Enc
 
     const handleDecryptiion = async (data: EncodedMessageResponse) => {
         try {
+
+
             if (rawData[message_id]) {
                 const email = await PostalMime.parse(rawData[message_id]);
                 setAttachments(email.attachments)
                 return setHtml(email.html! || "No HTML content")
             }
 
+
             const decrypted = await DecryptEncryptedMail({
-                encrypted: Security.DecryptFromString(data.chiper_text),
-                privateKeyArmored: Security.DecryptFromString(data.open_pgp.privateKey),
-                publicKeyArmored: Security.DecryptFromString(data.open_pgp.publicKey),
+                encrypted: s.decryptAES(data.chiper_text),
+                privateKeyArmored: s.decryptAES(data.open_pgp.privateKey),
+                publicKeyArmored: s.decryptAES(data.open_pgp.publicKey),
                 password: data.k
             })
             const email = await PostalMime.parse(decrypted);
@@ -36,13 +39,14 @@ const DecodingComponent = ({ message_id, data }: { message_id: string, data: Enc
 
             return setHtml(email.html! || "No HTML content")
         } catch (e) {
-            return setHtml("Error decrypting message")
+            return setHtml("Message could not be decrypted")
         }
     }
     React.useEffect(() => {
         setEncryptedData(data)
         handleDecryptiion(data)
     }, []);
+
     return (
         <div>
 

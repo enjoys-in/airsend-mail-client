@@ -148,8 +148,8 @@ export class API {
     static handleUpdateMailUserSetting(data: any) {
         return instance.put(`/api/v1/update-user-settings`, data)
     }
-    static handleMailEvents(data: MailEventData) {
-        return instance.patch(`/api/v1/update-mail-event`, data)
+    static handleMailEvents(data: MailEventData,folder:string) {
+        return instance.patch(`/api/v1/update-mail-event?current_mailbox=${folder}`, data)
     }
     static getMailboxUnReadCount(current_mailbox: string) {
         return instance.get(`/api/v1/get-mail-event?current_mailbox=${current_mailbox}`)

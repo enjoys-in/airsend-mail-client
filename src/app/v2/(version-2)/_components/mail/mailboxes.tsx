@@ -17,8 +17,10 @@ import QuotaComponent from "./QuotaComponent"
 import ShowMeetings from "./ShowMeetings"
 import { AccountSwitcherV2 } from "./AccountSwitcher"
 import MultiTabSystem from "./composeMail"
+import { useMailStore } from "@/store/mails"
 
 export function Mailboxes() {
+  const { all_folders, all_labels } = useMailStore()
 
   return (
     <Sidebar collapsible="none" className="hidden flex-1 md:flex ">
@@ -31,9 +33,9 @@ export function Mailboxes() {
 
         <SidebarGroup >
           <SidebarGroupContent>
-            <SidebarCollections text="Folder" />
+            <SidebarCollections text="Folder" list={all_folders||[]} />
             <Separator />
-            <SidebarCollections text="Lables" />
+            <SidebarCollections text="Lables" list={all_labels||[]} />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

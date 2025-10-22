@@ -13,11 +13,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { ArrowLeft, ChevronDown, X } from "lucide-react";
-import { useState, useCallback, type KeyboardEvent } from "react";
+import { useState, useCallback, type KeyboardEvent, useEffect } from "react";
 import { HtmlEditor } from "./plain-editor/htmlEditor";
 
 import ComposeFooter from "./ComposeFooter";
 import { useAppSelector } from "@/store/hooks";
+import { airsendDB } from "@/db";
 
 interface EmailChip {
   id: string;
@@ -137,7 +138,18 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
     },
     [addChip]
   );
+  useEffect(() => {
+    airsendDB.getMultiNestedItem("settings", selectedAccount?.email as string,
+      ["settings.user.display_name"]).then(res => {
+        if (res.value?.settings) {
 
+          setSelectedAccount({
+            email: selectedAccount.email,
+            name: (res.value?.settings as any)?.user?.display_name || selectedAccount?.name || ""
+          })
+        }
+      })
+  }, []);
   return (
     <div className="w-full bg-white dark:bg-neutral-900 transition-colors">
       {showHeader && (

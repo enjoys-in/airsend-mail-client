@@ -5,17 +5,10 @@ import { create } from 'zustand'
 
 
 
-const ALLOWED_SPECIAL_USE = [
-    // { name: "All Mail", path: "INBOX", special_use: "\\All", unseen_count: 0, total_count: 0 },
-    { name: "Inbox", path: "inbox", special_use: "\\Inbox", unseen_count: 0, total_count: 0 },
-    { name: "Sent", path: "sent", special_use: "\\Sent", unseen_count: 0, total_count: 0 },
-    { name: "Drafts", path: "drafts", special_use: "\\Drafts", unseen_count: 0, total_count: 0 },
-    { name: "Deleted", path: "deleted", special_use: "\\Trash", unseen_count: 0, total_count: 0 },
-    { name: "Spam", path: "spam", special_use: "\\Junk", unseen_count: 0, total_count: 0 },
-    { name: "Archive", path: "archive", special_use: "\\Archive", unseen_count: 0, total_count: 0 },
-]
-type Labels =( Omit<MailBoxListAPIResponse, "type"> & { type: MailLablesType.LABEL })[]
-type Folders =( Omit<MailBoxListAPIResponse, "type"> & { type: MailLablesType.FOLDER })[]
+
+type Mailbox = (Omit<MailBoxListAPIResponse, "type"> & { type: MailLablesType.MAILBOX })[]
+type Labels = (Omit<MailBoxListAPIResponse, "type"> & { type: MailLablesType.LABEL })[]
+type Folders = (Omit<MailBoxListAPIResponse, "type"> & { type: MailLablesType.FOLDER })[]
 interface State {
     loading: boolean
     setLoading: (loading: boolean) => void
@@ -26,14 +19,14 @@ interface State {
     error: string | null
     setError: (error: string | null) => void
 
-    rawData:Record<string, any>
+    rawData: Record<string, any>
     setRawData: (html: Record<string, any>) => void
 
     selected_mailbox: string | null
     setSelectedMailbox: (name: string | null) => void
 
-    all_mailbox: typeof ALLOWED_SPECIAL_USE
-    setAllMailbox: (list: typeof ALLOWED_SPECIAL_USE) => void
+    all_mailbox: Mailbox
+    setAllMailbox: (list: Mailbox) => void
 
     all_folders: Folders | null
     setAllFolders: (list: Folders | null) => void
@@ -108,7 +101,7 @@ export const useMailStore = create<State>()((set) => ({
     selected_mailbox: null,
     setSelectedMailbox: (name) => set({ selected_mailbox: name }),
 
-    all_mailbox: ALLOWED_SPECIAL_USE,
+    all_mailbox: [],
     setAllMailbox: (list) => set({ all_mailbox: list }),
 
     all_emails: null,

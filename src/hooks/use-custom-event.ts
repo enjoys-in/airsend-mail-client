@@ -2,6 +2,7 @@ import { useRef, useCallback } from 'react';
 
 export enum CustomEventKey {
     SyncMail = 'sync-mail',
+    SyncMailCounts = 'sync-mail-counts',
     SyncSettings = 'sync-settings',
     RefreshView = 'refresh-view',
     UserLoggedIn = 'user-logged-in',

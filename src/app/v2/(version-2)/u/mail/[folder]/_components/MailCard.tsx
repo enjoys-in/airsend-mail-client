@@ -16,7 +16,7 @@ import { EmailContextMenu } from './EmailContextMenu';
 import { GetAllMailsPayload } from '@/lib/types/mail.interface';
 import { Security } from '@/lib/security';
 import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event';
-
+const s = new Security();
 export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
     const router = useRouter()
     const params = useParams()
@@ -73,7 +73,7 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
                                     </AvatarFallback>
                                 </Avatar>) : (<Avatar className="h-8 w-8">
                                     <AvatarFallback className="text-green-500 text-sm bg-muted-foreground/50 dark:bg-neutral-700" >
-                                        {formattedName(filterNameAndEmail(Security.DecryptFromString(item.from_email), Security.DecryptFromString(item.from_email)))}
+                                        {formattedName(filterNameAndEmail(s.decryptAES(item.from_email), s.decryptAES(item.from_email)))}
                                     </AvatarFallback>
                                 </Avatar>
                                 )
@@ -92,8 +92,8 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
                                         <span className="w-2 h-2 bg-green-500 rounded-full" />
                                     )}
                                     {filterNameAndEmail(
-                                        Security.DecryptFromString(item.from_email),
-                                        Security.DecryptFromString(item.from_email)
+                                        s.decryptAES(item.from_email),
+                                        s.decryptAES(item.from_email)
                                     )}
                                 </span>
                             )}
@@ -105,7 +105,7 @@ export const MailCard = ({ item }: { item: GetAllMailsPayload }) => {
                                 {item?.subject}
                             </div>
                             <div className="text-sm text-gray-500 truncate flex-1 min-w-0">
-                                {Security.DecryptFromString(item?.plain_text) || item?.plain_text}
+                                {s.decryptAES(item?.plain_text) || item?.plain_text}
                             </div>
                         </div>
                         <div>

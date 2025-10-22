@@ -15,6 +15,7 @@ import { airsendDB } from "@/db";
 import { useAppSelector } from "@/store/hooks";
 import { SendMail } from "@/components/server-actions/send-mail";
 import { Security } from "@/lib/security";
+const s = new Security();
 
 export const MailDisplay = ({
   folder,
@@ -30,7 +31,6 @@ export const MailDisplay = ({
 
   const replyTextAreaRef = useRef<HTMLTextAreaElement>(null);
   const { selectedMail, setSelectedMail, setLoading } = useMailStore();
-
   const fetchMailBodyFromCache = async () => {
     await airsendDB.getItemByKey("mails", message_id as string).then((item) => {
       if (!item) {
@@ -109,7 +109,7 @@ export const MailDisplay = ({
               className="p-4"
               placeholder={`Reply ${
                 selectedMail?.from_email &&
-                "to " + Security.DecryptFromString(selectedMail?.from_email!)
+                "to " + s.decryptAES(selectedMail?.from_email!)
               }...`}
             />
             <div className="flex items-center">

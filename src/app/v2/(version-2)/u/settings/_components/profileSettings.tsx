@@ -37,13 +37,17 @@ export default function ProfileSettings({ email }: { email: string }) {
 
   // Reset form whenever selectedAccount changes
   useEffect(() => {
-    reset({ display_name: selectedAccount?.name || "" })
     airsendDB.getMultiNestedItem("settings", selectedAccount?.email as string,
-      ["settings.usage", "settings.mailbox_size"]).then(res => {
-        res.value?.settings && setQuota({
-          usage: +res.value?.settings.usage,
-          limit: +res.value?.settings.mailbox_size,
-        })
+      ["settings.usage", "settings.mailbox_size", "settings.user.display_name"]).then(res => {
+        if (res.value?.settings) {
+          setQuota({
+            usage: +(res.value?.settings as any)?.usage,
+            limit: +(res.value?.settings as any)?.mailbox_size,
+          })
+          reset({ display_name: (res.value?.settings as any)?.user?.display_name || selectedAccount?.name || "" })
+        }
+
+
       });
   }, [selectedAccount, reset])
 
@@ -78,7 +82,11 @@ export default function ProfileSettings({ email }: { email: string }) {
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <Label className="w-full md:w-40 text-sm font-medium">Email address</Label>
           <div className="flex-1">
-            <Select value={selectedEmail} onValueChange={setSelectedEmail}>
+            {accounts.length === 0 ? (<Input
+              value={currAccount?.email || email || ""}
+              readOnly
+              className="w-full bg-black border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-2"
+            />) : <Select value={selectedEmail} onValueChange={setSelectedEmail}>
               <SelectTrigger className="w-full bg-black border-gray-700 text-white">
                 <SelectValue
                   placeholder={currAccount?.email || email || "Select email"}
@@ -90,7 +98,8 @@ export default function ProfileSettings({ email }: { email: string }) {
                   <SelectItem key={acc.email} value={acc.email}>{acc.email}</SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+            </Select>}
+
           </div>
         </div>
 
@@ -147,7 +156,7 @@ export default function ProfileSettings({ email }: { email: string }) {
       {/* Save Changes Button */}
       {hasUnsavedChanges && (
         <div className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-50">
-          <Button onClick={handleSubmit(onSubmit)} className="bg-blue-600 text-white px-6 py-2 rounded shadow-lg hover:bg-blue-700">
+          <Button onClick={handleSubmit(onSubmit)} type="button" className="bg-blue-600 text-white px-6 py-2 rounded shadow-lg hover:bg-blue-700">
             Save Changes
           </Button>
         </div>

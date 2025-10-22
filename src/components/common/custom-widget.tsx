@@ -18,7 +18,7 @@ const CustomWidget = () => {
             timer = setTimeout(handleLoad, 500);
         } else {
             window.addEventListener("load", () => {
-                timer = setTimeout(handleLoad, 500);
+                timer = setTimeout(handleLoad, 1500);
             });
         }
 
