@@ -6,7 +6,7 @@ set -e
 echo "🚀 Starting deployment..."
 
 # Navigate to your project directory (optional)
-cd /path/to/your/project || exit 1
+cd /home/mullayam/projects/email-service/airsend-mail-client || exit 1
 
 echo "📥 Pulling latest changes from Git..."
 git pull origin main
