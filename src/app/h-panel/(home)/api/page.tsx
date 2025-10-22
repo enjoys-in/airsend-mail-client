@@ -40,13 +40,14 @@ interface API_Response {
 }
 const page = async () => {
     try {
-        const { data } = await serverAxios.get("/admin/api-keys") as {
+        const { data } = await serverAxios.get("/api/v1/admin/api-keys") as {
             data: {
                 success: boolean,
                 message: string,
                 result: API_Response[]
             }
         }
+        console.log(data)
         if (!data.success) throw new Error(data.message)
 
         return (
