@@ -62,7 +62,7 @@ const SocketContextProvider = ({ children }: PropsWithChildren) => {
         }
 
         return () => {
-            console.log("🧹 Cleaning up");
+            
             appSocket.off("connect", handleConnect);
             appSocket.off("disconnect", handleDisconnect);
             appSocket.off("connect_error", handleConnectError);

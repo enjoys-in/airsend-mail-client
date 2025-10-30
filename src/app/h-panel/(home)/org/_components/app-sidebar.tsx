@@ -83,9 +83,6 @@ export function OrgSidebar() {
           </div>
         ))}
       </nav>
-
-      
-     
     </div>
   )
 }

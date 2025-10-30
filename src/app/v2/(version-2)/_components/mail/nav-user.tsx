@@ -42,7 +42,7 @@ export function NavUserV2() {
     const { data } = await API.handleLogout()
     if (data.success) {
       await UserLogout()
-      router.push("/v2")
+      router.replace("/v2")
     }
   }
   return (

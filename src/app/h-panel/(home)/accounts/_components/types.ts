@@ -16,6 +16,7 @@ export interface FetchAllUsersRootObject {
         imap_config: {
             enable_imap: boolean
         },
+        allow_wildcard: boolean
         smtp_config: {   enable_smtp: boolean}
     }
 }

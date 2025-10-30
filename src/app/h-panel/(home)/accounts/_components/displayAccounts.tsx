@@ -37,6 +37,7 @@ import { MailServerDetails } from "./mailServerDetails"
 import { ResetPasswordForm } from "./resetPassword"
 import { FetchAllUsersRootObject } from "./types"
 import { RiLockPasswordLine } from "@remixicon/react"
+import { Switch } from "@/components/ui/switch"
 
 export function UserManagement({ users }: { users: FetchAllUsersRootObject[] }) {
     const { toast } = useToast()
@@ -114,7 +115,7 @@ export function UserManagement({ users }: { users: FetchAllUsersRootObject[] }) 
 
             <div className="border overflow-x-auto max-h-[500px] overflow-y-auto">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-zinc-900">
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Email</TableHead>
@@ -140,7 +141,7 @@ export function UserManagement({ users }: { users: FetchAllUsersRootObject[] }) 
                                     <TableCell>{formatBytes(+user.mailbox_size)}</TableCell>
                                     <TableCell>{user.status}</TableCell>
                                     <TableCell>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 items-baseline">
                                             <Button
                                                 onClick={() => handleShowDetails(user)}
                                                 variant="ghost"

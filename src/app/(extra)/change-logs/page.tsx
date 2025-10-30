@@ -2,10 +2,127 @@ import { Info } from "lucide-react"
 
 const CHANGE_LOGS = [
     {
+        date: "Oct 30, 2025",
+        version: "1",
+        color: "from-gray-500 to-purple-500",
+        versionNumber: "1.12",
+        improvements: [
+            "WIP- Sync Engine Under Integration",
+            "ElectricSql or RxDB Under Integration",
+            "Show IMAP/SMTP Details in Accounts",
+            "User can Reset/Change Password",
+            "Allow Wildcard for email"
+
+        ],
+        bugfixes: [
+            "Fix User Logout Issue in Webmail",
+            "Fix the Domain Logs Displayed",
+            "Update the Mail usage while sending and receiving mails",
+            "Fix RFC5322 Headers",
+            "Fix Private Key Error on Encryption of Mail"
+        ]
+    },
+    {
+        date: "Oct 25, 2025",
+        version: "1",
+        color: "from-purple-500 to-indigo-600",
+        versionNumber: "1.11",
+        improvements: [
+
+            "Update the Path for the Webmail",
+            "Show IMAP/SMTP Details in Accounts",
+            "User can Reset/Change Password",
+            "Sieive Filter Engine Added",
+        ],
+        bugfixes: [
+            "Fix Docs and API page",
+            "Fix the Domain Logs Displayed",
+            "Update the Mail usage while sending and receiving mails",
+            "Fix Request Thresold for SpamFilteration"
+
+        ]
+    },
+    {
+        date: "Oct 20, 2025",
+        version: "1",
+        color: "from-indigo-500 to-blue-600",
+        versionNumber: "1.10",
+        improvements: [
+            "Implemented send mail2 with improved dispatch logic and fallback handling",
+            "Added initial send mail workflow for outbound email service",
+            "Introduced new email notification system for inbound/outbound mail activity",
+            "Updated encryption method to refine AES key handling and cipher padding",
+            "Updated encryption method v2 to ensure 16-bit key compatibility",
+            "Fixed decryption key mismatch with proper key length enforcement",
+            "Uploaded Redis payload (v1, v2, v3) for queued mail event persistence",
+        ],
+        bugfixes: [
+            "Added Mbox ID mapping for consistent mailbox identification",
+            "Implemented threshold and IP check for rate limiting and anomaly detection",
+            "Updated keys for secure mail encryption handling",
+            "Fixed headers to improve MIME/SMTP compatibility",
+            "Enhanced mail delivery reliability and status tracking",
+
+        ]
+    },
+    {
+        date: "Oct 12, 2025",
+        version: "1",
+        color: "from-blue-500 to-sky-600",
+        versionNumber: "1.9",
+        improvements: [
+            "IP Block and Rate Limiting Added",
+            "IMAP Supports Added"
+        ],
+        bugfixes: [
+            "Fixed Undefined on Domains",
+            "Fix Splash Screen issue",
+
+        ]
+    },
+    {
+        date: "Sep 27, 2025",
+        version: "1",
+        color: "from-sky-500 to-cyan-600",
+        versionNumber: "1.7",
+        improvements: [
+            "Added Attachment Support",
+            "Introduced Threading Support like Gmail/Outlook",
+            "Added New Apis Endpoint",
+            "Added OFS Browser Support",
+        ],
+        bugfixes: [
+            "Fix Cache Key names according to new naming convention",
+            "Update Types",
+            "Fix Socket Connect/Disconnect Issue",
+            "Upaded the Ui of Display Mails"]
+    },
+
+
+    {
+        date: "Aug 30, 2025",
+        version: "1",
+        color: "from-cyan-500 to-teal-600",
+        versionNumber: "1.6",
+        improvements: [
+            "Update the Version",
+            "Added Charts and Analytics",
+            "Updated the OpenPGP E2E  Encryption(3 Layer protection)",
+            "Message Decoding on the Client Side",
+            "Added Splash Screen",
+        ],
+        bugfixes: [
+            "Fix the 500 Error on some pages",
+            "Update the IDB Version",
+            "Update the IDB Tables ",
+
+        ]
+    },
+    {
         date: "Aug 27, 2025",
-        version: "1.4",
+        version: "1.",
         color: "from-orange-600 to-yellow-400",
-        versionNumber: "1.4",
+        versionNumber: "1.5",
         improvements: [
             "User Can Now Send Mails",
             "Can See Mail, Decrypted and Read it",
@@ -17,9 +134,25 @@ const CHANGE_LOGS = [
             "Update the Mail usage while sending and receiving mails",
         ]
     },
-     {
+    {
         date: "Aug 20, 2025",
-        version: "1.3",
+        version: "1",
+        color: "from-yellow-600 to-red-400",
+        versionNumber: "1.4",
+        improvements: [
+            "Fixing the on going Bugs",
+            "Enabled sending mails to  Outlook/Microsoft",
+            "Added E2E encryption -  OpenPGP",
+        ],
+        bugfixes: [
+            "Replace Lexical with PlateJS in the editor",
+            "Fixed some issues related to the editor",
+            "Fixed API Last Usage and count"
+        ]
+    },
+    {
+        date: "May 20, 2025",
+        version: "1",
         color: "from-yellow-600 to-red-400",
         versionNumber: "1.3",
         improvements: [
@@ -35,7 +168,7 @@ const CHANGE_LOGS = [
     },
     {
         date: "May 1, 2025",
-        version: "1.2",
+        version: "1",
         color: "from-red-600 to-blue-400",
         versionNumber: "1.2",
         improvements: [
@@ -53,7 +186,7 @@ const CHANGE_LOGS = [
     },
     {
         date: "Mar 20, 2025",
-        version: "1.1",
+        version: "1",
         color: "from-blue-600 to-cyan-400",
         versionNumber: "1.1",
         improvements: [
@@ -71,7 +204,7 @@ const CHANGE_LOGS = [
     },
     {
         date: "Jan 20, 2025",
-        version: "1.0",
+        version: "1",
         color: "from-purple-600 to-pink-500",
         versionNumber: "1.0",
         improvements: [
@@ -136,7 +269,7 @@ export default function ChangelogPage() {
                                                 {log.versionNumber}
                                             </div>
                                             <div className="relative z-10 max-w-[70%]">
-                                                <h2 className="text-2xl font-bold mb-6">{log.version}</h2>
+                                                <h2 className="text-2xl font-bold mb-6">Version {log.version}</h2>
 
                                                 <div className="mb-6">
                                                     <h3 className="text-lg font-semibold mb-3">Improvements & Changes</h3>
@@ -172,7 +305,7 @@ export default function ChangelogPage() {
                                 </div>
                             </div>
                         ))
-                    } 
+                    }
                 </div>
             </div>
 

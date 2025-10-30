@@ -23,22 +23,22 @@ const IdbSyncHookApi = () => {
                     if ("usage" in modifications || "mailbox_size" in modifications || "quota_in_percent" in modifications) {
                         return
                     }
-                    const res = toast.promise(API.handleUpdateMailUserSetting({
-                        email,
-                        settings: payload
-                    }), {
-                        loading: 'Updating Settings',
-                        success: 'Settings Updated',
-                        error: 'Error while updating settings',
-                    })
-                    res.unwrap().then(({ data }: any) => {
+                    // const res = toast.promise(API.handleUpdateMailUserSetting({
+                    //     email,
+                    //     settings: payload
+                    // }), {
+                    //     loading: 'Updating Settings',
+                    //     success: 'Settings Updated',
+                    //     error: 'Error while updating settings',
+                    // })
+                    // res.unwrap().then(({ data }: any) => {
 
-                        if (!data.success) {
-                            toast.error("Something went wrong, Restoring old settings")
-                            setSettings(e?.oldObj?.settings)
-                        }
+                    //     if (!data.success) {
+                    //         toast.error("Something went wrong, Restoring old settings")
+                    //         setSettings(e?.oldObj?.settings)
+                    //     }
 
-                    })
+                    // })
                 }
             }
         };

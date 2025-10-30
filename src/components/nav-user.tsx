@@ -59,7 +59,7 @@ export function NavUser() {
     const { data } = await API.handleAdminLogout()
     if (data) {
       await AdminLogout()
-      router.push("/h-panel")
+      router.replace("/h-panel")
     }
 
 
