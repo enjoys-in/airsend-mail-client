@@ -9,7 +9,7 @@ const page = async () => {
     const { data } = await serverAxios.get("/api/v1/admin/track-records", {
       withCredentials: true
     })
-    
+
     if (!data.success) {
       throw new Error(data.message)
     }
@@ -41,17 +41,16 @@ const ResponsiveTable = ({ data }: { data: any[] }) => {
                 <th className="px-4 py-2 text-left text-gray-700">Opened Times</th>
                 <th className="px-4 py-2 text-left text-gray-700">Last Opened</th>
                 <th className="px-4 py-2 text-left text-gray-700">Status</th>
-
               </tr>
             </thead>
             <tbody className='text-gray-400'>
               {data.length === 0 ? <tr><td colSpan={5} className="text-center">No records found</td></tr>
-                : data.map((domain,i:number) =>
+                : data.map((domain, i: number) =>
                   domain.track_records.filter((d: any,) => d !== null).length === 0 ?
-                    <tr key={domain.id+i}>
+                    <tr key={domain.id + i}>
                       <td colSpan={5} className="text-center">No records found</td></tr> :
                     domain.track_records.map((record: any) => (
-                      <tr key={record.id+i} className="border-t border-gray-400 hover:bg-stone-900">
+                      <tr key={record.id + i} className="border-t border-gray-400 hover:bg-stone-900">
 
                         <td className="px-4 py-2">{record?.from}</td>
                         <td className="px-4 py-2">{record?.to}</td>
@@ -71,8 +70,8 @@ const ResponsiveTable = ({ data }: { data: any[] }) => {
         </div>
         <div className="md:hidden space-y-4 text-gray-400 " >
           {data.length === 0 ? <div className="text-center">No records found</div> : data.map((domain) =>
-            domain.track_records.filter((d: any) => d !== null).length === 0 ? <div className="text-center">No records found</div> : domain.track_records.map((record: any,i:number) => (
-              <div key={record.id+i} className="border border-gray-200 p-4 rounded-lg shadow-md bg-black">
+            domain.track_records.filter((d: any) => d !== null).length === 0 ? <div className="text-center">No records found</div> : domain.track_records.map((record: any, i: number) => (
+              <div key={record.id + i} className="border border-gray-200 p-4 rounded-lg shadow-md bg-black">
 
                 <p><strong>From:</strong> {record?.from}</p>
 

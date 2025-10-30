@@ -100,16 +100,60 @@ export function html2markdown(html: string): string {
 }
 export const getEmailStatusColor = (status: string) => {
   switch (status.toUpperCase()) {
+    // 🟩 Success / Delivered
     case "DELIVERED":
-    case "OPEN":
-    case "LINK OPEN":
-      return "bg-emerald-950 text-emerald-400 hover:bg-emerald-950"
+      return "bg-emerald-950 text-emerald-400 hover:bg-emerald-900"
+
+    // 🟦 Opened / Clicked
+    case "OPENED":
+      return "bg-sky-950 text-sky-400 hover:bg-sky-900"
+    case "CLICKED":
+      return "bg-blue-950 text-blue-400 hover:bg-blue-900"
+
+    // 🟨 Queued / Pending / Sending
+    case "QUEUED":
+      return "bg-amber-950 text-amber-400 hover:bg-amber-900"
+    case "PENDING":
+      return "bg-yellow-950 text-yellow-400 hover:bg-yellow-900"
+    case "SENDING":
+      return "bg-indigo-950 text-indigo-400 hover:bg-indigo-900"
+    case "PROCESSING":
+      return "bg-cyan-950 text-cyan-400 hover:bg-cyan-900"
+
+    // 🟪 Sent / Received
+    case "SENT":
+      return "bg-violet-950 text-violet-400 hover:bg-violet-900"
+    case "RECEIVED":
+      return "bg-purple-950 text-purple-400 hover:bg-purple-900"
+
+    // 🟧 Draft
+    case "DRAFT":
+      return "bg-orange-950 text-orange-400 hover:bg-orange-900"
+
+    // 🔴 Failures
+    case "UNDELIVERED":
+      return "bg-rose-950 text-rose-400 hover:bg-rose-900"
+    case "BOUNCED":
+      return "bg-red-950 text-red-400 hover:bg-red-900"
+    case "SOFT_BOUNCED":
+      return "bg-pink-950 text-pink-400 hover:bg-pink-900"
+    case "REJECTED":
+      return "bg-fuchsia-950 text-fuchsia-400 hover:bg-fuchsia-900"
+    case "DROPPED":
+      return "bg-crimson-950 text-crimson-400 hover:bg-crimson-900" // fallback red tone
+    case "FORWARDED":
+      return "bg-teal-950 text-teal-400 hover:bg-teal-900"
+
+    // ⚫ User actions
     case "UNSUBSCRIBED":
-      return "bg-amber-950 text-amber-400 hover:bg-amber-950"
+      return "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+
+    // ⚪ Default / unknown
     default:
-      return "bg-gray-800 text-gray-400 hover:bg-gray-800"
+      return "bg-gray-800 text-gray-400 hover:bg-gray-700"
   }
 }
+
 export function formatNameInParts(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) {
@@ -249,3 +293,14 @@ export const isValidTimezone = (timezone: string) => {
     return false;
   }
 };
+
+export function deleteCookie(name: string, path: string = "/", domain: string =".airsend.in") {
+  let cookie = `${name}=; Max-Age=0; path=${path}`;
+
+  if (domain) {
+    cookie += `; domain=${__config.APP.APP_ENV === "DEV" ? "localhost" : domain}`;
+  }
+
+  document.cookie = cookie;
+}
+

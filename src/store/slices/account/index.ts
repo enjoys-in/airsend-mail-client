@@ -2,6 +2,7 @@ import axios from "axios";
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { IUser } from "@/lib/types/user.interface";
 import { __config } from "@/constants/config"
+import { deleteCookie } from "@/lib/utils";
 export const fetchCurrentUser = createAsyncThunk<IUser>(
   "account/fetchCurrentUser",
   async (_, { rejectWithValue }) => {
@@ -17,8 +18,6 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
         }
       });
       if (!data.success) {
-        document.cookie = "access_token=; Max-Age=0; path=/";
-
         await axios.get(`${__config.APP.BASE_URL}/api/v1/auth/logout`, {
           withCredentials: true,
           headers: {
@@ -27,6 +26,7 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
             'x-api-key': __config.APP.API_KEY as string,
           }
         });
+        deleteCookie("access_token")
         window.location.href = "/v2";
       }
 
@@ -35,6 +35,7 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
       }
       return data.result as IUser;
     } catch (err) {
+      deleteCookie("access_token")
       return rejectWithValue("Failed to fetch current user");
     }
   }

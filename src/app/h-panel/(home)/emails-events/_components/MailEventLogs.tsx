@@ -34,7 +34,7 @@ interface MailEvents {
 export function MailEventsLogs({ data }: { data: MailEvents[] | [] }) {
     return (
         <div className="min-h-screen bg-background">
-            <div className="container mx-auto p-4 space-y-6">
+            <div className=" mx-auto p-4 space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-200">Emails</h1>
@@ -84,8 +84,8 @@ export function MailEventsLogs({ data }: { data: MailEvents[] | [] }) {
                                 <TableHeader>
                                     <TableRow className="text-gray-400 text-xs uppercase">
                                         <TableHead>Status</TableHead>
-                                        <TableHead>Timestamp</TableHead>
                                         <TableHead>Type</TableHead>
+                                        <TableHead>Timestamp</TableHead>
                                         <TableHead>From</TableHead>
                                         <TableHead>To</TableHead>
                                         <TableHead>Message</TableHead>
@@ -100,11 +100,12 @@ export function MailEventsLogs({ data }: { data: MailEvents[] | [] }) {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
-                                                <span className="text-sm text-gray-400">{moment(event?.timestamp).format("YYYY-MM-DD hh:mm:ss A")}</span>
-                                            </TableCell>
-                                            <TableCell>
                                                 <Badge variant={event?.type === "incoming" ? "default" : "secondary"} >{event?.type}</Badge>
                                             </TableCell>
+                                            <TableCell>
+                                                <span className="text-sm text-gray-400">{moment(event?.timestamp).format("YYYY-MM-DD hh:mm:ss A")}</span>
+                                            </TableCell>
+
                                             <TableCell>
                                                 <span className="text-sm text-gray-100 font-medium">{event?.from}</span>
 

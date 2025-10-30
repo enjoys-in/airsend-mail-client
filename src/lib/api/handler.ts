@@ -113,8 +113,11 @@ export class API {
     static handleDeleteUser(userid: string) {
         return instance.delete(adminRoutes(`/user/${userid}`))
     }
-    static handleResetPassword(userid: string) {
-        return instance.get(adminRoutes(`/reset-password/${userid}`))
+    static handleResetPassword(userid: string,data:{
+        isRandom:boolean,
+        user_password:string
+    }) {
+        return instance.put(adminRoutes(`/reset-password/${userid}`),data)
     }
     static downloadAttachment(messageId: string, index: number) {
         return instance.get(adminRoutes(`/download-attachment/${messageId}?index=${index}`))

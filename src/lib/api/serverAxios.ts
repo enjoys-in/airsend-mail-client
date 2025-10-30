@@ -5,12 +5,12 @@ import { Security } from '../security';
 
 const security = new Security();
 const serverAxios = axios.create({
-    baseURL:  __config.APP.BASE_URL,
+    baseURL: __config.APP.BASE_URL,
     withCredentials: true,
     headers: {
         'X-App-Version': '1.0.0',
         'X-App-Name': 'AirSend',
-         'x-api-key': __config.APP.API_KEY,
+        'x-api-key': __config.APP.API_KEY,
     }
 });
 

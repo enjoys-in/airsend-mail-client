@@ -2,6 +2,7 @@ import axios from "axios"
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit"
 import { AdminAuthState, IAdmin } from "@/lib/types/user.interface"
 import { __config } from "@/constants/config"
+import { deleteCookie } from "@/lib/utils"
 
 export const fetchAdminFromServer = createAsyncThunk<IAdmin>(
   "admin/fetchAdmin",
@@ -26,7 +27,8 @@ export const fetchAdminFromServer = createAsyncThunk<IAdmin>(
             'x-api-key': __config.APP.API_KEY as string,
           }
         });
-        document.cookie = "admin_access_token=; Max-Age=0; path=/";
+        deleteCookie("admin_access_token")
+
         window.location.href = "/h-panel";
       }
 
@@ -36,6 +38,7 @@ export const fetchAdminFromServer = createAsyncThunk<IAdmin>(
       }
       return data.result as IAdmin
     } catch (err) {
+      deleteCookie("admin_access_token")
       return rejectWithValue("Failed to load admin")
     }
   }
