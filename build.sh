@@ -3,7 +3,7 @@
 set -e
 
 APP_NAME="airsend-mail"
-PORT="3000"
+PORT="9500"
 MEMORY_LIMIT="512m"
 ENV_FILE=".env"
 
