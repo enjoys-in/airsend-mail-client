@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useState, useEffect } from "react";
 import { Check, InfoIcon as InfoCircle, TicketIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { airsendDB } from "@/db";
@@ -17,25 +17,49 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 function EmailSettings({ email }: { email: string }) {
-  const { settings,setSettings } = useSettingsStore();
+  const settings = useSettingsStore((s) => s.settings);
+  const setSettings = useSettingsStore((s) => s.setSettings);
   const [footerText, setFooterText] = useState("Sent with ❤️ by Airsend");
   const [systemReply, setSystemReply] = useState("This mailbox is read-only.");
 
   const [localSettings, setLocalSettings] = useState(settings?.email_settings);
+
+  // Sync localSettings when settings load async (e.g. from DB/API after mount)
+  useEffect(() => {
+    if (settings?.email_settings && !localSettings) {
+      setLocalSettings(settings.email_settings);
+      if (settings.email_settings.email_footer?.footer_text) {
+        setFooterText(settings.email_settings.email_footer.footer_text);
+      }
+      if (settings.email_settings.system_email?.system_email_reply) {
+        setSystemReply(settings.email_settings.system_email.system_email_reply);
+      }
+    }
+  }, [settings?.email_settings, localSettings]);
+
   const handleSaveSettings = async () => {
-    if (!email) return;
+    if (!email || !localSettings) return;
 
-
-    localSettings!.email_footer.footer_text = footerText.trim() as string;
-    localSettings!.system_email.system_email_reply = systemReply.trim() as string;
+    // Create a new object instead of mutating localSettings
+    const updated = {
+      ...localSettings,
+      email_footer: {
+        ...localSettings.email_footer,
+        footer_text: footerText.trim(),
+      },
+      system_email: {
+        ...localSettings.system_email,
+        system_email_reply: systemReply.trim(),
+      },
+    };
     await airsendDB.updateNestedItem(
       "settings",
       email,
       "settings.email_settings",
-      localSettings as any
+      updated as any
     );
-    setSettings({ email_settings: localSettings });
-
+    setLocalSettings(updated);
+    setSettings({ email_settings: updated });
   };
   return (
     <div className=" text-white p-8">
@@ -125,7 +149,7 @@ function EmailSettings({ email }: { email: string }) {
                 onCheckedChange={(checked) =>
                   setLocalSettings({
                     ...(localSettings as any),
-                    excludeSpam: checked,
+                    autoDeleteUnwanted: checked,
                   })
                 }
                 className="data-[state=checked]:bg-blue-500"
@@ -179,7 +203,7 @@ function EmailSettings({ email }: { email: string }) {
               onChange={(e) =>
                 setLocalSettings({
                   ...localSettings!,
-                  monthly_limit: e.target.value,
+                  monthly_limit: Number(e.target.value) || 0,
                 })
               }
             />
@@ -196,7 +220,7 @@ function EmailSettings({ email }: { email: string }) {
               onChange={(e) =>
                 setLocalSettings({
                   ...localSettings!,
-                  thresold_limit: e.target.value,
+                  thresold_limit: Number(e.target.value) || 0,
                 })
               }
             />
@@ -296,9 +320,9 @@ function EmailSettings({ email }: { email: string }) {
                   }
                   setLocalSettings({
                     ...(localSettings as any),
-                    email_footer: {
-                      ...localSettings?.email_footer,
-                      footer_text: footerText,
+                    system_email: {
+                      ...localSettings?.system_email,
+                      system_email_reply: systemReply,
                     } as any,
                   });
                 }}

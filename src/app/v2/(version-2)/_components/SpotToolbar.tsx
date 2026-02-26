@@ -1,15 +1,12 @@
 "use client"
-import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Archive, Check, ChevronDown, Flag, MoreHorizontal, RefreshCw, Shield, Trash2 } from "lucide-react"
-import { Label } from "@/components/ui/label"
 import { useMailStore } from "@/store/mails"
 import { useCallback, useEffect } from "react"
 import { toast } from "sonner"
 import { API } from "@/lib/api/handler"
 import { ApiResponse } from "@/lib/types"
-import { FaToolbox } from "react-icons/fa"
 import { CustomEventKey, useCustomEvent } from "@/hooks/use-custom-event"
 import { MailEventData } from "@/lib/types/update-mail-events.interface"
 import { airsendDB } from "@/db"
@@ -17,7 +14,11 @@ import { useParams } from "next/navigation"
 
 export function SpotToolbar() {
   const params = useParams()
-  const { checkedItems, all_emails, setCheckedItems, selected_mailbox, setAllEmails } = useMailStore()
+  const checkedItems = useMailStore((s) => s.checkedItems)
+  const all_emails = useMailStore((s) => s.all_emails)
+  const setCheckedItems = useMailStore((s) => s.setCheckedItems)
+  const selected_mailbox = useMailStore((s) => s.selected_mailbox)
+  const setAllEmails = useMailStore((s) => s.setAllEmails)
   const { listen } = useCustomEvent(CustomEventKey.MailEvents)
   const { emit } = useCustomEvent(CustomEventKey.SyncMailCounts)
   const handleImapEvents = useCallback(
@@ -51,7 +52,7 @@ export function SpotToolbar() {
         return toast.error(error.message)
       }
     },
-    []
+    [all_emails, checkedItems, selected_mailbox, params.folder, emit, setAllEmails, setCheckedItems]
   )
   const handleSelectAll = useCallback(() => {
     const message_id = all_emails?.map((item) => item.message_id)
@@ -59,202 +60,92 @@ export function SpotToolbar() {
       setCheckedItems(message_id)
     }
   },
-    []
+    [all_emails, setCheckedItems]
   )
   const handleUnselecteAll = useCallback(() => {
     setCheckedItems([])
-  }, [])
+  }, [setCheckedItems])
   useEffect(() => {
     const unsubscribe = listen(handleImapEvents)
     return () => { unsubscribe() }
-  }, [])
+  }, [listen, handleImapEvents])
   return checkedItems.length > 0 ? (
-    <div className="flex z-10 fixed items-center justify-between w-full bg:[#333333] dark:bg-[#333333] border-b text-white px-4 ">
-      <div className="flex items-center space-x-1">
-        {/* <Label className="flex items-center gap-2 text-sm">
-          <span>Unreads</span>
-          <Switch className="shadow-none" />
-        </Label> */}
-        <Button variant="ghost" size="sm" className="text-white hover:bg-neutral-600 rounded-none" onClick={checkedItems.length === all_emails?.length ? handleUnselecteAll : handleSelectAll}>
-          <Check className="w-5 h-5 mr-2" />
-          {checkedItems.length === all_emails?.length ? "Unselect All" : "Select All"}
+    <div className="flex z-10 fixed items-center justify-between w-full bg-foreground/95 backdrop-blur-sm border-b border-border/20 text-background px-3 h-10 animate-in slide-in-from-top-2 duration-200">
+      <div className="flex items-center gap-0.5">
+        <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5" onClick={checkedItems.length === all_emails?.length ? handleUnselecteAll : handleSelectAll}>
+          <Check className="w-3.5 h-3.5" />
+          {checkedItems.length === all_emails?.length ? "Unselect" : "Select All"}
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-white  rounded-none">
-              <Shield className="w-5 h-5 mr-2" />
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5">
+              <Shield className="w-3.5 h-3.5" />
               Report
-              <ChevronDown className="w-4 h-4 ml-1" />
+              <ChevronDown className="w-3 h-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem>Report spam</DropdownMenuItem>
-            <DropdownMenuItem>Report phishing</DropdownMenuItem>
+          <DropdownMenuContent className="rounded-lg">
+            <DropdownMenuItem className="text-xs">Report spam</DropdownMenuItem>
+            <DropdownMenuItem className="text-xs">Report phishing</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-white  rounded-none">
-              <Flag className="w-5 h-5 mr-2" />
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5">
+              <Flag className="w-3.5 h-3.5" />
               Flag
-              <ChevronDown className="w-4 h-4 ml-1" />
+              <ChevronDown className="w-3 h-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem>Flag as important</DropdownMenuItem>
-            <DropdownMenuItem>Flag for follow-up</DropdownMenuItem>
+          <DropdownMenuContent className="rounded-lg">
+            <DropdownMenuItem className="text-xs">Flag as important</DropdownMenuItem>
+            <DropdownMenuItem className="text-xs">Flag for follow-up</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button variant="ghost" size="sm" className="text-white hover:bg-neutral-600 rounded-none">
-          <svg
-            className="w-5 h-5 mr-2"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-          </svg>
-          Block
+
+        <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5" onClick={() => handleImapEvents({ action: "delete", message_id: checkedItems })}>
+          <Trash2 className="w-3.5 h-3.5" />
+          Delete
         </Button>
+
+        <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5">
+          <Archive className="w-3.5 h-3.5" />
+          Archive
+        </Button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-white hover:bg-neutral-600 rounded-none">
-              <FaToolbox className="w-5 h-5 mr-2" />
-              Actions
-              <ChevronDown className="w-4 h-4 ml-1" />
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5">
+              <MoreHorizontal className="w-3.5 h-3.5" />
+              More
+              <ChevronDown className="w-3 h-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-48">
-            <DropdownMenuItem className="p-0">
-              <Button variant="ghost" size="sm" className="text-white   rounded-none">
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h9.2" />
-                  <path d="M18 2a2 2 0 0 1 2 2v4" />
-                  <path d="M2 8v1" />
-                  <path d="M6 15h12" />
-                </svg>
-                Mark as Unread
-              </Button>
+          <DropdownMenuContent className="w-44 rounded-lg">
+            <DropdownMenuItem className="text-xs gap-2">
+              <RefreshCw className="w-3.5 h-3.5" /> Mark as Unread
             </DropdownMenuItem>
-            <DropdownMenuItem className="p-0" disabled={checkedItems.length > 1}>
-              <Button variant="ghost" size="sm" className="text-white   rounded-none">
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h9.2" />
-                  <path d="M18 2a2 2 0 0 1 2 2v4" />
-                  <path d="M2 8v1" />
-                  <path d="M6 15h12" />
-                </svg>
-                Mark All as Unread
-              </Button>
+            <DropdownMenuItem className="text-xs gap-2" disabled={checkedItems.length > 1}>
+              <RefreshCw className="w-3.5 h-3.5" /> Mark All as Unread
             </DropdownMenuItem>
-            <DropdownMenuItem className="p-0">
-              <Button variant="ghost" size="sm" className="text-white ounded-none">
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                </svg>
-                Move
-              </Button>
+            <DropdownMenuItem className="text-xs gap-2">
+              Move
             </DropdownMenuItem>
-            <DropdownMenuItem className="p-0" disabled={checkedItems.length > 1}>
-              <Button variant="ghost" size="sm" className="text-white   rounded-none">
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                </svg>
-                Move All
-              </Button>
+            <DropdownMenuItem className="text-xs gap-2" disabled={checkedItems.length > 1}>
+              Move All
             </DropdownMenuItem>
-            <DropdownMenuItem className="p-0" disabled={checkedItems.length > 1}>
-              <Button variant="ghost" size="sm" className="text-white   rounded-none">
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                </svg>
-                Copy All
-              </Button>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="p-0">
-              <Button variant="ghost" size="sm" className="text-white  rounded-none" onClick={() => handleImapEvents({
-                action: "delete",
-                message_id: checkedItems
-              })}>
-                <Trash2 className="w-5 h-5 mr-2" />
-                Delete
-              </Button>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="p-0" disabled={checkedItems.length > 1}>
-              <Button variant="ghost" size="sm" className="text-white   rounded-none">
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                </svg>
-                Delete All
-              </Button>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="p-0">
-              <Button variant="ghost" size="sm" className="text-white  rounded-none">
-                <Archive className="w-5 h-5 mr-2" />
-                Archive
-              </Button>
+            <DropdownMenuItem className="text-xs gap-2" disabled={checkedItems.length > 1}>
+              Delete All
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <span className="text-[11px] text-background/60 tabular-nums">
+        {checkedItems.length} selected
+      </span>
     </div>
   ) : null
 }

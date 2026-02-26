@@ -1,7 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { etiquettes } from "../big-calendar";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useCalDevStore } from "../../_lib/caldev-store";
+import { hexToEventColor } from "../../_lib/caldev-types";
+import type { EventColor } from "./types";
 
 interface CalendarContextType {
   // Date management
@@ -34,14 +36,23 @@ interface CalendarProviderProps {
 
 export function CalendarProvider({ children }: CalendarProviderProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const calendars = useCalDevStore((s) => s.calendars);
 
-  // Initialize visibleColors based on the isActive property in etiquettes
-  const [visibleColors, setVisibleColors] = useState<string[]>(() => {
-    // Filter etiquettes to get only those that are active
-    return etiquettes
-      .filter((etiquette) => etiquette.isActive)
-      .map((etiquette) => etiquette.color);
-  });
+  // Initialize visible colors from CalDev calendars (visible ones)
+  const [visibleColors, setVisibleColors] = useState<string[]>([
+    "blue", "orange", "violet", "emerald", "rose",
+  ]);
+
+  // Sync visible colors when calendars load from API
+  useEffect(() => {
+    if (calendars.length > 0) {
+      const colors = calendars
+        .filter((c) => c.is_visible)
+        .map((c) => hexToEventColor(c.color));
+      // Deduplicate
+      setVisibleColors([...new Set(colors)]);
+    }
+  }, [calendars]);
 
   // Toggle visibility of a color
   const toggleColorVisibility = (color: string) => {
@@ -56,7 +67,7 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
 
   // Check if a color is visible
   const isColorVisible = (color: string | undefined) => {
-    if (!color) return true; // Events without a color are always visible
+    if (!color) return true;
     return visibleColors.includes(color);
   };
 

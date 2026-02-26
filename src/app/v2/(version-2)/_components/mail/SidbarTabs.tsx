@@ -1,13 +1,8 @@
 "use client"
 import React from 'react'
 import { ListFolders } from './ListFolders'
-import RootTab from '@/components/RootTab'
-import { useAppSelector } from '@/store/hooks'
-import { cn } from '@/lib/utils'
-import { SettingsMenu } from './settingsMenu'
 
 const SidbarTabs = () => {
-    const activeTab = useAppSelector((state) => state.layout.sidebarTab);
     return (
         <div>
 

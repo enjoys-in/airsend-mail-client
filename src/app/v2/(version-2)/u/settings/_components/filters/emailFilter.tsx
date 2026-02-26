@@ -14,7 +14,7 @@ import { AddFilterDialog } from "./addFilterDialog"
 import { SieveFilterDialog } from "./sieveFilterDialog"
 import { useSettingsStore } from "@/store/settings"
 export default function EmailFilters({email}:{email:string}) {
-  const {setActiveItem}= useSettingsStore()
+  const setActiveItem = useSettingsStore((s) => s.setActiveItem)
   return (
     <div className="text-white p-8">
       <div className="max-w-3xl mx-auto space-y-12">
@@ -94,7 +94,7 @@ export default function EmailFilters({email}:{email:string}) {
             Learn more
           </a>
           <div>
-            <Button onClick={() => setActiveItem("Email Config")}  variant="outline" className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
+            <Button onClick={() => setActiveItem("email-config")}  variant="outline" className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
               Add address or domain
               <ChevronDown className="h-4 w-4" />
             </Button>

@@ -50,7 +50,7 @@ export default function LabelSettings() {
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className=" bg-[#0c0c0e] p-6 bg-white">
+      <form onSubmit={handleSubmit(onSubmit)} className=" bg-[#0c0c0e] p-6">
         <div className="space-y-6 bg-[#0c0c0e]">
           {/* System Labels Section */}
           <div>
@@ -144,7 +144,7 @@ export default function LabelSettings() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm bg-gray-100">
+              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm bg-[#1a1a1e]">
                 <div>Drafts</div>
                 <div className="flex items-center gap-4">
                   <label className="flex items-center">

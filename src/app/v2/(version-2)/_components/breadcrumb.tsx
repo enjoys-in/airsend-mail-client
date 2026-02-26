@@ -19,11 +19,12 @@ import { useSettingsStore } from "@/store/settings";
 import { RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CustomEventKey, useCustomEvent } from "@/hooks/use-custom-event";
-const BreadcrumbInfo = () => {
-    const { selected_mailbox } = useMailStore();
+const BreadcrumbInfo = React.memo(() => {
+    const selected_mailbox = useMailStore((s) => s.selected_mailbox);
     const params = useParams();
 
-    const { activeItem, keys } = useSettingsStore();
+    const activeItem = useSettingsStore((s) => s.activeItem);
+    const keys = useSettingsStore((s) => s.keys);
 
     const { emit } = useCustomEvent(CustomEventKey.SyncSettings);
     const pathname = usePathname();
@@ -67,6 +68,8 @@ const BreadcrumbInfo = () => {
             {pathname.includes("/v2/u/mail") && !match && <SyncButton />}
         </Fragment>
     );
-};
+});
+
+BreadcrumbInfo.displayName = "BreadcrumbInfo";
 
 export default BreadcrumbInfo;

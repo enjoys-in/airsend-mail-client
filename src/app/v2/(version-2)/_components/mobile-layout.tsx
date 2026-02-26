@@ -22,7 +22,7 @@ export const MobileLayoutV2 = ({ children }: { children: ReactNode }) => {
     const foo = useSearchParams();
     const mailId = foo.get("id");
     const sidebarTab = useAppSelector((state) => state.layout.sidebarTab);
-    const currAcc = useAppSelector((state) => state.accounts.currAccount);
+    const currAccName = useAppSelector((state) => state.accounts.currAccount?.name);
     const dispatch = useAppDispatch();
     const router = useRouter();
     return (

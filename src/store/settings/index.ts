@@ -38,7 +38,7 @@ export const useSettingsStore = create<State>()((set) => ({
         "identity-and-addresses": "Identity and addresses",
         "messages-and-composing": "Messages and composing"
     },
-    activeItem: "Account and password",
+    activeItem: "account-and-password",
     setActiveItem: (item) => set({ activeItem: item }),
     settings: null,
     setSettings: (item) => set((state) => ({

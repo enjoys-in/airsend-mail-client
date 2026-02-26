@@ -11,7 +11,8 @@ import { useSettingsStore } from "@/store/settings"
 const EmailPrivacy = () => {
 
   const currAccount = useAppSelector((state) => state.accounts.currAccount)
-  const { settings, setSettings } = useSettingsStore()
+  const settings = useSettingsStore((s) => s.settings)
+  const setSettings = useSettingsStore((s) => s.setSettings)
   const handleChange = async (value: any) => {
     if (!currAccount?.email) return
     setSettings({ email_privacy: value })

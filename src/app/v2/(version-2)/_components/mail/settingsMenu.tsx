@@ -49,7 +49,8 @@ const mailItems = [
 ]
 
 export const SettingsMenu = () => {
-    const { activeItem, setActiveItem } = useSettingsStore()
+    const activeItem = useSettingsStore((s) => s.activeItem)
+    const setActiveItem = useSettingsStore((s) => s.setActiveItem)
 
     useEffect(() => {
         const updateTabFromHash = () => {
@@ -66,7 +67,7 @@ export const SettingsMenu = () => {
     useEffect(() => {
 
         if (activeItem) {
-            window.location.hash = encodeURIComponent(activeItem.toLocaleLowerCase().replaceAll(" ", "-"))
+            window.location.hash = encodeURIComponent(activeItem)
         }
     }, [activeItem])
     return (
@@ -79,7 +80,7 @@ export const SettingsMenu = () => {
                             key={item.label}
                             className={`flex items-center w-full px-3 py-2 text-sm rounded-md ${activeItem === item.key ? "bg-gray-800" : "hover:bg-gray-900"
                                 }`}
-                            onClick={activeItem === item.label ? undefined : () => setActiveItem(item.key)}
+                            onClick={activeItem === item.key ? undefined : () => setActiveItem(item.key)}
                         >
                             <span className="mr-3 text-gray-400">{item.icon}</span>
                             <span>{item.label}</span>

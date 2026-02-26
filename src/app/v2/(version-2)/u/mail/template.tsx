@@ -4,7 +4,7 @@ import { SpotToolbar } from '../../_components/SpotToolbar'
 import { MailList } from '../../_components/mail'
 
 
-const template = async({ children }: { children: React.ReactNode }) => {
+const MailTemplate = ({ children }: { children: React.ReactNode }) => {
 
     return (
         <div>
@@ -16,4 +16,4 @@ const template = async({ children }: { children: React.ReactNode }) => {
     )
 }
 
-export default template
+export default MailTemplate

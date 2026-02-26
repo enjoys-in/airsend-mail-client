@@ -16,18 +16,17 @@ function MainLayout({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
   React.useEffect(() => {
     dispatch(fetchCurrentUser());
-
-  }, []);
+  }, [dispatch]);
   return (
     <SocketContextProvider>
       <CustomWidget />
       <CalendarProvider>
         <Suspense fallback={<Spinner />}>
           <div className="flex md:hidden flex-1 bg-[#111315]">
-            <MobileLayoutV2>{children} </MobileLayoutV2>
+            <MobileLayoutV2>{children}</MobileLayoutV2>
           </div>
           <div className="hidden md:flex flex-1  bg-[#111315]">
-            <DesktopLayoutV2 >{children} </DesktopLayoutV2>
+            <DesktopLayoutV2>{children}</DesktopLayoutV2>
           </div>
           <NewMailRecived />
           <SentMailToast />
@@ -38,6 +37,3 @@ function MainLayout({ children }: { children: ReactNode }) {
 }
 
 export default MainLayout;
-
-
-

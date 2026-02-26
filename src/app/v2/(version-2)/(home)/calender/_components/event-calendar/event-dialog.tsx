@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RiCalendarLine, RiDeleteBinLine } from "@remixicon/react";
+import { RiCalendarLine, RiDeleteBinLine, RiAddLine, RiCloseLine, RiMapPinLine, RiRepeatLine, RiGroupLine, RiBookmarkLine } from "@remixicon/react";
 import { format, isBefore } from "date-fns";
 
 import type { CalendarEvent, EventColor } from ".";
@@ -33,12 +33,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   StartHour,
   EndHour,
   DefaultStartHour,
   DefaultEndHour,
 } from "./constants";
+import { useCalDevStore } from "../../_lib/caldev-store";
+import type { CalDevAttendee } from "../../_lib/caldev-types";
 
 interface EventDialogProps {
   event: CalendarEvent | null;
@@ -68,10 +77,18 @@ export function EventDialog({
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
 
-  // Debug log to check what event is being passed
-  useEffect(() => {
-    console.log("EventDialog received event:", event);
-  }, [event]);
+  // New CalDev fields
+  const [calendarId, setCalendarId] = useState("");
+  const [attendees, setAttendees] = useState<CalDevAttendee[]>([]);
+  const [newAttendeeEmail, setNewAttendeeEmail] = useState("");
+  const [newAttendeeName, setNewAttendeeName] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [recurrenceRule, setRecurrenceRule] = useState("");
+  const [status, setEventStatus] = useState<"CONFIRMED" | "TENTATIVE" | "CANCELLED">("CONFIRMED");
+
+  // CalDev store – calendars list
+  const calendars = useCalDevStore((s) => s.calendars);
 
   useEffect(() => {
     if (event) {
@@ -88,11 +105,31 @@ export function EventDialog({
       setAllDay(event.allDay || false);
       setLocation(event.location || "");
       setColor((event.color as EventColor) || "sky");
-      setError(null); // Reset error when opening dialog
+      setError(null);
+
+      // CalDev fields — populated from raw event if editing
+      const rawEvent = event.id
+        ? useCalDevStore.getState().rawEvents.find((e) => e.id === event.id)
+        : null;
+      if (rawEvent) {
+        setCalendarId(rawEvent.calendar_id || "");
+        setAttendees(rawEvent.attendees || []);
+        setCategories(rawEvent.categories || []);
+        setRecurrenceRule(rawEvent.recurrence_rule || "");
+        setEventStatus(rawEvent.status || "CONFIRMED");
+      } else {
+        // New event defaults
+        const defaultCal = calendars.find((c) => c.is_default) || calendars[0];
+        setCalendarId(defaultCal?.id || "");
+        setAttendees([]);
+        setCategories([]);
+        setRecurrenceRule("");
+        setEventStatus("CONFIRMED");
+      }
     } else {
       resetForm();
     }
-  }, [event]);
+  }, [event, calendars]);
 
   const resetForm = () => {
     setTitle("");
@@ -105,6 +142,14 @@ export function EventDialog({
     setLocation("");
     setColor("blue");
     setError(null);
+    setCalendarId(calendars.find((c) => c.is_default)?.id || calendars[0]?.id || "");
+    setAttendees([]);
+    setNewAttendeeEmail("");
+    setNewAttendeeName("");
+    setCategories([]);
+    setNewCategory("");
+    setRecurrenceRule("");
+    setEventStatus("CONFIRMED");
   };
 
   const formatTimeForInput = (date: Date) => {
@@ -129,6 +174,41 @@ export function EventDialog({
     }
     return options;
   }, []); // Empty dependency array ensures this only runs once
+
+  // Attendee helpers
+  const handleAddAttendee = () => {
+    if (!newAttendeeEmail.trim()) return;
+    if (attendees.some((a) => a.email === newAttendeeEmail.trim())) return;
+    setAttendees([
+      ...attendees,
+      {
+        email: newAttendeeEmail.trim(),
+        display_name: newAttendeeName.trim() || newAttendeeEmail.trim(),
+        role: "REQ-PARTICIPANT",
+        status: "NEEDS-ACTION",
+        rsvp: true,
+        type: "INDIVIDUAL",
+      },
+    ]);
+    setNewAttendeeEmail("");
+    setNewAttendeeName("");
+  };
+
+  const handleRemoveAttendee = (email: string) => {
+    setAttendees(attendees.filter((a) => a.email !== email));
+  };
+
+  // Category helpers
+  const handleAddCategory = () => {
+    const cat = newCategory.trim();
+    if (!cat || categories.includes(cat)) return;
+    setCategories([...categories, cat]);
+    setNewCategory("");
+  };
+
+  const handleRemoveCategory = (cat: string) => {
+    setCategories(categories.filter((c) => c !== cat));
+  };
 
   const handleSave = () => {
     const start = new Date(startDate);
@@ -167,6 +247,25 @@ export function EventDialog({
 
     // Use generic title if empty
     const eventTitle = title.trim() ? title : "(no title)";
+
+    // Save extended data to the CalDev store as well
+    const calDevStore = useCalDevStore.getState();
+    if (event?.id) {
+      // Update existing event via API
+      calDevStore.editEvent(event.id, {
+        summary: eventTitle,
+        description,
+        location,
+        dtstart: start.toISOString(),
+        dtend: end.toISOString(),
+        all_day: allDay,
+        calendar_id: calendarId || undefined,
+        attendees,
+        categories,
+        recurrence_rule: recurrenceRule || undefined,
+        status: status,
+      } as any);
+    }
 
     onSave({
       id: event?.id || "",
@@ -411,6 +510,185 @@ export function EventDialog({
               onChange={(e) => setLocation(e.target.value)}
             />
           </div>
+
+          {/* Calendar picker */}
+          {calendars.length > 0 && (
+            <div className="*:not-first:mt-1.5">
+              <Label htmlFor="calendar-select">Calendar</Label>
+              <Select value={calendarId} onValueChange={setCalendarId}>
+                <SelectTrigger id="calendar-select">
+                  <SelectValue placeholder="Select calendar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {calendars
+                    .filter((c) => !c.is_readonly)
+                    .map((cal) => (
+                      <SelectItem key={cal.id} value={cal.id}>
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="size-2 rounded-full shrink-0"
+                            style={{ backgroundColor: cal.color }}
+                          />
+                          {cal.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Event status */}
+          <div className="*:not-first:mt-1.5">
+            <Label htmlFor="event-status">Status</Label>
+            <Select value={status} onValueChange={(v) => setEventStatus(v as typeof status)}>
+              <SelectTrigger id="event-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                <SelectItem value="TENTATIVE">Tentative</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Accordion for advanced fields */}
+          <Accordion type="single" collapsible className="w-full">
+            {/* Attendees */}
+            <AccordionItem value="attendees" className="border-b-0">
+              <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                <span className="flex items-center gap-2">
+                  <RiGroupLine size={16} className="text-muted-foreground" />
+                  Attendees {attendees.length > 0 && `(${attendees.length})`}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-2">
+                <div className="space-y-2">
+                  {attendees.map((a) => (
+                    <div
+                      key={a.email}
+                      className="flex items-center justify-between gap-2 text-sm rounded-md border px-2.5 py-1.5"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{a.display_name}</div>
+                        <div className="text-muted-foreground text-xs truncate">{a.email}</div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge variant="secondary" className="text-[10px] px-1.5">
+                          {a.status}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6"
+                          onClick={() => handleRemoveAttendee(a.email)}
+                        >
+                          <RiCloseLine size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Email"
+                      value={newAttendeeEmail}
+                      onChange={(e) => setNewAttendeeEmail(e.target.value)}
+                      className="h-8 text-xs"
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddAttendee())}
+                    />
+                    <Input
+                      placeholder="Name (optional)"
+                      value={newAttendeeName}
+                      onChange={(e) => setNewAttendeeName(e.target.value)}
+                      className="h-8 text-xs"
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddAttendee())}
+                    />
+                    <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={handleAddAttendee}>
+                      <RiAddLine size={14} />
+                    </Button>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Categories */}
+            <AccordionItem value="categories" className="border-b-0">
+              <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                <span className="flex items-center gap-2">
+                  <RiBookmarkLine size={16} className="text-muted-foreground" />
+                  Categories {categories.length > 0 && `(${categories.length})`}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-2">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {categories.map((cat) => (
+                      <Badge key={cat} variant="secondary" className="gap-1">
+                        {cat}
+                        <button onClick={() => handleRemoveCategory(cat)} className="ml-0.5 hover:text-destructive">
+                          <RiCloseLine size={12} />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add category..."
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      className="h-8 text-xs"
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddCategory())}
+                    />
+                    <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={handleAddCategory}>
+                      <RiAddLine size={14} />
+                    </Button>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Recurrence */}
+            <AccordionItem value="recurrence" className="border-b-0">
+              <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                <span className="flex items-center gap-2">
+                  <RiRepeatLine size={16} className="text-muted-foreground" />
+                  Recurrence {recurrenceRule && "(set)"}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-2">
+                <div className="*:not-first:mt-1.5">
+                  <Label htmlFor="recurrence-select">Repeat</Label>
+                  <Select value={recurrenceRule || "none"} onValueChange={(v) => setRecurrenceRule(v === "none" ? "" : v)}>
+                    <SelectTrigger id="recurrence-select">
+                      <SelectValue placeholder="Does not repeat" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Does not repeat</SelectItem>
+                      <SelectItem value="FREQ=DAILY">Every day</SelectItem>
+                      <SelectItem value="FREQ=WEEKLY">Every week</SelectItem>
+                      <SelectItem value="FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR">Weekdays</SelectItem>
+                      <SelectItem value="FREQ=MONTHLY">Every month</SelectItem>
+                      <SelectItem value="FREQ=YEARLY">Every year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {recurrenceRule && !["FREQ=DAILY", "FREQ=WEEKLY", "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", "FREQ=MONTHLY", "FREQ=YEARLY"].includes(recurrenceRule) && (
+                    <div className="mt-2">
+                      <Label htmlFor="recurrence-custom">Custom rule (RRULE)</Label>
+                      <Input
+                        id="recurrence-custom"
+                        value={recurrenceRule}
+                        onChange={(e) => setRecurrenceRule(e.target.value)}
+                        placeholder="FREQ=WEEKLY;BYDAY=MO"
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
           <fieldset className="space-y-4">
             <legend className="text-foreground text-sm leading-none font-medium">
               Etiquette

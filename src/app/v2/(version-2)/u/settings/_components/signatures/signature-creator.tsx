@@ -31,7 +31,7 @@ interface SignatureFormValues {
 
 export function SignatureCreator({ email }: { email: string }) {
   const { type } = useSignatureEditorStore()
-  const { settings } = useSettingsStore()
+  const settings = useSettingsStore((s) => s.settings)
 
   const { control, register, handleSubmit, watch, setValue, getValues } = useForm<SignatureFormValues>({
     defaultValues: {

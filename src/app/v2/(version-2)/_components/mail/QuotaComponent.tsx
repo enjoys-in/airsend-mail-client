@@ -22,79 +22,88 @@ const QuotaComponent = () => {
     const currAccount = useAppSelector(state => state.accounts.currAccount)
     const { listen } = useCustomEvent(CustomEventKey.SyncMail);
 
-    const fetchQuota = async (from_db = true) => {
+    const fetchQuotaFromAPI = React.useCallback(async () => {
+        if (!currAccount?.email) return
         try {
-            const item = await airsendDB.getMultiNestedItem("settings", currAccount?.email as string, [
-                "settings.usage",
-                "settings.mailbox_size",
-            ])
-
-            if (from_db && item.success && item.value && item.value.settings.usage) {
-                setQuota({
-                    usage: item.value.settings.usage,
-                    limit: item.value.settings.mailbox_size,
-                    quota_in_percent: Number(item.value.settings.usage / item.value.settings.mailbox_size * 100).toFixed(2),
-                });
-                return;
-            }
             const { data } = await API.getQuota() as AxiosResponse<ApiResponse<QuotaResponse>>;
-            if (!data.success) {
-                return
-            }
-            await airsendDB.addNestedItem("settings", currAccount?.email as string, {
+            if (!data.success) return
+
+            await airsendDB.addNestedItem("settings", currAccount.email, {
                 "settings.usage": data.result.usage,
                 "settings.mailbox_size": data.result.limit,
                 "settings.quota_in_percent": data.result.quota_in_percent
             })
             setQuota(data.result);
         } catch (error) {
-
+            // silently fail — cached data stays
         }
-    };
+    }, [currAccount?.email, setQuota]);
 
+    // On mount: show cached data instantly, then refresh from API
     useEffect(() => {
-        if (!quota && currAccount?.email) {
-            fetchQuota();
-        }
-    }, [quota, currAccount?.email]);
+        if (!currAccount?.email) return
+
+        // Show cached data immediately (if available)
+        airsendDB.getMultiNestedItem("settings", currAccount.email, [
+            "settings.usage",
+            "settings.mailbox_size",
+        ]).then((item) => {
+            if (item.success && item.value?.settings?.usage != null && item.value?.settings?.mailbox_size) {
+                setQuota({
+                    usage: Number(item.value.settings.usage),
+                    limit: Number(item.value.settings.mailbox_size),
+                    quota_in_percent: Number(
+                        Number(item.value.settings.usage) / Number(item.value.settings.mailbox_size) * 100
+                    ).toFixed(2),
+                });
+            }
+        });
+
+        // Always fetch fresh data from API
+        fetchQuotaFromAPI();
+    }, [currAccount?.email, fetchQuotaFromAPI]);
 
 
     useEffect(() => {
         const updateQuota = async (value: string) => {
-            const data = JSON.parse(value) as number | string
-            if (!data) return
+            try {
+                const delta = Number(JSON.parse(value))
+                if (!delta || isNaN(delta)) return
 
-            const item = await airsendDB.getMultiNestedItem("settings", currAccount?.email as string, [
-                "settings.usage",
-                "settings.mailbox_size",
-            ])
+                // Read fresh quota from Zustand (not stale closure)
+                const currentQuota = useMailStore.getState().quota
+                if (!currentQuota) return
 
-            if (item.success && item.value) {
-                const totalUsage = +(Number(item?.value?.settings?.usage) || 0) + Number(data);
-                const quota_in_percent = Number(totalUsage / item.value.settings.mailbox_size * 100).toFixed(2);
-                const { success } = await airsendDB.updateMultipleNestedItems("settings", currAccount?.email!, {
+                const totalUsage = Number(currentQuota.usage) + delta
+                const limit = Number(currentQuota.limit)
+                if (isNaN(totalUsage) || isNaN(limit) || limit === 0) return
+
+                const quota_in_percent = (totalUsage / limit * 100).toFixed(2)
+
+                await airsendDB.updateMultipleNestedItems("settings", currAccount?.email!, {
                     "settings.usage": totalUsage,
                     "settings.quota_in_percent": quota_in_percent,
                 });
 
-                if (success) {
-                    setQuota({
-                        limit: item.value.settings.mailbox_size,
-                        usage: totalUsage,
-                        quota_in_percent: quota_in_percent,
-                    });
-                }
+                setQuota({
+                    limit,
+                    usage: totalUsage,
+                    quota_in_percent,
+                });
+            } catch (error) {
+                // Fallback: just refresh from API
+                fetchQuotaFromAPI()
             }
         };
 
         socket.on(SocketEventConstants.MAIL_USAGED, updateQuota);
-        const unsubscribe = listen(() => fetchQuota(false))
+        const unsubscribe = listen(() => fetchQuotaFromAPI())
         return () => {
             socket.off(SocketEventConstants.MAIL_USAGED, updateQuota);
             unsubscribe()
         };
 
-    }, [currAccount?.email]);
+    }, [currAccount?.email, fetchQuotaFromAPI]);
 
 
 

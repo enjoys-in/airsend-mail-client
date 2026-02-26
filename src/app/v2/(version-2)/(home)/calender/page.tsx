@@ -2,11 +2,11 @@
 import React from 'react'
 import dynamic from 'next/dynamic';
 const BigCalendar = dynamic(() => import('./_components/big-calendar'), { ssr: false })
-import {  SidebarProvider } from '@/components/ui/sidebar'
+import { SidebarProvider } from '@/components/ui/sidebar'
 
 
 
-const page = async () => {
+const CalendarPage = () => {
 
   return (
     <SidebarProvider>
@@ -17,4 +17,4 @@ const page = async () => {
   )
 }
 
-export default page
+export default CalendarPage

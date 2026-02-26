@@ -9,32 +9,32 @@ import { AxiosResponse } from 'axios'
 import { GetUserSettingsResponse } from '@/lib/types/get-user-settings-response'
 import { useAppSelector } from '@/store/hooks'
 
+// Module-level lazy map – created once, never re-created on re-render
+const componentMap: Record<string, React.LazyExoticComponent<any>> = {
+    "account-and-password": lazy(() => import("./profileSettings")),
+    "signatures": lazy(() => import("./signatures/display-signature")),
+    "notifications": lazy(() => import("./notificationsSettings")),
+    "appearance": lazy(() => import("./mailAppearance")),
+    "identity-and-addresses": lazy(() => import("./identitySection")),
+    "import-via-easy-switch": lazy(() => import("./importViaEasySwitch")),
+    "messages-and-composing": lazy(() => import("./emailSettings")),
+    "email-forwarding": lazy(() => import("./emailForwarding")),
+    "folders-and-labels": lazy(() => import("./folderLabels")),
+    "encryption-and-keys": lazy(() => import("./encryptionSettings")),
+    "email-privacy": lazy(() => import("./configuration/emailPrivacy")),
+    "filters": lazy(() => import("./filters/emailFilter")),
+    "email-config": lazy(() => import("./configuration/emailConfig")),
+}
 
 export const DisplayTabComponent = () => {
-    const { activeItem, setSettings, settings ,keys} = useSettingsStore()
+    const activeItem = useSettingsStore((s) => s.activeItem)
+    const setSettings = useSettingsStore((s) => s.setSettings)
+    const settings = useSettingsStore((s) => s.settings)
+    const keys = useSettingsStore((s) => s.keys)
     const currAccount = useAppSelector((state) => state.accounts.currAccount)
 
     const { listen } = useCustomEvent(CustomEventKey.SyncSettings)
 
-    const componentMap: Record<string, any> = {
-        "account-and-password": lazy(() => import("./profileSettings")),
-        "signatures": lazy(() => import("./signatures/display-signature")),
-        // "Language and time": lazy(() => import("./mailLanguageAndTime")),
-        "notifications": lazy(() => import("./notificationsSettings")),
-        // "Security and privacy": lazy(() => import("./mailSecurityAndPrivacy")),
-        // "Recovery": lazy(() => import("./mailRecovery")),
-        "appearance": lazy(() => import("./mailAppearance")),
-        "identity-and-addresses": lazy(() => import("./identitySection")),
-        "import-via-easy-switch": lazy(() => import("./importViaEasySwitch")),
-        "messages-and-composing": lazy(() => import("./emailSettings")),
-        "email-forwarding": lazy(() => import("./emailForwarding")),
-        "folders-and-labels": lazy(() => import("./folderLabels")),
-        "encryption-and-keys": lazy(() => import("./encryptionSettings")),
-        "email-privacy": lazy(() => import("./configuration/emailPrivacy")),
-
-        "filters": lazy(() => import("./filters/emailFilter")),
-        "email-config": lazy(() => import("./configuration/emailConfig")),
-    }
     const TabComponent = componentMap[activeItem]
     const updateSettingsToStore = React.useCallback(
         async () => {

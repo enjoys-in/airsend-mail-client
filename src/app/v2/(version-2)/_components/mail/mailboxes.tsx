@@ -20,31 +20,33 @@ import MultiTabSystem from "./composeMail"
 import { useMailStore } from "@/store/mails"
 
 export function Mailboxes() {
-  const { all_folders, all_labels } = useMailStore()
+  const all_folders = useMailStore((state) => state.all_folders)
+  const all_labels = useMailStore((state) => state.all_labels)
 
   return (
-    <Sidebar collapsible="none" className="hidden flex-1 md:flex ">
-      <SidebarHeader className="gap-1 border-b my-1 p-0">
+    <Sidebar collapsible="none" className="hidden flex-1 md:flex bg-background">
+      <SidebarHeader className="gap-0 border-b p-0">
         <AccountSwitcherV2 />
-        <Separator />
+        <Separator className="bg-border/40" />
         <SidbarTabs />
       </SidebarHeader>
-      <SidebarContent>
-
-        <SidebarGroup >
+      <SidebarContent className="py-2">
+        <SidebarGroup className="p-0">
           <SidebarGroupContent>
-            <SidebarCollections text="Folder" list={all_folders||[]} />
-            <Separator />
-            <SidebarCollections text="Lables" list={all_labels||[]} />
+            <SidebarCollections text="Folders" list={all_folders||[]} />
+            <div className="mx-4 my-1">
+              <Separator className="bg-border/30" />
+            </div>
+            <SidebarCollections text="Labels" list={all_labels||[]} />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <div className="flex flex-row items-center w-full p-2">
+      <div className="flex items-center w-full p-2 border-t border-border/40">
         <MultiTabSystem />
       </div>
-      <SidebarFooter className="border-t">
+      <SidebarFooter className="border-t border-border/40 gap-1 py-2">
         <QuotaComponent />
-        <Separator />
+        <Separator className="bg-border/30" />
         <ShowMeetings />
       </SidebarFooter>
     </Sidebar>

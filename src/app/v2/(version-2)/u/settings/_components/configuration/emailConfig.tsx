@@ -75,7 +75,8 @@ type FormValues = z.infer<typeof formSchema>
 
 export default function EmailSettingsForm({ email }: { email: string }) {
   const { currAccount } = useAppSelector((state) => state.accounts)
-  const { settings, setSettings } = useSettingsStore()
+  const settings = useSettingsStore((s) => s.settings)
+  const setSettings = useSettingsStore((s) => s.setSettings)
   const [newBlockedSender, setNewBlockedSender] = useState("")
   const [newBlockedRecipient, setNewBlockedRecipient] = useState("")
   const [newCatchAllEmail, setNewCatchAllEmail] = useState("")

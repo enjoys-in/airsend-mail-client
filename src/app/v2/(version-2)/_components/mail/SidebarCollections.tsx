@@ -1,4 +1,5 @@
 "use client"
+import React from "react"
 import { MailBoxListAPIResponse, MailLablesType } from "@/lib/types/MailBoxListResponse.interface"
 import { useMailStore } from "@/store/mails"
 import { ChevronUp, Plus, Check, X, Folder, Tag } from "lucide-react"
@@ -39,11 +40,19 @@ const SidebarCollections: React.FC<SidebarCollectionsProps> = ({ text, list }) =
   const [showAll, setShowAll] = useState<boolean>(false)
   const [isCreating, setIsCreating] = useState<boolean>(false)
   const [newItemName, setNewItemName] = useState<string>("")
-  const { setAllFolders, setAllLabels, setSelectedMailbox, selected_mailbox } = useMailStore()
+  const setAllFolders = useMailStore((state) => state.setAllFolders)
+  const setAllLabels = useMailStore((state) => state.setAllLabels)
+  const setSelectedMailbox = useMailStore((state) => state.setSelectedMailbox)
+  const selected_mailbox = useMailStore((state) => state.selected_mailbox)
 
   const isFolder = text.toLowerCase().includes("folder")
   const [items, setItems] = useState<Partial<MailBoxListAPIResponse>[]>(list)
   const pathname = usePathname();
+
+  // Sync local items state when prop changes (e.g. after API fetch)
+  React.useEffect(() => {
+    setItems(list)
+  }, [list])
 
   const router = useRouter()
   const handleCreateItem = (): void => {
@@ -88,28 +97,32 @@ const SidebarCollections: React.FC<SidebarCollectionsProps> = ({ text, list }) =
   const hiddenCount = Math.min(items.length - 3, 9)
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5 px-2">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex flex-row gap-2 my-2 items-center text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-full text-left"
+        className="flex items-center gap-2 w-full h-7 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60 hover:text-muted-foreground transition-colors duration-150"
       >
-
-        {isFolder ? <Folder size={16} /> : <Tag size={16} />}
-        {text}
+        {isFolder ? <Folder size={13} /> : <Tag size={13} />}
+        <span>{text}</span>
         <ChevronUp
-          size={16}
-          className={`ml-auto transform transition-transform duration-300 ${isOpen ? "rotate-0" : "rotate-180"}`}
+          size={13}
+          className={cn(
+            "ml-auto transition-transform duration-200",
+            isOpen ? "rotate-0" : "rotate-180"
+          )}
         />
       </button>
 
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
-          }`}
+        className={cn(
+          "overflow-hidden transition-all duration-200 ease-out",
+          isOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
+        )}
       >
-        <div className="space-y-1">
-          <div className="max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent cursor-pointer">
+        <div className="flex flex-col gap-0.5">
+          <div className="max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
             {(visibleItems as MailBoxListAPIResponse[])?.map((item) => {
-              const isSelected = selected_mailbox === item?.path;
+              const isSelected = selected_mailbox === item?.path || pathname.includes(item?.path?.toLowerCase());
               return (
                 <div
                   onClick={() => {
@@ -118,83 +131,73 @@ const SidebarCollections: React.FC<SidebarCollectionsProps> = ({ text, list }) =
                   }}
                   key={item.id}
                   className={cn(
-                    "flex justify-between items-center px-2  group rounded-none cursor-pointer",
-
-                    isSelected || pathname.includes(item?.path?.toLowerCase())
-                      ? "dark:bg-[#5a61ff22]"
-                      : "bg-neutral-800"
+                    "group flex items-center justify-between h-8 px-2 rounded-lg cursor-pointer",
+                    "transition-colors duration-150 ease-out",
+                    isSelected
+                      ? "bg-accent text-accent-foreground font-medium"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                   )}
                 >
-                  <Link   prefetch
-                            href={`/v2/u/mail/${item.path.toLowerCase()}`} className="w-6 h-6 flex items-center justify-center">
-                    <div className={`w-3 h-3 rounded-full bg-${item.color}`}></div>
-                  <span className="ml-2 text-sm flex-1 dark:text-gray-200">{item.title}</span>
+                  <Link prefetch href={`/v2/u/mail/${item.path.toLowerCase()}`} className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", `bg-${item.color}`)} />
+                    <span className="text-[13px] truncate">{item.title}</span>
                   </Link>
-                  <span className={`ml-auto text-gray-500 dark:text-gray-400 text-xs ${item?.unread_count > item?.read_count ? "font-bold" : ""}`}>{item.total_count}</span>
+                  {item.total_count > 0 && (
+                    <span className={cn(
+                      "text-[11px] tabular-nums",
+                      item?.unread_count > item?.read_count ? "text-foreground font-semibold" : "text-muted-foreground/50"
+                    )}>
+                      {item.total_count}
+                    </span>
+                  )}
                 </div>
               )
             })}
           </div>
 
           {isCreating && (
-            <div className="flex items-center py-2 px-1 bg-gray-50 dark:bg-gray-800 rounded-md">
-              <div className="w-6 h-6 flex items-center justify-center">
-                <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-              </div>
+            <div className="flex items-center h-8 px-2 rounded-lg bg-muted/50">
+              <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30 flex-shrink-0" />
               <input
                 type="text"
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
-                placeholder={`New ${isFolder ? "folder" : "label"} name`}
-                className="ml-2 text-sm flex-1 bg-transparent border-none outline-none dark:text-gray-200"
+                placeholder={`New ${isFolder ? "folder" : "label"}`}
+                className="ml-2 text-[13px] flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/40"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleCreateItem()
                   if (e.key === "Escape") handleCancelCreate()
                 }}
               />
-              <div className="flex gap-1 ml-2">
-                <button
-                  onClick={handleCreateItem}
-                  className="p-1 hover:bg-green-100 dark:hover:bg-green-900 rounded text-green-600 dark:text-green-400 transition-colors"
-                >
+              <div className="flex gap-0.5">
+                <button onClick={handleCreateItem} className="p-1 rounded hover:bg-accent text-emerald-500 transition-colors duration-150">
                   <Check size={12} />
                 </button>
-                <button
-                  onClick={handleCancelCreate}
-                  className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded text-red-600 dark:text-red-400 transition-colors"
-                >
+                <button onClick={handleCancelCreate} className="p-1 rounded hover:bg-accent text-red-400 transition-colors duration-150">
                   <X size={12} />
                 </button>
               </div>
             </div>
           )}
 
-          <div className="flex items-center justify-between py-1">
+          <div className="flex items-center justify-between px-1 py-1">
             {!showAll && hiddenCount > 0 && (
-              <button
-                onClick={() => setShowAll(true)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs transition-colors"
-              >
-                Show {hiddenCount} more
+              <button onClick={() => setShowAll(true)} className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-150">
+                {hiddenCount} more
               </button>
             )}
-
             {showAll && items.length > 3 && (
-              <button
-                onClick={() => setShowAll(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs transition-colors"
-              >
+              <button onClick={() => setShowAll(false)} className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-150">
                 Show less
               </button>
             )}
-
             <button
               onClick={() => setIsCreating(true)}
-              className="flex items-center gap-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs transition-colors ml-auto"
+              className="flex items-center gap-1 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-150 ml-auto"
             >
-              <Plus size={12} />
-              Add {isFolder ? "folder" : "label"}
+              <Plus size={11} />
+              Add
             </button>
           </div>
         </div>

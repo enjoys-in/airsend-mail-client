@@ -96,7 +96,7 @@ export default async function RootLayout({
           defaultTheme="dark"
           disableTransitionOnChange
         >
-          <PingletWidget />
+          {/* <PingletWidget /> */}
           <StoreProvider>
             <IndexDbProvider>
               <TooltipProvider delayDuration={0}>{children}</TooltipProvider>

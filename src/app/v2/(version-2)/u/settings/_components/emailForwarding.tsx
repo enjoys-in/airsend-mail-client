@@ -37,7 +37,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const EmailForwardingSection = ({ email }: { email: string }) => {
-  const { settings, setSettings } = useSettingsStore()
+  const settings = useSettingsStore((s) => s.settings)
+  const setSettings = useSettingsStore((s) => s.setSettings)
 
   const [enabled, setEnabled] = React.useState(false);
   const form = useForm<FormValues>({
