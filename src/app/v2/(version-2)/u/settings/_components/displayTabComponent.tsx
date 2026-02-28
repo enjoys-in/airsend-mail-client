@@ -3,10 +3,8 @@ import React, { lazy } from 'react'
 import { useSettingsStore } from '@/store/settings'
 import { Settings } from 'lucide-react'
 import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event'
-import { API } from '@/lib/api/handler'
 import { airsendDB } from '@/db'
-import { AxiosResponse } from 'axios'
-import { GetUserSettingsResponse } from '@/lib/types/get-user-settings-response'
+import { syncUserSettings } from '@/lib/api/sync-user-settings'
 import { useAppSelector } from '@/store/hooks'
 
 // Module-level lazy map – created once, never re-created on re-render
@@ -48,23 +46,10 @@ export const DisplayTabComponent = () => {
     )
 
     const fetchUser = async () => {
-        const { data } = await API.handleGetMailUserSetting() as AxiosResponse<GetUserSettingsResponse>
-        if (!data.success) return
-        const { id, email_id, ...rest } = data.result.settings
-        const settingsObj = Object.assign({
-            usage: +data.result.usage,
-            mailbox_size: +data.result.mailbox_size,
-            quota_in_percent: Number(+data.result.usage / +data?.result?.mailbox_size * 100).toFixed(4),
-        }, rest)
-
-        const hasSettings = await airsendDB.has("settings", data.result.email)
-
-        if (hasSettings) {
-            await airsendDB.updateNestedItem("settings", data.result.email, "settings", settingsObj as any)
-            return
+        const result = await syncUserSettings(currAccount?.domain_name)
+        if (result) {
+            setSettings(result)
         }
-        await airsendDB.addNestedItem("settings", data.result.email, { "settings": settingsObj as any })
-        setSettings(settingsObj)
     }
     React.useEffect(() => {
         if (!settings) {

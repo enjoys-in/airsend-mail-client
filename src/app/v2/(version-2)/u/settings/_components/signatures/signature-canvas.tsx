@@ -158,11 +158,11 @@ export function SignatureCanvas({ onSave }: SignatureCanvasProps) {
         />
       </div>
       <div className="flex justify-between">
-        <Button variant="outline" size="sm" onClick={clearCanvas}>
+        <Button variant="outline" size="sm" type="button" onClick={clearCanvas}>
           <Eraser className="h-4 w-4 mr-2" />
           Clear
         </Button>
-        <Button size="sm" onClick={saveSignature}>
+        <Button size="sm" type="button" onClick={saveSignature}>
           <Save className="h-4 w-4 mr-2" />
           Save
         </Button>

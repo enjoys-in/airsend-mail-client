@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import {
 
   ChevronsUpDown,
@@ -38,6 +39,15 @@ export function NavUserV2() {
   const { isMobile } = useSidebar()
   const router = useRouter()
   const currAccount = useAppSelector(state => state.accounts.currAccount)
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => { setMounted(true) }, [])
+
+  const displayName = mounted ? (currAccount?.name ?? "") : ""
+  const displayEmail = mounted ? (currAccount?.email ?? "") : ""
+  const initials = mounted && currAccount?.name
+    ? formatNameInParts(currAccount.name)
+    : ""
+
   const handleLogout = async () => {
     const { data } = await API.handleLogout()
     if (data.success) {
@@ -55,11 +65,11 @@ export function NavUserV2() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground md:h-8 md:p-0"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg">{currAccount?.name && formatNameInParts(currAccount?.name as string) || "AE"}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{currAccount?.name}</span>
-                <span className="truncate text-xs">{currAccount?.email}</span>
+                <span className="truncate font-semibold">{displayName}</span>
+                <span className="truncate text-xs">{displayEmail}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -75,11 +85,11 @@ export function NavUserV2() {
                 onClick={() => router.push(`/h-panel/settings/${currAccount?.name}`)}
               >
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg">{formatNameInParts(currAccount?.name as string || "AE")}</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{currAccount?.name}</span>
-                  <span className="truncate text-xs">{currAccount?.email}</span>
+                  <span className="truncate font-semibold">{displayName}</span>
+                  <span className="truncate text-xs">{displayEmail}</span>
                 </div>
               </div>
             </DropdownMenuLabel>

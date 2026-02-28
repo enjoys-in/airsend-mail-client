@@ -1,5 +1,5 @@
 import { Prettify } from "."
-import { AutoReply, EmailSettings, IDisplay, INotifications, IPersonalization, ISignatures, VacationSender } from "./get-user-settings-response"
+import { AutoReply, EmailSettings, ICalenderConfig, IDisplay, INotifications, IOrganizationInfo, IPersonalization, ISignatures, VacationSender } from "./get-user-settings-response"
 
 type LabelVisibility = {
     showInLabelList: boolean
@@ -76,6 +76,8 @@ export interface AccountSettings {
         enable_imap: boolean;
     };
 
+    calender_config: ICalenderConfig;
+
     display: IDisplay
 
     auto_sync: {
@@ -84,6 +86,8 @@ export interface AccountSettings {
     };
 
     signatures: ISignatures[];
+
+    organization: IOrganizationInfo | null;
 
     last_synced_at: string | null;
     sync_error: string | null;

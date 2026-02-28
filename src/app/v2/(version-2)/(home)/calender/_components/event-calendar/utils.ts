@@ -6,9 +6,10 @@ import type { CalendarEvent, EventColor } from ".";
  * Get CSS classes for event colors
  */
 export function getEventColorClasses(color?: EventColor | string): string {
-  const eventColor = color || "sky";
+  const eventColor = color || "blue";
 
   switch (eventColor) {
+    case "blue":
     case "sky":
       return "bg-blue-200/50 hover:bg-blue-200/40 text-blue-900/90 dark:bg-blue-400/25 dark:hover:bg-blue-400/20 dark:text-blue-200 shadow-blue-700/8";
     case "violet":
@@ -20,6 +21,7 @@ export function getEventColorClasses(color?: EventColor | string): string {
     case "orange":
       return "bg-orange-200/50 hover:bg-orange-200/40 text-orange-900/90 dark:bg-orange-400/25 dark:hover:bg-orange-400/20 dark:text-orange-200 shadow-orange-700/8";
     default:
+      // Fallback for any unrecognized color — use blue
       return "bg-blue-200/50 hover:bg-blue-200/40 text-blue-900/90 dark:bg-blue-400/25 dark:hover:bg-blue-400/20 dark:text-blue-200 shadow-blue-700/8";
   }
 }

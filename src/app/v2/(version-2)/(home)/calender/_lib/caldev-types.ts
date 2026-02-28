@@ -298,6 +298,49 @@ export const EVENT_COLOR_HEX: Record<EventColor, string> = {
   emerald: "#10B981",
 };
 
+/**
+ * Normalize a JMAP CalendarEvent response (camelCase) into our internal
+ * CalDevEvent shape (snake_case).  The server returns fields like
+ * `calendarId`, `title`, `start`, `isAllDay`, etc. — we need
+ * `calendar_id`, `summary`, `dtstart`, `all_day`, …
+ */
+export function normalizeJMAPEvent(raw: Record<string, any>): CalDevEvent {
+  return {
+    id:               raw.id ?? "",
+    tenant_id:        raw.tenant_id ?? raw.tenantId ?? "",
+    user_id:          raw.user_id ?? raw.userId ?? "",
+    calendar_id:      raw.calendar_id ?? raw.calendarId ?? "",
+    uid:              raw.uid ?? "",
+    summary:          raw.summary ?? raw.title ?? "",
+    description:      raw.description ?? "",
+    location:         raw.location ?? "",
+    dtstart:          raw.dtstart ?? raw.start ?? "",
+    dtend:            raw.dtend ?? raw.end ?? raw.dtstart ?? raw.start ?? "",
+    duration:         raw.duration ?? "",
+    all_day:          raw.all_day ?? raw.isAllDay ?? false,
+    recurrence_rule:  raw.recurrence_rule ?? raw.recurrenceRule ?? "",
+    recurrence_id:    raw.recurrence_id ?? raw.recurrenceId ?? "",
+    sequence:         raw.sequence ?? 0,
+    status:           raw.status ?? "CONFIRMED",
+    transparency:     raw.transparency ?? "OPAQUE",
+    classification:   raw.classification ?? "PUBLIC",
+    organizer:        raw.organizer ?? "",
+    attendees:        raw.attendees ?? [],
+    categories:       raw.categories ?? [],
+    priority:         raw.priority ?? 0,
+    url:              raw.url ?? "",
+    geo:              raw.geo ?? "",
+    dtstamp:          raw.dtstamp ?? "",
+    etag:             raw.etag ?? "",
+    raw_ics:          raw.raw_ics ?? raw.rawIcs ?? "",
+    size_bytes:       raw.size_bytes ?? raw.sizeBytes ?? 0,
+    component_type:   raw.component_type ?? raw.componentType ?? "VEVENT",
+    properties:       raw.properties ?? {},
+    created_at:       raw.created_at ?? raw.created ?? "",
+    updated_at:       raw.updated_at ?? raw.updated ?? "",
+  };
+}
+
 /** Convert CalDev API event → UI CalendarEvent */
 export function toCalendarEvent(
   apiEvent: CalDevEvent,
@@ -313,6 +356,12 @@ export function toCalendarEvent(
     color: hexToEventColor(calendarColor || "#3B82F6"),
     location: apiEvent.location,
     label: apiEvent.categories?.[0],
+    // CalDev metadata — preserved for roundtrip editing
+    calendarId: apiEvent.calendar_id,
+    attendees: apiEvent.attendees as any,
+    categories: apiEvent.categories,
+    recurrenceRule: apiEvent.recurrence_rule || undefined,
+    status: apiEvent.status,
   };
 }
 
@@ -329,6 +378,58 @@ export function toCreateEventPayload(
     dtstart: uiEvent.start.toISOString(),
     dtend: uiEvent.end.toISOString(),
     all_day: uiEvent.allDay || false,
-    status: "CONFIRMED",
+    status: uiEvent.status || "CONFIRMED",
+    attendees: uiEvent.attendees as any,
+    categories: uiEvent.categories,
+    recurrence_rule: uiEvent.recurrenceRule,
+  };
+}
+
+/**
+ * Build a complete CalDevEvent by merging the create payload with the server response.
+ * JMAP Calendar/set create only returns server-assigned fields (id, uid, etc.),
+ * so we must merge with the original payload to avoid missing data.
+ */
+export function buildFullEvent(
+  payload: CreateEventPayload,
+  serverResponse: Partial<CalDevEvent>,
+): CalDevEvent {
+  return {
+    // Defaults for fields the server may not return
+    id: "",
+    tenant_id: "",
+    user_id: "",
+    uid: "",
+    duration: "",
+    recurrence_id: "",
+    sequence: 0,
+    transparency: "OPAQUE",
+    classification: "PUBLIC",
+    organizer: "",
+    priority: 0,
+    url: "",
+    geo: "",
+    dtstamp: new Date().toISOString(),
+    etag: "",
+    raw_ics: "",
+    size_bytes: 0,
+    component_type: "VEVENT",
+    properties: {},
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    // From payload
+    calendar_id: payload.calendar_id,
+    summary: payload.summary,
+    description: payload.description || "",
+    location: payload.location || "",
+    dtstart: payload.dtstart,
+    dtend: payload.dtend,
+    all_day: payload.all_day ?? false,
+    status: (payload.status || "CONFIRMED") as CalDevEvent["status"],
+    recurrence_rule: payload.recurrence_rule || "",
+    attendees: (payload.attendees || []) as CalDevAttendee[],
+    categories: payload.categories || [],
+    // Server overrides — these take precedence
+    ...serverResponse,
   };
 }

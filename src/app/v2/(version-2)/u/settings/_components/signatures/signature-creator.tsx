@@ -10,11 +10,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SignatureCanvas } from "./signature-canvas"
 import { SignatureEditor } from "./signature-editor"
-import { Plus, Trash2, Upload, Check, Info } from "lucide-react"
+import { Plus, Trash2, Upload, Check, Info, Pencil, FileText } from "lucide-react"
 import { useSettingsStore, useSignatureEditorStore } from "@/store/settings"
 import { airsendDB } from "@/db"
 import { toast } from "sonner"
 import { API } from "@/lib/api/handler"
+
+/** Return index if >= 0, otherwise fallback */
+const safeIndex = (idx: number, fallback = 0) => (idx >= 0 ? idx : fallback)
 
 type Signature = {
   key: string;
@@ -30,8 +33,9 @@ interface SignatureFormValues {
 }
 
 export function SignatureCreator({ email }: { email: string }) {
-  const { type } = useSignatureEditorStore()
+  const { type, setType } = useSignatureEditorStore()
   const settings = useSettingsStore((s) => s.settings)
+  const setSettings = useSettingsStore((s) => s.setSettings)
 
   const { control, register, handleSubmit, watch, setValue, getValues } = useForm<SignatureFormValues>({
     defaultValues: {
@@ -51,24 +55,40 @@ export function SignatureCreator({ email }: { email: string }) {
   const selectedSignature = signatures[selectedSignatureIndex]
 
   const onSubmit = async (data: SignatureFormValues) => {
-
     if (!email) return toast.error("Please select an account")
-    console.log(data.signatures)
     const res = await airsendDB.updateNestedItem("settings", email as string, "settings.signatures", data.signatures as any)
     if (res.success) {
       setValue("signatures", res.newValue as any)
-      setValue("selectedSignatureIndex", res.newValue?.findIndex((s: any) => s.default) || selectedSignatureIndex || 0)
+      setValue("selectedSignatureIndex", safeIndex(
+        res.newValue?.findIndex((s: any) => s.default) ?? -1,
+        selectedSignatureIndex
+      ))
+      setSettings({ signatures: res.newValue as any })
+      toast.success("Signatures saved")
     }
   }
 
   const handleAddSignature = () => {
+    const newIdx = fields.length
     append({
-      key: `signature-${fields.length + 1}`,
+      key: `signature-${newIdx + 1}`,
       line: "",
       type: "text",
-      name: `Signature ${fields.length + 1}`,
-      default: false
+      name: `Signature ${newIdx + 1}`,
+      default: newIdx === 0
     })
+    // Auto-select the newly added signature
+    setValue("selectedSignatureIndex", newIdx)
+  }
+
+  const handleRemoveSignature = (index: number) => {
+    remove(index)
+    // Adjust selected index to stay in bounds
+    if (selectedSignatureIndex >= fields.length - 1) {
+      setValue("selectedSignatureIndex", Math.max(0, fields.length - 2))
+    } else if (selectedSignatureIndex > index) {
+      setValue("selectedSignatureIndex", selectedSignatureIndex - 1)
+    }
   }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,9 +114,10 @@ export function SignatureCreator({ email }: { email: string }) {
 
     async function loadSignatures() {
 
-      if (settings?.signatures) {
-        setValue("selectedSignatureIndex", settings.signatures.findIndex((s: any) => s.default) || 0)
-
+      if (settings?.signatures && settings.signatures.length > 0) {
+        setValue("selectedSignatureIndex", safeIndex(
+          (settings.signatures as any[]).findIndex((s: any) => s.default)
+        ))
         return setValue("signatures", settings.signatures as any)
       }
       const idbData = await airsendDB.getNestedItem(
@@ -108,18 +129,32 @@ export function SignatureCreator({ email }: { email: string }) {
       if (idbData.success && idbData?.value && idbData?.value.length > 0) {
 
         setValue("signatures", idbData.value as any)
-        setValue("selectedSignatureIndex", idbData?.value.findIndex((s: any) => s.default) || 0)
+        setValue("selectedSignatureIndex", safeIndex(
+          idbData?.value.findIndex((s: any) => s.default) ?? -1
+        ))
       } else {
         const { data } = await API.handleGetMailUserSetting(`${idbData?.path}&=email=${email}`)
         if (data.success) {
-          setValue("signatures", data.result)
-          setValue("selectedSignatureIndex", data.result.findIndex((s: any) => s.default) || 0)
-          await airsendDB.updateNestedItem(
-            "settings",
-            email as string,
-            "settings.signatures",
-            data.result
-          )
+          // data.result may be the full settings object or a signatures array
+          const sigs: any[] = Array.isArray(data.result)
+            ? data.result
+            : Array.isArray(data.result?.settings?.signatures)
+              ? data.result.settings.signatures
+              : Array.isArray(data.result?.signatures)
+                ? data.result.signatures
+                : []
+          if (sigs.length > 0) {
+            setValue("signatures", sigs as any)
+            setValue("selectedSignatureIndex", safeIndex(
+              sigs.findIndex((s: any) => s.default) ?? -1
+            ))
+            await airsendDB.updateNestedItem(
+              "settings",
+              email as string,
+              "settings.signatures",
+              sigs
+            )
+          }
         }
       }
     }
@@ -174,7 +209,7 @@ export function SignatureCreator({ email }: { email: string }) {
                             variant="destructive"
                             size="sm"
                             type="button"
-                            onClick={() => remove(index)}
+                            onClick={() => handleRemoveSignature(index)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -195,20 +230,20 @@ export function SignatureCreator({ email }: { email: string }) {
                     <CardTitle>Signature Editor</CardTitle>
                     <CardDescription>Customize your signature</CardDescription>
                   </div>
-                  {/* <div className="flex">
-                <Pencil
-                  onClick={() => setType("canvas")}
-                  className={`mr-2 h-8 w-8 p-2 rounded-full cursor-pointer ${type === "canvas" ? "bg-blue-600 text-white" : "bg-gray-600"}`}
-                />
-                <Upload
-                  onClick={() => setType("upload")}
-                  className={`mr-2 h-8 w-8 p-2 rounded-full cursor-pointer ${type === "upload" ? "bg-blue-600 text-white" : "bg-gray-600"}`}
-                />
-                <FileText
-                  onClick={() => setType("editor")}
-                  className={`mr-2 h-8 w-8 p-2 rounded-full cursor-pointer ${type === "editor" ? "bg-blue-600 text-white" : "bg-gray-600"}`}
-                />
-              </div> */}
+                  <div className="flex">
+                    <Pencil
+                      onClick={() => setType("canvas")}
+                      className={`mr-2 h-8 w-8 p-2 rounded-full cursor-pointer ${type === "canvas" ? "bg-blue-600 text-white" : "bg-gray-600"}`}
+                    />
+                    <Upload
+                      onClick={() => setType("upload")}
+                      className={`mr-2 h-8 w-8 p-2 rounded-full cursor-pointer ${type === "upload" ? "bg-blue-600 text-white" : "bg-gray-600"}`}
+                    />
+                    <FileText
+                      onClick={() => setType("editor")}
+                      className={`mr-2 h-8 w-8 p-2 rounded-full cursor-pointer ${type === "editor" ? "bg-blue-600 text-white" : "bg-gray-600"}`}
+                    />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6 w-full">
@@ -256,12 +291,11 @@ export function SignatureCreator({ email }: { email: string }) {
                     <Label htmlFor="uploadSignature">Upload Signature</Label>
                     <Label
                       htmlFor="uploadSignature"
-                      className="flex items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none dark:bg-gray-800 dark:border-gray-600 dark:hover:border-gray-500"
+                      className="flex items-center justify-center w-full h-32 px-4 transition border-2 border-gray-600 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none bg-gray-800"
                     >
                       <span className="flex items-center space-x-2">
-                        <Upload className="flex flex-col sm:flex-row items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-gray-400 focus:outline-none dark:bg-gray-800 dark:border-gray-600 dark:hover:border-gray-500"
-                        />
-                        <span className="font-medium text-gray-600 dark:text-gray-400">
+                        <Upload className="h-6 w-6 text-gray-400" />
+                        <span className="font-medium text-gray-400">
                           Drop files to upload or click
                         </span>
                       </span>

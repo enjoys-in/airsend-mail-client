@@ -89,7 +89,7 @@ export default async function RootLayout({
       <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
       <link rel="manifest" href="/site.webmanifest"></link>
 
-      <body className={cn(jakarta.className,)} >
+      <body className={cn(jakarta.className,)} suppressHydrationWarning>
         <NextTopLoader color="#5a61ff" />
         <ThemeProvider
           attribute="class"

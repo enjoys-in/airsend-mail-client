@@ -24,21 +24,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-interface Member {
-  id: string
-  name: string
-  email: string
-  role: string
-  organization: string
-  domain: string
-  status: string
-  joinedDate: string
-  lastActive: string
-}
+import type { IMember } from "../_lib/types"
 
 interface MembersTableProps {
-  data: Member[]
+  data: IMember[]
 }
 
 const availableRoles = [
@@ -50,14 +39,15 @@ const availableRoles = [
 
 export function MembersTable({ data }: MembersTableProps) {
   const [members, setMembers] = React.useState(data)
-  const [actionMember, setActionMember] = React.useState<Member | null>(null)
+  const [actionMember, setActionMember] = React.useState<IMember | null>(null)
   const [actionType, setActionType] = React.useState<"kick" | "ban" | null>(null)
 
   const updateMemberRole = (memberId: string, newRole: string) => {
-    setMembers((prev) => prev.map((member) => (member.id === memberId ? { ...member, role: newRole } : member)))
+    const roleLabel = availableRoles.find((r) => r.value === newRole)?.label ?? newRole
+    setMembers((prev) => prev.map((member) => (member.id === memberId ? { ...member, role: roleLabel } : member)))
   }
 
-  const handleAction = (member: Member, action: "kick" | "ban") => {
+  const handleAction = (member: IMember, action: "kick" | "ban") => {
     setActionMember(member)
     setActionType(action)
   }
@@ -69,7 +59,7 @@ export function MembersTable({ data }: MembersTableProps) {
       setMembers((prev) => prev.filter((member) => member.id !== actionMember.id))
     } else if (actionType === "ban") {
       setMembers((prev) =>
-        prev.map((member) => (member.id === actionMember.id ? { ...member, status: "Banned" } : member)),
+        prev.map((member) => (member.id === actionMember.id ? { ...member, status: "banned" as const } : member)),
       )
     }
 
@@ -79,11 +69,11 @@ export function MembersTable({ data }: MembersTableProps) {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Active":
+      case "active":
         return <Badge variant="default">Active</Badge>
-      case "Banned":
+      case "banned":
         return <Badge variant="destructive">Banned</Badge>
-      case "Inactive":
+      case "inactive":
         return <Badge variant="secondary">Inactive</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
@@ -107,7 +97,7 @@ export function MembersTable({ data }: MembersTableProps) {
 
   return (
     <>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -159,8 +149,8 @@ export function MembersTable({ data }: MembersTableProps) {
                 <TableCell>{member.organization}</TableCell>
                 <TableCell>{member.domain}</TableCell>
                 <TableCell>{getStatusBadge(member.status)}</TableCell>
-                <TableCell>{member.joinedDate}</TableCell>
-                <TableCell>{member.lastActive}</TableCell>
+                <TableCell>{new Date(member.joined_at).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(member.last_active).toLocaleString()}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -185,7 +175,7 @@ export function MembersTable({ data }: MembersTableProps) {
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleAction(member, "ban")}
-                            disabled={member.status === "Banned"}
+                            disabled={member.status === "banned"}
                           >
                             <Ban className="mr-2 h-4 w-4" />
                             Ban Member

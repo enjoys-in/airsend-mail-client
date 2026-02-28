@@ -1,31 +1,25 @@
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
 import { OrganizationForm } from "../../_components/organization-form"
+import { ArrowLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
-// Mock data for the organization
-const organizationData = {
-  id: "ORG001",
-  name: "Acme Corporation",
-  logo: "/placeholder.svg?height=100&width=100",
-  banner: "/placeholder.svg?height=200&width=800",
-  footer: "© 2024 Acme Corporation. All rights reserved.",
-  headerColor: "#3b82f6",
-  permissions: ["read", "write", "admin"],
-  role: "owner",
-  domains: ["acme.com", "acme.org"],
-}
+export default async function EditOrganizationPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
 
-export default function EditOrganizationPage({ params }: { params:any }) {
-  return (
-    <SidebarInset>
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <h1 className="text-lg font-semibold">Edit Organization - {params.id}</h1>
-      </header>
-      <div className="flex flex-1 flex-col gap-4 p-4">
-        <OrganizationForm mode="edit" initialData={organizationData} />
-      </div>
-    </SidebarInset>
-  )
+    return (
+        <div className="flex flex-col h-full">
+            <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+                <Button variant="ghost" size="sm" asChild>
+                    <Link href="/h-panel/org">
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back
+                    </Link>
+                </Button>
+                <h1 className="text-lg font-semibold">Edit Organization — {id}</h1>
+            </header>
+            <div className="flex-1 p-4 min-w-0 overflow-auto">
+                <OrganizationForm mode="edit" />
+            </div>
+        </div>
+    )
 }

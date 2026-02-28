@@ -83,7 +83,7 @@ export function UserManagement({ users }: { users: FetchAllUsersRootObject[] }) 
                 ? null
                 : { email: user.email, password: "yourpassword", enable_imap: user.settings.imap_config.enable_imap, enable_smtp: user.settings.smtp_config.enable_smtp }
         )
-    }, [showServerDetails])
+    }, [])
 
     const handleResetPassword = useCallback((user: FetchAllUsersRootObject) => {
         setSelectedAccount({ email: user.email, password: "yourpassword" })

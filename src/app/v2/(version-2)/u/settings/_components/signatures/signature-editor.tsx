@@ -13,11 +13,14 @@ interface SignatureEditorProps {
 
 export function SignatureEditor({ value, onChange }: SignatureEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
+  // Track the last value we emitted to avoid resetting innerHTML on our own changes
+  const lastEmittedRef = useRef(value)
 
-  // Init HTML content on mount
+  // Only update innerHTML when value changes from an external source
   useEffect(() => {
-    if (editorRef.current && value !== editorRef.current.innerHTML) {
+    if (editorRef.current && value !== lastEmittedRef.current) {
       editorRef.current.innerHTML = value
+      lastEmittedRef.current = value
     }
   }, [value])
 
@@ -43,7 +46,9 @@ export function SignatureEditor({ value, onChange }: SignatureEditorProps) {
 
   const updateContent = () => {
     if (editorRef.current) {
-      onChange(editorRef.current.innerHTML)
+      const html = editorRef.current.innerHTML
+      lastEmittedRef.current = html
+      onChange(html)
     }
   }
 

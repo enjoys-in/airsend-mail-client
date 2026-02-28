@@ -61,30 +61,22 @@ export default function DomainDashboard() {
 
       dispatch(
         setMyDomains(
-          data.result.map(
-            (domain: any) =>
-              domain.status === DOMAIN_STATUS.VERIFIED && domain.domain_name
-          )
+          data.result
+            .filter((domain: any) => domain.status === DOMAIN_STATUS.VERIFIED)
+            .map((domain: any) => domain.domain_name)
         )
       );
     } catch (error) {
       setIsLoading(false);
     }
-  }, []);
+  }, [dispatch]);
   const handleDeleteDomain = React.useCallback(async (id: string) => {
     try {
       const { data } = await API.deleteDomain(id);
       if (!data.success) {
         throw new Error(data.message);
       }
-      const UpdatedDomains = domains.map((domain) => {
-        if (domain.id !== id) {
-          
-          return domain;
-        }
-      })
-      console.log(UpdatedDomains)
-      setDomains(UpdatedDomains);
+      setDomains((prev) => prev.filter((domain) => domain.id !== id));
       toast({ title: data.message });
       setSelectedDomain(null)
 
@@ -97,7 +89,7 @@ export default function DomainDashboard() {
         description: "Something went wrong. Please try again later.",
       });
     }
-  }, []);
+  }, [toast]);
 
   const handleClaimDomainOwnership = React.useCallback(async (id: string) => {
     try {
@@ -122,7 +114,7 @@ export default function DomainDashboard() {
         description: "Something went wrong. Please try again later.",
       });
     }
-  }, [])
+  }, [toast])
   const handleVerifyDomain = React.useCallback(async (id: string) => {
     try {
       const { data } = await API.verifyDomainOwnership(id);
@@ -138,10 +130,10 @@ export default function DomainDashboard() {
         description: "Something went wrong. Please try again later.",
       });
     }
-  }, [])
+  }, [toast])
   React.useEffect(() => {
     fetchAllDomains();
-  }, []);
+  }, [fetchAllDomains]);
   const filteredDomains = React.useMemo(() => {
     return domains.filter((domain) => {
       return domain.domain_name.toLowerCase().includes(query.toLowerCase());
@@ -219,10 +211,10 @@ export default function DomainDashboard() {
                       </h2>
                       {query.length > 0 ? (
                         <p className="text-gray-500 mb-4">
-                          <p className="text-muted-foreground">
+                          <span className="text-muted-foreground">
                             Try searching or filtering for a different term or
                             contact support.
-                          </p>
+                          </span>
                         </p>
                       ) : (
                         <p className="text-gray-500 mb-4">

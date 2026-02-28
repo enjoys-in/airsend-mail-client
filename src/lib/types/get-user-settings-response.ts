@@ -40,12 +40,35 @@ interface Settings {
     email_settings: EmailSettings
     email_privacy: EmailPrivacy
     imap_config: ImapConfig
+    calender_config: ICalenderConfig
     display: IDisplay
     auto_sync: AutoSync
     signatures: ISignatures[]
+    organization: IOrganizationInfo | null
     last_synced_at: string | null
     sync_error: string | null
     sync_status: string | null
+}
+
+export interface ICalenderConfig {
+    enable_calender: boolean
+    calender_sync_interval: number | string
+    notifications: boolean
+    sharing: boolean
+    config: Array<{
+        calendar_id: string
+        calendar_name: string
+        calender_url: string
+        sync_status: string
+        last_synced_at: Date | null
+        sync_error: string | null
+    }>
+}
+
+export interface IOrganizationInfo {
+    org_id: string | null
+    org_name: string | null
+    domain_name: string | null
 }
 export type INotifications = {
     new_email: boolean,

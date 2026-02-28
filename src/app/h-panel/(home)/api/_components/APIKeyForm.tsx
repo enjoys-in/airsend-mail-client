@@ -93,10 +93,14 @@ export function APIKeyForm() {
             if (!data.success) {
                 throw new Error(data.message)
             }
-            setMyDomains(data.result.map((domain: any) => domain.status === DOMAIN_STATUS.VERIFIED && ({ domain_name: domain.domain_name, id: domain.id, accounts: domain.accounts })))
+            setMyDomains(data.result
+                .filter((domain: any) => domain.status === DOMAIN_STATUS.VERIFIED)
+                .map((domain: any) => ({ domain_name: domain.domain_name, id: domain.id, accounts: domain.accounts })))
 
 
-            return data.result.map((domain: any) => domain.status === DOMAIN_STATUS.VERIFIED && ({ label: domain.domain_name, value: domain.id }))
+            return data.result
+                .filter((domain: any) => domain.status === DOMAIN_STATUS.VERIFIED)
+                .map((domain: any) => ({ label: domain.domain_name, value: domain.id }))
         } catch (error) {
             return []
         }
@@ -104,12 +108,13 @@ export function APIKeyForm() {
     }, [])
     React.useEffect(() => {
         fetchAllDomains()
-    }, [])
+    }, [fetchAllDomains])
     const watchDomain = form.watch("domain")
     React.useEffect(() => {
-        if (form.watch("domain")) {
+        if (watchDomain) {
             filterAccounts(form.getValues("domain"))
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [watchDomain])
     return (
         <div className="w-full max-w-2xl mx-auto mt-2 rounded-none">

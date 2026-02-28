@@ -65,6 +65,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                 title: "Success",
                 description: "You have been logged in successfully", duration: 2000
             })
+            
             router.push("/v2/u/mail/inbox")
         } catch (error) {
             setIsLoading(false);

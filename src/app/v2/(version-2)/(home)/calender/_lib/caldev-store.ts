@@ -3,15 +3,20 @@
 // ============================================================================
 
 import { create } from "zustand";
-import { startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import { toast } from "sonner";
 
 import type {
   CalDevCalendar,
   CalDevEvent,
   CalDevSubscription,
   CalDevAppPassword,
+  CreateEventPayload,
 } from "./caldev-types";
-import { toCalendarEvent, toCreateEventPayload } from "./caldev-types";
+import {
+  toCalendarEvent,
+  toCreateEventPayload,
+  buildFullEvent,
+} from "./caldev-types";
 import type { CalendarEvent } from "../_components/event-calendar/types";
 import * as api from "./caldev-api";
 
@@ -58,12 +63,17 @@ interface CalDevState {
   ) => Promise<CalDevCalendar | null>;
   editCalendar: (
     id: string,
-    updates: { name?: string; color?: string; description?: string; is_visible?: boolean },
+    updates: {
+      name?: string;
+      color?: string;
+      description?: string;
+      is_visible?: boolean;
+    },
   ) => Promise<boolean>;
   removeCalendar: (id: string) => Promise<boolean>;
 
   // Events
-  fetchEvents: (after: string, before: string) => Promise<void>;
+  fetchEvents: (after: string, before: string, force?: boolean) => Promise<void>;
   addEvent: (
     uiEvent: CalendarEvent,
     calendarId: string,
@@ -119,14 +129,17 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   ...initialState,
 
   // -----------------------------------------------------------------------
-  // Session
+  // Session — guarded: only runs once, skips if already initialized or in-flight
   // -----------------------------------------------------------------------
   initSession: async () => {
+    const { accountId, sessionLoading } = get();
+    if (accountId || sessionLoading) return; // already done or in-flight
+
     set({ sessionLoading: true, sessionError: null });
     try {
       const session = await api.getSession();
-      const accountId = api.getAccountId(session);
-      set({ accountId, sessionLoading: false });
+      const id = api.getAccountId(session);
+      set({ accountId: id, sessionLoading: false });
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Failed to init CalDev session";
@@ -138,14 +151,15 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   // Calendars
   // -----------------------------------------------------------------------
   fetchCalendars: async () => {
-    const { accountId } = get();
-    if (!accountId) return;
+    const { accountId, calendarsLoading } = get();
+    if (!accountId || calendarsLoading) return;
     set({ calendarsLoading: true });
     try {
       const calendars = await api.getCalendars(accountId);
       set({ calendars, calendarsLoading: false });
     } catch {
       set({ calendarsLoading: false });
+      toast.error("Failed to load calendars");
     }
   },
 
@@ -160,9 +174,11 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
       });
       if (created) {
         set((s) => ({ calendars: [...s.calendars, created] }));
+        toast.success(`Calendar "${name}" created`);
       }
       return created;
     } catch {
+      toast.error("Failed to create calendar");
       return null;
     }
   },
@@ -181,6 +197,7 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
       }
       return ok;
     } catch {
+      toast.error("Failed to update calendar");
       return false;
     }
   },
@@ -195,32 +212,60 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
           calendars: s.calendars.filter((c) => c.id !== id),
           rawEvents: s.rawEvents.filter((e) => e.calendar_id !== id),
         }));
+        toast.success("Calendar deleted");
       }
       return ok;
     } catch {
+      toast.error("Failed to delete calendar");
       return false;
     }
   },
 
   // -----------------------------------------------------------------------
-  // Events
+  // Events — with range caching to avoid redundant fetches
   // -----------------------------------------------------------------------
-  fetchEvents: async (after, before) => {
-    const { accountId } = get();
-    if (!accountId) return;
+  fetchEvents: async (after, before, force = false) => {
+    const { accountId, eventsLoading, lastFetchRange } = get();
+    if (!accountId || eventsLoading) return;
+
+    // Skip if requested range is within the already-fetched range
+    if (
+      !force &&
+      lastFetchRange &&
+      after >= lastFetchRange.after &&
+      before <= lastFetchRange.before
+    ) {
+      return;
+    }
+
     set({ eventsLoading: true });
     try {
       const events = await api.queryAndFetchEvents(accountId, {
         after,
         before,
       });
+
+      // Merge with existing events to avoid losing data from other ranges
+      const existingEvents = get().rawEvents;
+      const newIds = new Set(events.map((e) => e.id));
+      const retained = existingEvents.filter((e) => !newIds.has(e.id));
+
+      // Expand the cached range to cover both old and new
+      const mergedRange = lastFetchRange
+        ? {
+            after: after < lastFetchRange.after ? after : lastFetchRange.after,
+            before: before > lastFetchRange.before ? before : lastFetchRange.before,
+          }
+        : { after, before };
+
       set({
-        rawEvents: events,
+        rawEvents: [...retained, ...events],
         eventsLoading: false,
-        lastFetchRange: { after, before },
+        lastFetchRange: mergedRange,
       });
     } catch {
       set({ eventsLoading: false });
+      toast.error("Failed to load events");
     }
   },
 
@@ -231,10 +276,14 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
       const payload = toCreateEventPayload(uiEvent, calendarId);
       const created = await api.createEvent(accountId, payload);
       if (created) {
-        set((s) => ({ rawEvents: [...s.rawEvents, created] }));
+        // Merge payload + server response for a complete CalDevEvent
+        const fullEvent = buildFullEvent(payload, created);
+        set((s) => ({ rawEvents: [...s.rawEvents, fullEvent] }));
+        return fullEvent;
       }
-      return created;
+      return null;
     } catch {
+      toast.error("Failed to create event");
       return null;
     }
   },
@@ -242,17 +291,26 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   editEvent: async (eventId, updates) => {
     const { accountId } = get();
     if (!accountId) return false;
+
+    // Optimistic update
+    const prev = get().rawEvents;
+    set((s) => ({
+      rawEvents: s.rawEvents.map((e) =>
+        e.id === eventId ? { ...e, ...updates } : e,
+      ),
+    }));
+
     try {
       const ok = await api.updateEvent(accountId, eventId, updates);
-      if (ok) {
-        set((s) => ({
-          rawEvents: s.rawEvents.map((e) =>
-            e.id === eventId ? { ...e, ...updates } : e,
-          ),
-        }));
+      if (!ok) {
+        // Revert on failure
+        set({ rawEvents: prev });
+        toast.error("Failed to update event");
       }
       return ok;
     } catch {
+      set({ rawEvents: prev });
+      toast.error("Failed to update event");
       return false;
     }
   },
@@ -260,15 +318,23 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   removeEvent: async (eventId) => {
     const { accountId } = get();
     if (!accountId) return false;
+
+    // Optimistic delete
+    const prev = get().rawEvents;
+    set((s) => ({
+      rawEvents: s.rawEvents.filter((e) => e.id !== eventId),
+    }));
+
     try {
       const ok = await api.deleteEvent(accountId, eventId);
-      if (ok) {
-        set((s) => ({
-          rawEvents: s.rawEvents.filter((e) => e.id !== eventId),
-        }));
+      if (!ok) {
+        set({ rawEvents: prev });
+        toast.error("Failed to delete event");
       }
       return ok;
     } catch {
+      set({ rawEvents: prev });
+      toast.error("Failed to delete event");
       return false;
     }
   },
@@ -276,17 +342,25 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   moveEvent: async (eventId, dtstart, dtend) => {
     const { accountId } = get();
     if (!accountId) return false;
+
+    // Optimistic move
+    const prev = get().rawEvents;
+    set((s) => ({
+      rawEvents: s.rawEvents.map((e) =>
+        e.id === eventId ? { ...e, dtstart, dtend } : e,
+      ),
+    }));
+
     try {
       const ok = await api.updateEvent(accountId, eventId, { dtstart, dtend });
-      if (ok) {
-        set((s) => ({
-          rawEvents: s.rawEvents.map((e) =>
-            e.id === eventId ? { ...e, dtstart, dtend } : e,
-          ),
-        }));
+      if (!ok) {
+        set({ rawEvents: prev });
+        toast.error("Failed to move event");
       }
       return ok;
     } catch {
+      set({ rawEvents: prev });
+      toast.error("Failed to move event");
       return false;
     }
   },
@@ -310,12 +384,15 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   // Subscriptions
   // -----------------------------------------------------------------------
   fetchSubscriptions: async () => {
+    const { subscriptionsLoading } = get();
+    if (subscriptionsLoading) return;
     set({ subscriptionsLoading: true });
     try {
       const subs = await api.getSubscriptions();
       set({ subscriptions: subs, subscriptionsLoading: false });
     } catch {
       set({ subscriptionsLoading: false });
+      toast.error("Failed to load subscriptions");
     }
   },
 
@@ -329,10 +406,11 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
       set((s) => ({
         subscriptions: [...s.subscriptions, subscription],
       }));
+      toast.success("Subscription added — syncing in background");
       // Re-fetch calendars since subscription auto-creates a calendar
       get().fetchCalendars();
     } catch {
-      // error handling done by caller
+      toast.error("Failed to add subscription");
     }
   },
 
@@ -342,11 +420,12 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
       set((s) => ({
         subscriptions: s.subscriptions.filter((sub) => sub.id !== id),
       }));
+      toast.success("Subscription removed");
       if (deleteCalendar) {
         get().fetchCalendars();
       }
     } catch {
-      // handled by caller
+      toast.error("Failed to remove subscription");
     }
   },
 
@@ -358,8 +437,9 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
           sub.id === id ? { ...sub, ...updated } : sub,
         ),
       }));
+      toast.success("Sync completed");
     } catch {
-      // handled by caller
+      toast.error("Sync failed");
     }
   },
 

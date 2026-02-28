@@ -7,7 +7,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Plus_Jakarta_Sans, Raleway } from "next/font/google"
 
 import {
   Tooltip,
@@ -27,23 +26,15 @@ import { useAppDispatch } from "@/store/hooks"
 import { fetchAdminFromServer } from "@/store/slices/account/admin"
 
 
-
-const jakarta = Plus_Jakarta_Sans({
-  weight: ['600',],
-  style: ['normal'],
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-jakarta'
-});
 export default function Layout({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch()
   React.useEffect(() => {
     dispatch(fetchAdminFromServer());
-  }, []);
+  }, [dispatch]);
   return (
-    <SidebarProvider className={jakarta.className}>
+    <SidebarProvider>
       <HPanelAppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0 overflow-x-hidden">
         <header className="flex h-16 shrink-0 border-b border-gray-100 dark:border-gray-800 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 sticky top-0 bg-gray-100 dark:bg-black blur-0  shadow-md z-50">
           <div className="flex items-center justify-between w-full px-4">
             <div className="flex items-center gap-2">

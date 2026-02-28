@@ -7,88 +7,171 @@ import { Info } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useSettingsStore } from '@/store/settings'
+import { useEffect, useState } from 'react'
+import { airsendDB } from '@/db'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
-export default function EmailSettings({email}:{email:string}) {
-  const { control, watch } = useForm({
+interface AppearanceFormValues {
+  dailyEmails: boolean
+  inbox: string
+  composer: string
+  density: string
+  composerMode: string
+  conversationsPerPage: string
+  textDirection: string
+  defaultFont: string
+  defaultFontSize: string
+}
+
+export default function MailAppearance({ email }: { email: string }) {
+  const settings = useSettingsStore((s) => s.settings)
+  const setSettings = useSettingsStore((s) => s.setSettings)
+
+  const { control, watch, handleSubmit, reset } = useForm<AppearanceFormValues>({
     defaultValues: {
-      dailyEmails: true,
-      inbox: 'row',
+      dailyEmails: settings?.personalization?.theme === 'dark' || true,
+      inbox: settings?.display?.showRightSidebar ? 'column' : 'row',
       composer: 'normal',
       density: 'comfortable',
+      composerMode: 'normal',
+      conversationsPerPage: '50',
+      textDirection: 'ltr',
+      defaultFont: 'arial',
+      defaultFontSize: '14',
     },
   })
 
-  const values = watch()
+  // Sync from settings when they load async
+  useEffect(() => {
+    if (settings?.personalization) {
+      reset({
+        dailyEmails: true,
+        inbox: settings?.display?.showRightSidebar ? 'column' : 'row',
+        composer: 'normal',
+        density: 'comfortable',
+        composerMode: 'normal',
+        conversationsPerPage: '50',
+        textDirection: 'ltr',
+        defaultFont: 'arial',
+        defaultFontSize: '14',
+      })
+    }
+  }, [settings?.personalization, reset])
+
+  const onSave = async (data: AppearanceFormValues) => {
+    if (!email) return
+    const displayUpdate = {
+      ...settings?.display,
+      showRightSidebar: data.inbox === 'column',
+    }
+    await airsendDB.updateNestedItem("settings", email, "settings.display", displayUpdate as any)
+    setSettings({ display: displayUpdate as any })
+    toast.success("Appearance settings saved")
+  }
 
   return (
-    <div className="min-h-screen bg-black text-white px-4 py-8">
+    <div className="text-white px-4 py-8">
         <div className="space-y-6">
-          <h1 className="text-3xl font-bold  text-white ">Composing</h1>
+          <h1 className="text-3xl font-bold text-white">Composing</h1>
 
           <div className="flex items-center justify-between">
             <span>Composer mode</span>
-            <Select defaultValue="normal">
-              <SelectTrigger className="w-[180px] bg-black border-gray-700">
-                <SelectValue placeholder="Normal" />
-              </SelectTrigger>
-              <SelectContent className="bg-black border-gray-700">
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="rich">Rich Text</SelectItem>
-                <SelectItem value="plain">Plain Text</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="composerMode"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-[180px] bg-black border-gray-700">
+                    <SelectValue placeholder="Normal" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-black border-gray-700">
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="rich">Rich Text</SelectItem>
+                    <SelectItem value="plain">Plain Text</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
- <div className="flex items-center justify-between">
+
+          <div className="flex items-center justify-between">
             <span>Conversations per page</span>
-            <Select defaultValue="50">
-              <SelectTrigger className="w-[100px] bg-black border-gray-700">
-                <SelectValue placeholder="50" />
-              </SelectTrigger>
-              <SelectContent className="bg-black border-gray-700">
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="conversationsPerPage"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-[100px] bg-black border-gray-700">
+                    <SelectValue placeholder="50" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-black border-gray-700">
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
+
           <div className="flex items-center justify-between">
             <span>Composer text direction</span>
-            <Select defaultValue="ltr">
-              <SelectTrigger className="w-[180px] bg-black border-gray-700">
-                <SelectValue placeholder="Left to Right" />
-              </SelectTrigger>
-              <SelectContent className="bg-black border-gray-700">
-                <SelectItem value="ltr">Left to Right</SelectItem>
-                <SelectItem value="rtl">Right to Left</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="textDirection"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-[180px] bg-black border-gray-700">
+                    <SelectValue placeholder="Left to Right" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-black border-gray-700">
+                    <SelectItem value="ltr">Left to Right</SelectItem>
+                    <SelectItem value="rtl">Right to Left</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           <div className="flex items-center justify-between">
             <span>Composer default font/size</span>
             <div className="flex gap-2">
-              <Select defaultValue="arial">
-                <SelectTrigger className="w-[120px] bg-black border-gray-700">
-                  <SelectValue placeholder="Arial" />
-                </SelectTrigger>
-                <SelectContent className="bg-black border-gray-700">
-                  <SelectItem value="arial">Arial</SelectItem>
-                  <SelectItem value="times">Times New Roman</SelectItem>
-                  <SelectItem value="calibri">Calibri</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="defaultFont"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-[120px] bg-black border-gray-700">
+                      <SelectValue placeholder="Arial" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-gray-700">
+                      <SelectItem value="arial">Arial</SelectItem>
+                      <SelectItem value="times">Times New Roman</SelectItem>
+                      <SelectItem value="calibri">Calibri</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
 
-              <Select defaultValue="14">
-                <SelectTrigger className="w-[70px] bg-black border-gray-700">
-                  <SelectValue placeholder="14" />
-                </SelectTrigger>
-                <SelectContent className="bg-black border-gray-700">
-                  <SelectItem value="12">12</SelectItem>
-                  <SelectItem value="14">14</SelectItem>
-                  <SelectItem value="16">16</SelectItem>
-                  <SelectItem value="18">18</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="defaultFontSize"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-[70px] bg-black border-gray-700">
+                      <SelectValue placeholder="14" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-gray-700">
+                      <SelectItem value="12">12</SelectItem>
+                      <SelectItem value="14">14</SelectItem>
+                      <SelectItem value="16">16</SelectItem>
+                      <SelectItem value="18">18</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
         </div>

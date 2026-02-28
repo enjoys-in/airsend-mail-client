@@ -21,9 +21,9 @@ export function SideBarToggleButton() {
           className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
         >
           <Link href={"/h-panel"}>
-            <Image className="logo hidden dark:block data-[state=open]:hidden" src={open ? "/navbar-logo.png" : "/favicon.png"} alt="logo" width={512} height={512} />
+            <Image className="logo hidden dark:block data-[state=open]:hidden" src={open ? "/navbar-logo.png" : "/favicon.png"} alt="logo" width={512} height={512} style={{ width: "auto", height: "auto" }} />
             <Image className="logo dark:hidden data-[state=open]:hidden"src={open ? "/navbar-logo-light.png" : "/favicon.png"} 
-              alt="logo" width={512} height={512} />
+              alt="logo" width={512} height={512} style={{ width: "auto", height: "auto" }} />
 
 
           </Link>

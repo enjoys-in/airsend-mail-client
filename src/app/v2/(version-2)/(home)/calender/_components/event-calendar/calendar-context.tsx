@@ -1,6 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  type ReactNode,
+} from "react";
 import { useCalDevStore } from "../../_lib/caldev-store";
 import { hexToEventColor } from "../../_lib/caldev-types";
 import type { EventColor } from "./types";
@@ -38,46 +46,53 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const calendars = useCalDevStore((s) => s.calendars);
 
-  // Initialize visible colors from CalDev calendars (visible ones)
+  // Initialize visible colors — all default colors active
   const [visibleColors, setVisibleColors] = useState<string[]>([
     "blue", "orange", "violet", "emerald", "rose",
   ]);
+  const [colorsInitialized, setColorsInitialized] = useState(false);
 
-  // Sync visible colors when calendars load from API
+  // Sync visible colors from CalDev calendars — only on FIRST load
+  // so manual user toggles are preserved after that.
   useEffect(() => {
-    if (calendars.length > 0) {
+    if (calendars.length > 0 && !colorsInitialized) {
       const colors = calendars
         .filter((c) => c.is_visible)
         .map((c) => hexToEventColor(c.color));
-      // Deduplicate
       setVisibleColors([...new Set(colors)]);
+      setColorsInitialized(true);
     }
-  }, [calendars]);
+  }, [calendars, colorsInitialized]);
 
-  // Toggle visibility of a color
-  const toggleColorVisibility = (color: string) => {
-    setVisibleColors((prev) => {
-      if (prev.includes(color)) {
-        return prev.filter((c) => c !== color);
-      } else {
-        return [...prev, color];
-      }
-    });
-  };
+  // Stable toggle callback
+  const toggleColorVisibility = useCallback((color: string) => {
+    setVisibleColors((prev) =>
+      prev.includes(color)
+        ? prev.filter((c) => c !== color)
+        : [...prev, color],
+    );
+  }, []);
 
-  // Check if a color is visible
-  const isColorVisible = (color: string | undefined) => {
-    if (!color) return true;
-    return visibleColors.includes(color);
-  };
+  // Stable visibility check — depends on visibleColors
+  const isColorVisible = useCallback(
+    (color: string | undefined) => {
+      if (!color) return true;
+      return visibleColors.includes(color);
+    },
+    [visibleColors],
+  );
 
-  const value = {
-    currentDate,
-    setCurrentDate,
-    visibleColors,
-    toggleColorVisibility,
-    isColorVisible,
-  };
+  // Memoize the context value to prevent unnecessary consumer re-renders
+  const value = useMemo(
+    () => ({
+      currentDate,
+      setCurrentDate,
+      visibleColors,
+      toggleColorVisibility,
+      isColorVisible,
+    }),
+    [currentDate, visibleColors, toggleColorVisibility, isColorVisible],
+  );
 
   return (
     <CalendarContext.Provider value={value}>

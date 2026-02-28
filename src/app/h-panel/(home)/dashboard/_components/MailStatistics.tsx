@@ -44,7 +44,7 @@ const MailStatistics = async () => {
             </div>
         )
     } catch (error) {
-        <StatCardSkeleton />
+        return <StatCardSkeleton />
     }
 }
 

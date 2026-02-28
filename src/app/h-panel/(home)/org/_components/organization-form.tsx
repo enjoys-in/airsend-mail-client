@@ -10,18 +10,19 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { IOrganization } from "../_lib/types"
+import { MOCK_DOMAINS } from "../_lib/mock-data"
 
 const formSchema = z.object({
   name: z.string().min(2, "Organization name must be at least 2 characters"),
-  logo: z.string().optional(),
-  banner: z.string().optional(),
-  footer: z.string().optional(),
-  headerColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid hex color"),
-  permissions: z.array(z.string()),
-  role: z.string(),
+  title: z.string().min(1, "Title is required"),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  report_email: z.string().email("Invalid email address").or(z.literal("")),
+  logo_url: z.string().url("Invalid URL").or(z.literal("")).optional(),
+  bimi_record: z.string().optional(),
   domains: z.array(z.string()),
 })
 
@@ -29,50 +30,32 @@ type FormData = z.infer<typeof formSchema>
 
 interface OrganizationFormProps {
   mode: "add" | "edit"
-  initialData?: Partial<FormData>
+  initialData?: Partial<IOrganization>
 }
 
-const availablePermissions = ["read", "write", "admin", "delete", "manage_users", "manage_settings"]
-
-const availableRoles = [
-  { value: "owner", label: "Owner" },
-  { value: "admin", label: "Administrator" },
-  { value: "member", label: "Member" },
-  { value: "viewer", label: "Viewer" },
-]
-
-const availableDomains = ["acme.com", "acme.org", "example.com", "test.com", "demo.org"]
-
 export function OrganizationForm({ mode, initialData }: OrganizationFormProps) {
-  const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>(initialData?.permissions || [])
-  const [selectedDomains, setSelectedDomains] = React.useState<string[]>(initialData?.domains || [])
+  const initialDomainNames = initialData?.domains?.map((d) => d.domain_name) || []
+  const [selectedDomains, setSelectedDomains] = React.useState<string[]>(initialDomainNames)
+
+  const availableDomainNames = MOCK_DOMAINS.map((d) => d.domain_name)
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: initialData?.name || "",
-      logo: initialData?.logo || "",
-      banner: initialData?.banner || "",
-      footer: initialData?.footer || "",
-      headerColor: initialData?.headerColor || "#3b82f6",
-      permissions: initialData?.permissions || [],
-      role: initialData?.role || "",
-      domains: initialData?.domains || [],
+      title: initialData?.title || "",
+      phone: initialData?.phone || "",
+      address: initialData?.address || "",
+      report_email: initialData?.report_email || "",
+      logo_url: initialData?.logo_url || "",
+      bimi_record: initialData?.bimi_record || "",
+      domains: initialDomainNames,
     },
   })
 
   const onSubmit = (data: FormData) => {
     console.log(data)
     // Handle form submission
-  }
-
-  const togglePermission = (permission: string) => {
-    const updated = selectedPermissions.includes(permission)
-      ? selectedPermissions.filter((p) => p !== permission)
-      : [...selectedPermissions, permission]
-
-    setSelectedPermissions(updated)
-    form.setValue("permissions", updated)
   }
 
   const toggleDomain = (domain: string) => {
@@ -109,24 +92,13 @@ export function OrganizationForm({ mode, initialData }: OrganizationFormProps) {
 
               <FormField
                 control={form.control}
-                name="role"
+                name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {availableRoles.map((role) => (
-                          <SelectItem key={role.value} value={role.value}>
-                            {role.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Short display title" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -134,10 +106,38 @@ export function OrganizationForm({ mode, initialData }: OrganizationFormProps) {
 
               <FormField
                 control={form.control}
-                name="logo"
+                name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Organization Logo URL</FormLabel>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+1-555-000-0000" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="report_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Report Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="reports@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="logo_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Logo URL</FormLabel>
                     <FormControl>
                       <Input placeholder="https://example.com/logo.png" {...field} />
                     </FormControl>
@@ -148,29 +148,12 @@ export function OrganizationForm({ mode, initialData }: OrganizationFormProps) {
 
               <FormField
                 control={form.control}
-                name="banner"
+                name="bimi_record"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Organization Banner URL</FormLabel>
+                    <FormLabel>BIMI Record</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com/banner.png" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="headerColor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Header Color</FormLabel>
-                    <FormControl>
-                      <div className="flex gap-2">
-                        <Input placeholder="#3b82f6" {...field} />
-                        <div className="w-10 h-10 rounded border" style={{ backgroundColor: field.value }} />
-                      </div>
+                      <Input placeholder="v=BIMI1; l=https://example.com/logo.svg" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -180,12 +163,12 @@ export function OrganizationForm({ mode, initialData }: OrganizationFormProps) {
 
             <FormField
               control={form.control}
-              name="footer"
+              name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Organization Footer</FormLabel>
+                  <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Enter footer text" className="min-h-[80px]" {...field} />
+                    <Textarea placeholder="Enter organization address" className="min-h-[80px]" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -193,26 +176,9 @@ export function OrganizationForm({ mode, initialData }: OrganizationFormProps) {
             />
 
             <div className="space-y-4">
-              <FormLabel>Permissions</FormLabel>
-              <div className="flex flex-wrap gap-2">
-                {availablePermissions.map((permission) => (
-                  <Badge
-                    key={permission}
-                    variant={selectedPermissions.includes(permission) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => togglePermission(permission)}
-                  >
-                    {permission}
-                    {selectedPermissions.includes(permission) && <X className="ml-1 h-3 w-3" />}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
               <FormLabel>Domains</FormLabel>
               <div className="flex flex-wrap gap-2">
-                {availableDomains.map((domain) => (
+                {availableDomainNames.map((domain) => (
                   <Badge
                     key={domain}
                     variant={selectedDomains.includes(domain) ? "default" : "outline"}

@@ -25,10 +25,21 @@ import { usePathname } from "next/navigation"
 import { StackIcon } from "@radix-ui/react-icons"
 import SidebarCalendar from "../(home)/calender/_components/sidebar-calendar"
 import ChannelList from "../(home)/workspace/_components/ChannelList"
+import WorkspaceSidebar from "../(home)/workspace/_components/WorkspaceSidebar"
 import { SettingsMenuSidebar } from "./mail/settingsSidebar"
 import { cn } from "@/lib/utils"
+import { useFeatureAccess } from "@/hooks/use-feature-access"
 
-const navMain = [
+type NavItem = {
+    title: string
+    url: string
+    icon: React.ComponentType<{ className?: string }>
+    matchPath: string
+    /** Optional feature-flag key — item hidden when the flag is false */
+    featureKey?: "canAccessCalendar" | "canAccessWorkspace"
+}
+
+const navMain: NavItem[] = [
     {
         title: "Mailbox",
         url: "/v2/u/mail/",
@@ -40,41 +51,43 @@ const navMain = [
         url: "/v2/calender",
         icon: Calendar,
         matchPath: "/v2/calender",
+        featureKey: "canAccessCalendar",
     },
-    {
-        title: "Files",
-        url: "/v2/files",
-        icon: File,
-        matchPath: "/v2/files",
-    },
-    {
-        title: "Chats",
-        url: "/v2/chats",
-        icon: Send,
-        matchPath: "/v2/chats",
-    },
+    // {
+    //     title: "Files",
+    //     url: "/v2/files",
+    //     icon: File,
+    //     matchPath: "/v2/files",
+    // },
+    // {
+    //     title: "Chats",
+    //     url: "/v2/chats",
+    //     icon: Send,
+    //     matchPath: "/v2/chats",
+    // },
     {
         title: "Workspace",
         url: "/v2/workspace",
         icon: StackIcon,
         matchPath: "/v2/workspace",
+        featureKey: "canAccessWorkspace",
     },
-    {
-        title: "Teams",
-        url: "#",
-        icon: ArchiveX,
-        matchPath: "/v2/teams",
-    },
-    {
-        title: "Activity",
-        url: "#",
-        icon: Activity,
-        matchPath: "/v2/activity",
-    },
+    // {
+    //     title: "Teams",
+    //     url: "#",
+    //     icon: ArchiveX,
+    //     matchPath: "/v2/teams",
+    // },
+    // {
+    //     title: "Activity",
+    //     url: "#",
+    //     icon: Activity,
+    //     matchPath: "/v2/activity",
+    // },
 ]
 
 /** Icon rail nav item — isolated so hover/active state doesn't re-render siblings */
-const NavIconItem = React.memo(({ item, isActive }: { item: typeof navMain[number]; isActive: boolean }) => (
+const NavIconItem = React.memo(({ item, isActive }: { item: NavItem; isActive: boolean }) => (
     <SidebarMenuItem>
         <Link href={item.url}>
             <SidebarMenuButton
@@ -98,13 +111,27 @@ const SidebarSecondaryPanel = React.memo(({ pathname }: { pathname: string }) =>
     if (pathname.includes("/v2/u/settings")) return <SettingsMenuSidebar />
     if (pathname.includes("/v2/u/mail") || pathname.includes("/v2/u/compose")) return <Mailboxes />
     if (pathname === "/v2/calender") return <SidebarCalendar />
-    if (pathname === "/v2/workspace" || pathname === "/v2/chats" || pathname === "/v2/files") return <ChannelList />
+    // Workspace nested sidebar — team switcher + channels + DMs
+    if (pathname.startsWith("/v2/workspace")) return <WorkspaceSidebar />
+    if (pathname === "/v2/chats" || pathname === "/v2/files") return <ChannelList />
     return null
 })
 SidebarSecondaryPanel.displayName = "SidebarSecondaryPanel"
 
 export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const pathname = usePathname()
+    const { canAccessCalendar, canAccessWorkspace, isLoaded } = useFeatureAccess()
+
+    /* Filter nav items based on feature flags (always show while loading) */
+    const featureFlagMap = { canAccessCalendar, canAccessWorkspace } as const
+    const visibleNav = React.useMemo(
+        () => navMain.filter((item) => {
+            if (!item.featureKey) return true
+            if (!isLoaded) return true          // show everything until config loads
+            return featureFlagMap[item.featureKey]
+        }),
+        [isLoaded, canAccessCalendar, canAccessWorkspace],
+    )
 
     return (
         <Sidebar
@@ -130,7 +157,7 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                         </SidebarMenuItem>
                     </SidebarMenu>
                     <SidebarMenu>
-                        {navMain.map((item) => (
+                        {visibleNav.map((item) => (
                             <NavIconItem
                                 key={item.title}
                                 item={item}

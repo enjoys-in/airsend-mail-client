@@ -24,7 +24,6 @@ export function AgendaView({
 }: AgendaViewProps) {
   // Show events for the next days based on constant
   const days = useMemo(() => {
-    console.log("Agenda view updating with date:", currentDate.toISOString());
     return Array.from({ length: AgendaDaysToShow }, (_, i) =>
       addDays(new Date(currentDate), i),
     );
@@ -32,7 +31,6 @@ export function AgendaView({
 
   const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log("Agenda view event clicked:", event);
     onEventSelect(event);
   };
 
@@ -42,7 +40,7 @@ export function AgendaView({
   );
 
   return (
-    <div className="border-border/70 border-t ps-4">
+    <div className="border-border/40 border-t ps-4">
       {!hasEvents ? (
         <div className="flex min-h-[70svh] flex-col items-center justify-center py-16 text-center">
           <RiCalendarEventLine
@@ -63,7 +61,7 @@ export function AgendaView({
           return (
             <div
               key={day.toString()}
-              className="border-border/70 relative my-12 border-t"
+              className="border-border/40 relative my-12 border-t"
             >
               <span
                 className="bg-background absolute -top-3 left-0 flex h-6 items-center pe-4 text-[10px] uppercase data-today:font-medium sm:pe-4 sm:text-xs"

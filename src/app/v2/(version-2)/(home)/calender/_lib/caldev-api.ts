@@ -2,7 +2,7 @@
 // CalDev API Client — JMAP + REST integration
 // ============================================================================
 
-import axios, { type AxiosInstance } from "axios";
+import { caldevInstance } from "@/lib/api/api.instance";
 import type {
   CalDevCalendar,
   CalDevEvent,
@@ -22,42 +22,16 @@ import type {
   UpdateSubscriptionPayload,
   RSVPPayload,
 } from "./caldev-types";
+import { normalizeJMAPEvent } from "./caldev-types";
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
-const CALDEV_BASE_URL =
-  process.env.NEXT_PUBLIC_CALDEV_URL || "http://localhost:8443";
-
 const JMAP_USING = [
   "urn:ietf:params:jmap:core",
   "urn:ietf:params:jmap:calendars",
 ];
-
-// ---------------------------------------------------------------------------
-// Axios instance (credentials forwarded via cookie, same as mail system)
-// ---------------------------------------------------------------------------
-
-const caldevInstance: AxiosInstance = axios.create({
-  baseURL: CALDEV_BASE_URL,
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
-
-// Intercept 401 → redirect to auth
-caldevInstance.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err?.response?.status === 401 && typeof window !== "undefined") {
-      window.location.href = "/auth";
-    }
-    return Promise.reject(err);
-  },
-);
 
 // ---------------------------------------------------------------------------
 // JMAP Helpers
@@ -165,6 +139,43 @@ export async function deleteCalendar(
 }
 
 // ---------------------------------------------------------------------------
+// Payload converters – snake_case internal → camelCase JMAP
+// ---------------------------------------------------------------------------
+
+function toJMAPCreatePayload(p: CreateEventPayload): Record<string, any> {
+  const result: Record<string, any> = {
+    calendarId: p.calendar_id,
+    title: p.summary,
+    start: p.dtstart,
+    description: p.description ?? "",
+    location: p.location ?? "",
+    isAllDay: p.all_day ?? false,
+    status: p.status ?? "CONFIRMED",
+  };
+  if (p.dtend) result.end = p.dtend;
+  if (p.recurrence_rule) result.recurrenceRule = p.recurrence_rule;
+  if (p.attendees) result.attendees = p.attendees;
+  if (p.categories) result.categories = p.categories;
+  return result;
+}
+
+function toJMAPUpdatePayload(p: UpdateEventPayload): Record<string, any> {
+  const result: Record<string, any> = {};
+  if (p.summary !== undefined) result.title = p.summary;
+  if (p.description !== undefined) result.description = p.description;
+  if (p.location !== undefined) result.location = p.location;
+  if (p.dtstart !== undefined) result.start = p.dtstart;
+  if (p.dtend !== undefined) result.end = p.dtend;
+  if (p.all_day !== undefined) result.isAllDay = p.all_day;
+  if (p.status !== undefined) result.status = p.status;
+  if (p.calendar_id !== undefined) result.calendarId = p.calendar_id;
+  if (p.recurrence_rule !== undefined) result.recurrenceRule = p.recurrence_rule;
+  if (p.attendees !== undefined) result.attendees = p.attendees;
+  if (p.categories !== undefined) result.categories = p.categories;
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Events (JMAP)
 // ---------------------------------------------------------------------------
 
@@ -176,7 +187,7 @@ export async function getEvents(
   if (ids) args.ids = ids;
   const res = await jmapCall([["CalendarEvent/get", args, "e0"]]);
   const resp = findResponse(res, "e0");
-  return (resp?.list as CalDevEvent[]) || [];
+  return ((resp?.list as Record<string, any>[]) || []).map(normalizeJMAPEvent);
 }
 
 export async function queryEvents(
@@ -194,7 +205,7 @@ export async function queryEvents(
   return (resp?.ids as string[]) || [];
 }
 
-/** Query + fetch events in one batch */
+/** Query + fetch events in a single JMAP request using back-references */
 export async function queryAndFetchEvents(
   accountId: string,
   filter: {
@@ -203,29 +214,51 @@ export async function queryAndFetchEvents(
     before?: string;
   },
 ): Promise<CalDevEvent[]> {
-  // First query for IDs
-  const ids = await queryEvents(accountId, filter);
-  if (ids.length === 0) return [];
-  // Then fetch full events
-  return getEvents(accountId, ids);
+  try {
+    // Use JMAP back-reference to batch query + get in one HTTP request
+    const res = await jmapCall([
+      ["CalendarEvent/query", { accountId, filter }, "q0"],
+      [
+        "CalendarEvent/get",
+        {
+          accountId,
+          "#ids": {
+            resultOf: "q0",
+            name: "CalendarEvent/query",
+            path: "/ids",
+          },
+        } as any,
+        "e0",
+      ],
+    ]);
+    const resp = findResponse(res, "e0");
+    return ((resp?.list as Record<string, any>[]) || []).map(normalizeJMAPEvent);
+  } catch {
+    // Fallback: two-step fetch if back-references are not supported
+    const ids = await queryEvents(accountId, filter);
+    if (ids.length === 0) return [];
+    return getEvents(accountId, ids);
+  }
 }
 
 export async function createEvent(
   accountId: string,
   payload: CreateEventPayload,
 ): Promise<CalDevEvent | null> {
+  const jmapPayload = toJMAPCreatePayload(payload);
   const res = await jmapCall([
     [
       "CalendarEvent/set",
       {
         accountId,
-        create: { e1: payload },
+        create: { e1: jmapPayload },
       },
       "e0",
     ],
   ]);
   const resp = findResponse(res, "e0");
-  return (resp?.created?.["e1"] as CalDevEvent) || null;
+  const created = resp?.created?.["e1"] as Record<string, any> | undefined;
+  return created ? normalizeJMAPEvent(created) : null;
 }
 
 export async function updateEvent(
@@ -233,12 +266,13 @@ export async function updateEvent(
   eventId: string,
   payload: UpdateEventPayload,
 ): Promise<boolean> {
+  const jmapPayload = toJMAPUpdatePayload(payload);
   const res = await jmapCall([
     [
       "CalendarEvent/set",
       {
         accountId,
-        update: { [eventId]: payload },
+        update: { [eventId]: jmapPayload },
       },
       "e0",
     ],

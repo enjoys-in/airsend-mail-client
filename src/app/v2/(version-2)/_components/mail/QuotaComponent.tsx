@@ -39,7 +39,7 @@ const QuotaComponent = () => {
         }
     }, [currAccount?.email, setQuota]);
 
-    // On mount: show cached data instantly, then refresh from API
+    // On mount: show cached data from IDB; only call API if IDB has no data
     useEffect(() => {
         if (!currAccount?.email) return
 
@@ -56,11 +56,14 @@ const QuotaComponent = () => {
                         Number(item.value.settings.usage) / Number(item.value.settings.mailbox_size) * 100
                     ).toFixed(2),
                 });
+            } else {
+                // No cached data in IDB — fetch from API
+                fetchQuotaFromAPI();
             }
+        }).catch(() => {
+            // IDB not configured or errored — fetch from API
+            fetchQuotaFromAPI();
         });
-
-        // Always fetch fresh data from API
-        fetchQuotaFromAPI();
     }, [currAccount?.email, fetchQuotaFromAPI]);
 
 
