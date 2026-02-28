@@ -55,16 +55,18 @@ export const useUserConfigStore = create<UserConfigState>()((set) => ({
     ...initialState,
 
     hydrate: (settings, domainName) => {
-        const orgId = settings.organization?.org_id ?? null
+        /* `organization` is a DomainName { id, current_org_id } stored locally.
+           The user is "under an org" when current_org_id is not null. */
+        const orgId = settings.organization?.current_org_id ?? null
         const isUnderOrg = orgId !== null
         const calendarEnabled = settings.calender_config?.enable_calender ?? false
 
         set({
             isLoaded: true,
             orgId,
-            orgName: settings.organization?.org_name ?? null,
+            orgName: null,  // DomainName doesn't carry org_name; extend later if needed
             calendarEnabled,
-            domainName: domainName ?? settings.organization?.domain_name ?? null,
+            domainName: domainName ?? settings.organization?.id ?? null,
             isUnderOrg,
             canAccessWorkspace: isUnderOrg,
             canAccessCalendar: calendarEnabled,

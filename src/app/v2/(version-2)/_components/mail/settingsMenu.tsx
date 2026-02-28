@@ -16,9 +16,10 @@ import {
     Forward,
     Globe2,
     Key,
-
+    Server,
     Bell,
     Pen,
+    CalendarDays,
 } from "lucide-react"
 import { useSettingsStore } from "@/store/settings"
 import { EnvelopeOpenIcon } from "@radix-ui/react-icons"
@@ -38,7 +39,7 @@ const accountItems = [
 
 const mailItems = [
     { icon: <Filter size={18} />, label: "Filters", key: "filters" },
-    // { icon: <Server size={18} />, label: "IMAP/SMTP" },
+    { icon: <Server size={18} />, label: "IMAP/SMTP", key: "imap-smtp" },
     { icon: <EnvelopeOpenIcon height={18} width={18} />, label: "Email Config", key: "email-config" },
     { icon: <Lock size={18} />, label: "Email privacy", key: "email-privacy" },
     { icon: <Key size={18} />, label: "Encryption and keys", key: "encryption-and-keys" },
@@ -46,6 +47,7 @@ const mailItems = [
     { icon: <Forward size={18} />, label: "Email Forwarding", key: "email-forwarding" },
     { icon: <UserCircle size={18} />, label: "Identity and addresses", key: "identity-and-addresses" },
     { icon: <MessageSquare size={18} />, label: "Messages and composing", key: "messages-and-composing" },
+    { icon: <CalendarDays size={18} />, label: "Calendar", key: "calendar" },
 ]
 
 export const SettingsMenu = () => {

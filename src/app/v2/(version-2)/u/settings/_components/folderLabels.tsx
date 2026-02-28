@@ -1,75 +1,82 @@
 "use client"
 
-import { useState } from "react"
+import { memo, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { InfoIcon as InfoCircle } from "lucide-react"
 import Link from "next/link"
 import LabelSettings from "./labelSettings"
+import { useSettingsPersist } from "@/hooks/use-settings-persist"
+import type { IFoldersSettings } from "@/lib/types/get-user-settings-response"
+import {
+  SettingsPageHeader,
+  SettingsSection,
+  SettingToggleRow,
+  SaveSettingsBar,
+} from "./shared"
 
-export default function FoldersAndLabels({email}:{email:string}) {
-  const [useFolderColors, setUseFolderColors] = useState(true)
-  const [inheritColor, setInheritColor] = useState(true)
+const DEFAULT_FOLDERS: IFoldersSettings = {
+  use_folder_colors: true,
+  inherit_parent_color: true,
+}
+
+function FoldersAndLabels({ email }: { email: string }) {
+  const { settings, save, isSaving } = useSettingsPersist(email)
+  const [local, setLocal] = useState<IFoldersSettings>(DEFAULT_FOLDERS)
+  const [dirty, setDirty] = useState(false)
+
+  useEffect(() => {
+    if (settings?.folders_settings) {
+      setLocal(settings.folders_settings)
+    }
+  }, [settings?.folders_settings])
+
+  const update = <K extends keyof IFoldersSettings>(key: K, value: IFoldersSettings[K]) => {
+    setLocal((prev) => ({ ...prev, [key]: value }))
+    setDirty(true)
+  }
+
+  const handleSave = () => {
+    save("folders_settings", local)
+    setDirty(false)
+  }
 
   return (
-    <div className="   p-8">
-      <div className="max-w-3xl mx-auto space-y-12">
-        {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold  text-white">Folders and labels</h1>
-          <p className="text-gray-400">
-            Keep your inbox organized with folders and labels.{" "}
-            <Link href="#" className="text-blue-500 hover:underline">
-              Learn more
-            </Link>
-          </p>
-        </div>
+    <div className="p-4 md:p-8">
+      <div className="max-w-3xl mx-auto space-y-10">
+        <SettingsPageHeader
+          title="Folders and labels"
+          description="Keep your inbox organized with folders and labels."
+        />
 
         {/* Folders Section */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Folders</h2>
-
-          <div className="flex items-center justify-between">
-            <label htmlFor="folder-colors" className="text-gray-300">
-              Use folder colors
-            </label>
-            <Switch
-              id="folder-colors"
-              checked={useFolderColors}
-              onCheckedChange={setUseFolderColors}
-              className="data-[state=checked]:bg-blue-500"
-            />
+        <SettingsSection title="Folders">
+          <SettingToggleRow
+            label="Use folder colors"
+            checked={local.use_folder_colors}
+            onCheckedChange={(v) => update("use_folder_colors", v)}
+          />
+          <SettingToggleRow
+            label="Inherit color from parent folder"
+            tooltip="Child folders will use the same color as their parent"
+            checked={local.inherit_parent_color}
+            onCheckedChange={(v) => update("inherit_parent_color", v)}
+          />
+          <div className="pt-2">
+            <Button size="sm">Add folder</Button>
           </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <label htmlFor="inherit-color" className="text-gray-300">
-                Inherit color from parent folder
-              </label>
-              <InfoCircle className="h-5 w-5 text-gray-500" />
-            </div>
-            <Switch
-              id="inherit-color"
-              checked={inheritColor}
-              onCheckedChange={setInheritColor}
-              className="data-[state=checked]:bg-blue-500"
-            />
-          </div>
-
-          <div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">Add folder</Button>
-          </div>
-        </div>
+        </SettingsSection>
 
         {/* Labels Section */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Labels</h2>
+        <SettingsSection title="Labels">
           <div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">Add label</Button>
+            <Button size="sm">Add label</Button>
           </div>
-        </div>
+        </SettingsSection>
+
+        <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
       </div>
       {/* <LabelSettings/> */}
     </div>
   )
 }
+
+export default memo(FoldersAndLabels)

@@ -20,6 +20,7 @@ export interface UserSettingsResponse {
     tags: any[]
     throttle_configs: ThrottleConfig[]
     smtp_configs: any[]
+    domain_name: DomainName | null
 }
 
 interface Settings {
@@ -29,7 +30,7 @@ interface Settings {
     blocked_recepient_domain: any[]
     aliases: string[]
     forwarding_rules: ForwardingRules
-    notifications:INotifications
+    notifications: INotifications
     catch_emails: string[]
     smtp_config: SmtpConfig
     auto_reply: AutoReply
@@ -43,8 +44,10 @@ interface Settings {
     calender_config: ICalenderConfig
     display: IDisplay
     auto_sync: AutoSync
-    signatures: ISignatures[]
-    organization: IOrganizationInfo | null
+    encryption: IEncryptionSettings
+    folders_settings: IFoldersSettings
+    composing: IComposingSettings
+    signatures: ISignature[]
     last_synced_at: string | null
     sync_error: string | null
     sync_status: string | null
@@ -65,10 +68,9 @@ export interface ICalenderConfig {
     }>
 }
 
-export interface IOrganizationInfo {
-    org_id: string | null
-    org_name: string | null
-    domain_name: string | null
+export interface DomainName {
+    id: string
+    current_org_id: string | null
 }
 export type INotifications = {
     new_email: boolean,
@@ -77,13 +79,13 @@ export type INotifications = {
     undelivered_email: boolean,
     push_notification: boolean,
 }
-export type ISignatures = Array<{
+export interface ISignature {
     key: string;
     name: string;
     line: string;
     default: boolean;
     type: 'blob' | 'text' | 'upload';
-}>;
+}
 
 type ForwardingRules = Array<{
     from: string;
@@ -164,6 +166,27 @@ export interface IDisplay {
     showMeetings: boolean
     showRightSidebar: boolean
     settings: boolean
+}
+
+export interface IEncryptionSettings {
+    prompt_trust_keys: boolean
+    verify_key_transparency: boolean
+    sign_external_messages: boolean
+    attach_public_key: boolean
+    default_pgp_scheme: "PGP/MIME" | "PGP/INLINE"
+}
+
+export interface IFoldersSettings {
+    use_folder_colors: boolean
+    inherit_parent_color: boolean
+}
+
+export interface IComposingSettings {
+    composer_mode: "normal" | "rich" | "plain"
+    conversations_per_page: number
+    text_direction: "ltr" | "rtl"
+    default_font: string
+    default_font_size: number
 }
 
 interface AutoSync {

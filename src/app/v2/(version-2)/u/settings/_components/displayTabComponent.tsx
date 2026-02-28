@@ -8,11 +8,12 @@ import { syncUserSettings } from '@/lib/api/sync-user-settings'
 import { useAppSelector } from '@/store/hooks'
 
 // Module-level lazy map – created once, never re-created on re-render
-const componentMap: Record<string, React.LazyExoticComponent<any>> = {
+const componentMap: Record<string, React.LazyExoticComponent<React.ComponentType<{ email: string }>>> = {
     "account-and-password": lazy(() => import("./profileSettings")),
     "signatures": lazy(() => import("./signatures/display-signature")),
     "notifications": lazy(() => import("./notificationsSettings")),
     "appearance": lazy(() => import("./mailAppearance")),
+    "calendar": lazy(() => import("./calendarSettings")),
     "identity-and-addresses": lazy(() => import("./identitySection")),
     "import-via-easy-switch": lazy(() => import("./importViaEasySwitch")),
     "messages-and-composing": lazy(() => import("./emailSettings")),
@@ -20,6 +21,7 @@ const componentMap: Record<string, React.LazyExoticComponent<any>> = {
     "folders-and-labels": lazy(() => import("./folderLabels")),
     "encryption-and-keys": lazy(() => import("./encryptionSettings")),
     "email-privacy": lazy(() => import("./configuration/emailPrivacy")),
+    "imap-smtp": lazy(() => import("./configuration/imapSmtp")),
     "filters": lazy(() => import("./filters/emailFilter")),
     "email-config": lazy(() => import("./configuration/emailConfig")),
 }
@@ -63,7 +65,7 @@ export const DisplayTabComponent = () => {
     }, [listen])
     return (
         <React.Suspense fallback={<FallbackSkelton activeItem={keys[activeItem]} />}>
-            {TabComponent ? <TabComponent email={currAccount?.email} /> : <FallbackSkelton activeItem={keys[activeItem]} />}
+            {TabComponent ? <TabComponent email={currAccount?.email ?? ""} /> : <FallbackSkelton activeItem={keys[activeItem]} />}
         </React.Suspense>
     )
 }

@@ -1,5 +1,5 @@
 import { Prettify } from "."
-import { AutoReply, EmailSettings, ICalenderConfig, IDisplay, INotifications, IOrganizationInfo, IPersonalization, ISignatures, VacationSender } from "./get-user-settings-response"
+import { AutoReply, EmailSettings, ICalenderConfig, IComposingSettings, IDisplay, IEncryptionSettings, IFoldersSettings, INotifications, DomainName, IPersonalization, ISignature, VacationSender } from "./get-user-settings-response"
 
 type LabelVisibility = {
     showInLabelList: boolean
@@ -78,6 +78,12 @@ export interface AccountSettings {
 
     calender_config: ICalenderConfig;
 
+    encryption: IEncryptionSettings;
+
+    folders_settings: IFoldersSettings;
+
+    composing: IComposingSettings;
+
     display: IDisplay
 
     auto_sync: {
@@ -85,9 +91,9 @@ export interface AccountSettings {
         interval: number | string;
     };
 
-    signatures: ISignatures[];
+    signatures: ISignature[];
 
-    organization: IOrganizationInfo | null;
+    organization: DomainName ;
 
     last_synced_at: string | null;
     sync_error: string | null;

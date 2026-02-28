@@ -29,7 +29,9 @@ export async function syncUserSettings(
 
         const { id, email_id, ...rest } = data.result.settings
 
-        /* Build the canonical AccountSettings shape */
+        /* Build the canonical AccountSettings shape.
+           `domain_name` lives at the top-level response, not inside settings.
+           We store it as `organization` in our local AccountSettings blob. */
         const settingsObj: Partial<AccountSettings> = {
             usage: +data.result.usage,
             mailbox_size: +data.result.mailbox_size,
@@ -37,6 +39,7 @@ export async function syncUserSettings(
                 (+data.result.usage / +data.result.mailbox_size) * 100,
             ).toFixed(4),
             ...rest,
+            organization: data.result.domain_name ?? { id: "", current_org_id: null },
         }
 
         const email = data.result.email
