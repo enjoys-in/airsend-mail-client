@@ -15,20 +15,24 @@ const IdbSyncHookApi = () => {
                 if (e.table.toLowerCase() === 'settings') {
                     const email = (e as any).key
                     const { updatedAt, ...modifications } = dot.object((e as any).mods) as any;
-                    const { usage, mailbox_size, quota_in_percent, ...payload } = e.obj.settings
 
                     if (Object.keys(modifications).length === 0) {
                         return toast.info("Nothing to Update")
                     }
-                    if ("usage" in modifications || "mailbox_size" in modifications || "quota_in_percent" in modifications) {
+
+                    // Extract only the changed settings fields (delta)
+                    const delta = modifications.settings ?? modifications
+                    const { usage, mailbox_size, quota_in_percent, ...settingsDelta } = delta
+
+                    if (Object.keys(settingsDelta).length === 0) {
                         return
                     }
 
-                    /* Backend-first: push to API, rollback IDB on failure */
+                    /* Backend-first: push only changed fields to API, rollback on failure */
                     toast.promise(
                         API.handleUpdateMailUserSetting({
                             email,
-                            settings: payload,
+                            settings: settingsDelta,
                         }).then(({ data }: any) => {
                             if (!data.success) {
                                 /* Restore previous settings in Zustand so UI reverts */
