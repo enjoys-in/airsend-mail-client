@@ -28,7 +28,7 @@ interface EmailChip {
 
 
 
-export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
+export function EmailComposer({ showHeader, tabId }: { showHeader?: boolean; tabId?: number }) {
   const { currAccount, accounts } = useAppSelector((state) => state.accounts);
 
   const [selectedAccount, setSelectedAccount] = useState({
@@ -139,6 +139,7 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
     [addChip]
   );
   useEffect(() => {
+    if (!selectedAccount?.email) return;
     airsendDB.getMultiNestedItem("settings", selectedAccount?.email as string,
       ["settings.user.display_name"]).then(res => {
         if (res.value?.settings) {
@@ -149,26 +150,26 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
           })
         }
       })
-  }, []);
+  }, [selectedAccount?.email]);
   return (
-    <div className="w-full bg-white dark:bg-neutral-900 transition-colors">
+    <div className="w-full h-full flex flex-col bg-background text-foreground transition-colors">
       {showHeader && (
-        <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-2 border-b border-border shrink-0">
           <div className="flex items-center gap-3">
-            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <h1 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+            <h1 className="text-lg font-medium">
               New Email
             </h1>
           </div>
         </div>
       )}
 
-      <div className={`${showHeader ? "container" : "px-2"}`}>
+      <div className={`${showHeader ? "container" : "px-2"} shrink-0`}>
         {/* Header */}
 
         {/* Email Details */}
         <div
-          className={`py-6 space-y-4 border-b border-gray-200 dark:border-gray-700`}
+          className="py-4 space-y-3 border-b border-border"
         >
           {/* From Field */}
           <div className="flex items-center gap-4 w-full">
@@ -476,23 +477,25 @@ export function EmailComposer({ showHeader }: { showHeader?: boolean }) {
           </div>
         </div>
 
-        <div className=""></div>
       </div>
-      <HtmlEditor
-        attachments={attachments}
-        setAttachments={setAttachments}
-        onChange={(html) => setBody(html)}
-        footerElement={<ComposeFooter data={{
-          from: `${selectedAccount?.name} <${selectedAccount.email}>`,
-          to: toChips.map((chip) => chip.email),
-          cc: ccChips.map((chip) => chip.email),
-          bcc: bccChips.map((chip) => chip.email),
-          subject,
-          html: body,
-          attachments,
-        }} />}
-        defaultValue={``}
-      />
+      <div className="flex-1 min-h-0 flex flex-col">
+        <HtmlEditor
+          attachments={attachments}
+          setAttachments={setAttachments}
+          onChange={(html) => setBody(html)}
+          tabId={tabId}
+          footerElement={<ComposeFooter data={{
+            from: `${selectedAccount?.name} <${selectedAccount.email}>`,
+            to: toChips.map((chip) => chip.email),
+            cc: ccChips.map((chip) => chip.email),
+            bcc: bccChips.map((chip) => chip.email),
+            subject,
+            html: body,
+            attachments,
+          }} />}
+          defaultValue={``}
+        />
+      </div>
     </div>
   );
 }

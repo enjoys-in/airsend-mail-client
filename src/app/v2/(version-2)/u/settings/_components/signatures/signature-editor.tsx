@@ -16,6 +16,16 @@ export function SignatureEditor({ value, onChange }: SignatureEditorProps) {
   // Track the last value we emitted to avoid resetting innerHTML on our own changes
   const lastEmittedRef = useRef(value)
 
+  // Clear contentEditable DOM on unmount to prevent React "removeChild" errors
+  useEffect(() => {
+    const editor = editorRef.current
+    return () => {
+      if (editor) {
+        while (editor.firstChild) editor.removeChild(editor.firstChild)
+      }
+    }
+  }, [])
+
   // Only update innerHTML when value changes from an external source
   useEffect(() => {
     if (editorRef.current && value !== lastEmittedRef.current) {

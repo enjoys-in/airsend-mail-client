@@ -50,16 +50,19 @@ export function ListFolders() {
                 .equals(current_mailbox)
                 .modify(counts);
 
+            // Read latest all_mailbox from store to avoid stale closure
+            const latestMailbox = useMailStore.getState().all_mailbox;
+
             // Update Zustand state so UI reflects the change
             setAllMailbox(
-                all_mailbox.map((m) =>
+                latestMailbox.map((m) =>
                     m.path === current_mailbox ? { ...m, ...counts } : m
                 ) as any
             );
         } catch (error) {
             console.log(error);
         }
-    }, [all_mailbox, setAllMailbox]);
+    }, [setAllMailbox]);
     const syncMailboxAndLables = async () => {
         try {
             const { data } = await API.fetchUserFolderLabels(MailLablesType.ALL);

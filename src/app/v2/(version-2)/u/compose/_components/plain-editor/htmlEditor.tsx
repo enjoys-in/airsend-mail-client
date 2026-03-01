@@ -43,7 +43,6 @@ import { useAppSelector } from "@/store/hooks";
 import { API } from "@/lib/api/handler";
 import { __config } from "@/constants/config";
 import moment from "moment";
-import { useMultiTabStore } from "@/store/settings/multiTabSystem";
 
 
 
@@ -113,6 +112,7 @@ export interface HtmlEditorProps {
   setAttachments: React.Dispatch<
     React.SetStateAction<AttachmentWithProgress[]>
   >;
+  tabId?: number;
 }
 
 export const HtmlEditor: React.FC<HtmlEditorProps> = ({
@@ -120,18 +120,19 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
   defaultValue = "<p>Write your content here...</p>",
   placeholder = "Type or paste content here...",
   fontFamily = "Inter, sans-serif",
-  height = "400px",
+  height = "200px",
   footerElement,
   headerElement,
   toolbarPoistion = "top",
   sticky = false,
   onChange,
   attachments,
-  setAttachments
+  setAttachments,
+  tabId,
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
 
-  const { nextTabId } = useMultiTabStore()
+  const currentTabId = tabId?.toString() ?? "default";
   const [htmlContent, setHtmlContent] = useState<string>(defaultValue);
   const [isDragOver, setIsDragOver] = useState(false);
   const currAccount = useAppSelector(state => state.accounts.currAccount)
@@ -146,6 +147,21 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
   const [linkTarget, setLinkTarget] = useState<"_blank" | "_self">("_blank");
   const [selectedText, setSelectedText] = useState<string>("");
 
+
+  // On unmount, clear the contentEditable DOM so React doesn't try to
+  // removeChild nodes it never created (they were injected by execCommand /
+  // innerHTML / Range APIs).  Without this, navigating away throws:
+  //   "Failed to execute 'removeChild' on 'Node'"
+  useEffect(() => {
+    const editor = editorRef.current;
+    return () => {
+      if (editor) {
+        while (editor.firstChild) {
+          editor.removeChild(editor.firstChild);
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (editorRef.current) {
@@ -194,11 +210,13 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
   const handleFileUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
-      await ofss.storeFiles(currAccount!.email, { tabId: nextTabId.toString(), files });
+      if (currAccount?.email) {
+        await ofss.storeFiles(currAccount.email, { tabId: currentTabId, files });
+      }
       await sendFilesToServer(files)
       event.target.value = ""; // reset input
     },
-    []
+    [currAccount?.email, currentTabId]
   );
 
   const cancelUpload = (id: string) => {
@@ -280,7 +298,7 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
           const fileName = file.file.name
           const { data } = await API.uploadDelete({ id: attachmentId, index: fileName })
           if (data.success) {
-            ofss.deleteFile(currAccount!.email, nextTabId.toString(), fileName)
+            ofss.deleteFile(currAccount!.email, currentTabId, fileName)
             setAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
           }
 
@@ -294,9 +312,9 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
   }
   const fetchUploadedFiles = React.useCallback(async () => {
     if (!currAccount?.email) return;
-    const value: File[] = await ofss.getFiles(currAccount!.email, nextTabId.toString());
+    const value: File[] = await ofss.getFiles(currAccount.email, currentTabId);
     if (value.length > 0) setAttachments(value.map(file => ({ file, progress: 100, uploaded: true, id: `attachment-${Date.now()}-${Math.random()}` })));
-  }, [])
+  }, [currAccount?.email, currentTabId])
   const insertAdvancedList: EditorContextType["insertAdvancedList"] =
     useCallback((type) => {
       if (!editorRef.current) return;
@@ -472,7 +490,7 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
       }}
     >
       <div
-        className={`w-full border border-dashed rounded-lg overflow-hidden bg-transparent relative flex items-center justify-center transition-opacity ${isDragOver ? "opacity-50" : "opacity-100"
+        className={`w-full border border-dashed rounded-lg overflow-hidden bg-transparent relative flex flex-col flex-1 min-h-0 transition-opacity ${isDragOver ? "opacity-50" : "opacity-100"
           }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -491,17 +509,16 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
           </div>
         )}
         {headerElement && headerElement}
-        <div className="w-full border rounded-lg overflow-hidden bg-transparent relative">
+        <div className="w-full border rounded-lg overflow-hidden bg-transparent relative flex flex-col flex-1 min-h-0">
           {toolbarPoistion === "top" && (children || <PlainTextEditorToolbar />)}
 
           <div
             ref={editorRef}
             contentEditable
-            className="w-full p-4 text-sm leading-relaxed break-words whitespace-pre-wrap prose prose-sm max-w-none focus:outline-none font-normal "
+            className="w-full p-4 text-sm leading-relaxed break-words whitespace-pre-wrap prose prose-sm max-w-none focus:outline-none font-normal flex-1 min-h-0"
             style={{
               fontFamily,
               minHeight: height,
-              maxHeight: "500px",
               overflowY: "auto",
               wordBreak: "break-word",
               overflowWrap: "anywhere",
@@ -525,7 +542,7 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
           {/* Floating Toolbar */}
           {showFloatingToolbar && (
             <div
-              className="fixed z-50 bg-background border rounded-lg shadow-lg p-2 flex items-center gap-1"
+              className="fixed z-[60] bg-background border rounded-lg shadow-lg p-2 flex items-center gap-1"
               style={{
                 left: toolbarPosition.x,
                 top: toolbarPosition.y,

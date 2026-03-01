@@ -141,7 +141,7 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
   }, [currAccount?.email]);
 
   return (
-    <div className="sticky top-0 bottom-0 z-10  w-full border-t border-border bg-white dark:bg-neutral-900 px-3  flex items-center justify-between">
+    <div className="sticky bottom-0 z-10 w-full border-t border-border bg-background px-3 py-1.5 flex items-center justify-between shrink-0">
       <div className="w-full">
         <AiPromptButton />
       </div>

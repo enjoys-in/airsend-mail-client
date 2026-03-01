@@ -97,7 +97,7 @@ const ClientDisplay = ({
                 <div className="flex items-baseline gap-3">
                     <h2 className="text-2xl font-bold">{selectedMail?.subject}</h2>
                     <span className="text-sm text-muted-foreground">
-                        {moment(selectedMail?.date).format("MMM DD, YYYY hh:mm A")}
+                        {moment(selectedMail?.timestamp).format("MMM DD, YYYY hh:mm A")}
                     </span>
                 </div>
             </div>
@@ -130,7 +130,7 @@ const ClientDisplay = ({
                         <div className="flex flex-row gap-2 items-center">
                             {selectedMail.folder === "sent" ? (
                                 <div className="text-sm text-muted-foreground">
-                                    To: {selectedMail?.receipients}
+                                    To: {Array.isArray(selectedMail?.receipients) ? selectedMail.receipients.join(", ") : selectedMail?.receipients}
                                 </div>
                             ) : (
                                 <span className="group relative text-xs text-zinc-500 cursor-pointer">
@@ -153,43 +153,44 @@ const ClientDisplay = ({
                                             </Button>
                                         </TooltipTrigger>
                                     </PopoverTrigger>
-                                    <PopoverContent className="flex w-[450px] px-4 sm:px-6 md:px-8 lg:px-10">
-                                        <div className="flex flex-row gap-4 px-2 py-4 text-sm">
-                                            {/* Left Column */}
-                                            <div className="flex flex-col items-end text-right shrink-0">
-                                                <div>from:</div>
-                                                <div>to:</div>
-                                                <div>date:</div>
-                                                <div>subject:</div>
-                                                <div>mailed-by:</div>
-                                                <div>security:</div>
+                                    <PopoverContent className="w-[450px] px-4 sm:px-6 md:px-8 lg:px-10">
+                                        <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 px-2 py-4 text-sm">
+                                            <div className="text-right text-muted-foreground">from:</div>
+                                            <div>
+                                                <strong>
+                                                    {selectedMail?.from_email &&
+                                                        formatEmail(
+                                                            s.decryptAES(
+                                                                selectedMail?.from_email
+                                                            )
+                                                        )}
+                                                </strong>
                                             </div>
-                                            {/* Right Column */}
-                                            <div className="flex flex-col">
-                                                <div>
-                                                    <strong>
-                                                        {selectedMail?.from_email &&
-                                                            formatEmail(
-                                                                s.decryptAES(
-                                                                    selectedMail?.from_email
-                                                                )
-                                                            )}
-                                                    </strong>
-                                                </div>
-                                                <div>
-                                                    {selectedMail.folder === "sent"
-                                                        ? selectedMail?.receipients
-                                                        : selectedMail?.receipient}
-                                                </div>
-                                                <div>
-                                                    {moment(selectedMail?.timestamp).format("lll")}
-                                                </div>
-                                                <div>{selectedMail?.subject}</div>
-                                                <div>{selectedMail?.receipient?.split("@")[1]}</div>
-                                                <div className="flex items-center gap-1">
-                                                    <Lock size={10} />
-                                                    Standard encryption (TLS)
-                                                </div>
+
+                                            <div className="text-right text-muted-foreground">to:</div>
+                                            <div className="break-all">
+                                                {selectedMail.folder === "sent"
+                                                    ? (Array.isArray(selectedMail?.receipients)
+                                                        ? selectedMail.receipients.join(", ")
+                                                        : selectedMail?.receipients)
+                                                    : selectedMail?.receipient}
+                                            </div>
+
+                                            <div className="text-right text-muted-foreground">date:</div>
+                                            <div>
+                                                {moment(selectedMail?.timestamp).format("lll")}
+                                            </div>
+
+                                            <div className="text-right text-muted-foreground">subject:</div>
+                                            <div>{selectedMail?.subject}</div>
+
+                                            <div className="text-right text-muted-foreground">mailed-by:</div>
+                                            <div>{selectedMail?.receipient?.split("@")[1]}</div>
+
+                                            <div className="text-right text-muted-foreground">security:</div>
+                                            <div className="flex items-center gap-1">
+                                                <Lock size={10} />
+                                                Standard encryption (TLS)
                                             </div>
                                         </div>
                                     </PopoverContent>

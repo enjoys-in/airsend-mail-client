@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Inbox, Calendar, MessageCircle, LayoutGrid, Bell } from "lucide-react";
+import { Inbox, Calendar, LayoutGrid, Bell } from "lucide-react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import React from "react";
 
@@ -35,12 +35,6 @@ const tabs: TabItem[] = [
     href: "/v2/workspace",
     matchPath: "/v2/workspace",
     featureKey: "canAccessWorkspace",
-  },
-  {
-    label: "Chats",
-    icon: MessageCircle,
-    href: "/v2/chats",
-    matchPath: "/v2/chats",
   },
   {
     label: "Notifications",

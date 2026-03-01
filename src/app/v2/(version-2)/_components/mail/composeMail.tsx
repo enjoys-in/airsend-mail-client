@@ -1,5 +1,5 @@
 import React, { Fragment } from "react";
-import { X, Minus, Maximize2, Plus, Pen } from "lucide-react";
+import { X, Minus, Maximize2, Minimize2, Pen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -58,14 +58,14 @@ export default function MultiTabSystem() {
                         <Card
                             key={tab.id}
                             className={cn(
-                                "flex flex-col shadow-2xl rounded-t-xl rounded-b-none border-b-0 transition-all duration-200",
+                                "flex flex-col shadow-2xl rounded-t-xl rounded-b-none border-b-0 transition-all duration-200 overflow-hidden",
                                 isFullscreen
-                                    ? "fixed inset-4 z-50 mt-14 rounded-xl border-b"
-                                    : "max-w-[750px] w-[750px]"
+                                    ? "fixed inset-4 z-[60] mt-14 rounded-xl border-b"
+                                    : "w-[550px] max-h-[85vh]"
                             )}
                         >
                             {/* Tab Header */}
-                            <div className="bg-foreground text-background flex justify-between items-center rounded-t-xl h-9 px-3">
+                            <div className="bg-foreground text-background flex justify-between items-center rounded-t-xl h-9 px-3 shrink-0">
                                 <span className="text-sm font-medium truncate flex-1">{tab.title}</span>
                                 <div className="flex items-center gap-0.5 ml-2">
                                     <Button
@@ -74,7 +74,7 @@ export default function MultiTabSystem() {
                                         onClick={() => toggleFullscreen(tab.id)}
                                         className="h-6 w-6 text-background/60 hover:text-background hover:bg-white/10 rounded-md transition-colors duration-150"
                                     >
-                                        <Maximize2 className="w-3.5 h-3.5" />
+                                        {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                                     </Button>
                                     <Button
                                         size="icon"
@@ -96,7 +96,13 @@ export default function MultiTabSystem() {
                             </div>
 
                             {/* Tab Content */}
-                            <CardContent className="p-0 flex-1 overflow-auto h-[600px]" onFocus={() => setFocusedTab(tab.id)}>
+                            <CardContent
+                                className={cn(
+                                    "p-0 flex-1 overflow-auto",
+                                    isFullscreen ? "h-full" : "max-h-[calc(85vh-36px)]"
+                                )}
+                                onFocus={() => setFocusedTab(tab.id)}
+                            >
                                 {tab.content}
                             </CardContent>
                         </Card>

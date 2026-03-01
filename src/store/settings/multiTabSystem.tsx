@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import EmailComposer from '../../app/v2/(version-2)/u/compose/_components/emailComposer';
+
 interface Tab {
     id: number;
     title: string;
@@ -39,7 +40,7 @@ export const useMultiTabStore = create<TabStore>((set, get) => ({
         const newTab: Tab = {
             id,
             title: "New message",
-            content: <EmailComposer showHeader={false} />,
+            content: <EmailComposer showHeader={false} tabId={id} />,
         };
 
         const visible = [...get().visibleTabs];
@@ -123,7 +124,7 @@ export const useMultiTabStore = create<TabStore>((set, get) => ({
             fullscreenTab: get().fullscreenTab?.id === tabId ? null : tab,
         });
     },
-    focusedTab: 1,
+    focusedTab: 0,
     setFocusedTab: (tabId) => {
         set({
             focusedTab: tabId,
