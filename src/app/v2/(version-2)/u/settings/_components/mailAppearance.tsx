@@ -54,14 +54,14 @@ export default function MailAppearance({ email }: { email: string }) {
 
   /* ---- save ---- */
   const handleSave = async () => {
-    const displayUpdate: Partial<IDisplay> = {
+    const displayUpdate = {
       ...settings?.display,
       showRightSidebar: inboxLayout === "column",
-    };
-    const personUpdate: Partial<IPersonalization> = {
+    } as IDisplay;
+    const personUpdate = {
       ...settings?.personalization,
       layout: inboxLayout === "column" ? "2-column" : "list",
-    };
+    } as IPersonalization;
 
     await saveMultiple(
       {

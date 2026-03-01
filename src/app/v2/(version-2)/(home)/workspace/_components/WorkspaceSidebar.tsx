@@ -99,23 +99,23 @@ export default function WorkspaceSidebar() {
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
-  const activeTeam = teams.find((t) => t.id === activeTeamId);
+  const activeTeam = teams.find((t:any) => t.id === activeTeamId);
   const channels = activeTeamId ? getTeamChannels(activeTeamId) : [];
 
   const textChannels = channels.filter(
-    (c) => c.type === "text" || c.type === "announcement",
+    (c:any) => c.type === "text" || c.type === "announcement",
   );
-  const voiceChannels = channels.filter((c) => c.type === "voice");
+  const voiceChannels = channels.filter((c:any) => c.type === "voice");
 
   const filtered = (searchQuery.trim()
-    ? textChannels.filter((c) =>
+    ? textChannels.filter((c:any) =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : textChannels
   ).sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
 
   const filteredVoice = (searchQuery.trim()
-    ? voiceChannels.filter((c) =>
+    ? voiceChannels.filter((c:any) =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : voiceChannels
@@ -127,7 +127,7 @@ export default function WorkspaceSidebar() {
   // Members with custom status (not standard statuses like away, idle, busy, dnd)
   const standardStatuses = ["online", "offline", "away", "idle", "busy", "dnd"];
   const membersWithCustomStatus = members.filter(
-    (m) => m.customStatus && !standardStatuses.includes(m.customStatus.toLowerCase()),
+    (m:any) => m.customStatus && !standardStatuses.includes(m.customStatus.toLowerCase()),
   );
 
   const statusColor: Record<string, string> = {

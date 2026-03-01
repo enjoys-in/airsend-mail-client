@@ -103,6 +103,17 @@ export class API {
         return instance.get(adminRoutes(`/claim-domain-ownership/${domainId}`))
     }
 
+    // ACCOUNTS
+    static handleGetAllAccounts(domain: string) {
+        return instance.get(adminRoutes(`/accounts?domain=${domain}`))
+    }
+    static handleGetAccountSettings(account: string) {
+        return instance.get(adminRoutes(`/account-settings/${account}`))
+    }
+    static handleUpdateAccountSettings(account: string, data: any) {
+        return instance.put(adminRoutes(`/account-settings/${account}`), data)
+    }
+
     // USER
     static handleAddUser(data: any) {
         return instance.post(adminRoutes(`/user`), data)

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
 import type { Channel } from "../_lib/chat-types";
+import type { Team } from "../_lib/chat-types";
 import TeamSettingsDialog from "./TeamSettingsDialog";
 
 // ---------------------------------------------------------------------------
@@ -59,22 +60,22 @@ export default function ChannelSidebar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dmOpen, setDmOpen] = useState(true);
 
-  const activeTeam = teams.find((t) => t.id === activeTeamId);
+  const activeTeam = teams.find((t: Team) => t.id === activeTeamId);
   const channels = activeTeamId ? getTeamChannels(activeTeamId) : [];
 
   const textChannels = channels.filter(
-    (c) => c.type === "text" || c.type === "announcement",
+    (c: Channel) => c.type === "text" || c.type === "announcement",
   );
-  const voiceChannels = channels.filter((c) => c.type === "voice");
+  const voiceChannels = channels.filter((c: Channel) => c.type === "voice");
 
   const filtered = searchQuery.trim()
-    ? textChannels.filter((c) =>
+    ? textChannels.filter((c: Channel) =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : textChannels;
 
   const filteredVoice = searchQuery.trim()
-    ? voiceChannels.filter((c) =>
+    ? voiceChannels.filter((c: Channel) =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : voiceChannels;
@@ -110,7 +111,7 @@ export default function ChannelSidebar() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48 md:hidden">
-              {teams.map((t) => (
+              {teams.map((t: Team) => (
                 <DropdownMenuItem
                   key={t.id}
                   onClick={() => setActiveTeam(t.id)}
@@ -167,7 +168,7 @@ export default function ChannelSidebar() {
               isOpen={textOpen}
               onToggle={() => setTextOpen(!textOpen)}
             >
-              {filtered.map((channel) => (
+              {filtered.map((channel: Channel) => (
                 <ChannelItem
                   key={channel.id}
                   channel={channel}
@@ -187,7 +188,7 @@ export default function ChannelSidebar() {
                 isOpen={voiceOpen}
                 onToggle={() => setVoiceOpen(!voiceOpen)}
               >
-                {filteredVoice.map((channel) => (
+                {filteredVoice.map((channel: Channel) => (
                   <ChannelItem
                     key={channel.id}
                     channel={channel}
@@ -210,9 +211,9 @@ export default function ChannelSidebar() {
               isOpen={dmOpen}
               onToggle={() => setDmOpen(!dmOpen)}
             >
-              {directMessages.map((dm) => {
+              {directMessages.map((dm: any) => {
                 const other = dm.participants.find(
-                  (p) => p.userId !== "u-self",
+                  (p: any) => p.userId !== "u-self",
                 );
                 if (!other) return null;
                 return (

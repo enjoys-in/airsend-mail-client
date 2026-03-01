@@ -49,7 +49,7 @@ export default function InviteMemberDialog({
   const currAccount = useAppSelector((s) => s.accounts.currAccount);
   const email = currAccount?.email ?? "";
   const { activeTeamId, teams } = useChatStore();
-  const activeTeam = teams.find((t) => t.id === activeTeamId);
+  const activeTeam = teams.find((t:any) => t.id === activeTeamId);
 
   const [inviteeEmail, setInviteeEmail] = useState("");
   const [role, setRole] = useState<MemberRole>("member");

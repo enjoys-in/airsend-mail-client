@@ -21,7 +21,7 @@ export default function MentionPopover({
   const { members, activeTeamId } = useChatStore();
 
   const teamMembers = members.filter(
-    (m) =>
+    (m:any) =>
       m.teamId === activeTeamId &&
       (m.username.toLowerCase().includes(query.toLowerCase()) ||
         m.displayName.toLowerCase().includes(query.toLowerCase())),
@@ -35,7 +35,7 @@ export default function MentionPopover({
         Members
       </div>
       <ScrollArea className="max-h-48">
-        {teamMembers.map((member) => (
+        {teamMembers.map((member:any) => (
           <button
             key={member.id}
             onClick={() => onSelect(member.username)}

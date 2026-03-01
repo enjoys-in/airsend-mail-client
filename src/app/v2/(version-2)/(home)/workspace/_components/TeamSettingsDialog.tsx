@@ -89,7 +89,7 @@ export default function TeamSettingsDialog({
               <p className="text-xs text-muted-foreground">Team Settings</p>
             </div>
             <nav className="px-2 space-y-0.5">
-              {TABS.map((tab) => (
+              {TABS.map((tab: { id: SettingsTab; label: string; icon: React.ElementType }) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
@@ -209,7 +209,7 @@ function MembersSettings({ members }: { members: TeamMember[] }) {
 
   const filtered = searchQuery.trim()
     ? members.filter(
-        (m) =>
+        (m:any) =>
           m.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           m.email.toLowerCase().includes(searchQuery.toLowerCase()),
       )
@@ -457,7 +457,7 @@ function IntegrationsSettings() {
       </div>
 
       <div className="space-y-3">
-        {integrations.map((int) => (
+        {integrations.map((int:any) => (
           <div
             key={int.name}
             className="flex items-center gap-3 rounded-lg border border-border/40 p-4"

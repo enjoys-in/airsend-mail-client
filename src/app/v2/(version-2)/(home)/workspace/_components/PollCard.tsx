@@ -33,7 +33,7 @@ export function PollCard({ poll, email, myVoteIds = [] }: PollCardProps) {
   const isCreator = poll.createdBy === email;
 
   const maxVotes = useMemo(
-    () => Math.max(...poll.options.map((o) => o.voteCount), 1),
+    () => Math.max(...poll.options.map((o:any) => o.voteCount), 1),
     [poll.options]
   );
 
@@ -97,7 +97,7 @@ export function PollCard({ poll, email, myVoteIds = [] }: PollCardProps) {
 
       {/* Options */}
       <div className="p-3 space-y-2">
-        {poll.options.map((option) => {
+        {poll.options.map((option:any) => {
           const isSelected = selectedIds.includes(option.id);
           const wasVoted = myVoteIds.includes(option.id);
           const pct = poll.totalVotes > 0 ? Math.round((option.voteCount / poll.totalVotes) * 100) : 0;

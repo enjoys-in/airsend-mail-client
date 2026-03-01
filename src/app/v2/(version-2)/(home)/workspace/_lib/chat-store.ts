@@ -2,7 +2,7 @@
 // Teams & Chat Zustand Store — with API integration
 // ============================================================================
 
-import { create } from "zustand";
+import { create, type StoreApi, type UseBoundStore } from "zustand";
 import type {
   Team,
   Channel,
@@ -148,7 +148,9 @@ interface ChatStore {
 // Store
 // ---------------------------------------------------------------------------
 
-export const useChatStore = create<ChatStore>((set, get) => ({
+export type { ChatStore };
+
+export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore>()((set, get) => ({
   // Data — initialized with mock data
   teams: MOCK_TEAMS,
   channels: MOCK_CHANNELS,

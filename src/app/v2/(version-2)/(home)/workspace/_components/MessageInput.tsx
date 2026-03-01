@@ -73,11 +73,11 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const channel = effectiveChannelId
-    ? channels.find((c) => c.id === effectiveChannelId)
+    ? channels.find((c:any) => c.id === effectiveChannelId)
     : null;
 
   const dm = effectiveDmId
-    ? directMessages.find((d) => d.id === effectiveDmId)
+    ? directMessages.find((d:any) => d.id === effectiveDmId)
     : null;
 
   const placeholderText = channel
@@ -89,7 +89,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
   // Populate textarea when editing
   useEffect(() => {
     if (editingMessageId) {
-      const msg = messages.find((m) => m.id === editingMessageId);
+      const msg = messages.find((m:any) => m.id === editingMessageId);
       if (msg) {
         setContent(msg.content);
         textareaRef.current?.focus();
@@ -124,7 +124,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
         .map((m) => {
           const username = m.slice(1); // remove @
           const member = members.find(
-            (mb) =>
+            (mb:any) =>
               mb.username === username ||
               mb.displayName.toLowerCase().replace(/\s/g, ".") === username,
           );
@@ -206,7 +206,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       // TODO: implement file upload
-      console.log("Files dropped:", files.map((f) => f.name));
+      console.log("Files dropped:", files.map((f:any) => f.name));
     }
   };
 

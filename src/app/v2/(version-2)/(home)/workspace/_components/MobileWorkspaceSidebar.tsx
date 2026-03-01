@@ -77,22 +77,22 @@ export default function MobileWorkspaceSidebar({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const activeTeam = teams.find((t) => t.id === activeTeamId);
+  const activeTeam = teams.find((t:any) => t.id === activeTeamId);
   const channels = activeTeamId ? getTeamChannels(activeTeamId) : [];
 
   const textChannels = channels.filter(
-    (c) => c.type === "text" || c.type === "announcement",
+    (c:any) => c.type === "text" || c.type === "announcement",
   );
-  const voiceChannels = channels.filter((c) => c.type === "voice");
+  const voiceChannels = channels.filter((c:any) => c.type === "voice");
 
   const filtered = searchQuery.trim()
-    ? textChannels.filter((c) =>
+    ? textChannels.filter((c:any) =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : textChannels;
 
   const filteredVoice = searchQuery.trim()
-    ? voiceChannels.filter((c) =>
+    ? voiceChannels.filter((c:any) =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : voiceChannels;
@@ -129,7 +129,7 @@ export default function MobileWorkspaceSidebar({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
-                {teams.map((t) => (
+                {teams.map((t:any) => (
                   <DropdownMenuItem
                     key={t.id}
                     onClick={() => setActiveTeam(t.id)}
@@ -177,7 +177,7 @@ export default function MobileWorkspaceSidebar({
                 isOpen={textOpen}
                 onToggle={() => setTextOpen(!textOpen)}
               >
-                {filtered.map((channel) => (
+                {filtered.map((channel:any) => (
                   <MobileChannelItem
                     key={channel.id}
                     channel={channel}
@@ -195,7 +195,7 @@ export default function MobileWorkspaceSidebar({
                   isOpen={voiceOpen}
                   onToggle={() => setVoiceOpen(!voiceOpen)}
                 >
-                  {filteredVoice.map((channel) => (
+                  {filteredVoice.map((channel:any) => (
                     <MobileChannelItem
                       key={channel.id}
                       channel={channel}

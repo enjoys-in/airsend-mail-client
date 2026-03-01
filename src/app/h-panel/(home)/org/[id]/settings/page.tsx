@@ -58,7 +58,7 @@ export default function ManageSettingsPage() {
     const handleSave = async () => {
         try {
             setSaving(true)
-            const { data } = await (API as any).handleUpdateAccountSettings(selectedAccount, settings)
+            const { data } = await API.handleUpdateAccountSettings(selectedAccount, settings)
             if (data?.success) {
                 toast({ title: "Settings saved successfully" })
             } else {
@@ -272,7 +272,7 @@ export default function ManageSettingsPage() {
                                             checked={settings.email_settings.email_footer.footer_enabled}
                                             onChange={(v) => updateSettings("email_settings", {
                                                 ...settings.email_settings,
-                                                email_footer: { footer_enabled: v, footer_text: v ? "" : null }
+                                                email_footer: v ? { footer_enabled: true, footer_text: "" } : { footer_enabled: false, footer_text: null }
                                             })} />
                                         {settings.email_settings.email_footer.footer_enabled && (
                                             <div className="ml-4">
@@ -289,7 +289,7 @@ export default function ManageSettingsPage() {
                                             checked={settings.email_settings.system_email.is_system_email}
                                             onChange={(v) => updateSettings("email_settings", {
                                                 ...settings.email_settings,
-                                                system_email: { is_system_email: v, system_email_reply: v ? "" : null }
+                                                system_email: v ? { is_system_email: true, system_email_reply: "" } : { is_system_email: false, system_email_reply: null }
                                             })} />
                                         {settings.email_settings.system_email.is_system_email && (
                                             <div className="ml-4 space-y-2">

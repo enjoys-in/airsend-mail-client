@@ -1,3 +1,4 @@
+"use client"
 
 import { ConfirmationModal } from '@/components/common/confirmationModal';
 import { LandingPage } from './_components/landing'

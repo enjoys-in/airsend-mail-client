@@ -11,7 +11,7 @@ import { useChatStore } from "../_lib/chat-store";
 // ---------------------------------------------------------------------------
 
 export default function WorkspaceInit() {
-  const currAccount = useAppSelector((s) => s.accounts.currAccount);
+  const currAccount = useAppSelector((s:any) => s.accounts.currAccount);
   const email = currAccount?.email ?? "";
   const { activeTeamId, fetchTeams, fetchChannels, fetchMembers, fetchDMs } =
     useChatStore();

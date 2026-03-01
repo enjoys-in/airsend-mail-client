@@ -30,7 +30,7 @@ export default function ThreadPanel() {
   const endRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const parentMsg = messages.find((m) => m.id === activeThreadMessageId);
+  const parentMsg = messages.find((m:any) => m.id === activeThreadMessageId);
   const replies = threadReplies.filter(
     (r) => r.threadId === activeThreadMessageId,
   );

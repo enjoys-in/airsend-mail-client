@@ -60,11 +60,11 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
   const effectiveDmId = dmId ?? activeDmId;
 
   const channel = effectiveChannelId
-    ? channels.find((c) => c.id === effectiveChannelId)
+    ? channels.find((c:any) => c.id === effectiveChannelId)
     : null;
 
   const dm = effectiveDmId
-    ? directMessages.find((d) => d.id === effectiveDmId)
+    ? directMessages.find((d:any) => d.id === effectiveDmId)
     : null;
 
   const messages = effectiveChannelId
@@ -104,7 +104,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
 
   // DM view
   if (dm && !channel) {
-    const other = dm.participants.find((p) => p.userId !== currentUserId);
+    const other = dm.participants.find((p:any) => p.userId !== currentUserId);
     return (
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/40 px-4">
@@ -227,7 +227,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
           {/* Active polls */}
           {channelPolls.length > 0 && (
             <div className="mb-4 space-y-3">
-              {channelPolls.filter(p => !p.isClosed).map((poll) => (
+              {channelPolls.filter((p:any) => !p.isClosed).map((poll:any) => (
                 <PollCard key={poll.id} poll={poll} email={currentUserId} />
               ))}
             </div>
@@ -285,7 +285,7 @@ function MessageBubble({
   onUnreact: (msgId: string, emoji: string) => void;
 }) {
   const isMentioned = message.mentions.includes(currentUserId);
-  const author = members.find((m) => m.userId === message.authorId);
+  const author = members.find((m:any) => m.userId === message.authorId);
   const time = new Date(message.createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
