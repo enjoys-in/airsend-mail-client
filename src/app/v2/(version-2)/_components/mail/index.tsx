@@ -3,11 +3,16 @@ import React from 'react'
 import { useMailStore } from '@/store/mails'
 import { cn } from '@/lib/utils'
 
-export const MailList = ({ children, className }: { children: React.ReactNode; className?: string }) => {
-  const { checkedItems } = useMailStore()
+export const MailList = React.memo(({ children, className }: { children: React.ReactNode; className?: string }) => {
+  const hasCheckedItems = useMailStore((state) => state.checkedItems.length > 0)
   return (
-    <div className={cn("bg-neutral-200 dark:bg-neutral-900  transition-all duration-300 ease-in-out rounded-2xl", checkedItems.length > 0 && "mt-8", className)}>
+    <div className={cn(
+      "bg-background transition-all duration-200 ease-out",
+      className
+    )}>
       {children}
     </div>
   )
-}
+})
+
+MailList.displayName = 'MailList'

@@ -1,8 +1,8 @@
 import React from 'react'
 import { cn, formatBytes } from '@/lib/utils';
-import { Folder } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
 import { CustomDialog } from "@/components/common/CustomDialog"
-import StorageCard, { LinearProgressBar } from "@/components/shared/cards/StorageCard"
+import StorageCard from "@/components/shared/cards/StorageCard"
 
 const SidebarStroageView = ({
   total,
@@ -10,26 +10,40 @@ const SidebarStroageView = ({
 }: {
   used: number;
   total: number;
-
 }) => {
-  const percent = Math.round((used / total) * 100);
+  const percent = total > 0 ? (used / total) * 100 : 0;
+  const displayPercent = percent < 1 && percent > 0 ? percent.toFixed(2) : Math.round(percent);
+  // Ensure minimum visible width when there's any usage
+  const barWidth = percent > 0 ? Math.max(percent, 0.5) : 0;
 
   return (
-    <div className="flex flex-col cursor-default mt-2">
-      <div className="flex flex-row gap-2 items-center">
-        <Folder size={10} />
-        <div>
-          <span className={cn(`text-xs font-bold `, percent < 80 ? `text-blue-500 dark:text-zinc-50` : "text-red-600 dark:text-red-500")}>
-            {formatBytes(used)}
+    <div className="flex flex-col gap-1.5 cursor-default px-1">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <HardDrive size={11} className="text-muted-foreground/50" />
+          <span className="text-[11px] text-muted-foreground">
+            <span className={cn("font-medium", percent < 80 ? "text-foreground" : "text-red-500")}>
+              {formatBytes(used)} ({displayPercent}%)
+            </span>
+            <span className="text-muted-foreground/50"> / {formatBytes(total)}</span>
           </span>
-          <span className="text-xs text-zinc-400"> / {formatBytes(total)}</span>
         </div>
-        <CustomDialog triggerComponent={<span className="text-xs text-orange-500 cursor-pointer items-center">View</span>}>
+        <CustomDialog triggerComponent={
+          <span className="text-[10px] text-primary/70 hover:text-primary cursor-pointer transition-colors duration-150">Details</span>
+        }>
           <StorageCard used={used} total={total} />
         </CustomDialog>
       </div>
-      <div className="h-[4px] mt-1 flex w-full items-center rounded-full bg-zinc-300 dark:bg-zinc-300">
-        <LinearProgressBar progress={percent} width={250} />
+      <div className="h-1 w-full rounded-full bg-muted/50 overflow-hidden">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-500 ease-out",
+            percent < 50 ? "bg-emerald-500" :
+            percent < 80 ? "bg-amber-500" :
+            "bg-red-500"
+          )}
+          style={{ width: `${barWidth}%` }}
+        />
       </div>
     </div>
   );

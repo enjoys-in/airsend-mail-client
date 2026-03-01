@@ -23,22 +23,27 @@ const IdbSyncHookApi = () => {
                     if ("usage" in modifications || "mailbox_size" in modifications || "quota_in_percent" in modifications) {
                         return
                     }
-                    // const res = toast.promise(API.handleUpdateMailUserSetting({
-                    //     email,
-                    //     settings: payload
-                    // }), {
-                    //     loading: 'Updating Settings',
-                    //     success: 'Settings Updated',
-                    //     error: 'Error while updating settings',
-                    // })
-                    // res.unwrap().then(({ data }: any) => {
 
-                    //     if (!data.success) {
-                    //         toast.error("Something went wrong, Restoring old settings")
-                    //         setSettings(e?.oldObj?.settings)
-                    //     }
-
-                    // })
+                    /* Backend-first: push to API, rollback IDB on failure */
+                    toast.promise(
+                        API.handleUpdateMailUserSetting({
+                            email,
+                            settings: payload,
+                        }).then(({ data }: any) => {
+                            if (!data.success) {
+                                /* Restore previous settings in Zustand so UI reverts */
+                                if (e?.oldObj?.settings) {
+                                    setSettings(e.oldObj.settings)
+                                }
+                                throw new Error(data.message || "Update rejected by server")
+                            }
+                        }),
+                        {
+                            loading: "Syncing settings…",
+                            success: "Settings saved",
+                            error: "Failed to save — reverted",
+                        },
+                    )
                 }
             }
         };

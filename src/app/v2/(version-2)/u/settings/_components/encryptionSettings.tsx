@@ -1,159 +1,126 @@
 "use client"
 
-import { useState } from "react"
+import { memo, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronDown, Info, LinkIcon } from "lucide-react"
+import { ChevronDown, LinkIcon } from "lucide-react"
 import Link from "next/link"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useSettingsPersist } from "@/hooks/use-settings-persist"
+import type { IEncryptionSettings } from "@/lib/types/get-user-settings-response"
+import {
+  SettingsPageHeader,
+  SettingsSection,
+  SettingToggleRow,
+  SettingSelectRow,
+  SaveSettingsBar,
+} from "./shared"
 
-export default function EncryptionSettings({email}:{email:string}) {
-  const [promptTrustKeys, setPromptTrustKeys] = useState(true)
-  const [verifyKeysWithTransparency, setVerifyKeysWithTransparency] = useState(true)
-  const [signExternalMessages, setSignExternalMessages] = useState(true)
-  const [attachPublicKey, setAttachPublicKey] = useState(true)
-  const [defaultPgpScheme, setDefaultPgpScheme] = useState("PGP/MIME")
+const DEFAULT_ENCRYPTION: IEncryptionSettings = {
+  prompt_trust_keys: true,
+  verify_key_transparency: true,
+  sign_external_messages: true,
+  attach_public_key: true,
+  default_pgp_scheme: "PGP/MIME",
+}
+
+function EncryptionSettings({ email }: { email: string }) {
+  const { settings, save, isSaving } = useSettingsPersist(email)
+  const [local, setLocal] = useState<IEncryptionSettings>(DEFAULT_ENCRYPTION)
+  const [dirty, setDirty] = useState(false)
+
+  // Sync from store when settings load
+  useEffect(() => {
+    if (settings?.encryption) {
+      setLocal(settings.encryption)
+    }
+  }, [settings?.encryption])
+
+  const update = <K extends keyof IEncryptionSettings>(
+    key: K,
+    value: IEncryptionSettings[K],
+  ) => {
+    setLocal((prev) => ({ ...prev, [key]: value }))
+    setDirty(true)
+  }
+
+  const handleSave = () => {
+    save("encryption", local)
+    setDirty(false)
+  }
 
   return (
-    <div className="p-8">
-      <div className="max-w-3xl mx-auto space-y-12">
-        <h1 className="text-3xl font-bold text-white ">Encryption and keys</h1>
+    <div className="p-4 md:p-8">
+      <div className="max-w-3xl mx-auto space-y-10">
+        <SettingsPageHeader title="Encryption and keys" />
 
-        {/* Address and key verification section */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-bold">Address and key verification</h2>
+        {/* Address and key verification */}
+        <SettingsSection title="Address and key verification">
+          <SettingToggleRow
+            label="Prompt to trust keys"
+            tooltip="Ask before trusting new encryption keys"
+            checked={local.prompt_trust_keys}
+            onCheckedChange={(v) => update("prompt_trust_keys", v)}
+          />
+          <SettingToggleRow
+            label="Verify keys with Key Transparency"
+            tooltip="Use key transparency protocol to automatically verify encryption keys"
+            checked={local.verify_key_transparency}
+            onCheckedChange={(v) => update("verify_key_transparency", v)}
+            badge={
+              <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                BETA
+              </span>
+            }
+          />
+        </SettingsSection>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span>Prompt to trust keys</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-gray-400" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-80">Information about prompting to trust keys</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Switch checked={promptTrustKeys} onCheckedChange={setPromptTrustKeys} />
-          </div>
+        {/* External PGP settings */}
+        <SettingsSection
+          title="External PGP settings"
+          description="Only change these settings if you are using PGP with non-Proton recipients."
+        >
+          <SettingToggleRow
+            label="Sign external messages"
+            tooltip="Digitally sign all outgoing messages to non-Proton recipients"
+            checked={local.sign_external_messages}
+            onCheckedChange={(v) => update("sign_external_messages", v)}
+          />
+          <SettingToggleRow
+            label="Attach public key"
+            tooltip="Include your public key as an attachment in outgoing emails"
+            checked={local.attach_public_key}
+            onCheckedChange={(v) => update("attach_public_key", v)}
+          />
+          <SettingSelectRow
+            label="Default PGP scheme"
+            tooltip="Choose the default PGP encryption scheme"
+            value={local.default_pgp_scheme}
+            onValueChange={(v) => update("default_pgp_scheme", v as IEncryptionSettings["default_pgp_scheme"])}
+            options={[
+              { value: "PGP/MIME", label: "PGP/MIME" },
+              { value: "PGP/INLINE", label: "PGP/INLINE" },
+            ]}
+          />
+        </SettingsSection>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div>
-                <span>Verify keys with Key</span>
-                <div className="flex items-center gap-2">
-                  <span>Transparency</span>
-                  <span className="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">BETA</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="w-80">Information about key transparency</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-            </div>
-            <Switch checked={verifyKeysWithTransparency} onCheckedChange={setVerifyKeysWithTransparency} />
-          </div>
-        </section>
-
-        {/* External PGP settings section */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <LinkIcon className="h-5 w-5 text-blue-500" />
-            <h2 className="text-2xl font-bold">External PGP settings</h2>
-          </div>
-
-          <p className="text-gray-400">
-            Only change these settings if you are using PGP with non-Proton recipients.
-            <Link href="#" className="text-blue-500 ml-2">
-              Learn more
-            </Link>
-          </p>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span>Sign external messages</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-gray-400" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-80">Information about signing external messages</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Switch checked={signExternalMessages} onCheckedChange={setSignExternalMessages} />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span>Attach public key</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-gray-400" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-80">Information about attaching public key</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Switch checked={attachPublicKey} onCheckedChange={setAttachPublicKey} />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span>Default PGP scheme</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-gray-400" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-80">Information about PGP schemes</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Select value={defaultPgpScheme} onValueChange={setDefaultPgpScheme}>
-              <SelectTrigger className="w-[180px] bg-black border-gray-700">
-                <SelectValue placeholder="Select scheme" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700">
-                <SelectItem value="PGP/MIME">PGP/MIME</SelectItem>
-                <SelectItem value="PGP/INLINE">PGP/INLINE</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </section>
-
-        {/* Email encryption keys section */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-bold">Email encryption keys</h2>
-          <p className="text-gray-400">Download your PGP keys for use with other PGP-compatible services.</p>
-
+        {/* Email encryption keys */}
+        <SettingsSection
+          title="Email encryption keys"
+          description="Download your PGP keys for use with other PGP-compatible services."
+        >
           <div className="flex">
-            <Button variant="outline" className="bg-black text-white border-gray-700 rounded-r-none">
+            <Button variant="outline" className="rounded-r-none">
               Generate key
             </Button>
-            <Button variant="outline" className="bg-black text-white border-gray-700 border-l-0 px-2 rounded-l-none">
+            <Button variant="outline" className="border-l-0 px-2 rounded-l-none">
               <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
-        </section>
+        </SettingsSection>
+
+        <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
       </div>
     </div>
   )
 }
+
+export default memo(EncryptionSettings)

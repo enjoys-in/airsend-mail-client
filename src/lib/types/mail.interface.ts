@@ -105,19 +105,27 @@ export interface GetAllMailsPayload {
     from_email: string;
     message_id: string;
     receipient: string;
-    receipients: string;
+    receipients: string[];
     subject: string;
     flags: string[];
     folder: string;
     tags: string[];
     is_read: boolean;
     is_replied: boolean;
+    is_pinned: boolean;
+    is_forwarded: boolean;
+    is_starred: boolean;
+    is_important: boolean;
+    has_attachments: boolean;
     in_replied_to: string;
     references: string | string[];
     trackersDetected: number;
+    trackers_detected: number;
     plain_text: string;
     thread_id: string;
     uid: string | undefined;
+    priority: "low" | "normal" | "high" | "urgent";
+    created_at: string | undefined;
     hasAttachment: boolean | {
         related: boolean;
         type: "attachment";

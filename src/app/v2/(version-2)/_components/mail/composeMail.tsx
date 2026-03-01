@@ -1,11 +1,9 @@
 import React, { Fragment } from "react";
-import { X, Minus, Maximize2, Plus } from "lucide-react";
+import { X, Minus, Maximize2, Plus, Pen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
+import { cn } from "@/lib/utils";
 import { useMultiTabStore } from "@/store/settings/multiTabSystem";
-
-
 
 export default function MultiTabSystem() {
 
@@ -24,17 +22,17 @@ export default function MultiTabSystem() {
 
     return (
         <Fragment>
-            {/* New Mail button with top margin */}
+            {/* Compose button */}
             <Button
                 onClick={() => createTab()}
-                className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 active:bg-blue-800 cursor-pointer transition"
+                className="flex items-center justify-center gap-2 w-full h-9 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 shadow-sm transition-all duration-150"
             >
-                <Plus className="h-4 w-4" />
-                <span className="text-sm font-medium">New Mail</span>
+                <Pen className="h-3.5 w-3.5" />
+                <span>Compose</span>
             </Button>
 
             {/* Tabs container */}
-            <div className="fixed bottom-0 right-0 flex space-x-2 items-end">
+            <div className="fixed bottom-0 right-4 flex items-end gap-2 z-50">
                 {/* Minimized tabs */}
                 {minimizedTabs.map((tabId) => {
                     const tab = tabs.find((t) => t.id === tabId);
@@ -45,7 +43,7 @@ export default function MultiTabSystem() {
                             key={`min-${tabId}`}
                             variant="secondary"
                             size="sm"
-                            className="truncate max-w-[120px]"
+                            className="truncate max-w-[140px] h-8 rounded-t-lg rounded-b-none text-xs shadow-md border border-b-0"
                             onClick={() => restoreTab(tabId)}
                         >
                             {tab.title}
@@ -59,44 +57,46 @@ export default function MultiTabSystem() {
                     return (
                         <Card
                             key={tab.id}
-                            className={`flex flex-col shadow-lg transition-all duration-300 ${isFullscreen
-                                ? "fixed inset-4 z-50 mt-16"
-                                : "max-w-[750px] w-[750px]"
-                                }`}
+                            className={cn(
+                                "flex flex-col shadow-2xl rounded-t-xl rounded-b-none border-b-0 transition-all duration-200",
+                                isFullscreen
+                                    ? "fixed inset-4 z-50 mt-14 rounded-xl border-b"
+                                    : "max-w-[750px] w-[750px]"
+                            )}
                         >
                             {/* Tab Header */}
-                            <div className="bg-blue-600 text-white flex justify-between items-center rounded-t-lg ">
-                                <span className="font-medium truncate flex-1  px-2">{tab.title}</span>
-                                <div className="flex items-center space-x-1 ml-2">
+                            <div className="bg-foreground text-background flex justify-between items-center rounded-t-xl h-9 px-3">
+                                <span className="text-sm font-medium truncate flex-1">{tab.title}</span>
+                                <div className="flex items-center gap-0.5 ml-2">
                                     <Button
                                         size="icon"
                                         variant="ghost"
                                         onClick={() => toggleFullscreen(tab.id)}
-                                        className="text-gray-200 hover:text-white hover:bg-blue-700 transition-colors"
+                                        className="h-6 w-6 text-background/60 hover:text-background hover:bg-white/10 rounded-md transition-colors duration-150"
                                     >
-                                        <Maximize2 className="w-4 h-4" />
+                                        <Maximize2 className="w-3.5 h-3.5" />
                                     </Button>
                                     <Button
                                         size="icon"
                                         variant="ghost"
                                         onClick={() => minimizeTab(tab.id)}
-                                        className="text-gray-200 hover:text-white hover:bg-blue-700 transition-colors"
+                                        className="h-6 w-6 text-background/60 hover:text-background hover:bg-white/10 rounded-md transition-colors duration-150"
                                     >
-                                        <Minus className="w-4 h-4" />
+                                        <Minus className="w-3.5 h-3.5" />
                                     </Button>
                                     <Button
                                         size="icon"
                                         variant="ghost"
                                         onClick={() => closeTab(tab.id)}
-                                        className="text-gray-200 hover:text-white hover:bg-blue-700 transition-colors"
+                                        className="h-6 w-6 text-background/60 hover:text-background hover:bg-white/10 rounded-md transition-colors duration-150"
                                     >
-                                        <X className="w-4 h-4" />
+                                        <X className="w-3.5 h-3.5" />
                                     </Button>
                                 </div>
                             </div>
 
                             {/* Tab Content */}
-                            <CardContent className="p-0 flex-1 overflow-auto  h-[600px]" onFocus={() => setFocusedTab(tab.id)}>
+                            <CardContent className="p-0 flex-1 overflow-auto h-[600px]" onFocus={() => setFocusedTab(tab.id)}>
                                 {tab.content}
                             </CardContent>
                         </Card>
@@ -104,6 +104,5 @@ export default function MultiTabSystem() {
                 })}
             </div>
         </Fragment>
-
     );
 }

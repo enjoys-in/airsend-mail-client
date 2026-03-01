@@ -29,7 +29,8 @@ type NotificationFormValues = z.infer<typeof notificationFormSchema>
 export default function NotificationPreferencesForm({ email }: { email: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { setSettings, settings } = useSettingsStore()
+  const setSettings = useSettingsStore((s) => s.setSettings)
+  const settings = useSettingsStore((s) => s.settings)
 
   // Initialize the form with default values
   const form = useForm<NotificationFormValues>({

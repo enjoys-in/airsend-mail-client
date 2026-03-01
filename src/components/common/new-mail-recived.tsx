@@ -13,7 +13,8 @@ import { useMailStore } from '../../store/mails/index';
 const NewMailRecived = () => {
     const { socket } = useSockets()
     const audio = useAudio("/notification.mp3")
-    const { all_emails, setAllEmails } = useMailStore()
+    // Use granular selector — only subscribe to what's needed
+    const setAllEmails = useMailStore((s) => s.setAllEmails)
 
 
     const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -28,7 +29,9 @@ const NewMailRecived = () => {
             setIsNewReceived(true);
             setHasNewMessage(true);
             audio.play()
-            setAllEmails([obj as any, ...(all_emails || [])])
+            // Read fresh state at call time — avoids stale closure
+            const currentEmails = useMailStore.getState().all_emails
+            setAllEmails([obj as any, ...(currentEmails || [])])
             await airsendDB.addItem("mails", obj)
         })
         const handleChangeToDefault = () => {

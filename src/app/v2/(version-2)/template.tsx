@@ -9,25 +9,27 @@ import DesktopLayoutV2 from "./_components/desktop-layout";
 import { CalendarProvider } from "./(home)/calender/_components/event-calendar/calendar-context";
 import { MobileLayoutV2 } from "./_components/mobile-layout";
 import { fetchCurrentUser } from "@/store/slices/account";
+import { syncUserSettings } from "@/lib/api/sync-user-settings";
 import SentMailToast from "@/components/common/sent-mail";
 import CustomWidget from "@/components/common/custom-widget";
 
 function MainLayout({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
   React.useEffect(() => {
+    // Fire both in parallel — settings fetch does not depend on profile
     dispatch(fetchCurrentUser());
-
-  }, []);
+    syncUserSettings();
+  }, [dispatch]);
   return (
     <SocketContextProvider>
       <CustomWidget />
       <CalendarProvider>
         <Suspense fallback={<Spinner />}>
-          <div className="flex md:hidden flex-1 bg-[#111315]">
-            <MobileLayoutV2>{children} </MobileLayoutV2>
+          <div className="flex md:hidden flex-1 min-w-0 bg-[#111315]">
+            <MobileLayoutV2>{children}</MobileLayoutV2>
           </div>
-          <div className="hidden md:flex flex-1  bg-[#111315]">
-            <DesktopLayoutV2 >{children} </DesktopLayoutV2>
+          <div className="hidden md:flex flex-1 min-w-0 bg-[#111315]">
+            <DesktopLayoutV2>{children}</DesktopLayoutV2>
           </div>
           <NewMailRecived />
           <SentMailToast />
@@ -38,6 +40,3 @@ function MainLayout({ children }: { children: ReactNode }) {
 }
 
 export default MainLayout;
-
-
-

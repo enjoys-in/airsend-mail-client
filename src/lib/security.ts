@@ -1,7 +1,6 @@
-import { __config } from '@/constants/config';
 import * as crypto from 'crypto'
 import CryptoJS from 'crypto-js'
-const ENCRYPTION_KEY: string = "pY8rGx4JmZqK9nVtB2dE6fWcL1sQ3uHa";
+import { getRuntimeConfig } from './runtime-config'
 
 export class Security {
     /**
@@ -25,7 +24,7 @@ export class Security {
             decodedString = this.PurifiedString(method, uri, body);
         }
         const hmac = crypto
-            .createHmac("sha512", __config.APP.APP_SECRET as string)
+            .createHmac("sha512", getRuntimeConfig().appSecret)
             .update(decodedString);
         return hmac.digest("hex");
     }
@@ -107,7 +106,7 @@ export class Security {
     };
     
     encryptAES(plaintext: string, secret?: string): string {
-        const key = CryptoJS.enc.Utf8.parse(secret || ENCRYPTION_KEY);
+        const key = CryptoJS.enc.Utf8.parse(secret || getRuntimeConfig().encryptionKey);
         const iv = CryptoJS.lib.WordArray.random(16);
 
         const encrypted = CryptoJS.AES.encrypt(plaintext, key, {
@@ -141,7 +140,7 @@ export class Security {
         try {
             const [ivB64, cipherB64] = ciphertextB64.split(":");
 
-            const key = CryptoJS.enc.Utf8.parse(secret || ENCRYPTION_KEY);
+            const key = CryptoJS.enc.Utf8.parse(secret || getRuntimeConfig().encryptionKey);
 
             const decrypted = CryptoJS.AES.decrypt(
                 {
@@ -157,7 +156,7 @@ export class Security {
 
             return decrypted.toString(CryptoJS.enc.Utf8);
         } catch (error) {
-
+            console.log(error)
             return "";
         }
     }

@@ -32,13 +32,15 @@ export const useSettingsStore = create<State>()((set) => ({
         "filters": "Filters",
         "email-config": "Email Config",
         "email-privacy": "Email privacy",
+        "calendar": "Calendar",
+        "imap-smtp": "IMAP/SMTP",
         "encryption-and-keys": "Encryption and keys",
         "folders-and-labels": "Folders and labels",
         "email-forwarding": "Email Forwarding",
         "identity-and-addresses": "Identity and addresses",
-        "messages-and-composing": "Messages and composing"
+        "messages-and-composing": "Messages and composing",
     },
-    activeItem: "Account and password",
+    activeItem: "account-and-password",
     setActiveItem: (item) => set({ activeItem: item }),
     settings: null,
     setSettings: (item) => set((state) => ({

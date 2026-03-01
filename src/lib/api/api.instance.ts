@@ -57,3 +57,50 @@ instance.interceptors.response.use(
     }
 )
 export { instance }
+
+
+// ---------------------------------------------------------------------------
+// CalDev (Calendar) axios instance — same auth pattern, different base URL
+// ---------------------------------------------------------------------------
+
+const CALDEV_BASE_URL =
+  process.env.NEXT_PUBLIC_CALDEV_URL || "http://localhost:8443";
+
+const caldevInstance = axios.create({
+  baseURL: CALDEV_BASE_URL,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+caldevInstance.defaults.headers["common"] = {
+  Accept: "application/json",
+  "Content-Type": "application/json",
+  "X-App-Version": "1.0.0",
+  "X-App-Name": "AirSend",
+  "x-api-key": __config.APP.API_KEY,
+};
+
+caldevInstance.interceptors.request.use(
+  async (config) => {
+    security
+      .GenerateSignature(
+        (config.method as string).toUpperCase(),
+        `${config.baseURL}${config.url}` as string,
+        config?.data,
+      )
+      .then((signature) => {
+        config.headers["X-Signature"] = signature;
+      });
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+caldevInstance.interceptors.response.use(
+  (response) => response,
+  (error) => Promise.reject(error),
+);
+
+export { caldevInstance }

@@ -15,7 +15,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarRail,
-    useSidebar,
 } from "@/components/ui/sidebar"
 
 import { FavIcon } from "@/components/logo-image"
@@ -26,57 +25,113 @@ import { usePathname } from "next/navigation"
 import { StackIcon } from "@radix-ui/react-icons"
 import SidebarCalendar from "../(home)/calender/_components/sidebar-calendar"
 import ChannelList from "../(home)/workspace/_components/ChannelList"
+import WorkspaceSidebar from "../(home)/workspace/_components/WorkspaceSidebar"
 import { SettingsMenuSidebar } from "./mail/settingsSidebar"
+import { cn } from "@/lib/utils"
+import { useFeatureAccess } from "@/hooks/use-feature-access"
 
-// This is sample data
-const navMain = [
+type NavItem = {
+    title: string
+    url: string
+    icon: React.ComponentType<{ className?: string }>
+    matchPath: string
+    /** Optional feature-flag key — item hidden when the flag is false */
+    featureKey?: "canAccessCalendar" | "canAccessWorkspace"
+}
+
+const navMain: NavItem[] = [
     {
         title: "Mailbox",
         url: "/v2/u/mail/",
         icon: Inbox,
-        isActive: true,
+        matchPath: "/v2/u/mail",
     },
     {
         title: "Calendar",
-        url: "#",
+        url: "/v2/calender",
         icon: Calendar,
-        isActive: false,
+        matchPath: "/v2/calender",
+        featureKey: "canAccessCalendar",
     },
-    {
-        title: "Files",
-        url: "#",
-        icon: File,
-        isActive: false,
-    },
-    {
-        title: "Chats",
-        url: "#",
-        icon: Send,
-        isActive: false,
-    },
+    // {
+    //     title: "Files",
+    //     url: "/v2/files",
+    //     icon: File,
+    //     matchPath: "/v2/files",
+    // },
+    // {
+    //     title: "Chats",
+    //     url: "/v2/chats",
+    //     icon: Send,
+    //     matchPath: "/v2/chats",
+    // },
     {
         title: "Workspace",
-        url: "#",
+        url: "/v2/workspace",
         icon: StackIcon,
-        isActive: false,
+        matchPath: "/v2/workspace",
+        featureKey: "canAccessWorkspace",
     },
-    {
-        title: "Teams",
-        url: "#",
-        icon: ArchiveX,
-        isActive: false,
-    },
-    {
-        title: "Activity",
-        url: "#",
-        icon: Activity,
-        isActive: false,
-    },
-
+    // {
+    //     title: "Teams",
+    //     url: "#",
+    //     icon: ArchiveX,
+    //     matchPath: "/v2/teams",
+    // },
+    // {
+    //     title: "Activity",
+    //     url: "#",
+    //     icon: Activity,
+    //     matchPath: "/v2/activity",
+    // },
 ]
-export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
+/** Icon rail nav item — isolated so hover/active state doesn't re-render siblings */
+const NavIconItem = React.memo(({ item, isActive }: { item: NavItem; isActive: boolean }) => (
+    <SidebarMenuItem>
+        <Link href={item.url}>
+            <SidebarMenuButton
+                tooltip={{ children: item.title, hidden: false }}
+                isActive={isActive}
+                className={cn(
+                    "px-2.5 md:px-2 transition-colors duration-150",
+                    isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+                )}
+            >
+                <item.icon className="size-4" />
+                <span>{item.title}</span>
+            </SidebarMenuButton>
+        </Link>
+    </SidebarMenuItem>
+))
+NavIconItem.displayName = "NavIconItem"
+
+/** Secondary content panel — renders based on current route */
+const SidebarSecondaryPanel = React.memo(({ pathname }: { pathname: string }) => {
+    if (pathname.includes("/v2/u/settings")) return <SettingsMenuSidebar />
+    if (pathname.includes("/v2/u/mail") || pathname.includes("/v2/u/compose")) return <Mailboxes />
+    if (pathname === "/v2/calender") return <SidebarCalendar />
+    // Workspace nested sidebar — team switcher + channels + DMs
+    if (pathname.startsWith("/v2/workspace")) return <WorkspaceSidebar />
+    if (pathname === "/v2/chats" || pathname === "/v2/files") return <ChannelList />
+    return null
+})
+SidebarSecondaryPanel.displayName = "SidebarSecondaryPanel"
+
+export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const pathname = usePathname()
+    const { canAccessCalendar, canAccessWorkspace, isLoaded } = useFeatureAccess()
+
+    /* Filter nav items based on feature flags (always show while loading) */
+    const featureFlagMap = { canAccessCalendar, canAccessWorkspace } as const
+    const visibleNav = React.useMemo(
+        () => navMain.filter((item) => {
+            if (!item.featureKey) return true
+            if (!isLoaded) return true          // show everything until config loads
+            return featureFlagMap[item.featureKey]
+        }),
+        [isLoaded, canAccessCalendar, canAccessWorkspace],
+    )
 
     return (
         <Sidebar
@@ -84,16 +139,17 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
             className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row"
             {...props}
         >
+            {/* Icon rail */}
             <Sidebar
                 collapsible="none"
-                className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r"
+                className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r border-border/40"
             >
                 <SidebarHeader>
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
-                                <Link href="#">
-                                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                                <Link href="/v2/u/mail/inbox">
+                                    <div className="flex aspect-square size-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
                                         <FavIcon />
                                     </div>
                                 </Link>
@@ -101,35 +157,32 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                         </SidebarMenuItem>
                     </SidebarMenu>
                     <SidebarMenu>
-                        {navMain.map((item) => (
-                            <Link key={item.title} href={item.url}>
-                                <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton
-                                        tooltip={{
-                                            children: item.title,
-                                            hidden: false,
-                                        }}
-
-                                        className="px-2.5 md:px-2"
-                                    >
-                                        <item.icon />
-                                        <span>{item.title}</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            </Link>
+                        {visibleNav.map((item) => (
+                            <NavIconItem
+                                key={item.title}
+                                item={item}
+                                isActive={pathname.includes(item.matchPath)}
+                            />
                         ))}
                     </SidebarMenu>
                 </SidebarHeader>
                 <SidebarContent>
                     <SidebarGroup>
                         <SidebarGroupContent className="px-1.5 md:px-0">
-                            <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
+                            <SidebarMenuItem>
                                 <Link href="/v2/u/settings">
-                                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground ">
-                                        <Settings />
-                                    </div>
+                                    <SidebarMenuButton
+                                        tooltip={{ children: "Settings", hidden: false }}
+                                        isActive={pathname.includes("/v2/u/settings")}
+                                        className={cn(
+                                            "px-2.5 md:px-2 transition-colors duration-150",
+                                            pathname.includes("/v2/u/settings") && "bg-sidebar-accent text-sidebar-accent-foreground"
+                                        )}
+                                    >
+                                        <Settings className="size-4" />
+                                    </SidebarMenuButton>
                                 </Link>
-                            </SidebarMenuButton>
+                            </SidebarMenuItem>
                         </SidebarGroupContent>
                     </SidebarGroup>
                 </SidebarContent>
@@ -138,15 +191,9 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                     <NavUserV2 />
                 </SidebarFooter>
             </Sidebar>
-            {pathname.includes("/v2/u/settings") && <SettingsMenuSidebar />}
-            {(pathname.includes("/v2/u/mail") || pathname.includes("/v2/u/compose")) && <Mailboxes />}
-            {(pathname === "/v2/calender") && <SidebarCalendar />}
-            {/* {  ( pathname === "/v2/teams") &&  <ChannelList />     } */}
-            {(pathname === "/v2/workspace") && <ChannelList />}
-            {(pathname === "/v2/chats") && <ChannelList />}
-            {(pathname === "/v2/files") && <ChannelList />}
-            {(pathname === "/v2/settings") && <ChannelList />}
 
+            {/* Secondary panel */}
+            <SidebarSecondaryPanel pathname={pathname} />
         </Sidebar>
     )
 }

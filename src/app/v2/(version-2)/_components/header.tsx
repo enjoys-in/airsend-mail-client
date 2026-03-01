@@ -1,16 +1,13 @@
-
+import React from "react"
 import { Separator } from "@/components/ui/separator"
 import {
     SidebarInput,
-
     SidebarTrigger,
 } from "@/components/ui/sidebar"
-
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
-    TooltipProvider
 } from "@/components/ui/tooltip";
 import {
     DropdownMenu,
@@ -18,129 +15,106 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Settings } from 'lucide-react';
+import { Bell, Settings } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area"
-
 import BreadcrumbInfo from "./breadcrumb"
-import { Fragment } from "react";
-
 import Link from "next/link";
 
-
-
-export const HeaderV2 = () => {
+/** Icon button used in the header toolbar  */
+const HeaderIconBtn = React.memo(({ children, tooltip, href }: {
+    children: React.ReactNode; tooltip: string; href?: string
+}) => {
+    const inner = (
+        <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
+        >
+            {children}
+        </Button>
+    )
     return (
-        <header className="flex h-14 shrink-0 border-b border-gray-100 dark:border-gray-800 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 sticky top-0 bg-gray-100 dark:bg-black blur-0  shadow-md z-50">
+        <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+                {href ? <Link href={href}>{inner}</Link> : inner}
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">{tooltip}</TooltipContent>
+        </Tooltip>
+    )
+})
+HeaderIconBtn.displayName = "HeaderIconBtn"
+
+export const HeaderV2 = React.memo(() => {
+    return (
+        <header className="flex h-12 shrink-0 items-center gap-2 sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-11">
             <div className="flex items-center justify-between w-full px-4">
+                {/* Left: trigger + breadcrumb */}
                 <div className="flex items-center gap-2">
-                    <SidebarTrigger className="-ml-1 dark:hover:bg-gray-700 bg-gray-50 dark:bg-slate-800 " />
-                    <Separator orientation="vertical" className="mr-2 h-4" />
+                    <SidebarTrigger className="-ml-1 h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150" />
+                    <Separator orientation="vertical" className="mr-2 h-4 bg-border/40" />
                     <BreadcrumbInfo />
                 </div>
-                <div className="flex items-center mx-auto w-1/2">
-                    <SidebarInput placeholder="Type to search in mails ..." />
+
+                {/* Center: search */}
+                <div className="hidden md:flex items-center mx-auto w-full max-w-md">
+                    <SidebarInput
+                        placeholder="Search mail..."
+                        className="h-8 rounded-lg bg-muted/40 border-0 focus-visible:ring-1 focus-visible:ring-ring/30 placeholder:text-muted-foreground/50 text-sm"
+                    />
                 </div>
-                <div className="flex items-center gap-4">
-                    <Link href="/v2/u/settings">
-                        <div className="relative inline-flex justify-center h-8 w-8  items-center rounded-full text-sm font-semibold  border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-800 ">
-                            <Settings className="h-4 w-4 " />
-                        </div>
-                    </Link>
+
+                {/* Right: actions */}
+                <div className="flex items-center gap-1">
+                    <HeaderIconBtn tooltip="Settings" href="/v2/u/settings">
+                        <Settings className="h-4 w-4" />
+                    </HeaderIconBtn>
                     <Notifications />
                 </div>
             </div>
         </header>
     )
-}
-const Notifications = () => {
+})
+HeaderV2.displayName = "HeaderV2"
+
+const Notifications = React.memo(() => {
     return (
-        <Fragment>
-            <DropdownMenu>
-                <TooltipProvider disableHoverableContent>
-                    <Tooltip delayDuration={100}>
-                        <TooltipTrigger asChild>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className="relative inline-flex justify-center items-center h-8 w-8 rounded-full text-sm font-semibold  border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-800"
+        <DropdownMenu>
+            <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="relative h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
+                        >
+                            <Bell className="h-4 w-4" />
+                            <span className="absolute top-1 right-1 flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+                            </span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">Notifications</TooltipContent>
+            </Tooltip>
 
-                                >
-                                    <svg
-                                        className="flex-shrink-0 size-5"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width={24}
-                                        height={24}
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth={2}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                                    </svg>
-                                    <span className="flex absolute top-0 end-0 size-3 -mt-1.5 -me-1.5">
-                                        <span className="animate-ping absolute inline-flex size-full rounded-full bg-red-400 opacity-75 dark:bg-red-600" />
-                                        <span className="relative inline-flex rounded-full size-3 bg-red-500" />
-                                    </span>
-
-                                </Button>
-                            </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">Notifications</TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-
-                <DropdownMenuContent className="w-full rounded-none shadow-lg" align="end" forceMount>
-                    <div className="px-4 py-8  h-[600px]">
-                        <div className="mb-4 flex justify-between border-b pb-3">
-                            <p className="text-xl font-bold text-gray-700 dark:text-slate-200">All Notifications</p>
-                            <Button variant="outline" className="text-sm font-medium text-blue-700 focus:outline-none focus:ring-1">
-                                <Settings className="inline h-4 w-4" />
-                            </Button>
-                        </div>
-                        <ScrollArea className="h-full">
-                            <div className='w-96'>
-                                <div
-                                    className="mb-3 space-y-4 py-2 focus:outline-none focus:ring-1 "
-                                    tabIndex={0}
-                                >
-                                    <h1 className="text-sm text-center text-gray-800 dark:text-slate-200">No Notifications</h1>
-                                    {/* <div className="relative flex items-center">
-                    <div className="ml-4 flex flex-col sm:w-96">
-                      <p className="mb-1 font-medium text-gray-700 dark:text-slate-200">Johanson Levinsiki</p>
-                      <div className="text-sm text-gray-400">
-                        <span className="shrink-0 mr-1 text-rose-500">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            className="inline h-3 w-3"
-                          >
-                            <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
-                          </svg>
-                        </span>
-                        <span className="mr-1 font-medium text-rose-500">
-                          liked your comment:
-                        </span>
-                        <span className="">
-                          Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                        </span>
-                      </div>
+            <DropdownMenuContent className="w-80 rounded-xl p-0 shadow-lg border-border/50" align="end" forceMount>
+                <div className="p-4 border-b border-border/40">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground">
+                            <Settings className="h-3.5 w-3.5" />
+                        </Button>
                     </div>
-                    <span className="absolute top-0 right-2 text-sm text-gray-400">
-                      1min ago
-                    </span>
-                  </div> */}
-                                </div>
-
-
-                            </div>
-                        </ScrollArea>
+                </div>
+                <ScrollArea className="h-64">
+                    <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                        <Bell className="h-8 w-8 text-muted-foreground/30 mb-3" />
+                        <p className="text-sm text-muted-foreground/60">No notifications yet</p>
                     </div>
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </Fragment>
+                </ScrollArea>
+            </DropdownMenuContent>
+        </DropdownMenu>
     )
-} 
+})
+Notifications.displayName = "Notifications"

@@ -2,18 +2,20 @@ import React from 'react'
 
 import { SpotToolbar } from '../../_components/SpotToolbar'
 import { MailList } from '../../_components/mail'
+import { MobileMailHeader } from './_components/MobileMailHeader'
 
 
-const template = async({ children }: { children: React.ReactNode }) => {
+const MailTemplate = ({ children }: { children: React.ReactNode }) => {
 
     return (
-        <div>
+        <div className="flex flex-col flex-1 min-w-0">
+            <MobileMailHeader />
             <SpotToolbar />
-            <MailList >
+            <MailList>
                 {children}
             </MailList>
         </div>
     )
 }
 
-export default template
+export default MailTemplate

@@ -10,7 +10,7 @@ const StorageCard = ({
   total: number;
  
 }) => {
-  const percent = Math.round((used / total) * 100);
+  const percent = total > 0 ? (used / total) * 100 : 0;
 
   return (
     <div className="flex flex-col justify-center items-center">
@@ -60,9 +60,11 @@ const StorageCard = ({
   )
 }
 
-export function LinearProgressBar({ progress ,width=350}: { progress: number, width?: number }) {
+export function LinearProgressBar({ progress, width = 350 }: { progress: number, width?: number }) {
 
   const height = 12;
+  // Ensure a minimum visible width when there's any usage
+  const clampedProgress = progress > 0 ? Math.max(progress, 0.5) : 0;
   let gradientStops = [];
   if (progress <= 25) {
     gradientStops = [
@@ -152,10 +154,11 @@ export function LinearProgressBar({ progress ,width=350}: { progress: number, wi
     // </motion.div>
     <div className="relative w-full h-[4px]  rounded overflow-hidden">
       <svg
-        width={width}
+        width="100%"
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="absolute top-0 left-0"
+        preserveAspectRatio="none"
+        className="absolute top-0 left-0 w-full"
       >
         {/* Background Rectangle */}
         <rect
@@ -170,9 +173,10 @@ export function LinearProgressBar({ progress ,width=350}: { progress: number, wi
         <rect
           x="0"
           y="0"
-          width={(progress / 100) * width}
+          width={(clampedProgress / 100) * width}
           height={height}
           fill="url(#gradient)"
+          rx="6"
         />
         {/* Gradient Definition */}
         <defs>

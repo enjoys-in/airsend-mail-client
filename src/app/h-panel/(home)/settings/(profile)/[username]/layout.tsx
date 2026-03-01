@@ -7,7 +7,7 @@ const SettingsLayout = ({ children }: PropsWithChildren) => {
     const dispatch = useDispatch();
     React.useEffect(() => {
         dispatch(setSidebarTab("Preferences"))
-    },[])
+    },[dispatch])
     return (
         <div className='space-y-6 p-4 md:block'>
             {children}

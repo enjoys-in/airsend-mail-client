@@ -18,6 +18,14 @@ import { FavIcon } from "@/components/logo-image"
 import { __config } from "@/constants/config"
 
 export default function LoginPage() {
+    return (
+        <Suspense fallback={<Spinner />}>
+            <LoginContent />
+        </Suspense>
+    )
+}
+
+function LoginContent() {
     const searchParams = useSearchParams()
     const dispatch = useAppDispatch()
 
@@ -88,7 +96,6 @@ export default function LoginPage() {
         }
     }, [])
     return (
-        <Suspense fallback={<Spinner />}>
             <div className="min-h-screen dark bg-gradient-to-br from-teal-900 via-slate-900 to-orange-900 flex items-center justify-center p-4">
                 {isLoading ? (
                     <Spinner >
@@ -226,7 +233,6 @@ export default function LoginPage() {
                     </motion.div>}
 
             </div>
-        </Suspense>
     )
 }
 

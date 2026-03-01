@@ -1,166 +1,234 @@
-"use client"
+"use client";
 
-import React, { useState, useMemo, useEffect } from "react"
-import { Info } from "lucide-react"
-import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { airsendDB } from "@/db"
-import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { Button } from "@/components/ui/button"
-import { useForm } from "react-hook-form"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { fetchCurrentUser, setAccounts } from "@/store/slices/account"
-import { QuotaResponse } from '@/lib/types/QuotaResponse';
-
-import { formatBytes } from "@/lib/utils"
+import React, { useState, useMemo, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchCurrentUser, setAccounts } from "@/store/slices/account";
+import { useSettingsPersist } from "@/hooks/use-settings-persist";
+import { formatBytes } from "@/lib/utils";
+import {
+  SettingsPageHeader,
+  SettingsSection,
+  SettingToggleRow,
+  SaveSettingsBar,
+} from "./shared";
 
 export default function ProfileSettings({ email }: { email: string }) {
-  const { currAccount, accounts } = useAppSelector(state => state.accounts)
-  const dispatch = useAppDispatch()
+  const { currAccount, accounts } = useAppSelector((state) => state.accounts);
+  const dispatch = useAppDispatch();
 
-  const [selectedEmail, setSelectedEmail] = useState(currAccount?.email || email)
-  const [footerEnabled, setFooterEnabled] = useState(true)
-  const [secureEmailEnabled, setSecureEmailEnabled] = useState(true)
-  const [quota, setQuota] = useState<Omit<QuotaResponse, "quota_in_percent"> | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState(
+    currAccount?.email || email,
+  );
 
-  // Always find selected account from Redux state
   const selectedAccount = useMemo(
-    () => accounts.find(acc => acc.email === selectedEmail) || currAccount,
-    [selectedEmail, accounts, currAccount]
-  )
+    () => accounts.find((acc) => acc.email === selectedEmail) || currAccount,
+    [selectedEmail, accounts, currAccount],
+  );
 
-  // React Hook Form setup
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<{ display_name: string }>({
-    defaultValues: { display_name: selectedAccount?.name || "" }
-  })
+  const { settings, saveMultiple, isSaving } =
+    useSettingsPersist(selectedEmail);
 
-  // Reset form whenever selectedAccount changes
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<{ display_name: string }>({ defaultValues: { display_name: "" } });
+
+  const [footerEnabled, setFooterEnabled] = useState(false);
+  const [secureEmailEnabled, setSecureEmailEnabled] = useState(false);
+
+  /* ---- sync from store on load / account switch ---- */
   useEffect(() => {
-    airsendDB.getMultiNestedItem("settings", selectedAccount?.email as string,
-      ["settings.usage", "settings.mailbox_size", "settings.user.display_name"]).then(res => {
-        if (res.value?.settings) {
-          setQuota({
-            usage: +(res.value?.settings as any)?.usage,
-            limit: +(res.value?.settings as any)?.mailbox_size,
-          })
-          reset({ display_name: (res.value?.settings as any)?.user?.display_name || selectedAccount?.name || "" })
-        }
-
-
+    if (settings) {
+      reset({
+        display_name:
+          settings.user?.display_name || selectedAccount?.name || "",
       });
-  }, [selectedAccount, reset])
-
-  const watchedDisplayName = watch("display_name")
-  const hasUnsavedChanges = watchedDisplayName !== selectedAccount?.name
-
-  const onSubmit = async (data: { display_name: string }) => {
-    if (!selectedAccount) return
-
-    const res = await airsendDB.updateNestedItem(
-      "settings",
-      selectedAccount.email,
-      "settings.user.display_name",
-      data.display_name
-    )
-
-    if (res.success) {
-      reset({ display_name: data.display_name })
-      dispatch(fetchCurrentUser())
-      dispatch(setAccounts(accounts.map(acc => (
-        acc.email === selectedAccount.email ? { ...acc, name: data.display_name } : acc
-      ))))
+      setFooterEnabled(
+        settings.email_settings?.email_footer?.footer_enabled ?? false,
+      );
+      setSecureEmailEnabled(
+        settings.email_settings?.secure_email_enabled ?? false,
+      );
     }
-  }
+  }, [settings, selectedAccount, reset]);
+
+  /* ---- dirty tracking ---- */
+  const watchedName = watch("display_name");
+  const storedName =
+    settings?.user?.display_name || selectedAccount?.name || "";
+  const nameChanged = watchedName !== storedName;
+  const footerChanged =
+    footerEnabled !==
+    (settings?.email_settings?.email_footer?.footer_enabled ?? false);
+  const secureChanged =
+    secureEmailEnabled !==
+    (settings?.email_settings?.secure_email_enabled ?? false);
+  const dirty = nameChanged || footerChanged || secureChanged;
+
+  /* ---- save handler ---- */
+  const onSave = async (data: { display_name: string }) => {
+    if (!selectedAccount) return;
+
+    const updates: Record<string, any> = {};
+    const storeUpdates: Record<string, any> = {};
+
+    if (nameChanged) {
+      const updatedUser = { ...settings?.user, display_name: data.display_name };
+      updates["settings.user"] = updatedUser;
+      storeUpdates.user = updatedUser;
+    }
+
+    if (footerChanged || secureChanged) {
+      const updatedEmail = {
+        ...settings?.email_settings,
+        secure_email_enabled: secureEmailEnabled,
+        email_footer: {
+          ...settings?.email_settings?.email_footer,
+          footer_enabled: footerEnabled,
+        },
+      };
+      updates["settings.email_settings"] = updatedEmail;
+      storeUpdates.email_settings = updatedEmail;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await saveMultiple(updates, storeUpdates);
+    }
+
+    if (nameChanged) {
+      dispatch(fetchCurrentUser());
+      dispatch(
+        setAccounts(
+          accounts.map((acc) =>
+            acc.email === selectedAccount.email
+              ? { ...acc, name: data.display_name }
+              : acc,
+          ),
+        ),
+      );
+    }
+  };
+
+  const usage = settings?.usage ?? 0;
+  const limit = settings?.mailbox_size ?? 0;
 
   return (
-    <div className="text-white p-4 md:p-8 flex justify-center">
+    <div className="p-4 md:p-8 flex justify-center">
       <div className="w-full max-w-3xl space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-200">Display name and signature</h1>
+        <SettingsPageHeader title="Display name and signature" />
 
-        {/* Email Select */}
+        {/* Email address selector */}
         <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <Label className="w-full md:w-40 text-sm font-medium">Email address</Label>
+          <Label className="w-full md:w-40 text-sm font-medium">
+            Email address
+          </Label>
           <div className="flex-1">
-            {accounts.length === 0 ? (<Input
-              value={currAccount?.email || email || ""}
-              readOnly
-              className="w-full bg-black border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-2"
-            />) : <Select value={selectedEmail} onValueChange={setSelectedEmail}>
-              <SelectTrigger className="w-full bg-black border-gray-700 text-white">
-                <SelectValue
-                  placeholder={currAccount?.email || email || "Select email"}
-                  defaultValue={currAccount?.email || email}
-                />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                {accounts.map(acc => (
-                  <SelectItem key={acc.email} value={acc.email}>{acc.email}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>}
-
+            {accounts.length === 0 ? (
+              <Input
+                value={currAccount?.email || email || ""}
+                readOnly
+                className="w-full"
+              />
+            ) : (
+              <Select value={selectedEmail} onValueChange={setSelectedEmail}>
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={
+                      currAccount?.email || email || "Select email"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.email} value={acc.email}>
+                      {acc.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
 
-        {/* Display Name Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Display Name */}
+        <form onSubmit={handleSubmit(onSave)} className="space-y-4">
           <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <Label htmlFor="display-name" className="w-full md:w-40 text-sm font-medium">Display Name</Label>
+            <Label
+              htmlFor="display-name"
+              className="w-full md:w-40 text-sm font-medium"
+            >
+              Display Name
+            </Label>
             <div className="flex-1">
               <Input
                 id="display-name"
                 {...register("display_name", { required: true })}
-                className="w-full bg-black border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-2"
+                className="w-full"
               />
-              {errors.display_name && <p className="text-red-500 text-sm">Display name is required.</p>}
+              {errors.display_name && (
+                <p className="text-red-500 text-sm mt-1">
+                  Display name is required.
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Usage & Limit */}
+          {/* Usage & Limit (read-only) */}
           <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <Label className="w-full md:w-40 text-sm font-medium">Current Usage</Label>
-            <Input className="flex-1 bg-black border border-gray-700 rounded-md px-3 py-2" value={formatBytes(quota?.usage || 0)} readOnly />
+            <Label className="w-full md:w-40 text-sm font-medium">
+              Current Usage
+            </Label>
+            <Input
+              className="flex-1"
+              value={formatBytes(+usage || 0)}
+              readOnly
+            />
           </div>
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             <Label className="w-full md:w-40 text-sm font-medium">Limit</Label>
-            <Input className="flex-1 bg-black border border-gray-700 rounded-md px-3 py-2" value={formatBytes(quota?.limit || 0)} readOnly />
+            <Input
+              className="flex-1"
+              value={formatBytes(+limit || 0)}
+              readOnly
+            />
           </div>
         </form>
-        {/* Footer Toggle */}
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="w-full md:w-40 flex items-center gap-2">
-            <label className="text-sm font-medium">Airsend Mail footer</label>
-            <Info className="h-4 w-4 text-blue-500" />
-          </div>
-          <div className="flex-1 flex items-center gap-2">
-            <Switch checked={footerEnabled} onCheckedChange={setFooterEnabled} className="data-[state=checked]:bg-blue-600" />
-            <span className="text-blue-500 font-medium">Airsend Mail</span>
-          </div>
-        </div>
 
-        {/* Secure Email Toggle */}
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="w-full md:w-40" />
-          <div className="flex-1 flex items-center gap-2">
-            <span className="text-sm text-gray-400">Sent with</span>
-            <span className="text-blue-500 font-medium">Airsend Mail</span>
-            <span className="text-sm text-gray-400">secure email.</span>
-            <Switch checked={secureEmailEnabled} onCheckedChange={setSecureEmailEnabled} className="data-[state=checked]:bg-blue-600 ml-auto" />
-          </div>
-        </div>
+        {/* Branding toggles */}
+        <SettingsSection title="Email Branding">
+          <SettingToggleRow
+            label="Airsend Mail footer"
+            tooltip="Adds 'Sent with Airsend Mail' to outgoing messages"
+            checked={footerEnabled}
+            onCheckedChange={setFooterEnabled}
+          />
+          <SettingToggleRow
+            label="Secure email badge"
+            tooltip="Shows 'Sent with Airsend Mail secure email' in the footer"
+            checked={secureEmailEnabled}
+            onCheckedChange={setSecureEmailEnabled}
+          />
+        </SettingsSection>
 
-
+        <SaveSettingsBar
+          onSave={handleSubmit(onSave)}
+          show={dirty}
+          isSaving={isSaving}
+        />
       </div>
-
-      {/* Save Changes Button */}
-      {hasUnsavedChanges && (
-        <div className="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-50">
-          <Button onClick={handleSubmit(onSubmit)} type="button" className="bg-blue-600 text-white px-6 py-2 rounded shadow-lg hover:bg-blue-700">
-            Save Changes
-          </Button>
-        </div>
-      )}
     </div>
-  )
+  );
 }

@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { IndexDbProvider } from "@/context/IndexDbContext";
 
 import StoreProvider from "@/components/layout/StoreProvider";
+import { RuntimeConfigProvider } from "@/components/RuntimeConfigProvider";
 import { SiteConfig } from "@/constants/site";
 import { Plus_Jakarta_Sans } from "next/font/google";
 
@@ -89,19 +90,24 @@ export default async function RootLayout({
       <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
       <link rel="manifest" href="/site.webmanifest"></link>
 
-      <body className={cn(jakarta.className,)} >
+      <body className={cn(jakarta.className,)} suppressHydrationWarning>
         <NextTopLoader color="#5a61ff" />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           disableTransitionOnChange
         >
-          <PingletWidget />
-          <StoreProvider>
-            <IndexDbProvider>
-              <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
-            </IndexDbProvider>
-          </StoreProvider>
+          {/* <PingletWidget /> */}
+          <RuntimeConfigProvider
+            encryptionKey={process.env.ENCRYPTION_KEY!}
+            appSecret={process.env.APP_SECRET!}
+          >
+            <StoreProvider>
+              <IndexDbProvider>
+                <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
+              </IndexDbProvider>
+            </StoreProvider>
+          </RuntimeConfigProvider>
           <ServiceWorker />
         </ThemeProvider>
       </body>

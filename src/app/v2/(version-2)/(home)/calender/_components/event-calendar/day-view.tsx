@@ -191,14 +191,14 @@ export function DayView({
   return (
     <div data-slot="day-view" className="contents">
       {showAllDaySection && (
-        <div className="border-border/70 bg-muted/50 border-t">
+        <div className="border-border/40 bg-muted/50 border-t">
           <div className="grid grid-cols-[3rem_1fr] sm:grid-cols-[4rem_1fr]">
             <div className="relative">
               <span className="text-muted-foreground/70 absolute bottom-0 left-0 h-6 w-16 max-w-full pe-2 text-right text-[10px] sm:pe-4 sm:text-xs">
                 All day
               </span>
             </div>
-            <div className="border-border/70 relative border-r p-1 last:border-r-0">
+            <div className="border-border/40 relative border-r p-1 last:border-r-0">
               {allDayEvents.map((event) => {
                 const eventStart = new Date(event.start);
                 const eventEnd = new Date(event.end);
@@ -224,18 +224,16 @@ export function DayView({
         </div>
       )}
 
-      <div className="border-border/70 grid flex-1 grid-cols-[3rem_1fr] border-t sm:grid-cols-[4rem_1fr] overflow-hidden">
+      <div className="border-border/40 grid flex-1 grid-cols-[3rem_1fr] border-t sm:grid-cols-[4rem_1fr]">
         <div>
-          {hours.map((hour, index) => (
+          {hours.map((hour) => (
             <div
               key={hour.toString()}
-              className="border-border/70 relative h-[var(--week-cells-height)] border-b last:border-b-0"
+              className="border-border/40 relative h-[var(--week-cells-height)] border-b last:border-b-0"
             >
-              {index > 0 && (
-                <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-16 max-w-full items-center justify-end pe-2 text-[10px] sm:pe-4 sm:text-xs">
-                  {format(hour, "h a")}
-                </span>
-              )}
+              <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-16 max-w-full items-center justify-end pe-2 text-[10px] sm:pe-4 sm:text-xs">
+                {format(hour, "h a")}
+              </span>
             </div>
           ))}
         </div>
@@ -285,7 +283,7 @@ export function DayView({
             return (
               <div
                 key={hour.toString()}
-                className="border-border/70 relative h-[var(--week-cells-height)] border-b last:border-b-0"
+                className="border-border/40 relative h-[var(--week-cells-height)] border-b last:border-b-0"
               >
                 {/* Quarter-hour intervals */}
                 {[0, 1, 2, 3].map((quarter) => {

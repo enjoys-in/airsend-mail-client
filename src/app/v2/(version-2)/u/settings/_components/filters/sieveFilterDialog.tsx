@@ -1,53 +1,82 @@
 "use client"
 
-import { useState } from "react"
-import { X } from "lucide-react"
+import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 
-
-
-export function SieveFilterDialog() {
-  const [filterName, setFilterName] = useState("")
-
-  // Default Sieve script template
-  const defaultScript = `require ["include", "environment", "variables", "relational", "comparator-i;ascii-numeric", "spamtest"];
+const DEFAULT_SIEVE_SCRIPT = `require ["include", "environment", "variables", "relational", "comparator-i;ascii-numeric", "spamtest"];
 
 # Generated: Do not run this script on spam messages
 if allof (environment :matches "vnd.proton.spam-threshold" "*",
-spamtest :value "ge" :comparator "i;ascii-numeric" "${1}") 
+spamtest :value "ge" :comparator "i;ascii-numeric" "\${1}")
 {
   return;
 }
-
 `
 
+export function SieveFilterDialog({ onClose }: { onClose?: () => void }) {
+  const [filterName, setFilterName] = useState("")
+  const [script, setScript] = useState(DEFAULT_SIEVE_SCRIPT)
+  const [nameError, setNameError] = useState<string | null>(null)
+
+  const handleNameChange = useCallback((value: string) => {
+    setFilterName(value)
+    if (!value.trim()) {
+      setNameError("Filter name is required")
+    } else if (value.trim().length < 2) {
+      setNameError("Name must be at least 2 characters")
+    } else {
+      setNameError(null)
+    }
+  }, [])
+
+  const handleSave = useCallback(() => {
+    if (!filterName.trim()) {
+      setNameError("Filter name is required")
+      return
+    }
+    if (filterName.trim().length < 2) {
+      setNameError("Name must be at least 2 characters")
+      return
+    }
+    // TODO: Wire to a real persistence layer once filters endpoint is implemented
+    toast.info("Sieve filter saved locally (backend integration pending)")
+    console.log("[SieveFilterDialog] payload:", { filterName, script })
+    onClose?.()
+  }, [filterName, script, onClose])
+
   return (
-    <div className="p-6">
-
-
-      <div className="mb-4">
-        <label htmlFor="filter-name" className="block text-gray-300 mb-2">
-          Filter Name
-        </label>
+    <div className="p-6 space-y-6">
+      <div className="space-y-1.5">
+        <Label htmlFor="sieve-filter-name">Filter Name</Label>
         <Input
-          id="filter-name"
+          id="sieve-filter-name"
           value={filterName}
-          onChange={(e) => setFilterName(e.target.value)}
-          placeholder="Name"
-          className="bg-transparent border-blue-600 text-white focus:border-blue-500 focus:ring-0"
+          onChange={(e) => handleNameChange(e.target.value)}
+          placeholder="e.g. Block Spam"
+          className={nameError ? "border-destructive focus-visible:ring-destructive" : ""}
         />
+        {nameError && (
+          <p className="text-destructive text-xs">{nameError}</p>
+        )}
       </div>
 
-      <div className="bg-[#121214] rounded border border-gray-800 mb-6 overflow-hidden">
-        <pre className="p-4 text-sm font-mono overflow-auto max-h-[400px]">
-
-        </pre>
+      <div className="space-y-1.5">
+        <Label>Sieve Script</Label>
+        <div className="rounded-md border bg-muted/30 overflow-hidden">
+          <textarea
+            value={script}
+            onChange={(e) => setScript(e.target.value)}
+            className="w-full p-4 text-sm font-mono bg-transparent resize-y min-h-[200px] max-h-[400px] outline-none"
+            spellCheck={false}
+          />
+        </div>
       </div>
 
-      <div className="flex justify-between">
-        <Button className="bg-gray-700 hover:bg-gray-600 text-white">Save</Button>
+      <div className="flex justify-end">
+        <Button onClick={handleSave}>Save</Button>
       </div>
     </div>
   )

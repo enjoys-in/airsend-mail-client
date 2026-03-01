@@ -1,219 +1,215 @@
 "use client"
 
 import * as React from "react"
-
+import { useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, X } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { Plus, Edit, Trash2, ArrowLeft, Shield, Users } from "lucide-react"
+import Link from "next/link"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import type { IRole } from "../../_lib/types"
+import { ALL_PERMISSIONS } from "../../_lib/types"
+import { MOCK_ROLES } from "../../_lib/mock-data"
 
-const roles = [
-  {
-    id: "1",
-    name: "SUPER Admin",
-    description: "Full system access - can only be assigned to owner",
-    permissions: ["all"],
-    isDefault: true,
-    userCount: 1,
-  },
-  {
-    id: "2",
-    name: "Administrator",
-    description: "Full organization management access",
-    permissions: ["read", "write", "admin", "manage_users", "manage_settings"],
-    isDefault: false,
-    userCount: 3,
-  },
-  {
-    id: "3",
-    name: "Member",
-    description: "Standard user access",
-    permissions: ["read", "write"],
-    isDefault: false,
-    userCount: 15,
-  },
-]
+export default function OrgRolesPage() {
+    const params = useParams()
+    const orgId = params.id as string
 
-const availablePermissions = [
-  "read",
-  "write",
-  "admin",
-  "delete",
-  "manage_users",
-  "manage_settings",
-  "manage_billing",
-  "view_logs",
-]
+    const [roles, setRoles] = React.useState<IRole[]>(MOCK_ROLES)
+    const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+    const [editingRole, setEditingRole] = React.useState<IRole | null>(null)
+    const [deleteTarget, setDeleteTarget] = React.useState<IRole | null>(null)
 
-export default function RolesPage() {
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const [editingRole, setEditingRole] = React.useState<any>(null)
-  const [roleName, setRoleName] = React.useState("")
-  const [roleDescription, setRoleDescription] = React.useState("")
-  const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>([])
+    const [roleName, setRoleName] = React.useState("")
+    const [roleDescription, setRoleDescription] = React.useState("")
+    const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>([])
 
-  const openCreateDialog = () => {
-    setEditingRole(null)
-    setRoleName("")
-    setRoleDescription("")
-    setSelectedPermissions([])
-    setIsDialogOpen(true)
-  }
+    const openCreateDialog = () => {
+        setEditingRole(null)
+        setRoleName("")
+        setRoleDescription("")
+        setSelectedPermissions([])
+        setIsDialogOpen(true)
+    }
 
-  const openEditDialog = (role: any) => {
-    setEditingRole(role)
-    setRoleName(role.name)
-    setRoleDescription(role.description)
-    setSelectedPermissions(role.permissions)
-    setIsDialogOpen(true)
-  }
+    const openEditDialog = (role: IRole) => {
+        setEditingRole(role)
+        setRoleName(role.name)
+        setRoleDescription(role.description)
+        setSelectedPermissions([...role.permissions])
+        setIsDialogOpen(true)
+    }
 
-  const togglePermission = (permission: string) => {
-    setSelectedPermissions((prev) =>
-      prev.includes(permission) ? prev.filter((p) => p !== permission) : [...prev, permission],
-    )
-  }
+    const togglePermission = (perm: string) => {
+        setSelectedPermissions((prev) =>
+            prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm]
+        )
+    }
 
-  const handleSave = () => {
-    console.log({
-      name: roleName,
-      description: roleDescription,
-      permissions: selectedPermissions,
-    })
-    setIsDialogOpen(false)
-  }
+    const handleSave = () => {
+        if (!roleName.trim()) return
+        if (editingRole) {
+            setRoles((prev) =>
+                prev.map((r) =>
+                    r.id === editingRole.id
+                        ? { ...r, name: roleName, description: roleDescription, permissions: selectedPermissions }
+                        : r
+                )
+            )
+        } else {
+            const newRole: IRole = {
+                id: `role_${Date.now()}`,
+                name: roleName.trim(),
+                description: roleDescription.trim(),
+                permissions: selectedPermissions,
+                is_default: false,
+                is_system: false,
+                user_count: 0,
+                created_at: new Date().toISOString(),
+            }
+            setRoles((prev) => [...prev, newRole])
+        }
+        setIsDialogOpen(false)
+    }
 
-  return (
-    <div>
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-      
-        <h1 className="text-lg font-semibold">Roles & Permissions</h1>
-        <div className="ml-auto">
-          <Button onClick={openCreateDialog}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Role
-          </Button>
-        </div>
-      </header>
-      <div className="flex flex-1 flex-col gap-4 p-4">
-        <div className="grid gap-4">
-          {roles.map((role) => (
-            <Card key={role.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {role.name}
-                      {role.isDefault && <Badge variant="secondary">Default</Badge>}
-                      {role.name === "SUPER Admin" && <Badge variant="destructive">Owner Only</Badge>}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{role.description}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditDialog(role)}
-                      disabled={role.name === "SUPER Admin"}
-                    >
-                      <Edit className="h-4 w-4" />
+    const handleDelete = () => {
+        if (!deleteTarget) return
+        setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id))
+        setDeleteTarget(null)
+    }
+
+    const permLabel = (p: string) => p.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+
+    return (
+        <div className="flex flex-col h-full">
+            <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+                <Button variant="ghost" size="sm" asChild>
+                    <Link href="/h-panel/org">
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back
+                    </Link>
+                </Button>
+                <h1 className="text-lg font-semibold">Roles & Permissions — Org {orgId}</h1>
+                <div className="ml-auto">
+                    <Button size="sm" onClick={openCreateDialog}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Role
                     </Button>
-                    <Button variant="outline" size="sm" disabled={role.isDefault || role.name === "SUPER Admin"}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium">Permissions</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {role.permissions.includes("all") ? (
-                        <Badge>All Permissions</Badge>
-                      ) : (
-                        role.permissions.map((permission) => (
-                          <Badge key={permission} variant="outline">
-                            {permission}
-                          </Badge>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {role.userCount} user{role.userCount !== 1 ? "s" : ""} assigned
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{editingRole ? "Edit Role" : "Create New Role"}</DialogTitle>
-              <DialogDescription>
-                {editingRole
-                  ? "Modify the role details and permissions."
-                  : "Create a new role with specific permissions."}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="role-name">Role Name</Label>
-                <Input
-                  id="role-name"
-                  value={roleName}
-                  onChange={(e) => setRoleName(e.target.value)}
-                  placeholder="Enter role name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role-description">Description</Label>
-                <Input
-                  id="role-description"
-                  value={roleDescription}
-                  onChange={(e) => setRoleDescription(e.target.value)}
-                  placeholder="Enter role description"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Permissions</Label>
-                <div className="flex flex-wrap gap-2">
-                  {availablePermissions.map((permission) => (
-                    <Badge
-                      key={permission}
-                      variant={selectedPermissions.includes(permission) ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => togglePermission(permission)}
-                    >
-                      {permission}
-                      {selectedPermissions.includes(permission) && <X className="ml-1 h-3 w-3" />}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+            </header>
+            <div className="flex-1 p-4 space-y-4 min-w-0 overflow-auto">
+                {roles.map((role) => (
+                    <Card key={role.id}>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        {role.name}
+                                        {role.is_default && <Badge variant="secondary">Default</Badge>}
+                                        {role.is_system && <Badge variant="outline" className="text-[10px]">System</Badge>}
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground mt-1">{role.description}</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Users className="h-3.5 w-3.5" />{role.user_count}
+                                    </span>
+                                    <div className="flex gap-1">
+                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEditDialog(role)} disabled={role.name === "Super Admin"}>
+                                            <Edit className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(role)} disabled={role.is_system}>
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                            <div className="flex flex-wrap gap-1.5">
+                                {role.permissions.map((p) => (
+                                    <Badge key={p} variant="secondary" className="text-[11px]">{permLabel(p)}</Badge>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>{editingRole ? "Update Role" : "Create Role"}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </div>
-  )
+
+            {/* Create / Edit Dialog */}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>{editingRole ? "Edit Role" : "Create Role"}</DialogTitle>
+                        <DialogDescription>{editingRole ? "Update this role." : "Define a new role with permissions."}</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label>Role Name</Label>
+                            <Input placeholder="e.g. Moderator" value={roleName} onChange={(e) => setRoleName(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Description</Label>
+                            <Input placeholder="What this role can do..." value={roleDescription} onChange={(e) => setRoleDescription(e.target.value)} />
+                        </div>
+                        <Separator />
+                        <div className="space-y-2">
+                            <Label>Permissions</Label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {ALL_PERMISSIONS.map((perm) => {
+                                    const active = selectedPermissions.includes(perm)
+                                    return (
+                                        <Button key={perm} type="button" variant={active ? "default" : "outline"} size="sm" className="justify-start text-xs" onClick={() => togglePermission(perm)}>
+                                            {permLabel(perm)}
+                                        </Button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSave} disabled={!roleName.trim()}>{editingRole ? "Update Role" : "Create Role"}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation */}
+            <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Role</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the role <strong>{deleteTarget?.name}</strong>. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleDelete}>Delete Role</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
+    )
 }

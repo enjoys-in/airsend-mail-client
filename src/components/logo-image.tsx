@@ -4,8 +4,8 @@ import React from 'react'
 export const LogoImage = ({ w = 256 }: { w?: number }) => {
   return (
     <div>
-      <Image priority className="logo hidden dark:block" src="/navbar-logo.png" alt="logo" width={w} height={w} />
-      <Image priority className="logo dark:hidden" src="/navbar-logo-light.png" alt="logo" width={w} height={w} />
+      <Image className="logo hidden dark:block" src="/navbar-logo.png" alt="logo" width={w} height={w} style={{ width: "auto", height: "auto" }} />
+      <Image className="logo dark:hidden" src="/navbar-logo-light.png" alt="logo" width={w} height={w} style={{ width: "auto", height: "auto" }} />
     </div>
   )
 }

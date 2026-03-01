@@ -1,7 +1,18 @@
 "use client"
 
-
 import { useEffect, useState } from 'react'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Construction } from 'lucide-react'
+
 interface ConfirmationModalProps {
     title: string
     message: string
@@ -23,33 +34,29 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, mes
         onConfirm()
     }
 
-    if (!isOpen) return null
-
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900  rounded-lg p-8 max-w-lg w-full">
-                <div className="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-bold mb-4">Airsend Mail is Under Development 🚧</h2>
-                    <p className="mb-6">
-                        Airsend Mail is currently in active development. While you can continue to send emails without interruption, some features may not work as expected. If you encounter any issues, feel free to click on the <strong>Help</strong> button to raise a request — we’ll aim to fix it promptly!
-                    </p>
-                </div>
-
-                <div className="flex justify-end space-x-4">
-                    <button
-                        onClick={() => setIsOpen(false)}
-                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleConfirm}
-                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                    >
+        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+            <AlertDialogContent className="max-w-lg">
+                <AlertDialogHeader>
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
+                            <Construction className="h-5 w-5 text-amber-500" />
+                        </div>
+                        <AlertDialogTitle className="text-xl">
+                            Airsend Mail is Under Development
+                        </AlertDialogTitle>
+                    </div>
+                    <AlertDialogDescription className="pt-3 text-sm leading-relaxed">
+                        Airsend Mail is currently in active development. While you can continue to send emails without interruption, some features may not work as expected. If you encounter any issues, feel free to click on the <strong className="text-foreground">Help</strong> button to raise a request &mdash; we&apos;ll aim to fix it promptly!
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirm}>
                         OK
-                    </button>
-                </div>
-            </div>
-        </div>
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     )
 }

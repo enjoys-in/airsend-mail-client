@@ -1,12 +1,17 @@
 "use client"
 import { useMailStore } from '@/store/mails'
-import {  useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
-
-const page = () => {
+const MailRedirectPage = () => {
   const router = useRouter()
-  const { selected_mailbox } = useMailStore()
-  return router.push(selected_mailbox ? `/v2/u/mail/${selected_mailbox}` : "/v2/u/mail/inbox")
+  const selected_mailbox = useMailStore((state) => state.selected_mailbox)
+
+  useEffect(() => {
+    router.replace(selected_mailbox ? `/v2/u/mail/${selected_mailbox}` : "/v2/u/mail/inbox")
+  }, [router, selected_mailbox])
+
+  return null
 }
 
-export default page
+export default MailRedirectPage
