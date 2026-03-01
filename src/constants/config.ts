@@ -8,12 +8,10 @@ const envSchema = z.object({
 })
 const config = {
     MODE: process.env.NEXT_PUBLIC_APP_ENV,
-    ENCRYPTION_KEY: process.env.NEXT_PUBLIC_ENCRYPTION_KEY,
     APP: {
         APP_URL: "https://airsend.in",
         BASE_URL: process.env.NEXT_PUBLIC_APP_URL,
         API_URL: process.env.NEXT_PUBLIC_APP_URL + "/api/v1",
-        APP_SECRET: process.env.NEXT_PUBLIC_APP_SECRET,
         APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
         API_KEY: process.env.NEXT_PUBLIC_API_KEY,
     }

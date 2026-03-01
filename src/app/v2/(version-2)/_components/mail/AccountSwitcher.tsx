@@ -33,10 +33,17 @@ export function AccountSwitcherV2() {
   const { isMobile } = useSidebar()
   const currAccount = useAppSelector(state => state.accounts.currAccount)
   const [activeTeam, setActiveTeam] = React.useState(domains[0])
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => { setMounted(true) }, [])
 
   if (!activeTeam) {
     return null
   }
+
+  // Use empty strings on server / before mount to avoid hydration mismatch
+  const accountName = mounted ? (currAccount?.name ?? "") : ""
+  const accountEmail = mounted ? (currAccount?.email ?? "") : ""
 
   return (
     <SidebarMenu>
@@ -54,10 +61,10 @@ export function AccountSwitcherV2() {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-base font-medium text-foreground">
-                      {currAccount?.name}
+                      {accountName}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {currAccount?.email}
+                      {accountEmail}
                     </span>
                   </div>
                 </div>

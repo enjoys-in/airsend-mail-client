@@ -25,10 +25,10 @@ function MainLayout({ children }: { children: ReactNode }) {
       <CustomWidget />
       <CalendarProvider>
         <Suspense fallback={<Spinner />}>
-          <div className="flex md:hidden flex-1 bg-[#111315]">
+          <div className="flex md:hidden flex-1 min-w-0 bg-[#111315]">
             <MobileLayoutV2>{children}</MobileLayoutV2>
           </div>
-          <div className="hidden md:flex flex-1  bg-[#111315]">
+          <div className="hidden md:flex flex-1 min-w-0 bg-[#111315]">
             <DesktopLayoutV2>{children}</DesktopLayoutV2>
           </div>
           <NewMailRecived />

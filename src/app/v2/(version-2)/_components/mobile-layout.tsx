@@ -16,7 +16,7 @@ export const MobileLayoutV2 = ({ children }: { children: ReactNode }) => {
         /\/workspace\/(c|dm)\//.test(pathname);
 
     return (
-        <div className="flex flex-col w-screen h-svh">
+        <div className="flex flex-col w-full h-svh">
             <main className="flex flex-1 flex-col overflow-hidden">
                 <ScrollArea className={cn(
                     "h-[calc(100svh-3.5rem)]"

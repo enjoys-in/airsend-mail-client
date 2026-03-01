@@ -8,10 +8,10 @@ import { MobileMailHeader } from './_components/MobileMailHeader'
 const MailTemplate = ({ children }: { children: React.ReactNode }) => {
 
     return (
-        <div>
+        <div className="flex flex-col flex-1 min-w-0">
             <MobileMailHeader />
             <SpotToolbar />
-            <MailList >
+            <MailList>
                 {children}
             </MailList>
         </div>

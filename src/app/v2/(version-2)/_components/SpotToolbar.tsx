@@ -69,17 +69,21 @@ export function SpotToolbar() {
     const unsubscribe = listen(handleImapEvents)
     return () => { unsubscribe() }
   }, [listen, handleImapEvents])
+
+  // Hide on message detail page (preview) — only show on mail list
+  if (params.message_id) return null
+
   return checkedItems.length > 0 ? (
-    <div className="flex z-10 fixed items-center justify-between w-full bg-foreground/95 backdrop-blur-sm border-b border-border/20 text-background px-3 h-10 animate-in slide-in-from-top-2 duration-200">
+    <div className="flex z-40 sticky top-12 items-center justify-between w-full bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 border-b border-border/40 text-foreground px-3 h-10 animate-in slide-in-from-top-1 duration-300 ease-out shadow-sm">
       <div className="flex items-center gap-0.5">
-        <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5" onClick={checkedItems.length === all_emails?.length ? handleUnselecteAll : handleSelectAll}>
+        <Button variant="ghost" size="sm" className="h-7 text-xs rounded-lg gap-1.5" onClick={checkedItems.length === all_emails?.length ? handleUnselecteAll : handleSelectAll}>
           <Check className="w-3.5 h-3.5" />
           {checkedItems.length === all_emails?.length ? "Unselect" : "Select All"}
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5">
+            <Button variant="ghost" size="sm" className="h-7 text-xs rounded-lg gap-1.5">
               <Shield className="w-3.5 h-3.5" />
               Report
               <ChevronDown className="w-3 h-3" />
@@ -93,7 +97,7 @@ export function SpotToolbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5">
+            <Button variant="ghost" size="sm" className="h-7 text-xs rounded-lg gap-1.5">
               <Flag className="w-3.5 h-3.5" />
               Flag
               <ChevronDown className="w-3 h-3" />
@@ -105,19 +109,19 @@ export function SpotToolbar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5" onClick={() => handleImapEvents({ action: "delete", message_id: checkedItems })}>
+        <Button variant="ghost" size="sm" className="h-7 text-xs rounded-lg gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleImapEvents({ action: "delete", message_id: checkedItems })}>
           <Trash2 className="w-3.5 h-3.5" />
           Delete
         </Button>
 
-        <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5">
+        <Button variant="ghost" size="sm" className="h-7 text-xs rounded-lg gap-1.5">
           <Archive className="w-3.5 h-3.5" />
           Archive
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-background hover:bg-white/10 rounded-lg gap-1.5">
+            <Button variant="ghost" size="sm" className="h-7 text-xs rounded-lg gap-1.5">
               <MoreHorizontal className="w-3.5 h-3.5" />
               More
               <ChevronDown className="w-3 h-3" />
@@ -143,7 +147,7 @@ export function SpotToolbar() {
         </DropdownMenu>
       </div>
 
-      <span className="text-[11px] text-background/60 tabular-nums">
+      <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
         {checkedItems.length} selected
       </span>
     </div>

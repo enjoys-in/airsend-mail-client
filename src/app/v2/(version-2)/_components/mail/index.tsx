@@ -8,7 +8,6 @@ export const MailList = React.memo(({ children, className }: { children: React.R
   return (
     <div className={cn(
       "bg-background transition-all duration-200 ease-out",
-      hasCheckedItems && "mt-10",
       className
     )}>
       {children}

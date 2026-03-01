@@ -21,7 +21,7 @@ export default function DesktopLayoutV2({ children }: { children: React.ReactNod
             }
         >
             <AppSidebarV2 />
-            <SidebarInset>
+            <SidebarInset className="!min-h-0 h-svh overflow-y-auto overflow-x-hidden">
                 <HeaderV2 />
                 {children}
             </SidebarInset>

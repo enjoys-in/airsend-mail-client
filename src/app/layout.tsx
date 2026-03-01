@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { IndexDbProvider } from "@/context/IndexDbContext";
 
 import StoreProvider from "@/components/layout/StoreProvider";
+import { RuntimeConfigProvider } from "@/components/RuntimeConfigProvider";
 import { SiteConfig } from "@/constants/site";
 import { Plus_Jakarta_Sans } from "next/font/google";
 
@@ -97,11 +98,16 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           {/* <PingletWidget /> */}
-          <StoreProvider>
-            <IndexDbProvider>
-              <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
-            </IndexDbProvider>
-          </StoreProvider>
+          <RuntimeConfigProvider
+            encryptionKey={process.env.ENCRYPTION_KEY!}
+            appSecret={process.env.APP_SECRET!}
+          >
+            <StoreProvider>
+              <IndexDbProvider>
+                <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
+              </IndexDbProvider>
+            </StoreProvider>
+          </RuntimeConfigProvider>
           <ServiceWorker />
         </ThemeProvider>
       </body>
