@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import EmailComposer from '../../app/v2/(version-2)/u/compose/_components/emailComposer';
+import EmailComposer, { type ComposeInitialData } from '../../app/v2/(version-2)/u/compose/_components/emailComposer';
 
 interface Tab {
     id: number;
@@ -19,6 +19,7 @@ interface TabStore {
     focusedTab: number;
 
     createTab: () => void;
+    createTabWithData: (title: string, initialData: ComposeInitialData) => void;
     closeTab: (tabId: number) => void;
     minimizeTab: (tabId: number) => void;
     restoreTab: (tabId: number) => void;
@@ -41,6 +42,32 @@ export const useMultiTabStore = create<TabStore>((set, get) => ({
             id,
             title: "New message",
             content: <EmailComposer showHeader={false} tabId={id} />,
+        };
+
+        const visible = [...get().visibleTabs];
+        const queued = [...get().queuedTabs];
+
+        if (visible.length < get().MAX_VISIBLE_TABS) {
+            visible.push(newTab);
+        } else {
+            queued.push(visible[0]);
+            visible.splice(0, 1, newTab);
+        }
+
+        set({
+            tabs: [...get().tabs, newTab],
+            visibleTabs: visible,
+            queuedTabs: queued,
+            nextTabId: id + 1,
+        });
+    },
+
+    createTabWithData: (title: string, initialData: ComposeInitialData) => {
+        const id = get().nextTabId;
+        const newTab: Tab = {
+            id,
+            title,
+            content: <EmailComposer showHeader={false} tabId={id} initialData={initialData} />,
         };
 
         const visible = [...get().visibleTabs];

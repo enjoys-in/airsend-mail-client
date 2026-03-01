@@ -3,12 +3,10 @@ import {
     ChevronDown,
     ChevronLeft,
     Forward,
-    Layout,
     Lock,
-    Moon,
     MoreVertical,
+    Paperclip,
     Reply,
-    Sun,
     Trash2,
 } from "lucide-react";
 
@@ -31,7 +29,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import React, { Fragment, useEffect } from "react";
+import React, { Fragment, useEffect, useMemo } from "react";
 
 import { useRouter } from "next/navigation";
 import moment from "moment";
@@ -47,11 +45,14 @@ import {
 import { MailDisplaySkeleton, MailHeaderSkeleton } from "./mail-skeleton";
 import { useMailStore } from "@/store/mails";
 import { db } from "@/db";
- 
-import { MailDropdown } from "./menu-dropdown";
+
+import { MailDropdown, type MailDropdownActions } from "./menu-dropdown";
 import { Security } from "@/lib/security";
 import { useMailRenderSettings } from "@/store/mails/mail-render-settings";
-const s = new Security()
+import { MailStatusIndicators } from "../../_components/MailStatusIndicators";
+import { useMailActions, safeDecrypt } from "./use-mail-actions";
+
+const s = new Security();
 
 const ClientDisplay = ({
     folder,
@@ -60,11 +61,36 @@ const ClientDisplay = ({
     folder: string;
     message_id: string;
 }) => {
-    const router = useRouter();   
+    const router = useRouter();
     const { setRenderStyle, renderStyle, setRenderMode, renderMode } =
         useMailRenderSettings();
 
     const { selectedMail, setSelectedMail, setLoading } = useMailStore();
+
+    const {
+        handleReply,
+        handleReplyAll,
+        handleForward,
+        handleDelete,
+        handleArchive,
+        handleMarkRead,
+        handleMarkUnread,
+        handleSpam,
+        handleMoveTo,
+        handleToggleStar,
+        handleBlockSender,
+        handleBlockDomain,
+    } = useMailActions();
+
+    const senderEmail = useMemo(
+        () => (selectedMail ? safeDecrypt(selectedMail.from_email) : ""),
+        [selectedMail?.from_email]
+    );
+    const senderDomain = useMemo(
+        () => senderEmail?.split("@")[1] || "",
+        [senderEmail]
+    );
+
     useEffect(() => {
         if (!selectedMail) {
             db.mails
@@ -74,6 +100,27 @@ const ClientDisplay = ({
                 .then((item) => setSelectedMail(item as any));
         }
     }, [selectedMail]);
+
+    // Mark as read when user views the mail
+    useEffect(() => {
+        if (selectedMail && !selectedMail.is_read) {
+            handleMarkRead();
+        }
+    }, [selectedMail?.message_id]);
+
+    const dropdownActions: MailDropdownActions = {
+        onReply: handleReply,
+        onReplyAll: handleReplyAll,
+        onForward: handleForward,
+        onDelete: handleDelete,
+        onArchive: handleArchive,
+        onMarkUnread: handleMarkUnread,
+        onSpam: handleSpam,
+        onMoveTo: handleMoveTo,
+        onToggleStar: handleToggleStar,
+        onBlockSender: handleBlockSender,
+        onBlockDomain: handleBlockDomain,
+    };
     if (!selectedMail)
         return (
             <Fragment>
@@ -94,11 +141,23 @@ const ClientDisplay = ({
                     <ChevronLeft />
                 </Button>
 
-                <div className="flex items-baseline gap-3">
-                    <h2 className="text-2xl font-bold">{selectedMail?.subject}</h2>
-                    <span className="text-sm text-muted-foreground">
-                        {moment(selectedMail?.timestamp).format("MMM DD, YYYY hh:mm A")}
-                    </span>
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <div className="flex items-baseline gap-3">
+                        <h2 className="text-2xl font-bold truncate">{selectedMail?.subject}</h2>
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                            {moment(selectedMail?.timestamp).format("MMM DD, YYYY hh:mm A")}
+                        </span>
+                    </div>
+                    {/* Mail status indicators */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <MailStatusIndicators item={selectedMail as any} />
+                        {(selectedMail?.has_attachments || (Array.isArray(selectedMail?.hasAttachment) && (selectedMail?.hasAttachment as any[]).length > 0)) && (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                <Paperclip className="w-3.5 h-3.5" />
+                                Attachments
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -201,25 +260,10 @@ const ClientDisplay = ({
                     </div>
                 </div>
                 <div className="w-full lg:w-auto flex justify-end">
-                    {/* <Button onClick={() => setRenderStyle("light")}
-                        variant="ghost" size={"icon"}>
-                        {renderStyle === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                    </Button>
-                    {renderMode === "iframe" ?
-                        <Button onClick={() => setRenderMode("dynamicIframe")}
-                            variant="ghost" size={"icon"}>
-                            <Layout className="h-4 w-4" />
-                        </Button>
-                        : <Button onClick={() => setRenderMode("iframe")}
-                            variant="ghost" size={"icon"}>
-                            <RiLayout2Fill className="h-4 w-4" />
-                        </Button>
-                    } */}
-
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
-                                onClick={() => { }}
+                                onClick={handleReply}
                                 variant="ghost"
                                 size="icon"
                                 disabled={!selectedMail}
@@ -232,7 +276,12 @@ const ClientDisplay = ({
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={!selectedMail}>
+                            <Button
+                                onClick={handleForward}
+                                variant="ghost"
+                                size="icon"
+                                disabled={!selectedMail}
+                            >
                                 <Forward className="h-4 w-4" />
                                 <span className="sr-only">Forward</span>
                             </Button>
@@ -251,7 +300,7 @@ const ClientDisplay = ({
                                         <span className="sr-only">Trash</span>
                                     </div>
                                 </TooltipTrigger>
-                                <TooltipContent>Add to Trash</TooltipContent>
+                                <TooltipContent>Delete</TooltipContent>
                             </Tooltip>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -264,13 +313,16 @@ const ClientDisplay = ({
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction className="bg-red-500 hover:bg-red-600 text-white">
-                                    Continue
+                                <AlertDialogAction
+                                    className="bg-red-500 hover:bg-red-600 text-white"
+                                    onClick={handleDelete}
+                                >
+                                    Delete
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <MailDropdown>
+                    <MailDropdown actions={dropdownActions} senderEmail={senderEmail} senderDomain={senderDomain}>
                         <Button variant="ghost" size="icon" disabled={!selectedMail}>
                             <MoreVertical className="h-4 w-4" />
                             <span className="sr-only">More</span>

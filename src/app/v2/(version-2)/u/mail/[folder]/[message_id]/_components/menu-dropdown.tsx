@@ -1,160 +1,207 @@
+"use client";
+
+import React, { useState } from "react";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuSub,
     DropdownMenuSubTrigger,
     DropdownMenuSubContent,
-  } from "@/components/ui/dropdown-menu";
-  
-  import {
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import {
     Archive,
     BellOff,
-    CheckSquare,
-    ChevronRight,
-    Clock,
-    ExternalLink,
+    Forward,
+    Mail,
+    MailWarning,
     MoveRight,
-    Search,
-    Tag,
+    Reply,
+    ReplyAll,
+    ShieldBan,
+    Star,
     Trash2,
-  } from "lucide-react";
-  
-  export function MailDropdown({ children }: { children: React.ReactNode }) {
+    UserX,
+} from "lucide-react";
+
+import { useMailStore } from "@/store/mails";
+
+export interface MailDropdownActions {
+    onReply?: () => void;
+    onReplyAll?: () => void;
+    onForward?: () => void;
+    onDelete?: () => void;
+    onArchive?: () => void;
+    onMarkUnread?: () => void;
+    onSpam?: () => void;
+    onMoveTo?: (folder: string) => void;
+    onToggleStar?: () => void;
+    onBlockSender?: () => void;
+    onBlockDomain?: () => void;
+}
+
+export function MailDropdown({
+    children,
+    actions,
+    senderEmail,
+    senderDomain,
+}: {
+    children: React.ReactNode;
+    actions?: MailDropdownActions;
+    /** Full sender email address (for display in confirm dialog) */
+    senderEmail?: string;
+    /** Sender domain (for display in confirm dialog) */
+    senderDomain?: string;
+}) {
+    const all_mailbox = useMailStore((s) => s.all_mailbox);
+    const all_folders = useMailStore((s) => s.all_folders);
+
+    const [confirmType, setConfirmType] = useState<"sender" | "domain" | null>(null);
+
+    const moveTargets = [
+        ...(all_mailbox?.map((m) => m.path) ?? []),
+        ...(all_folders?.map((f) => f.path) ?? []),
+    ];
+
+    const handleConfirm = () => {
+        if (confirmType === "sender") actions?.onBlockSender?.();
+        if (confirmType === "domain") actions?.onBlockDomain?.();
+        setConfirmType(null);
+    };
+
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64">
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MoveRight className="h-4 w-4" />
-                <span>Move to tab</span>
-              </div>
-              <ChevronRight className="h-4 w-4" />
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-48">
-              {[
-                { label: "Primary", color: "bg-blue-500" },
-                { label: "Promotions", color: "bg-green-500" },
-                { label: "Updates", color: "bg-yellow-500" },
-                { label: "Forums", color: "bg-purple-500" },
-              ].map(({ label, color }) => (
-                <DropdownMenuItem key={label}>
-                  <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 flex items-center justify-center">
-                      <span className={`block h-2 w-2 rounded-full ${color}`}></span>
-                    </div>
-                    <span>{label}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-  
-          {[
-            { label: "Reply", icon: <MoveRight className="h-4 w-4 rotate-180" /> },
-            { label: "Reply all", icon: <MoveRight className="h-4 w-4 rotate-180" /> },
-            { label: "Forward", icon: <MoveRight className="h-4 w-4" /> },
-            { label: "Forward as attachment", icon: <MoveRight className="h-4 w-4" /> },
-          ].map(({ label, icon }) => (
-            <DropdownMenuItem key={label}>
-              <div className="flex items-center gap-2">{icon}<span>{label}</span></div>
-            </DropdownMenuItem>
-          ))}
-  
-          <DropdownMenuSeparator />
-  
-          <DropdownMenuItem>
-            <div className="flex items-center gap-2">
-              <Archive className="h-4 w-4" />
-              <span>Archive</span>
-            </div>
-          </DropdownMenuItem>
-  
-          <DropdownMenuItem>
-            <div className="flex items-center gap-2">
-              <Trash2 className="h-4 w-4" />
-              <span>Delete</span>
-            </div>
-          </DropdownMenuItem>
-  
-          <DropdownMenuItem>
-            <div className="flex items-center gap-2">
-              <span className="h-4 w-4 flex items-center justify-center font-bold text-xs">!</span>
-              <span>Mark as unread</span>
-            </div>
-          </DropdownMenuItem>
-  
-          <DropdownMenuItem>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span>Snooze</span>
-            </div>
-          </DropdownMenuItem>
-  
-          <DropdownMenuItem>
-            <div className="flex items-center gap-2">
-              <CheckSquare className="h-4 w-4" />
-              <span>Add to Tasks</span>
-            </div>
-          </DropdownMenuItem>
-  
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MoveRight className="h-4 w-4" />
-                <span>Move to</span>
-              </div>
-              <ChevronRight className="h-4 w-4" />
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-48">
-              {["Inbox", "Sent", "Drafts", "Spam", "Trash"].map(label => (
-                <DropdownMenuItem key={label}>{label}</DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-  
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4" />
-                <span>Label as</span>
-              </div>
-              <ChevronRight className="h-4 w-4" />
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-48">
-              {["Important", "Work", "Personal", "To-do", "Create new"].map(label => (
-                <DropdownMenuItem key={label}>{label}</DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-  
-          <DropdownMenuItem>
-            <div className="flex items-center gap-2">
-              <BellOff className="h-4 w-4" />
-              <span>Mute</span>
-            </div>
-          </DropdownMenuItem>
-  
-          <DropdownMenuItem>
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              <span>Find emails from Swarup Bhise</span>
-            </div>
-          </DropdownMenuItem>
-  
-          <DropdownMenuItem>
-            <div className="flex items-center gap-2">
-              <ExternalLink className="h-4 w-4" />
-              <span>Open in new window</span>
-            </div>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end">
+                    {/* Reply / Reply All / Forward */}
+                    <DropdownMenuItem onClick={actions?.onReply} className="gap-2 text-xs">
+                        <Reply className="h-3.5 w-3.5" /> Reply
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={actions?.onReplyAll} className="gap-2 text-xs">
+                        <ReplyAll className="h-3.5 w-3.5" /> Reply all
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={actions?.onForward} className="gap-2 text-xs">
+                        <Forward className="h-3.5 w-3.5" /> Forward
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    {/* Star */}
+                    <DropdownMenuItem onClick={actions?.onToggleStar} className="gap-2 text-xs">
+                        <Star className="h-3.5 w-3.5" /> Star
+                    </DropdownMenuItem>
+
+                    {/* Mark as unread */}
+                    <DropdownMenuItem onClick={actions?.onMarkUnread} className="gap-2 text-xs">
+                        <Mail className="h-3.5 w-3.5" /> Mark as unread
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    {/* Archive */}
+                    <DropdownMenuItem onClick={actions?.onArchive} className="gap-2 text-xs">
+                        <Archive className="h-3.5 w-3.5" /> Archive
+                    </DropdownMenuItem>
+
+                    {/* Delete */}
+                    <DropdownMenuItem
+                        onClick={actions?.onDelete}
+                        className="gap-2 text-xs text-destructive focus:text-destructive"
+                    >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                    </DropdownMenuItem>
+
+                    {/* Report spam */}
+                    <DropdownMenuItem onClick={actions?.onSpam} className="gap-2 text-xs">
+                        <MailWarning className="h-3.5 w-3.5" /> Report spam
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    {/* Block sender */}
+                    <DropdownMenuItem
+                        onClick={() => setConfirmType("sender")}
+                        className="gap-2 text-xs"
+                    >
+                        <UserX className="h-3.5 w-3.5" /> Block sender
+                    </DropdownMenuItem>
+
+                    {/* Block domain */}
+                    <DropdownMenuItem
+                        onClick={() => setConfirmType("domain")}
+                        className="gap-2 text-xs"
+                    >
+                        <ShieldBan className="h-3.5 w-3.5" /> Block domain
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    {/* Move to */}
+                    {moveTargets.length > 0 && (
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="gap-2 text-xs">
+                                <MoveRight className="h-3.5 w-3.5" /> Move to
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="w-44 max-h-60 overflow-y-auto">
+                                {moveTargets.map((target) => (
+                                    <DropdownMenuItem
+                                        key={target}
+                                        className="text-xs capitalize"
+                                        onClick={() => actions?.onMoveTo?.(target)}
+                                    >
+                                        {target}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                    )}
+
+                    {/* Mute (placeholder) */}
+                    <DropdownMenuItem disabled className="gap-2 text-xs">
+                        <BellOff className="h-3.5 w-3.5" /> Mute
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Confirmation dialog for block sender / domain */}
+            <AlertDialog open={!!confirmType} onOpenChange={(open) => !open && setConfirmType(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {confirmType === "sender" ? "Block sender" : "Block domain"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {confirmType === "sender"
+                                ? `Are you sure you want to block all emails from ${senderEmail || "this sender"}? You can unblock later in Settings → Email Config.`
+                                : `Are you sure you want to block all emails from the domain ${senderDomain || "this domain"}? This will block every sender at this domain. You can unblock later in Settings → Email Config.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-red-500 hover:bg-red-600 text-white"
+                            onClick={handleConfirm}
+                        >
+                            Block
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
-  }
+}
   

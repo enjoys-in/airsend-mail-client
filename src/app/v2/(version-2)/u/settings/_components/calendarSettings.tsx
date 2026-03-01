@@ -6,6 +6,7 @@ import { useSettingsPersist } from "@/hooks/use-settings-persist";
 import { SettingsPageHeader, SaveSettingsBar } from "./shared";
 import CalendarGeneral from "./calendar/calendar-general";
 import ConnectedCalendars from "./calendar/connected-calendars";
+import { toast } from "sonner";
 
 /* ---- defaults (used before API data arrives) ---- */
 const DEFAULT_CALENDAR: ICalenderConfig = {
@@ -67,6 +68,17 @@ function CalendarSettings({ email }: { email: string }) {
 
   /* ---- persist ---- */
   const handleSave = async () => {
+    if (local.enable_calender) {
+      // Must have at least one calendar when enabled
+      if (!local.config || local.config.length === 0) {
+        return toast.error("Please add at least one calendar before saving.");
+      }
+      // Validate every calendar has a name and URL
+      const invalid = local.config.find((c) => !c.calendar_name?.trim() || !c.calender_url?.trim());
+      if (invalid) {
+        return toast.error("Each calendar must have a name and URL.");
+      }
+    }
     await save("calender_config", local);
     setDirty(false);
   };

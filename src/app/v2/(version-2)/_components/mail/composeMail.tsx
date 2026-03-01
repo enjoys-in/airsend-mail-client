@@ -61,7 +61,7 @@ export default function MultiTabSystem() {
                                 "flex flex-col shadow-2xl rounded-t-xl rounded-b-none border-b-0 transition-all duration-200 overflow-hidden",
                                 isFullscreen
                                     ? "fixed inset-4 z-[60] mt-14 rounded-xl border-b"
-                                    : "w-[550px] max-h-[85vh]"
+                                    : "w-[620px] h-[75vh] min-h-[480px]"
                             )}
                         >
                             {/* Tab Header */}
@@ -99,7 +99,7 @@ export default function MultiTabSystem() {
                             <CardContent
                                 className={cn(
                                     "p-0 flex-1 overflow-auto",
-                                    isFullscreen ? "h-full" : "max-h-[calc(85vh-36px)]"
+                                    isFullscreen ? "h-full" : "h-[calc(100%-36px)]"
                                 )}
                                 onFocus={() => setFocusedTab(tab.id)}
                             >

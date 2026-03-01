@@ -33,12 +33,15 @@ export function SpotToolbar() {
           }
           if (data.action === "delete" || data.action === "move" || data.action === "archive") {
 
-
-            const udpatedEmails = all_emails && all_emails?.filter((item) => !checkedItems.includes(item.message_id))
+            // Use data.message_id (the actual IDs being acted on) instead of
+            // checkedItems which can be stale/empty for single-item actions
+            const idsToRemove = data.message_id || []
+            const currentEmails = useMailStore.getState().all_emails
+            const updatedEmails = currentEmails?.filter((item) => !idsToRemove.includes(item.message_id))
 
             emit(selected_mailbox || params.folder as string)
-            setAllEmails(udpatedEmails || [])
-            await airsendDB.bulkDeleteItems("mails", data.message_id || data.id as any)
+            setAllEmails(updatedEmails || [])
+            await airsendDB.bulkDeleteItems("mails", idsToRemove as any)
             setCheckedItems([])
 
           }
@@ -52,7 +55,7 @@ export function SpotToolbar() {
         return toast.error(error.message)
       }
     },
-    [all_emails, checkedItems, selected_mailbox, params.folder, emit, setAllEmails, setCheckedItems]
+    [selected_mailbox, params.folder, emit, setAllEmails, setCheckedItems]
   )
   const handleSelectAll = useCallback(() => {
     const message_id = all_emails?.map((item) => item.message_id)

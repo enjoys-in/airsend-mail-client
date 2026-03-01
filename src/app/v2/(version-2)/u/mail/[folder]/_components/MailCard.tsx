@@ -219,7 +219,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                         hovered ? "opacity-0" : "opacity-100",
                                         !item.is_read ? "text-blue-500 font-medium" : "text-muted-foreground/60"
                                     )}>
-                                        {dateToFromNowDaily(new Date(item?.timestamp as string))}
+                                        {dateToFromNowDaily(new Date((item?.timestamp || item?.created_at) as string))}
                                     </span>
                                 </div>
                             </div>
@@ -299,7 +299,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                     hovered ? "opacity-0" : "opacity-100",
                                     !item.is_read ? "text-blue-500 font-medium" : "text-muted-foreground/60"
                                 )}>
-                                    {dateToFromNowDaily(new Date(item?.timestamp as string))}
+                                    {dateToFromNowDaily(new Date((item?.timestamp || item?.created_at) as string))}
                                 </span>
                             </div>
                         </div>

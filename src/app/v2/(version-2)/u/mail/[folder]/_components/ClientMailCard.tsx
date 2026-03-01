@@ -41,13 +41,16 @@ const ClientMailCard = () => {
             }
             const results = data.result ?? []
             if (results.length > 0) {
-                await airsendDB.bulkPutItems("mails", results as any)
+                // Normalize folder field to match URL param (case-insensitive Dexie fix)
+                const normalized = results.map((m: any) => ({ ...m, folder: folder }))
+                await airsendDB.bulkPutItems("mails", normalized as any)
                 emptyFoldersRef.current.delete(folder)
+                setAllEmails(normalized)
             } else {
                 // Mark folder as legitimately empty so we don't re-fetch
                 emptyFoldersRef.current.add(folder)
+                setAllEmails(results)
             }
-            setAllEmails(results)
         } catch (error) {
             // handle error
         } finally {
@@ -58,6 +61,14 @@ const ClientMailCard = () => {
 
     const loadMailFromDB = useCallback(async () => {
         if (!currAccount?.email) return
+
+        // If Zustand already has emails for this folder, skip reload
+        const currentEmails = useMailStore.getState().all_emails
+        if (currentEmails && currentEmails.length > 0
+            && currentEmails[0]?.folder?.toLowerCase() === folder.toLowerCase()) {
+            return
+        }
+
         db.mails
             .where("[folder+receipient]")
             .equals([folder, currAccount.email])
@@ -96,10 +107,20 @@ const ClientMailCard = () => {
 
     if (loading) return <Loading />
 
+    // Sort mails descending by timestamp / created_at (newest first)
+    const sortedEmails = React.useMemo(() => {
+        if (!all_emails || all_emails.length === 0) return []
+        return [...all_emails].sort((a, b) => {
+            const dateA = new Date(a.timestamp || a.created_at || 0).getTime()
+            const dateB = new Date(b.timestamp || b.created_at || 0).getTime()
+            return dateB - dateA
+        })
+    }, [all_emails])
+
     return <Suspense fallback={<Loading />}>
-        {all_emails && all_emails.length > 0 ? (
+        {sortedEmails.length > 0 ? (
             <div className="divide-y-0">
-                {all_emails.map((item) => (
+                {sortedEmails.map((item) => (
                     <MailCard key={item.message_id} item={item} />
                 ))}
             </div>

@@ -26,9 +26,15 @@ interface EmailChip {
   isValid: boolean;
 }
 
+export interface ComposeInitialData {
+  to?: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject?: string;
+  body?: string;
+}
 
-
-export function EmailComposer({ showHeader, tabId }: { showHeader?: boolean; tabId?: number }) {
+export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?: boolean; tabId?: number; initialData?: ComposeInitialData }) {
   const { currAccount, accounts } = useAppSelector((state) => state.accounts);
 
   const [selectedAccount, setSelectedAccount] = useState({
@@ -36,19 +42,22 @@ export function EmailComposer({ showHeader, tabId }: { showHeader?: boolean; tab
     name: currAccount?.name || "",
   });
 
-  const [toChips, setToChips] = useState<EmailChip[]>([]);
-  const [ccChips, setCcChips] = useState<EmailChip[]>([]);
-  const [bccChips, setBccChips] = useState<EmailChip[]>([]);
+  const makeChips = (emails: string[] | undefined): EmailChip[] =>
+    (emails || []).map((e, i) => ({ id: `init-${Date.now()}-${i}`, email: e, isValid: validateEmail(e) }));
+
+  const [toChips, setToChips] = useState<EmailChip[]>(() => makeChips(initialData?.to));
+  const [ccChips, setCcChips] = useState<EmailChip[]>(() => makeChips(initialData?.cc));
+  const [bccChips, setBccChips] = useState<EmailChip[]>(() => makeChips(initialData?.bcc));
 
   const [toInput, setToInput] = useState("");
   const [ccInput, setCcInput] = useState("");
   const [bccInput, setBccInput] = useState("");
 
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [subject, setSubject] = useState(initialData?.subject || "");
+  const [body, setBody] = useState(initialData?.body || "");
 
-  const [showCc, setShowCc] = useState(false);
-  const [showBcc, setShowBcc] = useState(false);
+  const [showCc, setShowCc] = useState((initialData?.cc?.length ?? 0) > 0);
+  const [showBcc, setShowBcc] = useState((initialData?.bcc?.length ?? 0) > 0);
   const [attachments, setAttachments] = useState<any[]>([]);
   function validateEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -493,7 +502,7 @@ export function EmailComposer({ showHeader, tabId }: { showHeader?: boolean; tab
             html: body,
             attachments,
           }} />}
-          defaultValue={``}
+          defaultValue={initialData?.body || ``}
         />
       </div>
     </div>

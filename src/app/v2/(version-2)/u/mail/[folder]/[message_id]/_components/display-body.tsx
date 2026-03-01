@@ -5,7 +5,6 @@ import { Fragment, useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { MailData } from "@/lib/types/mail.interface";
 import { ApiResponse } from "@/lib/types";
 import { API } from "@/lib/api/handler";
@@ -13,8 +12,16 @@ import { AxiosResponse } from "axios";
 import { useMailStore } from "@/store/mails";
 import { airsendDB } from "@/db";
 import { useAppSelector } from "@/store/hooks";
-import { SendMail } from "@/components/server-actions/send-mail";
 import { Security } from "@/lib/security";
+import InlineReplyBox from "./inline-reply-box";
+import { type ReplyMode } from "./use-mail-actions";
+import { useMultiTabStore } from "@/store/settings/multiTabSystem";
+import {
+    getDecryptedFields,
+    buildReplyBody,
+    buildForwardBody,
+} from "./use-mail-actions";
+
 const s = new Security();
 
 export const MailDisplay = ({
@@ -28,9 +35,9 @@ export const MailDisplay = ({
 }) => {
   const router = useRouter();
   const currAccount = useAppSelector((state) => state.accounts.currAccount);
-
-  const replyTextAreaRef = useRef<HTMLTextAreaElement>(null);
   const { selectedMail, setSelectedMail, setLoading } = useMailStore();
+  const createTabWithData = useMultiTabStore((s) => s.createTabWithData);
+
   const fetchMailBodyFromCache = async () => {
     await airsendDB.getItemByKey("mails", message_id as string).then((item) => {
       if (!item) {
@@ -53,39 +60,38 @@ export const MailDisplay = ({
       if (!data.success) {
         throw new Error(data.message);
       }
-      // await airsendDB.updateItem("mails", message_id as string, data.result)
-
-      // setSelectedMail(data.result)
       setLoading(false);
     } catch (error) {}
   };
-  const handleReplySendBtn = async () => {
-    const options = {
-      from: currAccount?.email,
-      to: selectedMail?.from,
-      subject: `Re: ${selectedMail?.title}`,
-      body: `
-            ${replyTextAreaRef.current?.value}
-            --------------------------------------------
-            ${selectedMail?.content}
-            
-            `,
-      inReplyTo: selectedMail?.uid,
-    };
-    try {
-      const data = await SendMail({
-        ...options,
-      });
 
-      if (!data.success) {
-        throw new Error(data.message);
-      }
-    } catch (error: any) {}
+  /** Pop-out handler: opens the inline reply as a compose popup tab */
+  const handlePopOut = (mode: ReplyMode) => {
+    if (!selectedMail) return;
+    const f = getDecryptedFields(selectedMail);
+
+    if (mode === "forward") {
+      const body = buildForwardBody(selectedMail, f);
+      createTabWithData(`Fwd: ${f.subject || "(no subject)"}`, {
+        to: [],
+        subject: f.subject?.startsWith("Fwd:") ? f.subject : `Fwd: ${f.subject || ""}`,
+        body,
+      });
+    } else {
+      const body = buildReplyBody(selectedMail, f);
+      // Use reply_to if available, otherwise from_email
+      const replyAddress = f.replyTo || f.fromEmail;
+      const to =
+        selectedMail.folder === "sent"
+          ? (f.recipients.length > 0 ? f.recipients : [f.recipient])
+          : [replyAddress];
+      createTabWithData(`Re: ${f.subject || "(no subject)"}`, {
+        to: to.filter(Boolean),
+        subject: f.subject?.startsWith("Re:") ? f.subject : `Re: ${f.subject || ""}`,
+        body,
+      });
+    }
   };
-  const handleReplyBtnClicked = () => {
-    if (!replyTextAreaRef.current || !selectedMail) return;
-    replyTextAreaRef.current.focus();
-  };
+
   useEffect(() => {
     if (!selectedMail) {
       fetchMailBody();
@@ -97,33 +103,12 @@ export const MailDisplay = ({
   return (
     <Fragment>
       <Separator />
-      <ScrollArea className="flex-1 flex flex-col overflow-auto border-t border-gray-300 dark:border-gray-800">       
+      <ScrollArea className="flex-1 flex flex-col overflow-auto border-t border-gray-300 dark:border-gray-800">
         {selectedMail && children}
+
+        {/* Gmail-style inline reply / forward box */}
+        <InlineReplyBox onPopOut={handlePopOut} />
       </ScrollArea>
-      <Separator className="mt-auto" />
-      <div className="">
-        <form>
-          <div className="grid gap-4">
-            <Textarea
-              ref={replyTextAreaRef}
-              className="p-4"
-              placeholder={`Reply ${
-                selectedMail?.from_email &&
-                "to " + s.decryptAES(selectedMail?.from_email!)
-              }...`}
-            />
-            <div className="flex items-center">
-              <Button
-                onClick={handleReplySendBtn}
-                size="sm"
-                className="ml-auto"
-              >
-                Send
-              </Button>
-            </div>
-          </div>
-        </form>
-      </div>
     </Fragment>
   );
 };

@@ -31,7 +31,13 @@ export function DynamicIframe({
 
     if (!iframeDoc) return;
 
-    const processedHtml = sanitize ? DOMPurify.sanitize(html) : html;
+    const processedHtml = sanitize
+      ? DOMPurify.sanitize(html, {
+          ADD_DATA_URI_TAGS: ['img'],
+          ADD_ATTR: ['target'],
+          ALLOW_DATA_ATTR: true,
+        })
+      : html;
 
     // Create and inject the content
     iframeDoc.open();
