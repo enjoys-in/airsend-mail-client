@@ -1,6 +1,7 @@
 import { __config } from '@/constants/config';
 import axios from 'axios';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { Security } from '../security';
 
 const security = new Security();
@@ -30,15 +31,11 @@ serverAxios.interceptors.request.use(async (config) => {
     return Promise.reject(error);
 });
 serverAxios.interceptors.response.use(async function (response) {
-
-    // if (response.data.message = "Login required") {
-    //     await serverAxios.get("/imap/relogin")
-    //     await manualDelay(3000)
-
-    // }
     return response;
 }, function (error) {
-
+    if (error?.response?.status === 401) {
+        redirect('/v2');
+    }
     return Promise.reject(error);
 });
 

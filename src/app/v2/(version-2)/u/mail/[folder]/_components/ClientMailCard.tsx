@@ -105,8 +105,6 @@ const ClientMailCard = () => {
         return unsubscribe
     }, [listen, storeInDB, searchParams, emit, folder])
 
-    if (loading) return <Loading />
-
     // Sort mails descending by timestamp / created_at (newest first)
     const sortedEmails = React.useMemo(() => {
         if (!all_emails || all_emails.length === 0) return []
@@ -116,6 +114,8 @@ const ClientMailCard = () => {
             return dateB - dateA
         })
     }, [all_emails])
+
+    if (loading) return <Loading />
 
     return <Suspense fallback={<Loading />}>
         {sortedEmails.length > 0 ? (

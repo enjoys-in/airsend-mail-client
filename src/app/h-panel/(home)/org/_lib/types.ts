@@ -80,18 +80,49 @@ export interface IRole {
     created_at: string
 }
 
-export const ALL_PERMISSIONS = [
-    "read",
-    "write",
-    "admin",
-    "delete",
-    "manage_users",
-    "manage_settings",
-    "manage_billing",
-    "manage_domains",
-    "view_logs",
-    "manage_roles",
-] as const
+// ─── Permissions (grouped by category) ──────────────────────────
+export const PERMISSION_CATEGORIES = {
+    organization: {
+        label: "Organization",
+        permissions: ["org_view", "org_add", "org_edit", "org_delete"],
+    },
+    domain: {
+        label: "Domain",
+        permissions: ["domain_view", "domain_add", "domain_delete"],
+    },
+    member: {
+        label: "Member",
+        permissions: ["member_view", "member_add", "member_edit", "member_delete"],
+    },
+    roles: {
+        label: "Roles",
+        permissions: ["roles_view", "roles_manage"],
+    },
+    settings_general: {
+        label: "Settings — General",
+        permissions: ["settings_view", "settings_email", "settings_composing", "settings_folders"],
+    },
+    settings_security: {
+        label: "Settings — Security",
+        permissions: ["settings_pgp_keys", "settings_encryption"],
+    },
+    settings_mail: {
+        label: "Settings — Mail Server",
+        permissions: ["settings_imap", "settings_smtp"],
+    },
+    settings_other: {
+        label: "Settings — Other",
+        permissions: ["settings_calendar"],
+    },
+    system: {
+        label: "System",
+        permissions: ["view_logs", "manage_billing"],
+    },
+} as const
+
+export const ALL_PERMISSIONS = Object.values(PERMISSION_CATEGORIES).flatMap(
+    (cat) => cat.permissions
+)
 
 export type Permission = (typeof ALL_PERMISSIONS)[number]
 

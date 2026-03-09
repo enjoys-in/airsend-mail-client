@@ -109,11 +109,11 @@ export function MembersTable({ data }: MembersTableProps) {
               </TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Organization</TableHead>
-              <TableHead>Domain</TableHead>
+              <TableHead className="hidden lg:table-cell">Organization</TableHead>
+              <TableHead className="hidden lg:table-cell">Domain</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Joined Date</TableHead>
-              <TableHead>Last Active</TableHead>
+              <TableHead className="hidden md:table-cell">Joined Date</TableHead>
+              <TableHead className="hidden md:table-cell">Last Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -146,11 +146,11 @@ export function MembersTable({ data }: MembersTableProps) {
                     )}
                   </div>
                 </TableCell>
-                <TableCell>{member.organization}</TableCell>
-                <TableCell>{member.domain}</TableCell>
+                <TableCell className="hidden lg:table-cell">{member.organization}</TableCell>
+                <TableCell className="hidden lg:table-cell">{member.domain}</TableCell>
                 <TableCell>{getStatusBadge(member.status)}</TableCell>
-                <TableCell>{new Date(member.joined_at).toLocaleDateString()}</TableCell>
-                <TableCell>{new Date(member.last_active).toLocaleString()}</TableCell>
+                <TableCell className="hidden md:table-cell">{new Date(member.joined_at).toLocaleDateString()}</TableCell>
+                <TableCell className="hidden md:table-cell">{new Date(member.last_active).toLocaleString()}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

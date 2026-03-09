@@ -43,16 +43,17 @@ instance.interceptors.request.use(async (config) => {
 });
 instance.interceptors.response.use(
     async (response:AxiosResponse<ApiResponse<any>>) => {
-        if (response.status === 401) {
-            window.location.href = '/auth';
-        }
-        // if (response.data.message = "Login required") {
-        //     await instance.get("/imap/relogin")
-        //     await manualDelay(3000)
-        // }
         return response;
     },
     (error) => {
+        if (error?.response?.status === 401) {
+            localStorage.removeItem('admin_access_token');
+            localStorage.removeItem('access_token');
+            document.cookie = 'admin_access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'shield_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            window.location.href = '/v2';
+        }
         return Promise.reject(error);
     }
 )
@@ -100,7 +101,12 @@ caldevInstance.interceptors.request.use(
 
 caldevInstance.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(error),
+  (error) => {
+    if (error?.response?.status === 401) {
+      window.location.href = '/v2';
+    }
+    return Promise.reject(error);
+  },
 );
 
 export { caldevInstance }

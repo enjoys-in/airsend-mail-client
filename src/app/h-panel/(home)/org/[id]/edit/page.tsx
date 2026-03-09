@@ -2,9 +2,11 @@ import { OrganizationForm } from "../../_components/organization-form"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { MOCK_ORGANIZATIONS } from "../../_lib/mock-data"
 
 export default async function EditOrganizationPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
+    const org = MOCK_ORGANIZATIONS.find((o) => o.id === id)
 
     return (
         <div className="flex flex-col h-full">
@@ -18,7 +20,7 @@ export default async function EditOrganizationPage({ params }: { params: Promise
                 <h1 className="text-lg font-semibold">Edit Organization — {id}</h1>
             </header>
             <div className="flex-1 p-4 min-w-0 overflow-auto">
-                <OrganizationForm mode="edit" />
+                <OrganizationForm mode="edit" initialData={org} />
             </div>
         </div>
     )

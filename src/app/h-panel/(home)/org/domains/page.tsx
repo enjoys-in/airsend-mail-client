@@ -107,11 +107,12 @@ export default function DomainsPage() {
 
     const handleAddDomain = () => {
         if (!newDomain.trim()) return
-        const org = MOCK_ORGANIZATIONS.find((o) => o.id === newDomainOrg)
+        const effectiveOrg = newDomainOrg && newDomainOrg !== "none" ? newDomainOrg : null
+        const org = effectiveOrg ? MOCK_ORGANIZATIONS.find((o) => o.id === effectiveOrg) : null
         const domain: IDomain = {
             id: `dom_${Date.now()}`,
             domain_name: newDomain.trim().toLowerCase(),
-            org_id: newDomainOrg || null,
+            org_id: effectiveOrg,
             org_name: org?.name ?? null,
             status: "pending",
             dns_verified: false,
@@ -145,13 +146,14 @@ export default function DomainsPage() {
 
     const handleSaveSettings = () => {
         if (!selectedDomain) return
-        const org = MOCK_ORGANIZATIONS.find((o) => o.id === settingsOrg)
+        const effectiveOrg = settingsOrg && settingsOrg !== "none" ? settingsOrg : null
+        const org = effectiveOrg ? MOCK_ORGANIZATIONS.find((o) => o.id === effectiveOrg) : null
         setDomains((prev) =>
             prev.map((d) =>
                 d.id === selectedDomain.id
                     ? {
                           ...d,
-                          org_id: settingsOrg || null,
+                          org_id: effectiveOrg,
                           org_name: org?.name ?? null,
                           updated_at: new Date().toISOString(),
                       }
@@ -245,14 +247,14 @@ export default function DomainsPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Domain</TableHead>
-                                    <TableHead>Organization</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Organization</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>DNS</TableHead>
-                                    <TableHead>MX</TableHead>
-                                    <TableHead>SPF</TableHead>
-                                    <TableHead>DKIM</TableHead>
-                                    <TableHead>DMARC</TableHead>
-                                    <TableHead className="text-center">Accounts</TableHead>
+                                    <TableHead className="hidden md:table-cell">DNS</TableHead>
+                                    <TableHead className="hidden md:table-cell">MX</TableHead>
+                                    <TableHead className="hidden lg:table-cell">SPF</TableHead>
+                                    <TableHead className="hidden lg:table-cell">DKIM</TableHead>
+                                    <TableHead className="hidden lg:table-cell">DMARC</TableHead>
+                                    <TableHead className="hidden sm:table-cell text-center">Accounts</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -260,7 +262,7 @@ export default function DomainsPage() {
                                 {filtered.map((d) => (
                                     <TableRow key={d.id}>
                                         <TableCell className="font-medium">{d.domain_name}</TableCell>
-                                        <TableCell>
+                                        <TableCell className="hidden sm:table-cell">
                                             {d.org_name ? (
                                                 <span className="flex items-center gap-1.5 text-sm">
                                                     <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -275,9 +277,9 @@ export default function DomainsPage() {
                                                 {d.status}
                                             </Badge>
                                         </TableCell>
-                                        {(["dns_verified", "mx_verified", "spf_verified", "dkim_verified", "dmarc_verified"] as VerifyField[]).map(
+                                        {(["dns_verified", "mx_verified"] as VerifyField[]).map(
                                             (field) => (
-                                                <TableCell key={field}>
+                                                <TableCell key={field} className="hidden md:table-cell">
                                                     {d[field] ? (
                                                         <Check className="h-4 w-4 text-emerald-500" />
                                                     ) : (
@@ -286,7 +288,18 @@ export default function DomainsPage() {
                                                 </TableCell>
                                             )
                                         )}
-                                        <TableCell className="text-center">
+                                        {(["spf_verified", "dkim_verified", "dmarc_verified"] as VerifyField[]).map(
+                                            (field) => (
+                                                <TableCell key={field} className="hidden lg:table-cell">
+                                                    {d[field] ? (
+                                                        <Check className="h-4 w-4 text-emerald-500" />
+                                                    ) : (
+                                                        <X className="h-4 w-4 text-muted-foreground/40" />
+                                                    )}
+                                                </TableCell>
+                                            )
+                                        )}
+                                        <TableCell className="hidden sm:table-cell text-center">
                                             <Badge variant="secondary">{d.accounts_count}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">

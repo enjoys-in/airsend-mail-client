@@ -34,7 +34,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <HPanelAppSidebar />
-      <SidebarInset className="min-w-0 overflow-x-hidden">
+      <SidebarInset className="min-w-0 overflow-x-hidden overflow-y-auto h-svh">
         <header className="flex h-16 shrink-0 border-b border-gray-100 dark:border-gray-800 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 sticky top-0 bg-gray-100 dark:bg-black blur-0  shadow-md z-50">
           <div className="flex items-center justify-between w-full px-4">
             <div className="flex items-center gap-2">

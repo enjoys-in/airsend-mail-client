@@ -294,7 +294,7 @@ export const MenuList = {
             url: "/h-panel/org",
             icon: RiOrganizationChart as any,
             isActive: false,
-            enabled: false,
+            enabled: true,
             items: [],
         },
         {
@@ -324,10 +324,7 @@ export const MenuList = {
                     title: "SMTP",
                     url: "/h-panel/settings/smtp/providers",
                 },
-                {
-                    title: "IMAP",
-                    url: "/h-panel/settings/smtp/imap",
-                },
+              
             ],
         },
         {
