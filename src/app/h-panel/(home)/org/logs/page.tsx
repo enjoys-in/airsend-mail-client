@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, FileText } from "lucide-react"
 import type { ILog, LogLevel } from "../_lib/types"
-import { MOCK_LOGS } from "../_lib/mock-data"
+import { API } from "@/lib/api/handler"
 
 const levelVariant: Record<LogLevel, "destructive" | "secondary" | "default" | "outline"> = {
     error: "destructive",
@@ -18,23 +18,32 @@ const levelVariant: Record<LogLevel, "destructive" | "secondary" | "default" | "
 }
 
 export default function LogsPage() {
+    const [logs, setLogs] = React.useState<ILog[]>([])
+    const [loading, setLoading] = React.useState(true)
     const [search, setSearch] = React.useState("")
     const [levelFilter, setLevelFilter] = React.useState<string>("all")
     const [sourceFilter, setSourceFilter] = React.useState<string>("all")
 
+    React.useEffect(() => {
+        API.getLogs()
+            .then((res) => setLogs(res.data?.result || res.data || []))
+            .catch(() => {})
+            .finally(() => setLoading(false))
+    }, [])
+
     const sources = React.useMemo(
-        () => Array.from(new Set(MOCK_LOGS.map((l) => l.source))).sort(),
-        []
+        () => Array.from(new Set(logs.map((l) => l.source))).sort(),
+        [logs]
     )
 
     const filtered = React.useMemo(() => {
-        return MOCK_LOGS.filter((l) => {
+        return logs.filter((l) => {
             const matchSearch = !search || l.message.toLowerCase().includes(search.toLowerCase()) || l.actor.toLowerCase().includes(search.toLowerCase())
             const matchLevel = levelFilter === "all" || l.level === levelFilter
             const matchSource = sourceFilter === "all" || l.source === sourceFilter
             return matchSearch && matchLevel && matchSource
         })
-    }, [search, levelFilter, sourceFilter])
+    }, [logs, search, levelFilter, sourceFilter])
 
     return (
         <div className="flex flex-col h-full">

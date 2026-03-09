@@ -1,29 +1,22 @@
 "use client"
 
 import { useRef } from "react"
-import { setRuntimeConfig } from "@/lib/runtime-config"
+import { ensureEncryptionKey } from "@/lib/security"
 
 /**
- * Injects server-side env vars into the client runtime config singleton.
- *
- * Rendered in the root layout (server component) which reads the env vars
- * and passes them as props. The setter runs synchronously during the first
- * render pass — before any child component mounts — so `Security` and
- * other consumers already have access to the keys.
+ * RuntimeConfigProvider — fetches the encryption key once on mount.
+ * The key is stored in module-level memory (not in HTML source or window globals).
+ * All AES encrypt/decrypt happens client-side with zero latency after init.
  */
 export function RuntimeConfigProvider({
-    encryptionKey,
-    appSecret,
     children,
 }: {
-    encryptionKey: string
-    appSecret: string
     children: React.ReactNode
 }) {
     const initialized = useRef(false)
     if (!initialized.current) {
-        setRuntimeConfig({ encryptionKey, appSecret })
         initialized.current = true
+        ensureEncryptionKey()
     }
     return <>{children}</>
 }

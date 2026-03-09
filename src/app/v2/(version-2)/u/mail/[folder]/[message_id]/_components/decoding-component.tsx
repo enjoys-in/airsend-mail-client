@@ -27,10 +27,13 @@ const DecodingComponent = ({ message_id, data }: { message_id: string, data: Enc
             }
 
 
+            const decryptedCipher = s.decryptAES(data.chiper_text);
+            const decryptedPrivKey = s.decryptAES(data.open_pgp.privateKey);
+            const decryptedPubKey = s.decryptAES(data.open_pgp.publicKey);
             const decrypted = await DecryptEncryptedMail({
-                encrypted: s.decryptAES(data.chiper_text),
-                privateKeyArmored: s.decryptAES(data.open_pgp.privateKey),
-                publicKeyArmored: s.decryptAES(data.open_pgp.publicKey),
+                encrypted: decryptedCipher,
+                privateKeyArmored: decryptedPrivKey,
+                publicKeyArmored: decryptedPubKey,
                 password: data.k
             })
             const email = await PostalMime.parse(decrypted);

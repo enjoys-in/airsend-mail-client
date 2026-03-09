@@ -3,16 +3,31 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { UserPlus } from "lucide-react"
+import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MembersTable } from "../_components/members-table"
-import { MOCK_MEMBERS, MOCK_ORGANIZATIONS } from "../_lib/mock-data"
+import { API } from "@/lib/api/handler"
+import type { IMember, IOrganization } from "../_lib/types"
 
 export default function MembersPage() {
     const [selectedOrg, setSelectedOrg] = React.useState<string>("all")
+    const [members, setMembers] = React.useState<IMember[]>([])
+    const [organizations, setOrganizations] = React.useState<IOrganization[]>([])
+    const [loading, setLoading] = React.useState(true)
+
+    React.useEffect(() => {
+        Promise.all([
+            API.getMembers().then((res) => res.data?.result || res.data || []),
+            API.getOrganizations().then((res) => res.data?.result || res.data || []),
+        ]).then(([m, o]) => {
+            setMembers(m)
+            setOrganizations(o)
+        }).catch(() => {}).finally(() => setLoading(false))
+    }, [])
 
     const filteredMembers = selectedOrg === "all"
-        ? MOCK_MEMBERS
-        : MOCK_MEMBERS.filter((m) => m.org_id === selectedOrg)
+        ? members
+        : members.filter((m) => m.org_id === selectedOrg)
 
     return (
         <div className="flex flex-col h-full">
@@ -25,16 +40,18 @@ export default function MembersPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Organizations</SelectItem>
-                            {MOCK_ORGANIZATIONS.map((org) => (
+                            {organizations.map((org) => (
                                 <SelectItem key={org.id} value={org.id}>
                                     {org.name}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
-                    <Button size="sm" className="rounded-none">
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Invite Member
+                    <Button size="sm" className="rounded-none" asChild>
+                        <Link href="/h-panel/org/members/add">
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Add Member
+                        </Link>
                     </Button>
                 </div>
             </header>

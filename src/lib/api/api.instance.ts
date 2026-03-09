@@ -1,5 +1,6 @@
 import { __config } from '@/constants/config'
 import axios, { AxiosResponse } from 'axios'
+import Cookies from 'js-cookie'
 import { Security } from '../security';
 import { ApiResponse } from '../types';
 
@@ -23,19 +24,20 @@ instance.defaults.headers["common"] = {
 }
 
 instance.interceptors.request.use(async (config) => {
+    const signature = await security.GenerateSignature(
+        (config.method as string).toUpperCase(),
+        `${config.baseURL}${config.url}` as string,
+        config?.data,
+    )
+    config.headers['X-Signature'] = signature
 
-    // const toGet = (config.url as string).includes('/admin') ? 'admin_access_token' : 'access_token';
-
-    // const token = localStorage.getItem(toGet);
-
-    // if (token) {
-    //     config.headers['Authorization'] = `Bearer ${token}`;
-    // }
-
-    security.GenerateSignature((config.method as string).toUpperCase(), `${config.baseURL}${config.url}` as string, config?.data,).then((signature) => {
-        config.headers['X-Signature'] = signature
-    })
-
+    try {
+      const raw = Cookies.get('shield_user')
+      if (raw) {
+        const user = JSON.parse(raw)
+        if (user?.mid) config.headers['X-Tenant-ID'] = user.mid
+      }
+    } catch {}
 
     return config;
 }, (error) => {
@@ -65,7 +67,7 @@ export { instance }
 // ---------------------------------------------------------------------------
 
 const CALDEV_BASE_URL =
-  process.env.NEXT_PUBLIC_CALDEV_URL || "http://localhost:8443";
+  (typeof window !== 'undefined' && (window as any).__RUNTIME_CONFIG__?.CALDEV_URL) || process.env.CALDEV_URL || "http://localhost:8443";
 
 const caldevInstance = axios.create({
   baseURL: CALDEV_BASE_URL,
@@ -85,15 +87,21 @@ caldevInstance.defaults.headers["common"] = {
 
 caldevInstance.interceptors.request.use(
   async (config) => {
-    security
-      .GenerateSignature(
-        (config.method as string).toUpperCase(),
-        `${config.baseURL}${config.url}` as string,
-        config?.data,
-      )
-      .then((signature) => {
-        config.headers["X-Signature"] = signature;
-      });
+    const signature = await security.GenerateSignature(
+      (config.method as string).toUpperCase(),
+      `${config.baseURL}${config.url}` as string,
+      config?.data,
+    )
+    config.headers["X-Signature"] = signature;
+
+    try {
+      const raw = Cookies.get('shield_user')
+      if (raw) {
+        const user = JSON.parse(raw)
+        if (user?.mid) config.headers['X-Tenant-ID'] = user.mid
+      }
+    } catch {}
+
     return config;
   },
   (error) => Promise.reject(error),

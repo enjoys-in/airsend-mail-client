@@ -47,12 +47,9 @@ import { useMailStore } from "@/store/mails";
 import { db } from "@/db";
 
 import { MailDropdown, type MailDropdownActions } from "./menu-dropdown";
-import { Security } from "@/lib/security";
 import { useMailRenderSettings } from "@/store/mails/mail-render-settings";
 import { MailStatusIndicators } from "../../_components/MailStatusIndicators";
 import { useMailActions, safeDecrypt } from "./use-mail-actions";
-
-const s = new Security();
 
 const ClientDisplay = ({
     folder,
@@ -167,22 +164,22 @@ const ClientDisplay = ({
                     <Avatar>
                         <AvatarImage
                             alt={formatEmail(
-                                s.decryptAES(selectedMail?.from_email)
+                                senderEmail
                             ).toLocaleUpperCase()}
                         />
                         <AvatarFallback className="flex items-center justify-center h-10 w-10 bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full">
-                            {selectedMail?.from_email &&
+                            {senderEmail &&
                                 formatEmail(
-                                    s.decryptAES(selectedMail?.from_email)
+                                    senderEmail
                                 ).toLocaleUpperCase()[0]}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col ml-2 md:ml-0">
                         <div className="flex flex-col sm:flex-row gap-2 align-text-bottom">
                             <div className="font-semibold">
-                                {selectedMail?.from_email &&
+                                {senderEmail &&
                                     formatEmail(
-                                        s.decryptAES(selectedMail?.from_email)
+                                        senderEmail
                                     )}
                             </div>
                         </div>
@@ -217,11 +214,9 @@ const ClientDisplay = ({
                                             <div className="text-right text-muted-foreground">from:</div>
                                             <div>
                                                 <strong>
-                                                    {selectedMail?.from_email &&
+                                                    {senderEmail &&
                                                         formatEmail(
-                                                            s.decryptAES(
-                                                                selectedMail?.from_email
-                                                            )
+                                                            senderEmail
                                                         )}
                                                 </strong>
                                             </div>

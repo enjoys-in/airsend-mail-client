@@ -2,11 +2,19 @@ import { OrganizationForm } from "../../_components/organization-form"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { MOCK_ORGANIZATIONS } from "../../_lib/mock-data"
+import serverAxios from "@/lib/api/serverAxios"
 
 export default async function EditOrganizationPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
-    const org = MOCK_ORGANIZATIONS.find((o) => o.id === id)
+    let org = null
+    try {
+        const { data } = await serverAxios.get(`/api/v1/admin/organization/${id}`)
+        if (data.success) {
+            org = data.result
+        }
+    } catch {
+        org = null
+    }
 
     return (
         <div className="flex flex-col h-full">

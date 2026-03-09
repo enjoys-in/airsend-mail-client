@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { IOrganization } from "../_lib/types"
-import { MOCK_DOMAINS } from "../_lib/mock-data"
+import { API } from "@/lib/api/handler"
 import { useRouter } from "next/navigation"
 
 const formSchema = z.object({
@@ -41,8 +41,14 @@ export function OrganizationForm({ mode, initialData }: OrganizationFormProps) {
   const [logoMode, setLogoMode] = React.useState<"url" | "upload">("url")
   const [logoPreview, setLogoPreview] = React.useState<string | null>(initialData?.logo_url || null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const [availableDomainNames, setAvailableDomainNames] = React.useState<string[]>([])
 
-  const availableDomainNames = MOCK_DOMAINS.map((d) => d.domain_name)
+  React.useEffect(() => {
+    API.handleGetAllDomains().then((res) => {
+      const domains = res.data?.result || res.data || []
+      setAvailableDomainNames(domains.map((d: any) => d.domain_name))
+    }).catch(() => {})
+  }, [])
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -58,8 +64,17 @@ export function OrganizationForm({ mode, initialData }: OrganizationFormProps) {
     },
   })
 
-  const onSubmit = (data: FormData) => {
-    console.log(data)
+  const onSubmit = async (data: FormData) => {
+    try {
+      if (mode === "edit" && initialData?.id) {
+        await API.updateOrganization(initialData.id, data)
+      } else {
+        await API.createOrganization(data)
+      }
+      router.push("/h-panel/org")
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   const toggleDomain = (domain: string) => {

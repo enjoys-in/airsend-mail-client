@@ -31,14 +31,22 @@ import {
 } from "@/components/ui/alert-dialog"
 import type { IRole } from "../../_lib/types"
 import { ALL_PERMISSIONS, PERMISSION_CATEGORIES } from "../../_lib/types"
-import { MOCK_ROLES } from "../../_lib/mock-data"
+import { API } from "@/lib/api/handler"
 
 export default function OrgRolesPage() {
     const params = useParams()
     const orgId = params.id as string
 
-    const [roles, setRoles] = React.useState<IRole[]>(MOCK_ROLES)
+    const [roles, setRoles] = React.useState<IRole[]>([])
+    const [loading, setLoading] = React.useState(true)
     const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+
+    React.useEffect(() => {
+        API.getOrgRoles(orgId)
+            .then((res) => setRoles(res.data?.result || res.data || []))
+            .catch(() => {})
+            .finally(() => setLoading(false))
+    }, [orgId])
     const [editingRole, setEditingRole] = React.useState<IRole | null>(null)
     const [deleteTarget, setDeleteTarget] = React.useState<IRole | null>(null)
 
@@ -77,35 +85,41 @@ export default function OrgRolesPage() {
         }
     }
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!roleName.trim()) return
-        if (editingRole) {
-            setRoles((prev) =>
-                prev.map((r) =>
-                    r.id === editingRole.id
-                        ? { ...r, name: roleName, description: roleDescription, permissions: selectedPermissions }
-                        : r
-                )
-            )
-        } else {
-            const newRole: IRole = {
-                id: `role_${Date.now()}`,
-                name: roleName.trim(),
-                description: roleDescription.trim(),
-                permissions: selectedPermissions,
-                is_default: false,
-                is_system: false,
-                user_count: 0,
-                created_at: new Date().toISOString(),
+        try {
+            if (editingRole) {
+                const { data } = await API.updateRole(editingRole.id, { name: roleName, description: roleDescription, permissions: selectedPermissions })
+                const updated = data?.result || { ...editingRole, name: roleName, description: roleDescription, permissions: selectedPermissions }
+                setRoles((prev) => prev.map((r) => r.id === editingRole.id ? updated : r))
+            } else {
+                const { data } = await API.createRole({ name: roleName.trim(), description: roleDescription.trim(), permissions: selectedPermissions, org_id: orgId })
+                const newRole = data?.result || {
+                    id: `role_${Date.now()}`,
+                    name: roleName.trim(),
+                    description: roleDescription.trim(),
+                    permissions: selectedPermissions,
+                    is_default: false,
+                    is_system: false,
+                    user_count: 0,
+                    created_at: new Date().toISOString(),
+                }
+                setRoles((prev) => [...prev, newRole])
             }
-            setRoles((prev) => [...prev, newRole])
+        } catch (err) {
+            console.error(err)
         }
         setIsDialogOpen(false)
     }
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!deleteTarget) return
-        setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id))
+        try {
+            await API.deleteRole(deleteTarget.id)
+            setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id))
+        } catch (err) {
+            console.error(err)
+        }
         setDeleteTarget(null)
     }
 

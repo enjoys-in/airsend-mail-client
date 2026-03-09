@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 // GifPicker — search & select GIFs via Tenor API
 // ---------------------------------------------------------------------------
 
-const TENOR_API_KEY = process.env.NEXT_PUBLIC_TENOR_API_KEY ?? "";
+const TENOR_API_KEY = (typeof window !== 'undefined' && (window as any).__RUNTIME_CONFIG__?.TENOR_API_KEY) || process.env.TENOR_API_KEY || "";
 
 interface TenorGif {
   id: string;

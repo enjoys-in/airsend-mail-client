@@ -198,5 +198,66 @@ export class API {
             }
         })
     }
+
+    // ORGANIZATIONS
+    static getOrganizations() {
+        return instance.get(adminRoutes("/organizations"))
+    }
+    static getOrganization(id: string) {
+        return instance.get(adminRoutes(`/organization/${id}`))
+    }
+    static createOrganization(data: any) {
+        return instance.post(adminRoutes("/organization"), data)
+    }
+    static updateOrganization(id: string, data: any) {
+        return instance.put(adminRoutes(`/organization/${id}`), data)
+    }
+    static deleteOrganization(id: string) {
+        return instance.delete(adminRoutes(`/organization/${id}`))
+    }
+
+    // MEMBERS
+    static getMembers(query: string = "") {
+        return instance.get(adminRoutes(`/members${query}`))
+    }
+    static getOrgMembers(orgId: string) {
+        return instance.get(adminRoutes(`/organization/${orgId}/members`))
+    }
+    static inviteMember(data: any) {
+        return instance.post(adminRoutes("/member"), data)
+    }
+    static updateMember(id: string, data: any) {
+        return instance.put(adminRoutes(`/member/${id}`), data)
+    }
+    static removeMember(id: string) {
+        return instance.delete(adminRoutes(`/member/${id}`))
+    }
+
+    // ROLES
+    static getRoles(query: string = "") {
+        return instance.get(adminRoutes(`/roles${query}`))
+    }
+    static getOrgRoles(orgId: string) {
+        return instance.get(adminRoutes(`/organization/${orgId}/roles`))
+    }
+    static createRole(data: any) {
+        return instance.post(adminRoutes("/role"), data)
+    }
+    static updateRole(id: string, data: any) {
+        return instance.put(adminRoutes(`/role/${id}`), data)
+    }
+    static deleteRole(id: string) {
+        return instance.delete(adminRoutes(`/role/${id}`))
+    }
+
+    // LOGS
+    static getLogs(query: string = "") {
+        return instance.get(adminRoutes(`/logs${query}`))
+    }
+
+    // DOMAIN-ORG HISTORY
+    static getDomainHistory(query: string = "") {
+        return instance.get(adminRoutes(`/domain-org-history${query}`))
+    }
 }
 

@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import serverAxios from "@/lib/api/serverAxios"
-import { MOCK_ORGANIZATIONS } from "./_lib/mock-data"
 
 export default async function OrganizationsPage() {
     let organizations: any[] = []
@@ -13,8 +12,7 @@ export default async function OrganizationsPage() {
             organizations = data.result || []
         }
     } catch {
-        // fallback to mock data during development
-        organizations = MOCK_ORGANIZATIONS
+        organizations = []
     }
 
     return (

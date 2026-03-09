@@ -27,6 +27,7 @@ const navigationItems = [
             { title: "All Organizations", url: "/h-panel/org", icon: Building2 },
             { title: "Create Organization", url: "/h-panel/org/create", icon: Plus },
             { title: "Members", url: "/h-panel/org/members", icon: Users },
+            { title: "Add Member", url: "/h-panel/org/members/add", icon: Plus },
         ],
     },
     {
@@ -106,16 +107,18 @@ export default function OrgLayout({
     React.useEffect(() => { setMobileOpen(false) }, [pathname])
 
     return (
-        <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden">
+        <div className="flex w-full">
             {/* ── Desktop sidebar ── */}
-            <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
-                <div className="flex items-center gap-2 px-4 py-4 border-b border-neutral-200 dark:border-neutral-800">
-                    <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-semibold tracking-tight">Org Manager</span>
+            <aside className="hidden md:block w-60 shrink-0 border-r border-neutral-200 dark:border-neutral-800">
+                <div className="sticky top-16 h-[calc(100svh-4rem)] flex flex-col bg-white dark:bg-neutral-950 overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-4 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
+                        <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-semibold tracking-tight">Org Manager</span>
+                    </div>
+                    <ScrollArea className="flex-1 py-2">
+                        <SidebarNav />
+                    </ScrollArea>
                 </div>
-                <ScrollArea className="flex-1 py-2">
-                    <SidebarNav />
-                </ScrollArea>
             </aside>
 
             {/* ── Mobile sheet (only mount portal after hydration) ── */}
@@ -133,7 +136,7 @@ export default function OrgLayout({
                 </Sheet>
             )}
 
-            <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+            <div className="flex flex-1 flex-col min-w-0">
                 {/* ── Mobile header bar ── */}
                 <div className="flex md:hidden h-12 shrink-0 items-center gap-2 border-b px-3">
                     <Button
@@ -149,7 +152,7 @@ export default function OrgLayout({
                     <span className="text-sm font-semibold">Org Manager</span>
                 </div>
 
-                <main className="flex-1 overflow-auto">
+                <main className="flex-1 min-w-0">
                     {children}
                 </main>
             </div>

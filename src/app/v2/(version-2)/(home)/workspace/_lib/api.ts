@@ -12,7 +12,7 @@ import type {
   PollOption,
 } from "./chat-types"
 
-const BASE = process.env.NEXT_PUBLIC_WORKSPACE_API_URL ?? "http://localhost:8090"
+const BASE = (typeof window !== 'undefined' && (window as any).__RUNTIME_CONFIG__?.WORKSPACE_API_URL) || process.env.WORKSPACE_API_URL || "http://localhost:8090"
 
 // ── Types mirroring Go models.PaginatedResponse ──
 

@@ -91,7 +91,7 @@ function CalendarSettings({ email }: { email: string }) {
           description="Manage calendar preferences and connected external calendars."
         />
 
-        <CalendarGeneral local={local} onChange={handleChange} />
+        <CalendarGeneral local={local} onChange={handleChange} onAddCalendar={handleAddCalendar} />
 
         <ConnectedCalendars
           calendars={local.config}

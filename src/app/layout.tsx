@@ -82,6 +82,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const runtimeConfigJson = JSON.stringify({
+    APP_ENV: process.env.APP_ENV || "",
+    APP_URL: process.env.APP_URL || "",
+    API_KEY: process.env.API_KEY || "",
+    CALDEV_URL: process.env.CALDEV_URL || "",
+    WORKSPACE_API_URL: process.env.WORKSPACE_API_URL || "",
+    TENOR_API_KEY: process.env.TENOR_API_KEY || "",
+  }).replace(/</g, "\\u003c")
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -91,6 +99,7 @@ export default async function RootLayout({
       <link rel="manifest" href="/site.webmanifest"></link>
 
       <body className={cn(jakarta.className,)} suppressHydrationWarning>
+        <script dangerouslySetInnerHTML={{ __html: `window.__RUNTIME_CONFIG__=${runtimeConfigJson}` }} />
         <NextTopLoader color="#5a61ff" />
         <ThemeProvider
           attribute="class"
@@ -98,10 +107,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           {/* <PingletWidget /> */}
-          <RuntimeConfigProvider
-            encryptionKey={process.env.ENCRYPTION_KEY!}
-            appSecret={process.env.APP_SECRET!}
-          >
+          <RuntimeConfigProvider>
             <StoreProvider>
               <IndexDbProvider>
                 <TooltipProvider delayDuration={0}>{children}</TooltipProvider>

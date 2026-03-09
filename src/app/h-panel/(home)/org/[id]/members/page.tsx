@@ -1,17 +1,27 @@
 "use client"
 
+import * as React from "react"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { UserPlus, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+
 import { MembersTable } from "../../_components/members-table"
-import { MOCK_MEMBERS } from "../../_lib/mock-data"
+import { API } from "@/lib/api/handler"
+import type { IMember } from "../../_lib/types"
 
 export default function OrganizationMembersPage() {
     const params = useParams()
     const orgId = params.id as string
+    const [orgMembers, setOrgMembers] = React.useState<IMember[]>([])
+    const [loading, setLoading] = React.useState(true)
 
-    const orgMembers = MOCK_MEMBERS.filter((m) => m.org_id === orgId)
+    React.useEffect(() => {
+        API.getOrgMembers(orgId)
+            .then((res) => setOrgMembers(res.data?.result || res.data || []))
+            .catch(() => {})
+            .finally(() => setLoading(false))
+    }, [orgId])
 
     return (
         <div className="flex flex-col h-full">
@@ -24,9 +34,11 @@ export default function OrganizationMembersPage() {
                 </Button>
                 <h1 className="text-lg font-semibold">Members — Org {orgId}</h1>
                 <div className="ml-auto">
-                    <Button size="sm">
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Invite Member
+                    <Button size="sm" asChild>
+                        <Link href="/h-panel/org/members/add">
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Add Member
+                        </Link>
                     </Button>
                 </div>
             </header>

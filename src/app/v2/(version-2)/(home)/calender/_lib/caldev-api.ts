@@ -2,6 +2,7 @@
 // CalDev API Client — JMAP + REST integration
 // ============================================================================
 
+import Cookies from "js-cookie";
 import { caldevInstance } from "@/lib/api/api.instance";
 import type {
   CalDevCalendar,
@@ -403,10 +404,46 @@ export async function sendRSVP(
 // App Passwords (REST)
 // ---------------------------------------------------------------------------
 
+/** Read the user's `mid` from the shield_user cookie. */
+function getMid(): string | null {
+  try {
+    const raw = Cookies.get("shield_user");
+    if (raw) {
+      const user = JSON.parse(raw);
+      return user?.mid ?? null;
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Ensure the user's default calendar collection exists on the CalDAV server.
+ * Uses MKCALENDAR; silently ignores if the collection already exists (405/409).
+ */
+async function ensureDefaultCalendar(): Promise<void> {
+  const mid = getMid();
+  if (!mid) return;
+
+  try {
+    await caldevInstance.request({
+      method: "MKCALENDAR",
+      url: `/dav/${mid}/${mid}/calendars/`,
+    });
+  } catch (err: any) {
+    // 405 Method Not Allowed / 409 Conflict → calendar already exists, safe to ignore
+    const status = err?.response?.status;
+    if (status === 405 || status === 409) return;
+    // Any other error: swallow silently — app-password creation should still proceed
+  }
+}
+
 export async function createAppPassword(
   label: string,
   password: string,
 ): Promise<CalDevAppPassword> {
+  // Provision the user's default calendar before creating the app password
+  await ensureDefaultCalendar();
+
   const { data } = await caldevInstance.post<
     CalDevRestResponse<CalDevAppPassword>
   >("/api/app-passwords/", { label, password });

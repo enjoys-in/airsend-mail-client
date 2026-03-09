@@ -6,21 +6,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Search, History } from "lucide-react"
-import { MOCK_DOMAIN_HISTORY } from "../_lib/mock-data"
+import { API } from "@/lib/api/handler"
+import type { IDomainOrgHistory } from "../_lib/types"
 
 export default function DomainHistoryPage() {
+    const [history, setHistory] = React.useState<IDomainOrgHistory[]>([])
+    const [loading, setLoading] = React.useState(true)
     const [search, setSearch] = React.useState("")
 
+    React.useEffect(() => {
+        API.getDomainHistory()
+            .then((res) => setHistory(res.data?.result || res.data || []))
+            .catch(() => {})
+            .finally(() => setLoading(false))
+    }, [])
+
     const filtered = React.useMemo(() => {
-        if (!search) return MOCK_DOMAIN_HISTORY
+        if (!search) return history
         const q = search.toLowerCase()
-        return MOCK_DOMAIN_HISTORY.filter(
+        return history.filter(
             (h) =>
                 (h.domain_name ?? "").toLowerCase().includes(q) ||
                 (h.org_name ?? "").toLowerCase().includes(q) ||
                 (h.changed_by ?? "").toLowerCase().includes(q)
         )
-    }, [search])
+    }, [search, history])
 
     return (
         <div className="flex flex-col h-full">

@@ -25,7 +25,6 @@ import {
     getDecryptedFields,
     buildReplyBody,
     buildForwardBody,
-    safeDecrypt,
 } from "./use-mail-actions";
 
 const s = new Security();
@@ -281,8 +280,6 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
     }, [selectedMail, currAccount, toChips, ccChips, subject, mode, handleDiscard]);
 
     if (!selectedMail) return null;
-
-    const fromEmail = safeDecrypt(selectedMail.from_email);
 
     // ── Collapsed state: action buttons ──────────────────────────
     if (!mode) {

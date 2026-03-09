@@ -1,38 +1,13 @@
 /**
  * Runtime configuration singleton.
  *
- * On the **server** `process.env` is available directly, so the getters
- * fall through to it automatically.
+ * `APP_SECRET` and `ENCRYPTION_KEY` are **never** sent to the client.
+ * - HMAC signing goes through `/api/sign`.
+ * - AES encrypt/decrypt goes through `/api/crypto`.
  *
- * On the **client** the values are injected by `<RuntimeConfigProvider>`
- * (rendered in the root server layout) *before* any child component mounts,
- * so every `Security` instance already has access to the keys.
- *
- * This keeps `ENCRYPTION_KEY` and `APP_SECRET` out of the static JS bundle.
+ * Non-secret runtime values (APP_ENV, APP_URL, API_KEY, etc.) are
+ * injected via `window.__RUNTIME_CONFIG__` in the root layout.
  */
 
-let _encryptionKey = ""
-let _appSecret = ""
-
-export interface RuntimeConfig {
-    encryptionKey: string
-    appSecret: string
-}
-
-/** Called once by RuntimeConfigProvider (client) at render time. */
-export function setRuntimeConfig(config: RuntimeConfig) {
-    _encryptionKey = config.encryptionKey
-    _appSecret = config.appSecret
-}
-
-/**
- * Read the current runtime config.
- * - Server: falls back to `process.env` (always available).
- * - Client: uses the value injected by the provider.
- */
-export function getRuntimeConfig(): RuntimeConfig {
-    return {
-        encryptionKey: _encryptionKey || process.env.ENCRYPTION_KEY || "",
-        appSecret: _appSecret || process.env.APP_SECRET || "",
-    }
-}
+// Nothing to export — all secrets are server-side only.
+// This file is kept as documentation of the runtime-config approach.

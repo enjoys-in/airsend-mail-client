@@ -1,16 +1,45 @@
 import * as crypto from 'crypto'
 import CryptoJS from 'crypto-js'
-import { getRuntimeConfig } from './runtime-config'
+
+/**
+ * Module-level encryption key cache.
+ * - Server: reads from process.env.ENCRYPTION_KEY directly.
+ * - Client: fetched once from /api/crypto on first use, cached forever.
+ *   Key lives only in JS memory — never in HTML source or window globals.
+ */
+let _clientKey: string | null = null;
+let _keyPromise: Promise<string> | null = null;
+
+function getEncryptionKey(): string {
+    // Server: always available
+    if (typeof window === "undefined") return process.env.ENCRYPTION_KEY || "";
+    return _clientKey || "";
+}
+
+/** Ensures the client has the encryption key. Call once at app init or lazily. */
+export async function ensureEncryptionKey(): Promise<string> {
+    if (typeof window === "undefined") return process.env.ENCRYPTION_KEY || "";
+    if (_clientKey) return _clientKey;
+    if (_keyPromise) return _keyPromise;
+
+    _keyPromise = fetch("/api/crypto")
+        .then((res) => res.json())
+        .then((data) => {
+            _clientKey = data.key || "";
+            return _clientKey;
+        })
+        .catch(() => {
+            _keyPromise = null;
+            return "";
+        });
+    return _keyPromise;
+}
 
 export class Security {
     /**
     * Generates a signature for the given method, URI, body, and client secret.
-    *
-    * @param {RoutingMethods} method - The HTTP method used for the request.
-    * @param {string} uri - The URI of the request.
-    * @param {any} body - The body of the request.
-    * @param {string} clientSecret - The client secret used for generating the signature.
-    * @return {Promise<string>} A promise that resolves to the generated signature.
+    * On the server uses process.env.APP_SECRET directly.
+    * On the client calls /api/sign to keep the secret server-side.
     */
     async GenerateSignature(
         method: any,
@@ -23,10 +52,23 @@ export class Security {
         } else {
             decodedString = this.PurifiedString(method, uri, body);
         }
-        const hmac = crypto
-            .createHmac("sha512", getRuntimeConfig().appSecret)
-            .update(decodedString);
-        return hmac.digest("hex");
+
+        // Server-side: sign directly
+        if (typeof window === "undefined") {
+            const hmac = crypto
+                .createHmac("sha512", process.env.APP_SECRET || "")
+                .update(decodedString);
+            return hmac.digest("hex");
+        }
+
+        // Client-side: delegate to /api/sign to keep APP_SECRET server-only
+        const res = await fetch("/api/sign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ payload: decodedString }),
+        });
+        const data = await res.json();
+        return data.signature || "";
     }
 
     /**
@@ -106,57 +148,24 @@ export class Security {
     };
     
     encryptAES(plaintext: string, secret?: string): string {
-        const key = CryptoJS.enc.Utf8.parse(secret || getRuntimeConfig().encryptionKey);
+        const key = CryptoJS.enc.Utf8.parse(secret || getEncryptionKey());
         const iv = CryptoJS.lib.WordArray.random(16);
-
-        const encrypted = CryptoJS.AES.encrypt(plaintext, key, {
-            iv,
-            mode: CryptoJS.mode.CBC,
-            padding: CryptoJS.pad.Pkcs7,
-        });
-        const ivB64 = CryptoJS.enc.Base64.stringify(iv);
-        const cipherB64 = encrypted.ciphertext.toString(CryptoJS.enc.Base64);
-
-        return `${ivB64}:${cipherB64}`;
+        const encrypted = CryptoJS.AES.encrypt(plaintext, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
+        return `${CryptoJS.enc.Base64.stringify(iv)}:${encrypted.ciphertext.toString(CryptoJS.enc.Base64)}`;
     }
-    /**
-     * Decrypts the given ciphertext using AES decryption with the given IV and secret key.
-     *
-     * @param {string} ciphertextB64 - The base64-encoded ciphertext to decrypt.  
-     * @param {string} [secret] - The secret key used for decryption. If not provided, the default encryption key will be used.
-     * @return {string} The decrypted plaintext as a UTF-8 encoded string.
-     */
 
-
-    /**
-     * Decrypts the given ciphertext using AES decryption with the given IV and secret key.
-     *
-     * @param {string} ciphertextB64 - The base64-encoded ciphertext to decrypt.
-     * @param {string} [secret] - The secret key used for decryption. If not provided, the default encryption key will be used.
-     * @return {string} The decrypted plaintext as a UTF-8 encoded string.
-     * @throws {Error} If decryption fails, an error will be thrown.
-     */
     decryptAES(ciphertextB64: string, secret?: string): string {
+        if (!ciphertextB64) return "";
         try {
             const [ivB64, cipherB64] = ciphertextB64.split(":");
-
-            const key = CryptoJS.enc.Utf8.parse(secret || getRuntimeConfig().encryptionKey);
-
+            const key = CryptoJS.enc.Utf8.parse(secret || getEncryptionKey());
             const decrypted = CryptoJS.AES.decrypt(
-                {
-                    ciphertext: CryptoJS.enc.Base64.parse(cipherB64),
-                } as any,
+                { ciphertext: CryptoJS.enc.Base64.parse(cipherB64) } as any,
                 key,
-                {
-                    iv: CryptoJS.enc.Base64.parse(ivB64),
-                    mode: CryptoJS.mode.CBC,
-                    padding: CryptoJS.pad.Pkcs7,
-                }
+                { iv: CryptoJS.enc.Base64.parse(ivB64), mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 },
             );
-
             return decrypted.toString(CryptoJS.enc.Utf8);
-        } catch (error) {
-            console.log(error)
+        } catch {
             return "";
         }
     }

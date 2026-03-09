@@ -18,14 +18,33 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { MOCK_ORGANIZATIONS } from "../_lib/mock-data"
+import { API } from "@/lib/api/handler"
+import type { IOrganization } from "../_lib/types"
 
 export default function DangerZonePage() {
     const [confirmText, setConfirmText] = React.useState("")
     const [selectedOrg, setSelectedOrg] = React.useState("")
+    const [organizations, setOrganizations] = React.useState<IOrganization[]>([])
+
+    React.useEffect(() => {
+        API.getOrganizations()
+            .then((res) => setOrganizations(res.data?.result || res.data || []))
+            .catch(() => {})
+    }, [])
 
     const isDeleteEnabled = confirmText === "DELETE" && selectedOrg
-    const selectedName = MOCK_ORGANIZATIONS.find((o) => o.id === selectedOrg)?.name ?? selectedOrg
+    const selectedName = organizations.find((o) => o.id === selectedOrg)?.name ?? selectedOrg
+
+    const handleDelete = async () => {
+        try {
+            await API.deleteOrganization(selectedOrg)
+            setOrganizations((prev) => prev.filter((o) => o.id !== selectedOrg))
+        } catch (err) {
+            console.error(err)
+        }
+        setConfirmText("")
+        setSelectedOrg("")
+    }
 
     return (
         <div className="flex flex-col h-full">
@@ -60,7 +79,7 @@ export default function DangerZonePage() {
                                         <SelectValue placeholder="Choose an organization..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {MOCK_ORGANIZATIONS.map((org) => (
+                                        {organizations.map((org) => (
                                             <SelectItem key={org.id} value={org.id}>
                                                 {org.id} — {org.name}
                                             </SelectItem>
@@ -90,7 +109,7 @@ export default function DangerZonePage() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => { console.log("Deleting:", selectedOrg); setConfirmText(""); setSelectedOrg("") }}>
+                                        <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleDelete}>
                                             Yes, delete organization
                                         </AlertDialogAction>
                                     </AlertDialogFooter>

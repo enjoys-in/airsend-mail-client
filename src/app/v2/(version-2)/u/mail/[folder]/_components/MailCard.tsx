@@ -23,9 +23,7 @@ const s = new Security();
 /** Safely decrypt — returns raw value when decryption fails or input is not encrypted */
 function safeDecrypt(value: string | undefined | null): string {
     if (!value) return ""
-    // Only attempt decryption if the value looks like an encrypted payload (iv:cipher)
     if (!value.includes(":")) return value
-
     const result = s.decryptAES(value)
     return result || value
 }

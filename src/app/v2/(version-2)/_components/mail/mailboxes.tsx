@@ -18,10 +18,12 @@ import ShowMeetings from "./ShowMeetings"
 import { AccountSwitcherV2 } from "./AccountSwitcher"
 import MultiTabSystem from "./composeMail"
 import { useMailStore } from "@/store/mails"
+import { useFeatureAccess } from "@/hooks/use-feature-access"
 
 export function Mailboxes() {
   const all_folders = useMailStore((state) => state.all_folders)
   const all_labels = useMailStore((state) => state.all_labels)
+  const { canAccessCalendar } = useFeatureAccess()
 
   return (
     <Sidebar collapsible="none" className="hidden flex-1 md:flex bg-background">
@@ -46,8 +48,12 @@ export function Mailboxes() {
       </div>
       <SidebarFooter className="border-t border-border/40 gap-1 py-2">
         <QuotaComponent />
-        <Separator className="bg-border/30" />
-        <ShowMeetings />
+        {canAccessCalendar && (
+          <>
+            <Separator className="bg-border/30" />
+            <ShowMeetings />
+          </>
+        )}
       </SidebarFooter>
     </Sidebar>
   )

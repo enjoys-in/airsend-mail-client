@@ -52,7 +52,8 @@ import {
     Search,
 } from "lucide-react"
 import type { IDomain } from "../_lib/types"
-import { MOCK_DOMAINS, MOCK_ORGANIZATIONS } from "../_lib/mock-data"
+import { API } from "@/lib/api/handler"
+import type { IOrganization } from "../_lib/types"
 
 type VerifyField = "dns_verified" | "mx_verified" | "spf_verified" | "dkim_verified" | "dmarc_verified"
 
@@ -77,8 +78,20 @@ function VerifyBadge({ ok }: { ok: boolean }) {
 }
 
 export default function DomainsPage() {
-    const [domains, setDomains] = React.useState<IDomain[]>(MOCK_DOMAINS)
+    const [domains, setDomains] = React.useState<IDomain[]>([])
+    const [organizations, setOrganizations] = React.useState<IOrganization[]>([])
+    const [loading, setLoading] = React.useState(true)
     const [search, setSearch] = React.useState("")
+
+    React.useEffect(() => {
+        Promise.all([
+            API.handleGetAllDomains().then((res) => res.data?.result || res.data || []),
+            API.getOrganizations().then((res) => res.data?.result || res.data || []),
+        ]).then(([d, o]) => {
+            setDomains(d)
+            setOrganizations(o)
+        }).catch(() => {}).finally(() => setLoading(false))
+    }, [])
     const [statusFilter, setStatusFilter] = React.useState<string>("all")
     const [isAddOpen, setIsAddOpen] = React.useState(false)
     const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
@@ -105,34 +118,43 @@ export default function DomainsPage() {
         })
     }, [domains, search, statusFilter])
 
-    const handleAddDomain = () => {
+    const handleAddDomain = async () => {
         if (!newDomain.trim()) return
-        const effectiveOrg = newDomainOrg && newDomainOrg !== "none" ? newDomainOrg : null
-        const org = effectiveOrg ? MOCK_ORGANIZATIONS.find((o) => o.id === effectiveOrg) : null
-        const domain: IDomain = {
-            id: `dom_${Date.now()}`,
-            domain_name: newDomain.trim().toLowerCase(),
-            org_id: effectiveOrg,
-            org_name: org?.name ?? null,
-            status: "pending",
-            dns_verified: false,
-            mx_verified: false,
-            spf_verified: false,
-            dkim_verified: false,
-            dmarc_verified: false,
-            accounts_count: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+        try {
+            const effectiveOrg = newDomainOrg && newDomainOrg !== "none" ? newDomainOrg : null
+            const { data } = await API.addNewDomain({ domain_name: newDomain.trim().toLowerCase(), org_id: effectiveOrg })
+            const domain = data?.result || {
+                id: `dom_${Date.now()}`,
+                domain_name: newDomain.trim().toLowerCase(),
+                org_id: effectiveOrg,
+                org_name: effectiveOrg ? organizations.find((o) => o.id === effectiveOrg)?.name ?? null : null,
+                status: "pending",
+                dns_verified: false,
+                mx_verified: false,
+                spf_verified: false,
+                dkim_verified: false,
+                dmarc_verified: false,
+                accounts_count: 0,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }
+            setDomains((prev) => [domain, ...prev])
+        } catch (err) {
+            console.error(err)
         }
-        setDomains((prev) => [domain, ...prev])
         setNewDomain("")
         setNewDomainOrg("")
         setIsAddOpen(false)
     }
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!deleteTarget) return
-        setDomains((prev) => prev.filter((d) => d.id !== deleteTarget.id))
+        try {
+            await API.deleteDomain(deleteTarget.id)
+            setDomains((prev) => prev.filter((d) => d.id !== deleteTarget.id))
+        } catch (err) {
+            console.error(err)
+        }
         setDeleteTarget(null)
     }
 
@@ -144,42 +166,40 @@ export default function DomainsPage() {
         setIsSettingsOpen(true)
     }
 
-    const handleSaveSettings = () => {
+    const handleSaveSettings = async () => {
         if (!selectedDomain) return
-        const effectiveOrg = settingsOrg && settingsOrg !== "none" ? settingsOrg : null
-        const org = effectiveOrg ? MOCK_ORGANIZATIONS.find((o) => o.id === effectiveOrg) : null
-        setDomains((prev) =>
-            prev.map((d) =>
-                d.id === selectedDomain.id
-                    ? {
-                          ...d,
-                          org_id: effectiveOrg,
-                          org_name: org?.name ?? null,
-                          updated_at: new Date().toISOString(),
-                      }
-                    : d
+        try {
+            const effectiveOrg = settingsOrg && settingsOrg !== "none" ? settingsOrg : null
+            await API.updateDomain(selectedDomain.id, { org_id: effectiveOrg, catch_all: settingsCatchAll, auto_sync: settingsAutoSync })
+            const org = effectiveOrg ? organizations.find((o) => o.id === effectiveOrg) : null
+            setDomains((prev) =>
+                prev.map((d) =>
+                    d.id === selectedDomain.id
+                        ? {
+                              ...d,
+                              org_id: effectiveOrg,
+                              org_name: org?.name ?? null,
+                              updated_at: new Date().toISOString(),
+                          }
+                        : d
+                )
             )
-        )
+        } catch (err) {
+            console.error(err)
+        }
         setIsSettingsOpen(false)
     }
 
-    const handleVerify = (domainId: string) => {
-        setDomains((prev) =>
-            prev.map((d) =>
-                d.id === domainId
-                    ? {
-                          ...d,
-                          dns_verified: true,
-                          mx_verified: true,
-                          spf_verified: true,
-                          dkim_verified: Math.random() > 0.3,
-                          dmarc_verified: Math.random() > 0.3,
-                          status: "active" as const,
-                          updated_at: new Date().toISOString(),
-                      }
-                    : d
-            )
-        )
+    const handleVerify = async (domainId: string) => {
+        try {
+            const { data } = await API.verifyDomain(domainId)
+            const result = data?.result
+            if (result) {
+                setDomains((prev) => prev.map((d) => d.id === domainId ? { ...d, ...result } : d))
+            }
+        } catch (err) {
+            console.error(err)
+        }
     }
 
     const statusColor: Record<string, string> = {
@@ -367,7 +387,7 @@ export default function DomainsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">None</SelectItem>
-                                    {MOCK_ORGANIZATIONS.map((o) => (
+                                    {organizations.map((o) => (
                                         <SelectItem key={o.id} value={o.id}>
                                             {o.name}
                                         </SelectItem>
@@ -404,7 +424,7 @@ export default function DomainsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">None</SelectItem>
-                                    {MOCK_ORGANIZATIONS.map((o) => (
+                                    {organizations.map((o) => (
                                         <SelectItem key={o.id} value={o.id}>
                                             {o.name}
                                         </SelectItem>

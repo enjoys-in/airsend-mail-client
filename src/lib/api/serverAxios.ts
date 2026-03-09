@@ -23,9 +23,16 @@ serverAxios.interceptors.request.use(async (config) => {
         config.headers['Authorization'] = `Bearer ${token}`
     }
 
-    security.GenerateSignature((config.method as string).toUpperCase(), config.baseURL as string, config.data).then((signature) => {
-        config.headers['X-Signature'] = signature
-    })
+    const shieldRaw = cookieStore.get('shield_user')?.value;
+    if (shieldRaw) {
+        try {
+            const user = JSON.parse(shieldRaw);
+            if (user?.mid) config.headers['X-Tenant-ID'] = user.mid;
+        } catch {}
+    }
+
+    const signature = await security.GenerateSignature((config.method as string).toUpperCase(), config.baseURL as string, config.data)
+    config.headers['X-Signature'] = signature
     return config;
 }, (error) => {
     return Promise.reject(error);
