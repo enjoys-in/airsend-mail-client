@@ -93,7 +93,13 @@ export async function syncCalendarsToBackend(
     config: [],
   };
 
-  const updatedConfig: ICalenderConfig = { ...currentConfig, config: configArray };
+  // Auto-enable calendar when calendars exist
+  const shouldEnable = configArray.length > 0 || currentConfig.enable_calender;
+  const updatedConfig: ICalenderConfig = {
+    ...currentConfig,
+    config: configArray,
+    enable_calender: shouldEnable,
+  };
 
   try {
     await airsendDB.updateNestedItem(

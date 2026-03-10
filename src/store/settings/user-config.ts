@@ -59,7 +59,14 @@ export const useUserConfigStore = create<UserConfigState>()((set) => ({
            The user is "under an org" when current_org_id is not null. */
         const orgId = settings.organization?.current_org_id ?? null
         const isUnderOrg = orgId !== null
-        const calendarEnabled = settings.calender_config?.enable_calender ?? false
+
+        // Calendar is accessible if:
+        // 1) enable_calender is true, OR
+        // 2) There's already a configured calendar in the config array
+        const calenderConfig = settings.calender_config
+        const enableFlag = calenderConfig?.enable_calender ?? false
+        const hasConfiguredCalendars = Array.isArray(calenderConfig?.config) && calenderConfig.config.length > 0
+        const calendarEnabled = enableFlag || hasConfiguredCalendars
 
         set({
             isLoaded: true,

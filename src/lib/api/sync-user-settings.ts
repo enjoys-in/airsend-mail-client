@@ -4,6 +4,7 @@ import { useUserConfigStore } from "@/store/settings/user-config"
 import type { AxiosResponse } from "axios"
 import type { GetUserSettingsResponse } from "@/lib/types/get-user-settings-response"
 import type { AccountSettings } from "@/lib/types/account-settings.interface"
+import { withSyncGuard } from "./sync-guard"
 
 /* ------------------------------------------------------------------ */
 /*  syncUserSettings                                                   */
@@ -42,16 +43,26 @@ export async function syncUserSettings(
             organization: data.result.domain_name ?? { id: "", current_org_id: null },
         }
 
+        /* ---- Auto-fix: if calendars are configured but flag is false, enable it ---- */
+        const calConfig = settingsObj.calender_config
+        if (calConfig && Array.isArray(calConfig.config) && calConfig.config.length > 0) {
+            if (!calConfig.enable_calender) {
+                settingsObj.calender_config = { ...calConfig, enable_calender: true }
+            }
+        }
+
         const email = data.result.email
 
-        /* ---- Persist to IDB ---- */
-        const exists = await airsendDB.has("settings", email)
+        /* ---- Persist to IDB (guarded to prevent dexie-observable → API loop) ---- */
+        await withSyncGuard(async () => {
+            const exists = await airsendDB.has("settings", email)
 
-        if (exists) {
-            await airsendDB.updateNestedItem("settings", email, "settings", settingsObj as any)
-        } else {
-            await airsendDB.addNestedItem("settings", email, { settings: settingsObj as any })
-        }
+            if (exists) {
+                await airsendDB.updateNestedItem("settings", email, "settings", settingsObj as any)
+            } else {
+                await airsendDB.addNestedItem("settings", email, { settings: settingsObj as any })
+            }
+        })
 
         /* ---- Hydrate Zustand feature-flag store ---- */
         useUserConfigStore.getState().hydrate(settingsObj, domainName)

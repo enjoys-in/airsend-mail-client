@@ -6,11 +6,17 @@ import { useSettingsStore } from '@/store/settings'
 import dot from 'dot-object';
 import { API } from '@/lib/api/handler';
 import { toast } from 'sonner';
+import { isSyncingFromBackend } from '@/lib/api/sync-guard';
 
 const IdbSyncHookApi = () => {
     const { setSettings } = useSettingsStore()
     React.useEffect(() => {
         const handler = async (changes: any) => {
+            // Skip if we're syncing FROM backend TO IDB (prevents loop)
+            if (isSyncingFromBackend()) {
+                return;
+            }
+
             for (const e of changes) {
                 if (e.table.toLowerCase() === 'settings') {
                     const email = (e as any).key

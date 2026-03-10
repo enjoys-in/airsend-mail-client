@@ -59,19 +59,36 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
   const [showAppPasswordDialog, setShowAppPasswordDialog] = useState(false);
   const [appPassword, setAppPassword] = useState("");
   const [appPasswordLoading, setAppPasswordLoading] = useState(false);
+
+  // Calendar is effectively enabled if flag is true OR there are configured calendars
+  const hasConfiguredCalendars = Array.isArray(local.config) && local.config.length > 0;
+  const isEffectivelyEnabled = local.enable_calender || hasConfiguredCalendars;
  
   const handleEnableToggle = useCallback(
-    (checked: boolean) => {
-      if (checked) {
+    async (checked: boolean) => {
+      if (checked && !hasConfiguredCalendars) {
+        // First-time setup — show dialog
         setCalName("");
         setCalColor("#3B82F6");
         setNameError("");
         setShowSetupDialog(true);
+      } else if (checked && hasConfiguredCalendars) {
+        // Re-enabling existing calendar — immediately persist so it doesn't get overwritten
+        const updated = { ...local, enable_calender: true };
+        onChange("enable_calender", true);
+        if (onSave) {
+          await onSave(updated);
+        }
       } else {
+        // Disabling — immediately persist
+        const updated = { ...local, enable_calender: false };
         onChange("enable_calender", false);
+        if (onSave) {
+          await onSave(updated);
+        }
       }
     },
-    [onChange],
+    [onChange, hasConfiguredCalendars, local, onSave],
   );
 
   const handleSetupConfirm = useCallback(async () => {
@@ -118,7 +135,8 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
 
       // Fetch JMAP calendars and sync config array to backend
       const configArray = await fetchCalendarConfigArray(mid);
-      const updatedLocal = { ...local, config: configArray };
+      // Ensure enable_calender is true when saving the new config
+      const updatedLocal = { ...local, config: configArray, enable_calender: true };
 
       // Persist the updated calender_config (with calendar list) to IDB → auto-syncs to backend
       if (onSave) {
@@ -142,7 +160,7 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
         <SettingToggleRow
           label="Enable calendar"
           tooltip="Turn on/off the integrated calendar feature"
-          checked={local.enable_calender}
+          checked={isEffectivelyEnabled}
           onCheckedChange={handleEnableToggle}
         />
         <SettingToggleRow
@@ -150,14 +168,14 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
           tooltip="Receive notifications for upcoming calendar events"
           checked={local.notifications}
           onCheckedChange={(v) => onChange("notifications", v)}
-          disabled={!local.enable_calender}
+          disabled={!isEffectivelyEnabled}
         />
         <SettingToggleRow
           label="Calendar sharing"
           tooltip="Allow sharing your calendar with other users"
           checked={local.sharing}
           onCheckedChange={(v) => onChange("sharing", v)}
-          disabled={!local.enable_calender}
+          disabled={!isEffectivelyEnabled}
         />
       </SettingsSection>
 
@@ -168,7 +186,7 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
           value={String(local.calender_sync_interval)}
           onValueChange={(v) => onChange("calender_sync_interval", Number(v))}
           options={[...SYNC_INTERVAL_OPTIONS]}
-          disabled={!local.enable_calender}
+          disabled={!isEffectivelyEnabled}
         />
       </SettingsSection>
 
