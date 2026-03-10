@@ -66,7 +66,7 @@ function AccountMenu({ currAccount }: { currAccount: IUser }) {
               />
               <div className="flex flex-col items-start cursor-pointer">
                 <span>{currAccount?.email}</span>
-                <p className="text-xs text-zinc-500">{currAccount?.tenant}</p>
+                <p className="text-xs text-zinc-500">{currAccount?.tenant_name}</p>
               </div>
               <ChevronDown size={15} className="self-start mt-1 cursor-pointer" />
             </div>

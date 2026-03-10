@@ -9,10 +9,10 @@ export interface IUser {
     mid: string;
     email: string;
     domain_name: string;
-    tenant: string;
+    tenant_name: string;
     name: string;
     role: ROLE_TYPE;
-    hasOrgs: Record<string, any> | null;
+    hasOrgs: string | null;
 }
 export enum ROLE {
     USER = "USER",

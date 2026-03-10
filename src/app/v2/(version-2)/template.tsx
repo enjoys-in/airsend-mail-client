@@ -1,7 +1,7 @@
 "use client"
 import React, { ReactNode, Suspense, } from "react";
 
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { Spinner } from "@/components/common/spinner";
 import SocketContextProvider from "@/context/SocketContext";
 import NewMailRecived from "@/components/common/new-mail-recived";
@@ -10,16 +10,23 @@ import { CalendarProvider } from "./(home)/calender/_components/event-calendar/c
 import { MobileLayoutV2 } from "./_components/mobile-layout";
 import { fetchCurrentUser } from "@/store/slices/account";
 import { syncUserSettings } from "@/lib/api/sync-user-settings";
+import { setMid } from "@/lib/api/auth-state";
 import SentMailToast from "@/components/common/sent-mail";
 import CustomWidget from "@/components/common/custom-widget";
 
 function MainLayout({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
+  const mid = useAppSelector((s) => s.accounts?.currAccount?.mid);
+
   React.useEffect(() => {
-    // Fire both in parallel — settings fetch does not depend on profile
     dispatch(fetchCurrentUser());
     syncUserSettings();
   }, [dispatch]);
+
+  // Keep module-level auth state in sync with Redux
+  React.useEffect(() => {
+    setMid(mid ?? null);
+  }, [mid]);
   return (
     <SocketContextProvider>
       <CustomWidget />

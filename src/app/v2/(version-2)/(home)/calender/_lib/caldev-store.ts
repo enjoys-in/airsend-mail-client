@@ -245,12 +245,8 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
         before,
       });
 
-      // Merge with existing events to avoid losing data from other ranges
-      const existingEvents = get().rawEvents;
-      const newIds = new Set(events.map((e) => e.id));
-      const retained = existingEvents.filter((e) => !newIds.has(e.id));
-
-      // Expand the cached range to cover both old and new
+      // Replace all events with the fresh fetch
+      // (queryAndFetchEvents now returns ALL events, client-filtered)
       const mergedRange = lastFetchRange
         ? {
             after: after < lastFetchRange.after ? after : lastFetchRange.after,
@@ -259,7 +255,7 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
         : { after, before };
 
       set({
-        rawEvents: [...retained, ...events],
+        rawEvents: events,
         eventsLoading: false,
         lastFetchRange: mergedRange,
       });

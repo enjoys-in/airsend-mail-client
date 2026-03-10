@@ -7,6 +7,7 @@ import { SettingsPageHeader, SaveSettingsBar } from "./shared";
 import CalendarGeneral from "./calendar/calendar-general";
 import ConnectedCalendars from "./calendar/connected-calendars";
 import { toast } from "sonner";
+import { useUserConfigStore } from "@/store/settings/user-config";
 
 /* ---- defaults (used before API data arrives) ---- */
 const DEFAULT_CALENDAR: ICalenderConfig = {
@@ -16,8 +17,6 @@ const DEFAULT_CALENDAR: ICalenderConfig = {
   sharing: false,
   config: [],
 };
-
-type CalendarEntry = ICalenderConfig["config"][number];
 
 /* ------------------------------------------------------------------ */
 function CalendarSettings({ email }: { email: string }) {
@@ -42,20 +41,6 @@ function CalendarSettings({ email }: { email: string }) {
     [],
   );
 
-  /* ---- calendar list mutations ---- */
-  const handleAddCalendar = useCallback((entry: CalendarEntry) => {
-    setLocal((prev) => ({ ...prev, config: [...prev.config, entry] }));
-    setDirty(true);
-  }, []);
-
-  const handleRemoveCalendar = useCallback((calendarId: string) => {
-    setLocal((prev) => ({
-      ...prev,
-      config: prev.config.filter((c) => c.calendar_id !== calendarId),
-    }));
-    setDirty(true);
-  }, []);
-
   /* ---- reset ---- */
   const handleReset = useCallback(() => {
     if (settings?.calender_config) {
@@ -66,20 +51,36 @@ function CalendarSettings({ email }: { email: string }) {
     setDirty(false);
   }, [settings?.calender_config]);
 
+  /* ---- persist & re-hydrate (called after app password created) ---- */
+  const handleSaveAndHydrate = useCallback(async (config: ICalenderConfig) => {
+    await save("calender_config", config);
+    // Re-hydrate user-config store so sidebar/feature flags update immediately
+    if (settings) {
+      useUserConfigStore.getState().hydrate({ ...settings, calender_config: config });
+    }
+    setDirty(false);
+  }, [save, settings]);
+
+  /* ---- sync config array from CalDev calendars to backend ---- */
+  const handleConfigSync = useCallback(
+    (configArray: ICalenderConfig["config"]) => {
+      setLocal((prev) => {
+        const next = { ...prev, config: configArray };
+        // Fire-and-forget save to IDB → auto-syncs to backend via dexie-observable
+        save("calender_config", next);
+        if (settings) {
+          useUserConfigStore.getState().hydrate({ ...settings, calender_config: next });
+        }
+        return next;
+      });
+    },
+    [save, settings],
+  );
+
   /* ---- persist ---- */
   const handleSave = async () => {
-    if (local.enable_calender) {
-      // Must have at least one calendar when enabled
-      if (!local.config || local.config.length === 0) {
-        return toast.error("Please add at least one calendar before saving.");
-      }
-      // Validate every calendar has a name and URL
-      const invalid = local.config.find((c) => !c.calendar_name?.trim() || !c.calender_url?.trim());
-      if (invalid) {
-        return toast.error("Each calendar must have a name and URL.");
-      }
-    }
     await save("calender_config", local);
+    useUserConfigStore.getState().hydrate({ ...settings, calender_config: local });
     setDirty(false);
   };
 
@@ -91,13 +92,11 @@ function CalendarSettings({ email }: { email: string }) {
           description="Manage calendar preferences and connected external calendars."
         />
 
-        <CalendarGeneral local={local} onChange={handleChange} onAddCalendar={handleAddCalendar} />
+        <CalendarGeneral local={local} onChange={handleChange} onSave={handleSaveAndHydrate} />
 
         <ConnectedCalendars
-          calendars={local.config}
           disabled={!local.enable_calender}
-          onAdd={handleAddCalendar}
-          onRemove={handleRemoveCalendar}
+          onConfigSync={handleConfigSync}
         />
 
         <SaveSettingsBar

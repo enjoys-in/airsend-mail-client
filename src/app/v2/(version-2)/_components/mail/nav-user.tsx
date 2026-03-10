@@ -64,7 +64,7 @@ export function NavUserV2() {
     ? displayName || currAccount?.name || ""
     : ""
   const resolvedEmail = mounted ? (currAccount?.email ?? "") : ""
-  const resolvedTenant = mounted ? (currAccount?.tenant ?? "") : ""
+  const resolvedTenant = mounted ? (currAccount?.tenant_name ?? "") : ""
   const initials = mounted && resolvedName
     ? formatNameInParts(resolvedName)
     : ""

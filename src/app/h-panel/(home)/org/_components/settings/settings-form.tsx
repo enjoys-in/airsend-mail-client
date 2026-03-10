@@ -158,7 +158,7 @@ export function SettingsForm({ account, initialData }: SettingsFormProps) {
                         <PrivacySection />
                     </TabsContent>
                     <TabsContent value="advanced" className="mt-4">
-                        <AdvancedSection />
+                        <AdvancedSection account={account} />
                     </TabsContent>
                 </Tabs>
             </form>

@@ -33,7 +33,17 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
       if (!data.success) {
         throw new Error(data.message || "Failed to fetch user profile")
       }
-      return data.result as IUser;
+      // Only pick declared IUser fields — strip sensitive data (PGP keys, DKIM private, etc.)
+      const raw = data.result;
+      return {
+        mid: raw.mid,
+        email: raw.email,
+        domain_name: raw.domain_name,
+        tenant_name: raw.tenant_name,
+        name: raw.name,
+        role: raw.role,
+        hasOrgs: raw.hasOrgs ?? null,
+      } as IUser;
     } catch (err) {
       deleteCookie("access_token")
       return rejectWithValue("Failed to fetch current user");

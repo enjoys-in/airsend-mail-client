@@ -13,14 +13,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   SettingsSection,
   SettingToggleRow,
   SettingSelectRow,
 } from "../shared";
-
-const CALDEV_BASE_URL =
-  (typeof window !== 'undefined' && (window as any).__RUNTIME_CONFIG__?.CALDEV_URL) || process.env.CALDEV_URL || "http://localhost:8443";
+import {
+  ensureDefaultCalendar,
+  createAppPassword,
+  fetchCalendarConfigArray,
+} from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-api";
+import { useAppSelector } from "@/store/hooks";
 
 const SYNC_INTERVAL_OPTIONS = [
   { value: "5", label: "Every 5 minutes" },
@@ -31,26 +36,28 @@ const SYNC_INTERVAL_OPTIONS = [
   { value: "1440", label: "Every 24 hours" },
 ] as const;
 
-type CalendarEntry = ICalenderConfig["config"][number];
-
 interface CalendarGeneralProps {
   local: ICalenderConfig;
   onChange: <K extends keyof ICalenderConfig>(key: K, value: ICalenderConfig[K]) => void;
-  onAddCalendar?: (entry: CalendarEntry) => void;
+  onSave?: (config: ICalenderConfig) => Promise<void>;
 }
 
-function CalendarGeneral({ local, onChange, onAddCalendar }: CalendarGeneralProps) {
+function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
+  const mid = useAppSelector((s) => s.accounts?.currAccount?.mid);
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [calName, setCalName] = useState("");
-  const [calUrl, setCalUrl] = useState(CALDEV_BASE_URL);
   const [nameError, setNameError] = useState("");
+  const [setupLoading, setSetupLoading] = useState(false);
 
+  // App password dialog state
+  const [showAppPasswordDialog, setShowAppPasswordDialog] = useState(false);
+  const [appPassword, setAppPassword] = useState("");
+  const [appPasswordLoading, setAppPasswordLoading] = useState(false);
+ 
   const handleEnableToggle = useCallback(
     (checked: boolean) => {
       if (checked) {
-        // Opening — pre-fill defaults
         setCalName("");
-        setCalUrl(CALDEV_BASE_URL);
         setNameError("");
         setShowSetupDialog(true);
       } else {
@@ -60,35 +67,67 @@ function CalendarGeneral({ local, onChange, onAddCalendar }: CalendarGeneralProp
     [onChange],
   );
 
-  const handleSetupConfirm = useCallback(() => {
+  const handleSetupConfirm = useCallback(async () => {
     if (!calName.trim()) {
       setNameError("Calendar name is required");
       return;
     }
     setNameError("");
+    setSetupLoading(true);
 
-    // Enable the calendar
-    onChange("enable_calender", true);
+    try {
+      // Provision calendar via JMAP Calendar/set
+      const ok = await ensureDefaultCalendar(mid);
+      if (!ok) {
+        toast.error("Failed to create calendar. Please try again.");
+        return;
+      }
 
-    // Auto-add the calendar entry if handler is provided
-    if (onAddCalendar) {
-      const entry: CalendarEntry = {
-        calendar_id: crypto.randomUUID(),
-        calendar_name: calName.trim(),
-        calender_url: calUrl.trim() || CALDEV_BASE_URL,
-        sync_status: "pending",
-        last_synced_at: null,
-        sync_error: null,
-      };
-      onAddCalendar(entry);
+      // Enable the calendar
+      onChange("enable_calender", true);
+
+      setShowSetupDialog(false);
+
+      // Show app password dialog
+      setAppPassword("");
+      setShowAppPasswordDialog(true);
+    } catch (err) {
+      console.error('[calendar-general] handleSetupConfirm error:', err);
+      toast.error("Failed to create calendar.");
+    } finally {
+      setSetupLoading(false);
     }
-
-    setShowSetupDialog(false);
-  }, [calName, calUrl, onChange, onAddCalendar]);
+  }, [calName, onChange, mid]);
 
   const handleSetupCancel = useCallback(() => {
     setShowSetupDialog(false);
   }, []);
+
+  const handleAppPasswordSubmit = useCallback(async () => {
+    if (!appPassword.trim()) return;
+    setAppPasswordLoading(true);
+    try {
+      await createAppPassword("Calendar", appPassword, mid);
+
+      // Fetch JMAP calendars and sync config array to backend
+      const configArray = await fetchCalendarConfigArray(mid);
+      const updatedLocal = { ...local, config: configArray };
+
+      // Persist the updated calender_config (with calendar list) to IDB → auto-syncs to backend
+      if (onSave) {
+        await onSave(updatedLocal);
+      }
+
+      toast.success("Calendar enabled and app password created.");
+      setShowAppPasswordDialog(false);
+      setAppPassword("");
+    } catch (err) {
+      console.error('[calendar-general] handleAppPasswordSubmit error:', err);
+      toast.error("Failed to create app password.");
+    } finally {
+      setAppPasswordLoading(false);
+    }
+  }, [appPassword, mid, local, onSave]);
 
   return (
     <>
@@ -146,22 +185,52 @@ function CalendarGeneral({ local, onChange, onAddCalendar }: CalendarGeneralProp
               />
               {nameError && <p className="text-destructive text-xs">{nameError}</p>}
             </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={handleSetupCancel} disabled={setupLoading}>Cancel</Button>
+            <Button onClick={handleSetupConfirm} disabled={setupLoading}>
+              {setupLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Enable Calendar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* App Password Dialog — non-dismissable, user must create a password */}
+      <Dialog open={showAppPasswordDialog} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} hideCloseButton>
+          <DialogHeader>
+            <DialogTitle>Create App Password</DialogTitle>
+            <DialogDescription>
+              An app password is required to complete your calendar setup. This password allows external calendar clients to sync with your calendar securely.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="setup-cal-url">Calendar URL</Label>
+              <Label htmlFor="app-password">App Password</Label>
               <Input
-                id="setup-cal-url"
-                placeholder={CALDEV_BASE_URL}
-                value={calUrl}
-                onChange={(e) => setCalUrl(e.target.value)}
+                id="app-password"
+                type="password"
+                placeholder="Enter a secure password"
+                value={appPassword}
+                onChange={(e) => setAppPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && appPassword.trim() && handleAppPasswordSubmit()}
               />
-              <p className="text-xs text-muted-foreground">
-                Default: {CALDEV_BASE_URL}
+            </div>
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
+              <p className="text-xs text-blue-800 dark:text-blue-300">
+                <strong>Use this password</strong> to connect your calendar with <strong>Apple Calendar</strong>, <strong>Microsoft Outlook</strong>, <strong>Thunderbird</strong>, or any CalDAV-compatible app. You'll need your email address and this app password to sign in.
               </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={handleSetupCancel}>Cancel</Button>
-            <Button onClick={handleSetupConfirm}>Enable Calendar</Button>
+            <Button
+              onClick={handleAppPasswordSubmit}
+              disabled={!appPassword.trim() || appPasswordLoading}
+            >
+              {appPasswordLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Create Password
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

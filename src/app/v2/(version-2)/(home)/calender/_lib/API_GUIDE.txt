@@ -1,0 +1,639 @@
+================================================================================
+  CalDev — Frontend API Guide
+================================================================================
+
+BASE URL:  http://localhost:8443
+
+================================================================================
+  AUTHENTICATION
+================================================================================
+
+Frontend auth uses the access_token cookie (set by the mail/auth system).
+All requests should include: credentials: "include" in fetch options.
+
+The cookie contains a JWT with: mid (mail_accounts.id), email, name, role.
+The server reads tenant_id and user_id from this cookie automatically.
+
+accountId for JMAP = "{tenant_id}:{user_id}" e.g. "85:85"
+(Get these from the /jmap/session endpoint after login.)
+
+Example fetch:
+  fetch("http://localhost:8443/jmap/api", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ... })
+  })
+
+================================================================================
+  RESPONSE FORMATS
+================================================================================
+
+REST endpoints (/api/*):
+{
+  "success": true,
+  "message": "description",
+  "result": { ... }
+}
+
+JMAP endpoints (/jmap/*):
+{
+  "methodResponses": [ ["MethodName", { ...result }, "callId"] ],
+  "sessionState": "abc123"
+}
+
+Error (REST):
+{
+  "success": false,
+  "message": "error description",
+  "error": { "details": "optional details" }
+}
+
+
+================================================================================
+  QUICK REFERENCE — What to use from frontend
+================================================================================
+
+  Action                    Endpoint / Method
+  ──────                    ─────────────────
+  Get session/account info  GET  /jmap/session
+  List calendars            POST /jmap/api → Calendar/get
+  Create calendar           POST /jmap/api → Calendar/set (create)
+  Delete calendar           POST /jmap/api → Calendar/set (destroy)
+  List events               POST /jmap/api → CalendarEvent/get
+  Query events (filtered)   POST /jmap/api → CalendarEvent/query
+  Create event              POST /jmap/api → CalendarEvent/set (create)
+  Update event              POST /jmap/api → CalendarEvent/set (update)
+  Delete event              POST /jmap/api → CalendarEvent/set (destroy)
+  Get changes since state   POST /jmap/api → CalendarEvent/changes
+  RSVP to invitation        POST /api/scheduling/rsvp
+  List subscriptions        GET  /api/subscriptions/
+  Add external calendar     POST /api/subscriptions/
+  Trigger sync              POST /api/subscriptions/:id/sync
+  Health check              GET  /health (no auth)
+
+
+================================================================================
+  1. JMAP SESSION (get accountId)
+================================================================================
+
+GET /jmap/session
+
+Response (200):
+{
+  "capabilities": { ... },
+  "accounts": {
+    "85:85": {
+      "name": "user@example.com",
+      "isPersonal": true,
+      "isReadOnly": false
+    }
+  },
+  "primaryAccounts": {
+    "urn:ietf:params:jmap:calendars": "85:85"
+  },
+  "username": "user@example.com",
+  "apiUrl": "http://localhost:8443/jmap/api",
+  "state": "a1b2c3d4"
+}
+
+Frontend tip: Read primaryAccounts["urn:ietf:params:jmap:calendars"] to get
+your accountId. Use it in all JMAP method calls.
+
+
+================================================================================
+  2. JMAP API — How it works
+================================================================================
+
+All JMAP calls go through a single endpoint:
+
+POST /jmap/api
+Content-Type: application/json
+
+Request format:
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["MethodName", { "accountId": "85:85", ...args }, "callId"]
+  ]
+}
+
+Response format:
+{
+  "methodResponses": [
+    ["MethodName", { ...result }, "callId"]
+  ],
+  "sessionState": "abc123"
+}
+
+You can batch multiple method calls in one request.
+"callId" is a client-chosen string to match responses to requests.
+
+
+================================================================================
+  3. Calendar/get — List calendars
+================================================================================
+
+Request:
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["Calendar/get", { "accountId": "85:85" }, "c0"]
+  ]
+}
+
+Response:
+["Calendar/get", {
+  "accountId": "85:85",
+  "state": "abc123",
+  "list": [
+    {
+      "id": "uuid",
+      "name": "Personal",
+      "description": "Default calendar",
+      "color": "#0078D4",
+      "sortOrder": 0,
+      "isDefault": true,
+      "isVisible": true,
+      "isReadOnly": false,
+      "timezone": "UTC",
+      "supportedComponents": ["VEVENT", "VTODO"],
+      "myRights": {
+        "mayReadItems": true,
+        "mayWriteAll": true,
+        "mayDelete": true,
+        "mayRename": true
+      }
+    }
+  ],
+  "notFound": []
+}, "c0"]
+
+
+================================================================================
+  4. Calendar/set — Create / Delete calendars
+================================================================================
+
+Create:
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["Calendar/set", {
+      "accountId": "85:85",
+      "create": {
+        "temp0": {
+          "name": "Work",
+          "description": "Work calendar",
+          "color": "#EF4444",
+          "timezone": "Asia/Kolkata"
+        }
+      }
+    }, "c1"]
+  ]
+}
+
+Create response:
+["Calendar/set", {
+  "accountId": "85:85",
+  "created": {
+    "temp0": { "id": "generated-uuid" }
+  },
+  "newState": "new-state"
+}, "c1"]
+
+"temp0" is your client-chosen temporary ID.
+The server returns the real ID in created["temp0"].id.
+
+--------
+
+Delete:
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["Calendar/set", {
+      "accountId": "85:85",
+      "destroy": ["calendar-uuid-to-delete"]
+    }, "c2"]
+  ]
+}
+
+Delete response:
+["Calendar/set", {
+  "accountId": "85:85",
+  "destroyed": ["calendar-uuid-to-delete"],
+  "newState": "new-state"
+}, "c2"]
+
+
+================================================================================
+  5. CalendarEvent/get — List events
+================================================================================
+
+Get ALL events:
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["CalendarEvent/get", { "accountId": "85:85" }, "e0"]
+  ]
+}
+
+Get specific events by ID:
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["CalendarEvent/get", {
+      "accountId": "85:85",
+      "ids": ["event-uuid-1", "event-uuid-2"]
+    }, "e0"]
+  ]
+}
+
+Response:
+["CalendarEvent/get", {
+  "accountId": "85:85",
+  "state": "abc123",
+  "list": [
+    {
+      "id": "uuid",
+      "calendarId": "calendar-uuid",
+      "uid": "unique-uid@caldev",
+      "@type": "CalendarEvent",
+      "title": "Team Meeting",
+      "description": "Weekly standup",
+      "location": "Room 42",
+      "start": "2026-03-10T14:00:00Z",
+      "end": "2026-03-10T15:00:00Z",
+      "duration": "",
+      "status": "CONFIRMED",
+      "isAllDay": false,
+      "sequence": 0,
+      "priority": 0,
+      "classification": "PUBLIC",
+      "created": "2026-03-10T10:00:00Z",
+      "updated": "2026-03-10T10:00:00Z",
+      "recurrenceRules": [
+        { "rule": "FREQ=WEEKLY;BYDAY=MO" }
+      ],
+      "organizer": "mailto:user@example.com",
+      "locations": {
+        "1": { "name": "Room 42" }
+      },
+      "participants": {
+        "1": {
+          "name": "Jane Doe",
+          "email": "jane@example.com",
+          "kind": "individual",
+          "roles": { "attendee": true },
+          "participationStatus": "NEEDS-ACTION",
+          "expectReply": true
+        }
+      }
+    }
+  ],
+  "notFound": []
+}, "e0"]
+
+
+================================================================================
+  6. CalendarEvent/query — Filter events by date/calendar
+================================================================================
+
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["CalendarEvent/query", {
+      "accountId": "85:85",
+      "filter": {
+        "calendarId": "calendar-uuid",
+        "after": "2026-03-01T00:00:00Z",
+        "before": "2026-04-01T00:00:00Z"
+      },
+      "position": 0,
+      "limit": 50
+    }, "q0"]
+  ]
+}
+
+Filter fields (all optional):
+  calendarId   string   filter by calendar UUID
+  after        string   ISO 8601 — events starting after this time
+  before       string   ISO 8601 — events starting before this time
+
+Response returns event IDs (use CalendarEvent/get to fetch full objects):
+["CalendarEvent/query", {
+  "accountId": "85:85",
+  "queryState": "abc123",
+  "position": 0,
+  "ids": ["event-uuid-1", "event-uuid-2", "event-uuid-3"],
+  "total": 3
+}, "q0"]
+
+
+================================================================================
+  7. CalendarEvent/set — Create / Update / Delete events
+================================================================================
+
+Create:
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["CalendarEvent/set", {
+      "accountId": "85:85",
+      "create": {
+        "temp0": {
+          "calendarId": "calendar-uuid",
+          "title": "New Meeting",
+          "description": "Discuss project",
+          "location": "Room 1",
+          "start": "2026-03-15T10:00:00Z",
+          "end": "2026-03-15T11:00:00Z",
+          "isAllDay": false
+        }
+      }
+    }, "e1"]
+  ]
+}
+
+Create response:
+["CalendarEvent/set", {
+  "created": {
+    "temp0": {
+      "id": "generated-uuid",
+      "uid": "generated-uid@caldev",
+      "etag": "\"abc123\""
+    }
+  },
+  "newState": "new-state"
+}, "e1"]
+
+--------
+
+Update:
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["CalendarEvent/set", {
+      "accountId": "85:85",
+      "update": {
+        "existing-event-uuid": {
+          "title": "Updated Title",
+          "description": "New description",
+          "start": "2026-03-15T11:00:00Z",
+          "end": "2026-03-15T12:00:00Z"
+        }
+      }
+    }, "e2"]
+  ]
+}
+
+Updatable fields: title, description, location, start, end, isAllDay
+
+Update response:
+["CalendarEvent/set", {
+  "updated": { "existing-event-uuid": null },
+  "newState": "new-state"
+}, "e2"]
+
+--------
+
+Delete:
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["CalendarEvent/set", {
+      "accountId": "85:85",
+      "destroy": ["event-uuid-1", "event-uuid-2"]
+    }, "e3"]
+  ]
+}
+
+Delete response:
+["CalendarEvent/set", {
+  "destroyed": ["event-uuid-1"],
+  "notDestroyed": {
+    "event-uuid-2": { "type": "notFound", "description": "Event not found" }
+  },
+  "newState": "new-state"
+}, "e3"]
+
+
+================================================================================
+  8. CalendarEvent/changes — Sync changes since last state
+================================================================================
+
+Use this for incremental sync. Save the "state" from previous responses
+and pass it as "sinceState" to get only what changed.
+
+{
+  "using": ["urn:ietf:params:jmap:calendars"],
+  "methodCalls": [
+    ["CalendarEvent/changes", {
+      "accountId": "85:85",
+      "sinceState": "previous-state-token"
+    }, "ch0"]
+  ]
+}
+
+Response:
+["CalendarEvent/changes", {
+  "accountId": "85:85",
+  "oldState": "previous-state-token",
+  "newState": "new-state-token",
+  "hasMoreChanges": false,
+  "created": ["new-event-uuid"],
+  "updated": ["modified-event-uuid"],
+  "destroyed": ["deleted-event-uuid"]
+}, "ch0"]
+
+
+================================================================================
+  9. RSVP — Respond to event invitations
+================================================================================
+
+POST /api/scheduling/rsvp
+Content-Type: application/json
+
+Request:
+{
+  "event_uid": "event-uid@caldev",
+  "response": "ACCEPTED",
+  "comment": "I'll be there!"
+}
+
+Valid response values:
+  ACCEPTED, DECLINED, TENTATIVE
+  (shortcuts: accept/yes, decline/no, maybe)
+
+Response (200):
+{
+  "success": true,
+  "message": "RSVP recorded. Reply sent to organizer.",
+  "result": {
+    "event_uid": "event-uid@caldev",
+    "attendee": "user@example.com",
+    "response": "ACCEPTED"
+  }
+}
+
+
+================================================================================
+  10. CALENDAR SUBSCRIPTIONS (Import external calendars)
+================================================================================
+
+GET /api/subscriptions/
+List all subscriptions.
+
+Response (200):
+{
+  "success": true,
+  "message": "subscriptions retrieved",
+  "result": {
+    "subscriptions": [
+      {
+        "id": "uuid",
+        "calendar_id": "uuid",
+        "source_type": "google",
+        "source_url": "https://calendar.google.com/calendar/ical/.../basic.ics",
+        "display_name": "Indian Holidays",
+        "color": "#10B981",
+        "is_enabled": true,
+        "sync_interval": 3600,
+        "last_synced_at": "2026-03-10T12:00:00Z",
+        "events_count": 535,
+        "last_error": ""
+      }
+    ]
+  }
+}
+
+--------
+
+POST /api/subscriptions/
+Create a new subscription.
+
+Request:
+{
+  "source_url": "https://calendar.google.com/.../basic.ics",
+  "display_name": "Indian Holidays",
+  "color": "#10B981",
+  "sync_interval": 3600
+}
+
+Fields:
+  source_url        REQUIRED   ICS feed URL
+  display_name      optional   default: "Imported Calendar"
+  color             optional   default: "#6B7280"
+  source_type       optional   default: "ics_url" (auto-detects google/outlook)
+  auth_type         optional   "none" | "basic" | "bearer" | "api_key"
+  auth_credentials  optional   credentials string for auth_type
+  sync_interval     optional   default: 3600 (seconds, min 300)
+  calendar_id       optional   auto-creates a read-only calendar if empty
+
+Response (201):
+{
+  "success": true,
+  "message": "Subscription created. First sync is running in the background.",
+  "result": {
+    "subscription": { ... },
+    "calendar_id": "uuid"
+  }
+}
+
+--------
+
+PUT /api/subscriptions/:id
+Update subscription (all fields optional).
+
+Request:
+{
+  "display_name": "New Name",
+  "color": "#EF4444",
+  "is_enabled": false,
+  "sync_interval": 7200
+}
+
+--------
+
+DELETE /api/subscriptions/:id?delete_calendar=true
+Delete subscription. Add ?delete_calendar=true to also delete the calendar.
+
+Response: 204 No Content
+
+--------
+
+POST /api/subscriptions/:id/sync
+Trigger immediate sync.
+
+Response (200):
+{
+  "success": true,
+  "message": "Sync completed successfully",
+  "result": {
+    "subscription": { ... updated subscription ... }
+  }
+}
+
+
+================================================================================
+  11. HEALTH CHECK
+================================================================================
+
+GET /health
+No auth required.
+
+Response (200):
+{
+  "success": true,
+  "message": "service is healthy",
+  "result": {
+    "status": "ok",
+    "service": "caldev",
+    "time": "2026-03-10T12:00:00Z"
+  }
+}
+
+
+================================================================================
+  FRONTEND ROUTE SUMMARY
+================================================================================
+
+Method  Path                         Auth     Format   Description
+──────  ────                         ────     ──────   ───────────
+GET     /health                      None     JSON     Health check
+GET     /jmap/session                Cookie   JSON     Get accountId & session
+POST    /jmap/api                    Cookie   JSON     All calendar CRUD operations
+POST    /api/scheduling/rsvp         Cookie   JSON     RSVP to event invitation
+GET     /api/subscriptions/          Cookie   JSON     List external subscriptions
+POST    /api/subscriptions/          Cookie   JSON     Add external calendar
+PUT     /api/subscriptions/:id       Cookie   JSON     Update subscription
+DELETE  /api/subscriptions/:id       Cookie   JSON     Delete subscription
+POST    /api/subscriptions/:id/sync  Cookie   JSON     Trigger manual sync
+
+Note: /dav/* routes are for native CalDAV clients (Apple Calendar, Thunderbird).
+      Do NOT use them from the web frontend — use /jmap/api instead.
+
+================================================================================
+  JMAP METHODS SUMMARY
+================================================================================
+
+Method                   Action
+──────                   ──────
+Calendar/get             List all calendars
+Calendar/set             Create / delete calendars
+CalendarEvent/get        Get events (all or by ID)
+CalendarEvent/set        Create / update / delete events
+CalendarEvent/query      Filter events by date range / calendar
+CalendarEvent/changes    Get changes since a state token
+
+================================================================================
+  HTTP STATUS CODES
+================================================================================
+
+200    Success
+201    Created
+204    No Content (successful delete)
+400    Bad Request (validation error)
+401    Unauthorized (missing/expired token)
+404    Not Found
+429    Too Many Requests (rate limited)
+500    Internal Server Error

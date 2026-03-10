@@ -29,6 +29,7 @@ import WorkspaceSidebar from "../(home)/workspace/_components/WorkspaceSidebar"
 import { SettingsMenuSidebar } from "./mail/settingsSidebar"
 import { cn } from "@/lib/utils"
 import { useFeatureAccess } from "@/hooks/use-feature-access"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type NavItem = {
     title: string
@@ -106,6 +107,15 @@ const NavIconItem = React.memo(({ item, isActive }: { item: NavItem; isActive: b
 ))
 NavIconItem.displayName = "NavIconItem"
 
+/** Skeleton placeholder for a nav icon while feature access loads */
+const NavIconSkeleton = () => (
+    <SidebarMenuItem>
+        <SidebarMenuButton className="px-2.5 md:px-2" disabled>
+            <Skeleton className="size-4 rounded" />
+        </SidebarMenuButton>
+    </SidebarMenuItem>
+)
+
 /** Secondary content panel — renders based on current route */
 const SidebarSecondaryPanel = React.memo(({ pathname }: { pathname: string }) => {
     if (pathname.includes("/v2/u/settings")) return <SettingsMenuSidebar />
@@ -122,16 +132,20 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
     const pathname = usePathname()
     const { canAccessCalendar, canAccessWorkspace, isLoaded } = useFeatureAccess()
 
-    /* Filter nav items based on feature flags (always show while loading) */
+    /* Filter nav items based on feature flags */
     const featureFlagMap = { canAccessCalendar, canAccessWorkspace } as const
     const visibleNav = React.useMemo(
         () => navMain.filter((item) => {
             if (!item.featureKey) return true
-            if (!isLoaded) return true          // show everything until config loads
+            if (!isLoaded) return false         // hide gated items until config loads
             return featureFlagMap[item.featureKey]
         }),
         [isLoaded, canAccessCalendar, canAccessWorkspace],
     )
+
+    /* Count of feature-gated items to show as skeletons while loading */
+    const gatedCount = navMain.filter((item) => item.featureKey).length
+    const showSkeletons = !isLoaded
 
     return (
         <Sidebar
@@ -163,6 +177,9 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                                 item={item}
                                 isActive={pathname.includes(item.matchPath)}
                             />
+                        ))}
+                        {showSkeletons && Array.from({ length: gatedCount }, (_, i) => (
+                            <NavIconSkeleton key={`skel-${i}`} />
                         ))}
                     </SidebarMenu>
                 </SidebarHeader>

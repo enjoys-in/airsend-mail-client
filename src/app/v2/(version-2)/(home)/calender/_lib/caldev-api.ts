@@ -2,8 +2,8 @@
 // CalDev API Client — JMAP + REST integration
 // ============================================================================
 
-import Cookies from "js-cookie";
 import { caldevInstance } from "@/lib/api/api.instance";
+import { getMid, setMid } from "@/lib/api/auth-state";
 import type {
   CalDevCalendar,
   CalDevEvent,
@@ -23,7 +23,8 @@ import type {
   UpdateSubscriptionPayload,
   RSVPPayload,
 } from "./caldev-types";
-import { normalizeJMAPEvent } from "./caldev-types";
+import { normalizeJMAPEvent, normalizeJMAPCalendar, buildFullCalendar } from "./caldev-types";
+import type { ICalenderConfig } from "@/lib/types/get-user-settings-response";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -33,6 +34,40 @@ const JMAP_USING = [
   "urn:ietf:params:jmap:core",
   "urn:ietf:params:jmap:calendars",
 ];
+
+// ---------------------------------------------------------------------------
+// Backend config-array helpers
+// ---------------------------------------------------------------------------
+
+/** Convert JMAP calendars → backend `calender_config.config` entries */
+export function buildBackendConfigArray(
+  calendars: CalDevCalendar[],
+): ICalenderConfig["config"] {
+  return calendars.map((cal) => ({
+    calendar_id: cal.id,
+    calendar_name: cal.name,
+    calender_url: "",
+    sync_status: "synced",
+    last_synced_at: cal.updated_at ? new Date(cal.updated_at) : null,
+    sync_error: null,
+  }));
+}
+
+/**
+ * Fetch JMAP calendars and return a ready-to-persist `config` array.
+ * Call this after calendar create / delete to keep the backend in sync.
+ */
+export async function fetchCalendarConfigArray(
+  mid?: string | null,
+): Promise<ICalenderConfig["config"]> {
+  const resolvedMid = mid || getMid();
+  if (resolvedMid) setMid(resolvedMid);
+
+  const session = await getSession();
+  const accountId = getAccountId(session);
+  const calendars = await getCalendars(accountId);
+  return buildBackendConfigArray(calendars);
+}
 
 // ---------------------------------------------------------------------------
 // JMAP Helpers
@@ -81,7 +116,7 @@ export async function getCalendars(
     ["Calendar/get", { accountId }, "c0"],
   ]);
   const resp = findResponse(res, "c0");
-  return (resp?.list as CalDevCalendar[]) || [];
+  return ((resp?.list as Record<string, any>[]) || []).map(normalizeJMAPCalendar);
 }
 
 export async function createCalendar(
@@ -99,7 +134,9 @@ export async function createCalendar(
     ],
   ]);
   const resp = findResponse(res, "c0");
-  return (resp?.created?.["cal1"] as CalDevCalendar) || null;
+  const created = (resp?.created as Record<string, any>)?.["cal1"];
+  if (!created) return null;
+  return buildFullCalendar(payload, created);
 }
 
 export async function updateCalendar(
@@ -107,18 +144,26 @@ export async function updateCalendar(
   calendarId: string,
   payload: UpdateCalendarPayload,
 ): Promise<boolean> {
+  // Convert snake_case payload → camelCase JMAP fields
+  const jmapPayload: Record<string, unknown> = {};
+  if (payload.name !== undefined) jmapPayload.name = payload.name;
+  if (payload.color !== undefined) jmapPayload.color = payload.color;
+  if (payload.description !== undefined) jmapPayload.description = payload.description;
+  if (payload.timezone !== undefined) jmapPayload.timezone = payload.timezone;
+  if (payload.is_visible !== undefined) jmapPayload.isVisible = payload.is_visible;
+
   const res = await jmapCall([
     [
       "Calendar/set",
       {
         accountId,
-        update: { [calendarId]: payload },
+        update: { [calendarId]: jmapPayload },
       },
       "c0",
     ],
   ]);
   const resp = findResponse(res, "c0");
-  return !!resp?.updated?.[calendarId];
+  return !!(resp?.updated as Record<string, any>)?.[calendarId];
 }
 
 export async function deleteCalendar(
@@ -194,7 +239,7 @@ export async function getEvents(
 export async function queryEvents(
   accountId: string,
   filter: {
-    calendarIds?: string[];
+    calendarId?: string;
     after?: string;
     before?: string;
   },
@@ -206,40 +251,29 @@ export async function queryEvents(
   return (resp?.ids as string[]) || [];
 }
 
-/** Query + fetch events in a single JMAP request using back-references */
+/**
+ * Fetch events — uses CalendarEvent/get (all events) then filters client-side.
+ * This is more reliable than CalendarEvent/query which depends on server-side
+ * filter support and back-references.
+ */
 export async function queryAndFetchEvents(
   accountId: string,
   filter: {
-    calendarIds?: string[];
+    calendarId?: string;
     after?: string;
     before?: string;
   },
 ): Promise<CalDevEvent[]> {
-  try {
-    // Use JMAP back-reference to batch query + get in one HTTP request
-    const res = await jmapCall([
-      ["CalendarEvent/query", { accountId, filter }, "q0"],
-      [
-        "CalendarEvent/get",
-        {
-          accountId,
-          "#ids": {
-            resultOf: "q0",
-            name: "CalendarEvent/query",
-            path: "/ids",
-          },
-        } as any,
-        "e0",
-      ],
-    ]);
-    const resp = findResponse(res, "e0");
-    return ((resp?.list as Record<string, any>[]) || []).map(normalizeJMAPEvent);
-  } catch {
-    // Fallback: two-step fetch if back-references are not supported
-    const ids = await queryEvents(accountId, filter);
-    if (ids.length === 0) return [];
-    return getEvents(accountId, ids);
-  }
+  // Get ALL events via CalendarEvent/get (no ids = return all)
+  const allEvents = await getEvents(accountId);
+
+  // Client-side filter by date range + calendar
+  return allEvents.filter((e) => {
+    if (filter.calendarId && e.calendar_id !== filter.calendarId) return false;
+    if (filter.after && e.dtstart < filter.after) return false;
+    if (filter.before && e.dtstart > filter.before) return false;
+    return true;
+  });
 }
 
 export async function createEvent(
@@ -258,7 +292,7 @@ export async function createEvent(
     ],
   ]);
   const resp = findResponse(res, "e0");
-  const created = resp?.created?.["e1"] as Record<string, any> | undefined;
+  const created = (resp?.created as Record<string, any>)?.["e1"];
   return created ? normalizeJMAPEvent(created) : null;
 }
 
@@ -279,7 +313,7 @@ export async function updateEvent(
     ],
   ]);
   const resp = findResponse(res, "e0");
-  return !!resp?.updated?.[eventId];
+  return !!(resp?.updated as Record<string, any>)?.[eventId];
 }
 
 export async function deleteEvent(
@@ -314,11 +348,15 @@ export async function getEventChanges(
     ["CalendarEvent/changes", { accountId, sinceState }, "ch0"],
   ]);
   const resp = findResponse(res, "ch0");
+  // API returns created/updated/destroyed per JMAP spec
+  const created = (resp?.created as string[]) || [];
+  const updated = (resp?.updated as string[]) || [];
+  const destroyed = (resp?.destroyed as string[]) || [];
   return {
     oldState: resp?.oldState || sinceState,
     newState: resp?.newState || sinceState,
-    changed: (resp?.changed as string[]) || [],
-    removed: (resp?.removed as string[]) || [],
+    changed: [...created, ...updated],
+    removed: destroyed,
     hasMoreChanges: resp?.hasMoreChanges || false,
   };
 }
@@ -400,53 +438,109 @@ export async function sendRSVP(
   return data.result;
 }
 
+/** Process an incoming iMIP message (REQUEST / REPLY / CANCEL). */
+export async function sendIncomingScheduling(
+  payload: { tenant_id: string; ics: string; sender_email: string },
+): Promise<{ method: string; event_uid: string;[key: string]: string }> {
+  const { data } = await caldevInstance.post<
+    CalDevRestResponse<{ method: string; event_uid: string;[key: string]: string }>
+  >("/api/scheduling/incoming", payload);
+  return data.result;
+}
+
+// ---------------------------------------------------------------------------
+// ICS Feeds (REST, read-only)
+// ---------------------------------------------------------------------------
+
+export interface CalDevFeed {
+  name: string;
+  description: string;
+  color?: string;
+  feed_url: string;
+}
+
+export async function getFeeds(
+  tenantId: string,
+  userId: string,
+): Promise<CalDevFeed[]> {
+  const { data } = await caldevInstance.get<
+    CalDevRestResponse<{ feeds: CalDevFeed[] }>
+  >(`/feeds/${tenantId}/${userId}/`);
+  return data.result?.feeds || [];
+}
+
 // ---------------------------------------------------------------------------
 // App Passwords (REST)
 // ---------------------------------------------------------------------------
 
-/** Read the user's `mid` from the shield_user cookie. */
-function getMid(): string | null {
-  try {
-    const raw = Cookies.get("shield_user");
-    if (raw) {
-      const user = JSON.parse(raw);
-      return user?.mid ?? null;
-    }
-  } catch {}
-  return null;
-}
-
 /**
- * Ensure the user's default calendar collection exists on the CalDAV server.
- * Uses MKCALENDAR; silently ignores if the collection already exists (405/409).
+ * Ensure the user has at least one calendar.
+ * Uses JMAP Calendar/get to check, then Calendar/set (create) if none exist.
+ * Returns true if a calendar exists or was created, false on failure.
  */
-async function ensureDefaultCalendar(): Promise<void> {
-  const mid = getMid();
-  if (!mid) return;
+export async function ensureDefaultCalendar(mid?: string | null): Promise<boolean> {
+  const resolvedMid = mid || getMid();
+  console.log('[ensureDefaultCalendar] mid:', resolvedMid);
+  if (!resolvedMid) {
+
+    return false;
+  }
+
+  // Ensure the interceptor also has the mid for X-Tenant-ID
+  setMid(resolvedMid);
 
   try {
-    await caldevInstance.request({
-      method: "MKCALENDAR",
-      url: `/dav/${mid}/${mid}/calendars/`,
+    // 1. Get session & accountId
+    const session = await getSession();
+    const accountId = getAccountId(session);
+
+    if (!accountId) {
+
+      return false;
+    }
+
+    // 2. Check if calendars already exist
+    const calendars = await getCalendars(accountId);
+    console.log('[ensureDefaultCalendar] existing calendars:', calendars.length);
+    if (calendars.length > 0) {
+
+      return true;
+    }
+
+    // 3. No calendars — create default via JMAP Calendar/set
+
+    const created = await createCalendar(accountId, {
+      name: "Personal",
+      description: "Default calendar",
+      color: "#0078D4",
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     });
+
+    return !!created;
   } catch (err: any) {
-    // 405 Method Not Allowed / 409 Conflict → calendar already exists, safe to ignore
-    const status = err?.response?.status;
-    if (status === 405 || status === 409) return;
-    // Any other error: swallow silently — app-password creation should still proceed
+
+    return false;
   }
 }
 
 export async function createAppPassword(
   label: string,
   password: string,
+  mid?: string | null,
 ): Promise<CalDevAppPassword> {
+  console.log('[createAppPassword] label:', label, '| password length:', password.length, '| mid:', mid);
+
   // Provision the user's default calendar before creating the app password
-  await ensureDefaultCalendar();
+  const calOk = await ensureDefaultCalendar(mid);
+
+
+  const payload = { label, password };
+
 
   const { data } = await caldevInstance.post<
     CalDevRestResponse<CalDevAppPassword>
-  >("/api/app-passwords/", { label, password });
+  >("/api/app-passwords/", payload);
+
   return data.result;
 }
 

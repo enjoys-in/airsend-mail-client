@@ -86,7 +86,7 @@ export default function AccountSwitcher2({ className }: AccountSwitcherProps) {
     const accounts = useAppSelector((state) => state.accounts.accounts);
     const currAccount = useAppSelector((state) => state.accounts.currAccount);   
     const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false)
-    const [selectedAcc, setSelectedAcc] = React.useState<string>(currAccount?.tenant || "")
+    const [selectedAcc, setSelectedAcc] = React.useState<string>(currAccount?.tenant_name || "")
 
     return (
         <Dialog open={showNewTeamDialog} onOpenChange={setShowNewTeamDialog}>

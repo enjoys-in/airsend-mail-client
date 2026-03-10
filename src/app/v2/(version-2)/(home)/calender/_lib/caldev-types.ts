@@ -140,8 +140,9 @@ export interface JMAPMethodResponse {
   state: string;
   list?: unknown[];
   notFound?: string[];
-  created?: Record<string, unknown>;
-  updated?: Record<string, unknown>;
+  // Set responses use Record, Changes responses use string[]
+  created?: Record<string, unknown> | string[];
+  updated?: Record<string, unknown> | string[];
   destroyed?: string[];
   notCreated?: Record<string, unknown>;
   notUpdated?: Record<string, unknown>;
@@ -154,8 +155,6 @@ export interface JMAPMethodResponse {
   oldState?: string;
   newState?: string;
   hasMoreChanges?: boolean;
-  changed?: string[];
-  removed?: string[];
 }
 
 export type JMAPResponseEntry = [string, JMAPMethodResponse, string];
@@ -299,10 +298,128 @@ export const EVENT_COLOR_HEX: Record<EventColor, string> = {
 };
 
 /**
+ * Extract a flat location string from JMAP `locations` map.
+ * JMAP returns: { "1": { "name": "Room 42" }, ... }
+ * We join all location names with ", ".
+ */
+function extractLocation(raw: Record<string, any>): string {
+  if (typeof raw.location === "string" && raw.location) return raw.location;
+  if (raw.locations && typeof raw.locations === "object") {
+    const names = Object.values(raw.locations)
+      .map((loc: any) => loc?.name)
+      .filter(Boolean);
+    if (names.length) return names.join(", ");
+  }
+  return "";
+}
+
+/**
+ * Convert JMAP `participants` map → CalDevAttendee[].
+ * JMAP returns: { "1": { name, email, kind, roles: { attendee: true }, participationStatus, expectReply } }
+ */
+function extractAttendees(raw: Record<string, any>): CalDevAttendee[] {
+  // Already an array (snake_case response)
+  if (Array.isArray(raw.attendees) && raw.attendees.length) return raw.attendees;
+  if (!raw.participants || typeof raw.participants !== "object") return [];
+
+  return Object.values(raw.participants).map((p: any) => {
+    const roles = p.roles || {};
+    let role: CalDevAttendee["role"] = "REQ-PARTICIPANT";
+    if (roles.chair) role = "CHAIR";
+    else if (roles["opt-participant"]) role = "OPT-PARTICIPANT";
+    else if (roles["non-participant"]) role = "NON-PARTICIPANT";
+
+    let kind: CalDevAttendee["type"] = "INDIVIDUAL";
+    if (p.kind === "group") kind = "GROUP";
+    else if (p.kind === "resource") kind = "RESOURCE";
+    else if (p.kind === "location") kind = "ROOM";
+
+    return {
+      email: p.email ?? p.sendTo?.imip?.replace("mailto:", "") ?? "",
+      display_name: p.name ?? "",
+      role,
+      status: (p.participationStatus ?? "NEEDS-ACTION") as CalDevAttendee["status"],
+      rsvp: p.expectReply ?? false,
+      type: kind,
+    };
+  });
+}
+
+/**
+ * Extract recurrence rule string from JMAP `recurrenceRules` array.
+ * JMAP returns: [{ "rule": "FREQ=WEEKLY;BYDAY=MO" }]
+ * We take the first rule string.
+ */
+function extractRecurrenceRule(raw: Record<string, any>): string {
+  if (typeof raw.recurrence_rule === "string" && raw.recurrence_rule) return raw.recurrence_rule;
+  if (typeof raw.recurrenceRule === "string" && raw.recurrenceRule) return raw.recurrenceRule;
+  if (Array.isArray(raw.recurrenceRules) && raw.recurrenceRules.length) {
+    const first = raw.recurrenceRules[0];
+    return typeof first === "string" ? first : first?.rule ?? "";
+  }
+  return "";
+}
+
+/**
+ * Normalize a JMAP Calendar/get response (camelCase) into our internal
+ * CalDevCalendar shape (snake_case).
+ */
+export function normalizeJMAPCalendar(raw: Record<string, any>): CalDevCalendar {
+  return {
+    id:                   raw.id ?? "",
+    tenant_id:            raw.tenant_id ?? raw.tenantId ?? "",
+    user_id:              raw.user_id ?? raw.userId ?? "",
+    name:                 raw.name ?? "",
+    description:          raw.description ?? "",
+    color:                raw.color ?? "#4F46E5",
+    timezone:             raw.timezone ?? "UTC",
+    sort_order:           raw.sort_order ?? raw.sortOrder ?? 0,
+    ctag:                 raw.ctag ?? "",
+    sync_token:           raw.sync_token ?? raw.syncToken ?? "",
+    is_default:           raw.is_default ?? raw.isDefault ?? false,
+    is_visible:           raw.is_visible ?? raw.isVisible ?? true,
+    is_readonly:          raw.is_readonly ?? raw.isReadOnly ?? false,
+    supported_components: raw.supported_components ?? raw.supportedComponents ?? ["VEVENT"],
+    max_resource_size:    raw.max_resource_size ?? raw.maxResourceSize ?? 0,
+    properties:           raw.properties ?? raw.myRights ?? {},
+    created_at:           raw.created_at ?? raw.created ?? "",
+    updated_at:           raw.updated_at ?? raw.updated ?? "",
+  };
+}
+
+/**
+ * Build a complete CalDevCalendar by merging the create payload with the server response.
+ * JMAP Calendar/set create only returns { id }, so we merge with the original payload.
+ */
+export function buildFullCalendar(
+  payload: CreateCalendarPayload,
+  serverResponse: Record<string, any>,
+): CalDevCalendar {
+  return {
+    id:                   serverResponse.id ?? "",
+    tenant_id:            "",
+    user_id:              "",
+    name:                 payload.name,
+    description:          payload.description ?? "",
+    color:                payload.color ?? "#4F46E5",
+    timezone:             payload.timezone ?? "UTC",
+    sort_order:           0,
+    ctag:                 "",
+    sync_token:           "",
+    is_default:           false,
+    is_visible:           true,
+    is_readonly:          false,
+    supported_components: ["VEVENT"],
+    max_resource_size:    0,
+    properties:           {},
+    created_at:           new Date().toISOString(),
+    updated_at:           new Date().toISOString(),
+  };
+}
+
+/**
  * Normalize a JMAP CalendarEvent response (camelCase) into our internal
- * CalDevEvent shape (snake_case).  The server returns fields like
- * `calendarId`, `title`, `start`, `isAllDay`, etc. — we need
- * `calendar_id`, `summary`, `dtstart`, `all_day`, …
+ * CalDevEvent shape (snake_case).
  */
 export function normalizeJMAPEvent(raw: Record<string, any>): CalDevEvent {
   return {
@@ -313,19 +430,19 @@ export function normalizeJMAPEvent(raw: Record<string, any>): CalDevEvent {
     uid:              raw.uid ?? "",
     summary:          raw.summary ?? raw.title ?? "",
     description:      raw.description ?? "",
-    location:         raw.location ?? "",
+    location:         extractLocation(raw),
     dtstart:          raw.dtstart ?? raw.start ?? "",
     dtend:            raw.dtend ?? raw.end ?? raw.dtstart ?? raw.start ?? "",
     duration:         raw.duration ?? "",
     all_day:          raw.all_day ?? raw.isAllDay ?? false,
-    recurrence_rule:  raw.recurrence_rule ?? raw.recurrenceRule ?? "",
+    recurrence_rule:  extractRecurrenceRule(raw),
     recurrence_id:    raw.recurrence_id ?? raw.recurrenceId ?? "",
     sequence:         raw.sequence ?? 0,
     status:           raw.status ?? "CONFIRMED",
     transparency:     raw.transparency ?? "OPAQUE",
     classification:   raw.classification ?? "PUBLIC",
     organizer:        raw.organizer ?? "",
-    attendees:        raw.attendees ?? [],
+    attendees:        extractAttendees(raw),
     categories:       raw.categories ?? [],
     priority:         raw.priority ?? 0,
     url:              raw.url ?? "",

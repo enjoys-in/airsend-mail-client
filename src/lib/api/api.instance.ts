@@ -3,6 +3,7 @@ import axios, { AxiosResponse } from 'axios'
 import Cookies from 'js-cookie'
 import { Security } from '../security';
 import { ApiResponse } from '../types';
+import { getMid } from './auth-state';
 
 const security = new Security();
 
@@ -31,13 +32,8 @@ instance.interceptors.request.use(async (config) => {
     )
     config.headers['X-Signature'] = signature
 
-    try {
-      const raw = Cookies.get('shield_user')
-      if (raw) {
-        const user = JSON.parse(raw)
-        if (user?.mid) config.headers['X-Tenant-ID'] = user.mid
-      }
-    } catch {}
+    const mid = getMid();
+    if (mid) config.headers['X-Tenant-ID'] = mid;
 
     return config;
 }, (error) => {
@@ -86,22 +82,9 @@ caldevInstance.defaults.headers["common"] = {
 };
 
 caldevInstance.interceptors.request.use(
-  async (config) => {
-    const signature = await security.GenerateSignature(
-      (config.method as string).toUpperCase(),
-      `${config.baseURL}${config.url}` as string,
-      config?.data,
-    )
-    config.headers["X-Signature"] = signature;
-
-    try {
-      const raw = Cookies.get('shield_user')
-      if (raw) {
-        const user = JSON.parse(raw)
-        if (user?.mid) config.headers['X-Tenant-ID'] = user.mid
-      }
-    } catch {}
-
+  (config) => {
+    const mid = getMid();
+    if (mid) config.headers['X-Tenant-ID'] = mid;
     return config;
   },
   (error) => Promise.reject(error),
