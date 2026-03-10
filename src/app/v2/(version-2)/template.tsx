@@ -10,13 +10,14 @@ import { CalendarProvider } from "./(home)/calender/_components/event-calendar/c
 import { MobileLayoutV2 } from "./_components/mobile-layout";
 import { fetchCurrentUser } from "@/store/slices/account";
 import { syncUserSettings } from "@/lib/api/sync-user-settings";
-import { setMid } from "@/lib/api/auth-state";
+import { setMid, setEmail } from "@/lib/api/auth-state";
 import SentMailToast from "@/components/common/sent-mail";
 import CustomWidget from "@/components/common/custom-widget";
 
 function MainLayout({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
   const mid = useAppSelector((s) => s.accounts?.currAccount?.mid);
+  const email = useAppSelector((s) => s.accounts?.currAccount?.email);
 
   React.useEffect(() => {
     dispatch(fetchCurrentUser());
@@ -26,7 +27,8 @@ function MainLayout({ children }: { children: ReactNode }) {
   // Keep module-level auth state in sync with Redux
   React.useEffect(() => {
     setMid(mid ?? null);
-  }, [mid]);
+    setEmail(email ?? null);
+  }, [mid, email]);
   return (
     <SocketContextProvider>
       <CustomWidget />

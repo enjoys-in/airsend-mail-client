@@ -5,6 +5,7 @@
 // ============================================================================
 
 let _mid: string | null = null;
+let _email: string | null = null;
 
 export function getMid(): string | null {
   return _mid;
@@ -12,4 +13,12 @@ export function getMid(): string | null {
 
 export function setMid(mid: string | null): void {
   _mid = mid;
+}
+
+export function getEmail(): string | null {
+  return _email;
+}
+
+export function setEmail(email: string | null): void {
+  _email = email;
 }

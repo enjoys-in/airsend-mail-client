@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { caldevInstance } from "@/lib/api/api.instance";
-import { getMid, setMid } from "@/lib/api/auth-state";
+import { getMid, setMid, getEmail } from "@/lib/api/auth-state";
 import type {
   CalDevCalendar,
   CalDevEvent,
@@ -25,6 +25,9 @@ import type {
 } from "./caldev-types";
 import { normalizeJMAPEvent, normalizeJMAPCalendar, buildFullCalendar } from "./caldev-types";
 import type { ICalenderConfig } from "@/lib/types/get-user-settings-response";
+import { airsendDB } from "@/db";
+import { useSettingsStore } from "@/store/settings";
+import { useUserConfigStore } from "@/store/settings/user-config";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -67,6 +70,43 @@ export async function fetchCalendarConfigArray(
   const accountId = getAccountId(session);
   const calendars = await getCalendars(accountId);
   return buildBackendConfigArray(calendars);
+}
+
+/**
+ * Sync the current JMAP calendars to the main backend's calender_config.config.
+ * Writes to IDB → dexie-observable auto-pushes to backend API.
+ * Safe to call from non-React code (Zustand store actions).
+ */
+export async function syncCalendarsToBackend(
+  calendars: CalDevCalendar[],
+): Promise<void> {
+  const email = getEmail();
+  if (!email) return;
+
+  const configArray = buildBackendConfigArray(calendars);
+  const settings = useSettingsStore.getState().settings;
+  const currentConfig: ICalenderConfig = (settings?.calender_config as ICalenderConfig) || {
+    enable_calender: false,
+    calender_sync_interval: 15,
+    notifications: true,
+    sharing: false,
+    config: [],
+  };
+
+  const updatedConfig: ICalenderConfig = { ...currentConfig, config: configArray };
+
+  try {
+    await airsendDB.updateNestedItem(
+      "settings",
+      email,
+      "settings.calender_config" as any,
+      updatedConfig as any,
+    );
+    useSettingsStore.getState().setSettings({ calender_config: updatedConfig });
+    useUserConfigStore.getState().hydrate({ ...settings, calender_config: updatedConfig });
+  } catch (err) {
+    console.error("[syncCalendarsToBackend] failed:", err);
+  }
 }
 
 // ---------------------------------------------------------------------------

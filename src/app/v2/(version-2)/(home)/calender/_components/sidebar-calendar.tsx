@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useCalendarContext } from "./event-calendar/calendar-context";
 import { useCalDevStore } from "../_lib/caldev-store";
 import { hexToEventColor } from "../_lib/caldev-types";
 import { Calendar } from "@/components/ui/calendar";
+import type { DayContentProps } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import {
   RiCheckLine,
@@ -12,6 +13,9 @@ import {
   RiMoreLine,
   RiPencilLine,
   RiDeleteBinLine,
+  RiPaletteLine,
+  RiDownloadLine,
+  RiUploadLine,
 } from "@remixicon/react";
 import {
   Sidebar,
@@ -41,8 +45,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import SubscriptionsPanel from "./subscriptions-panel";
 
 // Default color palette for creating calendars
@@ -64,6 +80,7 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
 
   // CalDev store
   const calendars = useCalDevStore((s) => s.calendars);
+  const rawEvents = useCalDevStore((s) => s.rawEvents);
   const addCalendar = useCalDevStore((s) => s.addCalendar);
   const editCalendar = useCalDevStore((s) => s.editCalendar);
   const removeCalendar = useCalDevStore((s) => s.removeCalendar);
@@ -75,10 +92,77 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
   const [calColor, setCalColor] = useState(CALENDAR_COLORS[0]);
   const [calDesc, setCalDesc] = useState("");
 
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+
+  // Hidden file input for ICS import
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importTargetCalId, setImportTargetCalId] = useState<string>("");
+
   // Update the calendar month whenever currentDate changes
   useEffect(() => {
     setCalendarMonth(currentDate);
   }, [currentDate]);
+
+  // ── Compute event-dot dates for the visible month ──
+  const eventDotDates = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    // include a few days before/after for outside-days
+    const rangeStart = new Date(year, month, -6);
+    const rangeEnd = new Date(year, month + 1, 7);
+
+    const dateMap = new Map<string, string[]>(); // "YYYY-MM-DD" → color hex[]
+
+    for (const ev of rawEvents) {
+      const start = new Date(ev.dtstart);
+      const end = new Date(ev.dtend || ev.dtstart);
+      if (end < rangeStart || start > rangeEnd) continue;
+
+      // Find the calendar to get its color
+      const cal = calendars.find((c) => c.id === ev.calendar_id);
+      if (!cal) continue;
+      const color = cal.color;
+
+      // For multi-day events, place a dot on each day in range
+      const cursor = new Date(Math.max(start.getTime(), rangeStart.getTime()));
+      const limit = new Date(Math.min(end.getTime(), rangeEnd.getTime()));
+      while (cursor <= limit) {
+        const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
+        const existing = dateMap.get(key) || [];
+        if (!existing.includes(color)) existing.push(color);
+        dateMap.set(key, existing);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+    return dateMap;
+  }, [rawEvents, calendars, calendarMonth]);
+
+  // ── Custom DayContent with event dots ──
+  const DayContentWithDots = useCallback(
+    (props: DayContentProps) => {
+      const d = props.date;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const colors = eventDotDates.get(key);
+      return (
+        <div className="relative flex flex-col items-center">
+          <span>{d.getDate()}</span>
+          {colors && colors.length > 0 && (
+            <span className="flex gap-[2px] absolute -bottom-0.5">
+              {colors.slice(0, 3).map((c, i) => (
+                <span
+                  key={i}
+                  className="size-1 rounded-full"
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </span>
+          )}
+        </div>
+      );
+    },
+    [eventDotDates],
+  );
 
   const handleSelect = (date: Date | undefined) => {
     if (date) setCurrentDate(date);
@@ -102,6 +186,14 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
     setDialogOpen(true);
   };
 
+  const openColorPicker = (cal: (typeof calendars)[0]) => {
+    setEditingCalendar(cal.id);
+    setCalName(cal.name);
+    setCalColor(cal.color);
+    setCalDesc(cal.description || "");
+    setDialogOpen(true);
+  };
+
   const handleSave = async () => {
     if (!calName.trim()) return;
     if (editingCalendar) {
@@ -116,8 +208,70 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
     setDialogOpen(false);
   };
 
-  const handleDelete = async (id: string) => {
-    await removeCalendar(id);
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    await removeCalendar(deleteTarget.id);
+    setDeleteTarget(null);
+  };
+
+  // ── ICS Import ──
+  const handleImportClick = (calId: string) => {
+    setImportTargetCalId(calId);
+    importInputRef.current?.click();
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !importTargetCalId) return;
+
+    if (!file.name.endsWith(".ics") && !file.name.endsWith(".ical")) {
+      toast.error("Please select a valid .ics file");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      if (!text.includes("BEGIN:VCALENDAR")) {
+        toast.error("Invalid ICS file");
+        return;
+      }
+      // Import via CalDev API
+      const { caldevInstance } = await import("@/lib/api/api.instance");
+      await caldevInstance.post(`/api/calendars/${importTargetCalId}/import`, text, {
+        headers: { "Content-Type": "text/calendar" },
+      });
+      toast.success(`Events imported into calendar`);
+      // Refresh events
+      const { lastFetchRange } = useCalDevStore.getState();
+      if (lastFetchRange) {
+        useCalDevStore.getState().fetchEvents(lastFetchRange.after, lastFetchRange.before, true);
+      }
+    } catch {
+      toast.error("Failed to import ICS file");
+    } finally {
+      // Reset file input
+      e.target.value = "";
+      setImportTargetCalId("");
+    }
+  };
+
+  // ── ICS Export ──
+  const handleExport = async (calId: string, calName: string) => {
+    try {
+      const { caldevInstance } = await import("@/lib/api/api.instance");
+      const { data } = await caldevInstance.get(`/api/calendars/${calId}/export`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([data], { type: "text/calendar" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${calName.replace(/[^a-zA-Z0-9]/g, "_")}.ics`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export calendar");
+    }
   };
 
   return (
@@ -132,6 +286,9 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
               month={calendarMonth}
               showOutsideDays
               onMonthChange={setCalendarMonth}
+              components={{
+                DayContent: DayContentWithDots,
+              }}
               classNames={{
                 day_button:
                   "transition-none! hover:not-in-data-selected:bg-sidebar-accent group-[.range-middle]:group-data-selected:bg-sidebar-accent text-sidebar-foreground",
@@ -210,25 +367,49 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                   align="end"
-                                  className="min-w-32"
+                                  className="min-w-36"
                                 >
                                   <DropdownMenuItem
                                     onClick={() => openEditDialog(cal)}
                                   >
-                                    <RiPencilLine size={14} className="mr-2" />{" "}
+                                    <RiPencilLine size={14} className="mr-2" />
                                     Rename
                                   </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => openColorPicker(cal)}
+                                  >
+                                    <RiPaletteLine size={14} className="mr-2" />
+                                    Change color
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleImportClick(cal.id)}
+                                  >
+                                    <RiUploadLine size={14} className="mr-2" />
+                                    Import ICS
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleExport(cal.id, cal.name)}
+                                  >
+                                    <RiDownloadLine size={14} className="mr-2" />
+                                    Export ICS
+                                  </DropdownMenuItem>
                                   {!cal.is_default && (
-                                    <DropdownMenuItem
-                                      className="text-destructive focus:text-destructive"
-                                      onClick={() => handleDelete(cal.id)}
-                                    >
-                                      <RiDeleteBinLine
-                                        size={14}
-                                        className="mr-2"
-                                      />{" "}
-                                      Delete
-                                    </DropdownMenuItem>
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onClick={() =>
+                                          setDeleteTarget({ id: cal.id, name: cal.name })
+                                        }
+                                      >
+                                        <RiDeleteBinLine
+                                          size={14}
+                                          className="mr-2"
+                                        />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </>
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -306,6 +487,40 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden file input for ICS import */}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".ics,.ical"
+        className="hidden"
+        onChange={handleImportFile}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete calendar</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &ldquo;{deleteTarget?.name}&rdquo;?
+              All events in this calendar will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteConfirm}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

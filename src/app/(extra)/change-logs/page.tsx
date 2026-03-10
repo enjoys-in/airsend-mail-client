@@ -2,13 +2,154 @@ import { Info } from "lucide-react"
 
 const CHANGE_LOGS = [
     {
+        date: "Mar 10, 2026",
+        version: "2",
+        color: "from-emerald-500 to-teal-600",
+        versionNumber: "2.0.0",
+        improvements: [
+            "Introduced CalDAV/JMAP Calendar Integration with Go-based CalDev Server",
+            "Auto-Sync Calendar Config to Main Backend on Fetch, Create, and Delete",
+            "Connected Calendars Settings Page with JMAP Data",
+            "MKCALENDAR Rewritten to JMAP Protocol",
+            "Converted Metadata to App Router Pattern (createMetadata + JSON-LD)",
+            "Module-Level Auth State for Non-React Code (Email + MID Tracking)",
+            "Org Settings Refactored into Modular Sections (Email, Server, Security, Privacy, Notifications)",
+            "Add Members Page for Organizations",
+            "API Handler Module with Crypto and Signing Routes",
+            "Security Module Updated with Revised Encryption Methods",
+        ],
+        bugfixes: [
+            "Fixed Empty calender_config.config on Main Backend",
+            "Removed X-Signature Header from CalDev API Instance",
+            "Fixed IDB Primary Key Mismatch for Settings Sync",
+            "Fixed ConnectedCalendars Not Fetching JMAP Data",
+            "Fixed Metadata Using Deprecated Pages Router next/head Pattern",
+            "Fixed Org Sidebar and Removed Duplicate App-Sidebar Components",
+            "Removed Unused Zustand Slices (folders, labels, mail)",
+        ]
+    },
+    {
+        date: "Mar 1, 2026",
+        version: "2",
+        color: "from-teal-500 to-cyan-600",
+        versionNumber: "1.17",
+        improvements: [
+            "Inline Reply Box for Message Thread View",
+            "Mail Actions Hook (use-mail-actions) for Centralized Email Operations",
+            "Email Context Menu Redesigned",
+            "Mail Card UI Overhaul with Status Indicators Component",
+            "Mobile Mail Sidebar and Mobile Mail Header",
+            "Account Switcher Redesigned for Desktop and Mobile",
+            "SpotToolbar Redesigned",
+            "IDB Sync Hook API Delta Settings Support",
+            "Runtime Config Provider for Dynamic Environment Variables",
+        ],
+        bugfixes: [
+            "Fixed Layout Issues in v2 Desktop and Mobile Layouts",
+            "Fixed Signature and UI Bugs in Mail Composer",
+            "Fixed Build Errors and Build Script for Docker Deployment",
+            "Fixed IDB Sync Hook API with Improved Delta Settings",
+            "Fixed Mail Card Client-Side Rendering Issues",
+            "Fixed Account Switcher Navigation and Display",
+            "Fixed Decoding Component in Message Display",
+        ]
+    },
+    {
+        date: "Feb 28, 2026",
+        version: "2",
+        color: "from-cyan-500 to-blue-600",
+        versionNumber: "1.16",
+        improvements: [
+            "Organization Management — Create, Edit, Settings, Members, Roles",
+            "Org Domain Management and Domain History Pages",
+            "Org Logs Viewer and Danger Zone Pages",
+            "Org Roles Page with CRUD and Permission Management",
+            "Settings Shared Components (SettingsSection, SettingToggleRow, SettingSelectRow, SaveSettingsBar)",
+            "Signature Creator and Editor Rewrite",
+            "Mail Appearance Settings Overhaul",
+            "Profile Settings Redesigned",
+            "Email Filter and Sieve Filter Dialog Improvements",
+            "Footer System Email and Message Toggles in Settings",
+            "Email Privacy and Encryption Settings Rework",
+            "Calendar Feature Gate — Enable/Disable Calendar per Account in Settings",
+            "App Password Setup Flow for CalDev Authentication",
+            "IDB Settings Persistence for Calendar and User Configuration",
+            "Feature Access Hook (use-feature-access) for Gated Features",
+            "User Config Zustand Store with Hydration",
+        ],
+        bugfixes: [
+            "Fixed removeChild Hydration Error in Root Layout",
+            "Fixed Hydration Errors Across h-panel Pages",
+            "Fixed Socket Connect/Disconnect Stability in SocketContext",
+            "Fixed API Instance and ServerAxios Request Handling",
+        ]
+    },
+    {
+        date: "Feb 26, 2026",
+        version: "2",
+        color: "from-blue-500 to-indigo-600",
+        versionNumber: "1.15",
+        improvements: [
+            "Full Calendar UI with Day, Week, Month, and Agenda Views",
+            "Sidebar Mini Calendar with Event Dot Indicators per Day",
+            "Create, Rename, Change Color, and Delete Calendars from Sidebar",
+            "Import and Export ICS Files for Calendar Data",
+            "Calendar Event CRUD — Create, Edit, Drag-and-Drop, and Delete Events",
+            "Calendar Subscriptions Panel (Subscribe to External Calendars)",
+            "New Workspace Module with Go-based Backend Server (Postgres, Redis, WebSocket)",
+            "Team/Channel Create, Edit, and Management UI",
+            "Channel Sidebar with Team Rail Navigation",
+            "Real-Time Messaging with WebSocket Hub and Redis Streaming",
+            "Message Input with Mentions, Emoji Picker, and GIF Picker",
+            "Threaded Conversations and Side Panel",
+            "Polls — Create, Vote, and View Results in Channels",
+            "Direct Messages (DM) Support",
+            "Invite Member Dialog for Team Collaboration",
+            "Team Settings with Roles, Permissions, and Danger Zone",
+            "Profile Cards and Status Cards for Members",
+            "Mobile Workspace Sidebar and Bottom Actions",
+            "OpenTelemetry Instrumentation Setup",
+        ],
+        bugfixes: [
+            "Fixed Calendar Events Visibility Not Updating on Toggle",
+            "Fixed Calendar Route Accessibility Without Feature Gate",
+        ]
+    },
+    {
+        date: "Feb 10, 2026",
+        version: "2",
+        color: "from-indigo-500 to-violet-600",
+        versionNumber: "1.14",
+        improvements: [
+            "Docker Build with Standalone Output and Build Script",
+            "Dockerized Deployment with Optimized Dockerfile",
+        ],
+        bugfixes: [
+            "Fixed Docker Port Configuration",
+        ]
+    },
+    {
+        date: "Oct 31, 2025",
+        version: "1",
+        color: "from-violet-500 to-purple-600",
+        versionNumber: "1.13",
+        improvements: [
+            "SMTP Relay Configuration with Enhanced Relay Form and Table",
+            "SMTP/Email Provider Config Form Rewrite",
+            "Updated Changelog Page UI",
+        ],
+        bugfixes: [
+            "Fixed Build Errors",
+            "Fixed IDB Sync Hook Ordering",
+        ]
+    },
+    {
         date: "Oct 30, 2025",
         version: "1",
         color: "from-gray-500 to-purple-500",
         versionNumber: "1.12",
         improvements: [
             "WIP- Sync Engine Under Integration",
-            "ElectricSql or RxDB Under Integration",
             "Show IMAP/SMTP Details in Accounts",
             "User can Reset/Change Password",
             "Allow Wildcard for email"
@@ -248,7 +389,7 @@ export default function ChangelogPage() {
                     </p>
                 </div>
                 <div className="text-gray-600 dark:text-gray-300">
-                    <p>Changelog in 2025</p>
+                    <p>Changelog in 2025 - 2026</p>
                 </div>
             </div>
 
@@ -257,7 +398,7 @@ export default function ChangelogPage() {
                     <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-700"></div>
                     {
                         CHANGE_LOGS.map((log) => (
-                            <div className="py-12 relative">
+                            <div key={log.versionNumber} className="py-12 relative">
                                 <div className="flex items-start">
                                     <div className="relative z-10 mr-8">
                                         <div className="w-8 h-8 rounded-full border-4 border-[#1e2130] bg-gray-700 flex items-center justify-center"></div>

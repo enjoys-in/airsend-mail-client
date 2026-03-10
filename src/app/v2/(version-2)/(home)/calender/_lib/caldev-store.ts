@@ -157,6 +157,8 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
     try {
       const calendars = await api.getCalendars(accountId);
       set({ calendars, calendarsLoading: false });
+      // Sync calendar list to main backend
+      api.syncCalendarsToBackend(calendars);
     } catch {
       set({ calendarsLoading: false });
       toast.error("Failed to load calendars");
@@ -173,8 +175,11 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
         description,
       });
       if (created) {
-        set((s) => ({ calendars: [...s.calendars, created] }));
+        const updated = [...get().calendars, created];
+        set({ calendars: updated });
         toast.success(`Calendar "${name}" created`);
+        // Sync to main backend
+        api.syncCalendarsToBackend(updated);
       }
       return created;
     } catch {
@@ -208,11 +213,14 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
     try {
       const ok = await api.deleteCalendar(accountId, id);
       if (ok) {
-        set((s) => ({
-          calendars: s.calendars.filter((c) => c.id !== id),
-          rawEvents: s.rawEvents.filter((e) => e.calendar_id !== id),
-        }));
+        const updated = get().calendars.filter((c) => c.id !== id);
+        set({
+          calendars: updated,
+          rawEvents: get().rawEvents.filter((e) => e.calendar_id !== id),
+        });
         toast.success("Calendar deleted");
+        // Sync to main backend
+        api.syncCalendarsToBackend(updated);
       }
       return ok;
     } catch {
