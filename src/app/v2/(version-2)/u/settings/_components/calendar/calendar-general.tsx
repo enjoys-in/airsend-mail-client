@@ -46,8 +46,14 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
   const mid = useAppSelector((s) => s.accounts?.currAccount?.mid);
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [calName, setCalName] = useState("");
+  const [calColor, setCalColor] = useState("#3B82F6");
   const [nameError, setNameError] = useState("");
   const [setupLoading, setSetupLoading] = useState(false);
+
+  const COLOR_OPTIONS = [
+    "#3B82F6", "#0078D4", "#8B5CF6", "#6366F1", "#EC4899",
+    "#F43F5E", "#EF4444", "#F97316", "#F59E0B", "#10B981", "#14B8A6",
+  ];
 
   // App password dialog state
   const [showAppPasswordDialog, setShowAppPasswordDialog] = useState(false);
@@ -58,6 +64,7 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
     (checked: boolean) => {
       if (checked) {
         setCalName("");
+        setCalColor("#3B82F6");
         setNameError("");
         setShowSetupDialog(true);
       } else {
@@ -76,8 +83,8 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
     setSetupLoading(true);
 
     try {
-      // Provision calendar via JMAP Calendar/set
-      const ok = await ensureDefaultCalendar(mid);
+      // Provision calendar via JMAP Calendar/set with user's chosen name & color
+      const ok = await ensureDefaultCalendar(mid, { name: calName, color: calColor });
       if (!ok) {
         toast.error("Failed to create calendar. Please try again.");
         return;
@@ -97,7 +104,7 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
     } finally {
       setSetupLoading(false);
     }
-  }, [calName, onChange, mid]);
+  }, [calName, calColor, onChange, mid]);
 
   const handleSetupCancel = useCallback(() => {
     setShowSetupDialog(false);
@@ -184,6 +191,22 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
                 onChange={(e) => { setCalName(e.target.value); setNameError(""); }}
               />
               {nameError && <p className="text-destructive text-xs">{nameError}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_OPTIONS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`h-7 w-7 rounded-full border-2 transition-all ${
+                      calColor === c ? "border-foreground scale-110" : "border-transparent"
+                    }`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setCalColor(c)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -30,7 +30,7 @@ const CalendarPage = () => {
           </p>
         </div>
         <Button asChild variant="outline" className="mt-2">
-          <Link href="/v2/u/settings/calendar">
+          <Link href="/v2/u/settings#calendar">
             <Settings className="h-4 w-4 mr-2" />
             Go to Calendar Settings
           </Link>

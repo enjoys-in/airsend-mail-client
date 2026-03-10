@@ -81,6 +81,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
     const { emit } = useCustomEvent(CustomEventKey.MailEvents)
 
     const decryptedFromEmail = React.useMemo(() => safeDecrypt(item.from_email), [item.from_email])
+    const decryptedSubject = React.useMemo(() => safeDecrypt(item?.subject), [item?.subject])
     const decryptedPlainText = React.useMemo(() => safeDecrypt(item?.plain_text), [item?.plain_text])
     const previewText = React.useMemo(() => stripHtml(decryptedPlainText), [decryptedPlainText])
 
@@ -226,7 +227,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                 "text-sm truncate",
                                 !item.is_read ? "text-foreground font-medium" : "text-muted-foreground"
                             )}>
-                                {item?.subject}
+                                {decryptedSubject}
                             </p>
                             {/* Row 3: preview + attachments */}
                             <div className="flex items-center gap-2">
@@ -271,7 +272,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                     "text-sm whitespace-nowrap",
                                     !item.is_read ? "text-foreground font-medium" : "text-muted-foreground"
                                 )}>
-                                    {item?.subject}
+                                    {decryptedSubject}
                                 </span>
                             </div>
 

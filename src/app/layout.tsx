@@ -55,7 +55,10 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           {/* <PingletWidget /> */}
-          <RuntimeConfigProvider>
+          <RuntimeConfigProvider
+            appSecret={process.env.APP_SECRET || ""}
+            encryptionKey={process.env.ENCRYPTION_KEY || ""}
+          >
             <StoreProvider>
               <IndexDbProvider>
                 <TooltipProvider delayDuration={0}>{children}</TooltipProvider>

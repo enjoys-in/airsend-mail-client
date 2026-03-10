@@ -2,37 +2,33 @@ import * as crypto from 'crypto'
 import CryptoJS from 'crypto-js'
 
 /**
- * Module-level encryption key cache.
- * - Server: reads from process.env.ENCRYPTION_KEY directly.
- * - Client: fetched once from /api/crypto on first use, cached forever.
- *   Key lives only in JS memory — never in HTML source or window globals.
+ * Module-level security config.
+ * - Server: reads from process.env directly.
+ * - Client: set once via setSecurityConfig() from RuntimeConfigProvider
+ *   (server component passes secrets as props → client component stores them here).
  */
-let _clientKey: string | null = null;
-let _keyPromise: Promise<string> | null = null;
+let _appSecret: string = "";
+let _encryptionKey: string = "";
 
-function getEncryptionKey(): string {
-    // Server: always available
-    if (typeof window === "undefined") return process.env.ENCRYPTION_KEY || "";
-    return _clientKey || "";
+/** Called once by RuntimeConfigProvider to store secrets in memory. */
+export function setSecurityConfig(config: { appSecret: string; encryptionKey: string }) {
+    _appSecret = config.appSecret;
+    _encryptionKey = config.encryptionKey;
 }
 
-/** Ensures the client has the encryption key. Call once at app init or lazily. */
-export async function ensureEncryptionKey(): Promise<string> {
-    if (typeof window === "undefined") return process.env.ENCRYPTION_KEY || "";
-    if (_clientKey) return _clientKey;
-    if (_keyPromise) return _keyPromise;
+function getAppSecret(): string {
+    if (typeof window === "undefined") return process.env.APP_SECRET || "";
+    return _appSecret;
+}
 
-    _keyPromise = fetch("/api/crypto")
-        .then((res) => res.json())
-        .then((data) => {
-            _clientKey = data.key || "";
-            return _clientKey;
-        })
-        .catch(() => {
-            _keyPromise = null;
-            return "";
-        });
-    return _keyPromise;
+function getEncryptionKey(): string {
+    if (typeof window === "undefined") return process.env.ENCRYPTION_KEY || "";
+    return _encryptionKey;
+}
+
+/** Kept for backward compatibility. Returns the encryption key synchronously. */
+export async function ensureEncryptionKey(): Promise<string> {
+    return getEncryptionKey();
 }
 
 export class Security {
@@ -53,22 +49,18 @@ export class Security {
             decodedString = this.PurifiedString(method, uri, body);
         }
 
-        // Server-side: sign directly
+        const secret = getAppSecret();
+
+        // Server-side: use Node crypto
         if (typeof window === "undefined") {
             const hmac = crypto
-                .createHmac("sha512", process.env.APP_SECRET || "")
+                .createHmac("sha512", secret)
                 .update(decodedString);
             return hmac.digest("hex");
         }
 
-        // Client-side: delegate to /api/sign to keep APP_SECRET server-only
-        const res = await fetch("/api/sign", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ payload: decodedString }),
-        });
-        const data = await res.json();
-        return data.signature || "";
+        // Client-side: sign directly with CryptoJS (no server round-trip)
+        return CryptoJS.HmacSHA512(decodedString, secret).toString(CryptoJS.enc.Hex);
     }
 
     /**

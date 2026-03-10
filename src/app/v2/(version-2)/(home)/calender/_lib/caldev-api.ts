@@ -518,9 +518,12 @@ export async function getFeeds(
  * Uses JMAP Calendar/get to check, then Calendar/set (create) if none exist.
  * Returns true if a calendar exists or was created, false on failure.
  */
-export async function ensureDefaultCalendar(mid?: string | null): Promise<boolean> {
+export async function ensureDefaultCalendar(
+  mid?: string | null,
+  opts?: { name?: string; color?: string },
+): Promise<boolean> {
   const resolvedMid = mid || getMid();
-  console.log('[ensureDefaultCalendar] mid:', resolvedMid);
+  
   if (!resolvedMid) {
 
     return false;
@@ -541,18 +544,20 @@ export async function ensureDefaultCalendar(mid?: string | null): Promise<boolea
 
     // 2. Check if calendars already exist
     const calendars = await getCalendars(accountId);
-    console.log('[ensureDefaultCalendar] existing calendars:', calendars.length);
+   
     if (calendars.length > 0) {
 
       return true;
     }
 
     // 3. No calendars — create default via JMAP Calendar/set
+    const calName = opts?.name?.trim() || "Personal";
+    const calColor = opts?.color || "#0078D4";
 
     const created = await createCalendar(accountId, {
-      name: "Personal",
-      description: "Default calendar",
-      color: "#0078D4",
+      name: calName,
+      description: `${calName} calendar`,
+      color: calColor,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     });
 

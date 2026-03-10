@@ -1,22 +1,26 @@
 "use client"
 
 import { useRef } from "react"
-import { ensureEncryptionKey } from "@/lib/security"
+import { setSecurityConfig } from "@/lib/security"
 
 /**
- * RuntimeConfigProvider — fetches the encryption key once on mount.
- * The key is stored in module-level memory (not in HTML source or window globals).
- * All AES encrypt/decrypt happens client-side with zero latency after init.
+ * RuntimeConfigProvider — receives secrets from the server component (layout.tsx)
+ * and stores them in module-level memory via setSecurityConfig().
+ * No network calls needed — secrets are passed as props from the server.
  */
 export function RuntimeConfigProvider({
+    appSecret,
+    encryptionKey,
     children,
 }: {
+    appSecret: string
+    encryptionKey: string
     children: React.ReactNode
 }) {
     const initialized = useRef(false)
     if (!initialized.current) {
         initialized.current = true
-        ensureEncryptionKey()
+        setSecurityConfig({ appSecret, encryptionKey })
     }
     return <>{children}</>
 }

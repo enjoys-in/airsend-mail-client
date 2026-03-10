@@ -83,6 +83,10 @@ const ClientDisplay = ({
         () => (selectedMail ? safeDecrypt(selectedMail.from_email) : ""),
         [selectedMail?.from_email]
     );
+    const decryptedSubject = useMemo(
+        () => (selectedMail ? safeDecrypt(selectedMail.subject) : ""),
+        [selectedMail?.subject]
+    );
     const senderDomain = useMemo(
         () => senderEmail?.split("@")[1] || "",
         [senderEmail]
@@ -140,7 +144,7 @@ const ClientDisplay = ({
 
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                     <div className="flex items-baseline gap-3">
-                        <h2 className="text-2xl font-bold truncate">{selectedMail?.subject}</h2>
+                        <h2 className="text-2xl font-bold truncate">{decryptedSubject}</h2>
                         <span className="text-sm text-muted-foreground whitespace-nowrap">
                             {moment(selectedMail?.timestamp).format("MMM DD, YYYY hh:mm A")}
                         </span>
@@ -236,7 +240,7 @@ const ClientDisplay = ({
                                             </div>
 
                                             <div className="text-right text-muted-foreground">subject:</div>
-                                            <div>{selectedMail?.subject}</div>
+                                            <div>{decryptedSubject}</div>
 
                                             <div className="text-right text-muted-foreground">mailed-by:</div>
                                             <div>{selectedMail?.receipient?.split("@")[1]}</div>
