@@ -7,17 +7,17 @@ PORT="9500"
 MEMORY_LIMIT="512m"
 ENV_FILE=".env"
 
-echo "🛑 Stopping old container..."
-docker stop $APP_NAME 2>/dev/null || true
-
-echo "🗑️  Removing old container..."
-docker rm $APP_NAME 2>/dev/null || true
-
 echo "🧹 Removing old image..."
 docker rmi $APP_NAME 2>/dev/null || true
 
 echo "🔨 Building fresh image..."
 docker build -t $APP_NAME .
+
+echo "🛑 Stopping old container..."
+docker stop $APP_NAME 2>/dev/null || true
+
+echo "🗑️  Removing old container..."
+docker rm $APP_NAME 2>/dev/null || true
 
 echo "🚀 Running container..."
 docker run -d \
