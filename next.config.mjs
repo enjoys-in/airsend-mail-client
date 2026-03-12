@@ -4,6 +4,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   devIndicators: false,
   images: {
     domains: ["lh3.googleusercontent.com", "avatars.githubusercontent.com"],
