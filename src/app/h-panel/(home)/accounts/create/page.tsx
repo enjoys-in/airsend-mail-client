@@ -332,7 +332,7 @@ const Page = () => {
                                             className="shrink-0"
                                             onClick={() => {
                                                 const lastAlias = form.getValues(`aliases.${index}.alias`);
-                                                if (!lastAlias.trim()) {
+                                                if (!lastAlias?.trim()) {
                                                     form.setError(`aliases.${index}.alias`, {
                                                         type: "manual",
                                                         message: "Email Alias cannot be empty before adding a new one",

@@ -501,7 +501,7 @@ export default function AddMemberPage() {
                                                     const lastAlias = memberForm.getValues(
                                                         `aliases.${index}.alias`,
                                                     )
-                                                    if (!lastAlias.trim()) {
+                                                    if (!lastAlias?.trim()) {
                                                         memberForm.setError(
                                                             `aliases.${index}.alias`,
                                                             {
