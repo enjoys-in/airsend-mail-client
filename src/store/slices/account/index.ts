@@ -1,31 +1,16 @@
-import axios from "axios";
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { IUser } from "@/lib/types/user.interface";
-import { __config } from "@/constants/config"
 import { deleteCookie } from "@/lib/utils";
+import { instance } from "@/lib/api/api.instance";
+
 export const fetchCurrentUser = createAsyncThunk<IUser>(
   "account/fetchCurrentUser",
   async (_, { rejectWithValue }) => {
     try {
-
-      const { data } = await axios.get(`${__config.APP.BASE_URL}/api/v1/profile`, {
-        withCredentials: true,
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          'x-api-key': __config.APP.API_KEY as string,
-        }
-      });
+      const { data } = await instance.get(`/api/v1/profile`);
+      
       if (!data.success) {
-        await axios.get(`${__config.APP.BASE_URL}/api/v1/auth/logout`, {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            'x-api-key': __config.APP.API_KEY as string,
-          }
-        });
+        await instance.post('/api/v1/auth/logout');
         deleteCookie("access_token")
         window.location.href = "/v2";
       }
