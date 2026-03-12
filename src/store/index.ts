@@ -2,6 +2,10 @@ import { configureStore } from "@reduxjs/toolkit";
 
 import accountReducer from "./slices/account";
 import adminReducer from "./slices/account/admin";
+import labelsReducer from "./slices/labels";
+import foldersReducer from "./slices/folders";
+import mailsReducer from "./slices/mails";
+import mailReducer from "./slices/mail";
 
 import layoutReducer from "./slices/layout";
 
@@ -10,7 +14,11 @@ export const makeStore = () => {
     reducer: {
       layout: layoutReducer,
       accounts: accountReducer,
-      admin: adminReducer
+      admin: adminReducer,
+      labels: labelsReducer,
+      folders: foldersReducer,
+      mails: mailsReducer,
+      mail: mailReducer,
     },
   });
 };

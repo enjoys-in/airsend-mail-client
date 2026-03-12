@@ -87,13 +87,13 @@ const LeftSidebar = () => {
                 <Collections
                   type="folders"
                   collections={folders}
-                  createCollection={(foo) => dispatch(createFolder(foo))}
+                  createCollection={(foo) => dispatch(createFolder(foo as IFolder))}
                 />
                 <Separator className="my-1" />
                 <Collections
                   type="labels"
                   collections={labels}
-                  createCollection={(foo) => dispatch(createLabel(foo))}
+                  createCollection={(foo) => dispatch(createLabel(foo as ILabel))}
                 />
               </ScrollArea>
             </div>

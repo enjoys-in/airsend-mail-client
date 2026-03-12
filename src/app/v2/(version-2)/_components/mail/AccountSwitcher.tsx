@@ -39,7 +39,7 @@ export function AccountSwitcherV2() {
       mid: "",
       email: account.email,
       domain_name: account.domain,
-      tenant: account.domain,
+      tenant_name: account.domain,
       name: account.name,
       role: "USER",
       hasOrgs: null,
