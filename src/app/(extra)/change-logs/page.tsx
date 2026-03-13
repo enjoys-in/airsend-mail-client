@@ -4,7 +4,7 @@ const CHANGE_LOGS = [
     {
         date: "Mar 13, 2026",
         version: "2",
-        color: "from-pink-500 to-rose-600",
+        color: "from-pink-500 to-emerald-600",
         versionNumber: "2.1.0",
         improvements: [
             "Manage Blocked IPs Page — Global and Per-Domain Tabs with Unblock and Purge All",
@@ -167,7 +167,7 @@ const CHANGE_LOGS = [
     {
         date: "Oct 30, 2025",
         version: "1",
-        color: "from-gray-500 to-purple-500",
+        color: "from-purple-500 to-fuchsia-600",
         versionNumber: "1.12",
         improvements: [
             "WIP- Sync Engine Under Integration",
@@ -187,7 +187,7 @@ const CHANGE_LOGS = [
     {
         date: "Oct 25, 2025",
         version: "1",
-        color: "from-purple-500 to-indigo-600",
+        color: "from-fuchsia-500 to-indigo-600",
         versionNumber: "1.11",
         improvements: [
 
@@ -282,8 +282,8 @@ const CHANGE_LOGS = [
     },
     {
         date: "Aug 27, 2025",
-        version: "1.",
-        color: "from-orange-600 to-yellow-400",
+        version: "1",
+        color: "from-teal-500 to-orange-600",
         versionNumber: "1.5",
         improvements: [
             "User Can Now Send Mails",
@@ -299,7 +299,7 @@ const CHANGE_LOGS = [
     {
         date: "Aug 20, 2025",
         version: "1",
-        color: "from-yellow-600 to-red-400",
+        color: "from-orange-500 to-yellow-600",
         versionNumber: "1.4",
         improvements: [
             "Fixing the on going Bugs",
@@ -315,7 +315,7 @@ const CHANGE_LOGS = [
     {
         date: "May 20, 2025",
         version: "1",
-        color: "from-yellow-600 to-red-400",
+        color: "from-yellow-500 to-red-600",
         versionNumber: "1.3",
         improvements: [
             "Fixing the on going Bugs",
@@ -331,7 +331,7 @@ const CHANGE_LOGS = [
     {
         date: "May 1, 2025",
         version: "1",
-        color: "from-red-600 to-blue-400",
+        color: "from-red-500 to-blue-600",
         versionNumber: "1.2",
         improvements: [
             "Update the UI, Added Logo, and Changelog",
@@ -349,7 +349,7 @@ const CHANGE_LOGS = [
     {
         date: "Mar 20, 2025",
         version: "1",
-        color: "from-blue-600 to-cyan-400",
+        color: "from-blue-500 to-purple-600",
         versionNumber: "1.1",
         improvements: [
             "Added some new pages Pricing,Features and Changelog",

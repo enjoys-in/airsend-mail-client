@@ -155,7 +155,7 @@ export function ManageIP({ globalIPs: initGlobal, domainIPs: initDomain }: Props
         </div>
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input type="search" placeholder="Search by IP..." className="pl-8 bg-background" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Input type="search" placeholder="Search by IP..." className="pl-8 bg-background focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
         {activeTab === "domain" && (
           <Select value={domainFilter} onValueChange={setDomainFilter}>
