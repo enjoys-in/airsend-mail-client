@@ -19,6 +19,9 @@ import { useToast } from "@/components/ui/use-toast"
 import { API } from "@/lib/api/handler"
 import Badge from "@/components/common/badges"
 import { useState, useMemo, useCallback } from "react"
+import { useAppSelector } from "@/store/hooks"
+
+const SUPER_ADMIN_EMAIL = "mullayam06@gmail.com"
 
 interface Props {
   globalIPs: string[]
@@ -29,6 +32,8 @@ type TabType = "domain" | "global"
 
 export function ManageIP({ globalIPs: initGlobal, domainIPs: initDomain }: Props) {
   const { toast } = useToast()
+  const user = useAppSelector(state => state.admin.user)
+  const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL
   const [globalIPs, setGlobalIPs] = useState(initGlobal)
   const [domainIPs, setDomainIPs] = useState(initDomain)
   const [query, setQuery] = useState("")
@@ -142,9 +147,11 @@ export function ManageIP({ globalIPs: initGlobal, domainIPs: initDomain }: Props
           <Button size="sm" variant={activeTab === "domain" ? "default" : "ghost"} className="rounded-sm" onClick={() => setActiveTab("domain")}>
             Per Domain
           </Button>
-          <Button size="sm" variant={activeTab === "global" ? "default" : "ghost"} className="rounded-sm" onClick={() => setActiveTab("global")}>
-            Global
-          </Button>
+          {isSuperAdmin && (
+            <Button size="sm" variant={activeTab === "global" ? "default" : "ghost"} className="rounded-sm" onClick={() => setActiveTab("global")}>
+              Global
+            </Button>
+          )}
         </div>
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
