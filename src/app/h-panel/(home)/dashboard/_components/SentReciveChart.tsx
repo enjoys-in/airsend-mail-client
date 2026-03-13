@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CartesianGrid, Line, LineChart, XAxis } from "recharts"
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
 import {
   Card,
@@ -78,17 +78,27 @@ export function SentReciveChart({ chartData }: { chartData: { month: string, sen
       <CardContent className="px-2 sm:p-6">
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
+          className="aspect-auto h-[350px] w-full"
         >
           <LineChart
             accessibilityLayer
             data={chartData}
             margin={{
+              top: 20,
               left: 12,
               right: 12,
+              bottom: 5,
             }}
           >
             <CartesianGrid vertical={false} />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              width={40}
+              domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.3)]}
+              allowDecimals={false}
+            />
             <XAxis
               dataKey="date"
               tickLine={false}

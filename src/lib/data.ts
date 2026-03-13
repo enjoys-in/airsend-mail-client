@@ -9,6 +9,7 @@ import {
     Mail,
     MailCheckIcon,
     Settings2,
+    Shield,
     Text,
     Users,
 } from "lucide-react"
@@ -277,6 +278,14 @@ export const MenuList = {
             title: "Emails Events",
             url: "/h-panel/emails-events",
             icon: MailCheckIcon,
+            isActive: true,
+            enabled: true,
+            items: [],
+        },
+        {
+            title: "Manage IP",
+            url: "/h-panel/manage-ip",
+            icon: Shield,
             isActive: true,
             enabled: true,
             items: [],

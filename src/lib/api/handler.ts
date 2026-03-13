@@ -103,6 +103,17 @@ export class API {
         return instance.get(adminRoutes(`/claim-domain-ownership/${domainId}`))
     }
 
+    // BLOCKED IPs
+    static getBlockedIPs(query: string = "") {
+        return instance.get(adminRoutes(`/blocked-ips${query}`))
+    }
+    static unblockIP(id: string) {
+        return instance.delete(adminRoutes(`/blocked-ips/${id}`))
+    }
+    static purgeAllBlockedIPs(query: string = "") {
+        return instance.delete(adminRoutes(`/blocked-ips/purge${query}`))
+    }
+
     // ACCOUNTS
     static handleGetAllAccounts(domain: string) {
         return instance.get(adminRoutes(`/accounts?domain=${domain}`))
