@@ -433,39 +433,53 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
     if (!selection?.rangeCount) return;
     const range = selection.getRangeAt(0);
     range.deleteContents();
-    // First, handle images from clipboardData.files
+
+    // Collect pasted image files
+    const imageFiles: File[] = [];
     Array.from(clipboardData.files).forEach(file => {
       if (!file.type.startsWith("image/")) return;
+      imageFiles.push(file);
+    });
 
-      const reader = new FileReader();
-      reader.onload = evt => {
+    // Also check clipboard items for image blobs (e.g. screenshots)
+    items.forEach(item => {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file && !imageFiles.some(f => f.name === file.name && f.size === file.size)) {
+          imageFiles.push(file);
+        }
+      }
+    });
+
+    if (imageFiles.length > 0) {
+      // Upload images as attachments AND show inline preview via object URL
+      imageFiles.forEach(file => {
+        const objectUrl = URL.createObjectURL(file);
         const img = document.createElement("img");
-        img.src = evt.target?.result as string;
-        img.style.maxWidth = "100%"; // wrap properly
+        img.src = objectUrl;
+        img.style.maxWidth = "100%";
+        img.dataset.inlineAttachment = file.name;
         range.insertNode(img);
-
         range.collapse(false);
         selection.removeAllRanges();
         selection.addRange(range);
-      };
-      reader.readAsDataURL(file);
-    });
-    items.forEach(item => {
+      });
+      sendFilesToServer(imageFiles);
+      updateContent();
+    }
 
+    // Handle pasted text
+    items.forEach(item => {
       if (item.type === "text/plain") {
-        // Handle text
         item.getAsString(text => {
           const sanitizedText = text.replace(/\s+/g, " ");
           range.insertNode(document.createTextNode(sanitizedText));
 
-          // Move cursor after inserted text
           range.collapse(false);
           selection.removeAllRanges();
           selection.addRange(range);
         });
-
       }
-
     });
   };
 
