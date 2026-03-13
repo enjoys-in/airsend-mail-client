@@ -97,7 +97,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
     // For sent mail: show first recipient
     const displayName = React.useMemo(() => {
         if (isSentByMe) {
-            const firstRecipient = item.receipients?.[0] ?? ""
+            const firstRecipient = safeDecrypt(item.receipients?.[0] ?? "")
             return filterNameAndEmail(firstRecipient, firstRecipient)
         }
         return filterNameAndEmail(decryptedFromEmail, decryptedFromEmail)
