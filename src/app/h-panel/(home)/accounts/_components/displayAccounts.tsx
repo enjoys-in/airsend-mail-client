@@ -115,7 +115,7 @@ export function UserManagement({ users }: { users: FetchAllUsersRootObject[] }) 
 
             <div className="border overflow-x-auto max-h-[500px] overflow-y-auto">
                 <Table>
-                    <TableHeader className="bg-zinc-900">
+                    <TableHeader className="sticky top-0 bg-zinc-900 z-10">
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Email</TableHead>

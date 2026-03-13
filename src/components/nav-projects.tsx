@@ -43,11 +43,7 @@ const path = usePathname()
             <span>Sponsor Us</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
-        <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
-          <SidebarMenuButton className="text-sidebar-foreground/40 text-xs cursor-default hover:bg-transparent">
-            <span>Airsend Client v2.1.0</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
+        
       </SidebarMenu>
     </SidebarGroup>
   )

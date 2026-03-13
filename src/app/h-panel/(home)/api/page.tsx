@@ -47,7 +47,7 @@ const page = async () => {
                 result: API_Response[]
             }
         }
- 
+
         if (!data.success) throw new Error(data.message)
 
         return (

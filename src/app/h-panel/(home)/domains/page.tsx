@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import React from "react";
 import { API } from "@/lib/api/handler";
 import { useToast } from "@/components/ui/use-toast";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import {
   Table,
@@ -174,9 +173,9 @@ export default function DomainDashboard() {
             </Select>
           </div>
         </div>
-        <ScrollArea className="h-[300px] w-full rounded-md border">
+        <div className="h-[300px] w-full overflow-auto rounded-md border">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 <TableHead>Domain Name</TableHead>
                 <TableHead>Status</TableHead>
@@ -308,8 +307,7 @@ export default function DomainDashboard() {
               )}
             </TableBody>
           </Table>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
         {selectedDomain && <ShowVerifyDomain data={selectedDomain} handleClaimDomainOwnership={handleClaimDomainOwnership} />}
       </div>
     </div>
