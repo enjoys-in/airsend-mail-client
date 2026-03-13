@@ -245,13 +245,13 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
 
                         {/* ── Desktop: single-line (sender | subject | preview | meta) ── */}
                         <div className="hidden sm:flex items-center min-w-0">
-                            {/* Sender — auto width, never truncated */}
-                            <div className="flex-shrink-0 max-w-[40%] relative flex items-center pr-3">
+                            {/* Sender — fixed width, always visible */}
+                            <div className="flex-shrink-0 w-[180px] lg:w-[220px] relative flex items-center pr-3">
                                 {!item.is_read && (
                                     <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500" />
                                 )}
                                 <span className={cn(
-                                    "text-sm whitespace-nowrap",
+                                    "text-sm truncate",
                                     !item.is_read ? "font-semibold text-foreground" : "font-medium text-muted-foreground"
                                 )}>
                                     {isSentByMe ? (
@@ -266,23 +266,21 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                 </span>
                             </div>
 
-                            {/* Subject — auto width, never truncated */}
-                            <div className="flex-shrink-0 max-w-[40%] pr-1.5">
+                            {/* Subject + Preview — fills remaining space, truncates */}
+                            <div className="flex-1 min-w-0 flex items-center">
                                 <span className={cn(
-                                    "text-sm whitespace-nowrap",
+                                    "text-sm truncate flex-shrink min-w-0",
                                     !item.is_read ? "text-foreground font-medium" : "text-muted-foreground"
                                 )}>
                                     {decryptedSubject}
                                 </span>
+                                {previewText && (
+                                    <span className="truncate flex-shrink min-w-0 ml-1.5">
+                                        <span className="text-muted-foreground/30">&mdash;&nbsp;</span>
+                                        <span className="text-xs text-muted-foreground/50">{previewText}</span>
+                                    </span>
+                                )}
                             </div>
-
-                            {/* Preview — fills remaining space, truncated */}
-                            {previewText && (
-                                <div className="flex-1 min-w-0 truncate">
-                                    <span className="text-muted-foreground/30">&mdash;&nbsp;</span>
-                                    <span className="text-xs text-muted-foreground/50">{previewText}</span>
-                                </div>
-                            )}
 
                             {/* Right: attachments + indicators + timestamp */}
                             <div className="flex items-center gap-2 flex-shrink-0 pl-3">

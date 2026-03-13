@@ -105,10 +105,37 @@ const ClientMailCard = () => {
         return unsubscribe
     }, [listen, storeInDB, searchParams, emit, folder])
 
-    // Sort mails descending by timestamp / created_at (newest first)
+    // Group by thread_id, sort threads by newest message, show latest per thread
     const sortedEmails = React.useMemo(() => {
         if (!all_emails || all_emails.length === 0) return []
-        return [...all_emails].sort((a, b) => {
+
+        // Group mails by thread_id (mails without thread_id are standalone)
+        const threadMap = new Map<string, typeof all_emails>()
+        const standalone: typeof all_emails = []
+
+        for (const mail of all_emails) {
+            if (mail.thread_id) {
+                const existing = threadMap.get(mail.thread_id) || []
+                existing.push(mail)
+                threadMap.set(mail.thread_id, existing)
+            } else {
+                standalone.push(mail)
+            }
+        }
+
+        // For each thread, pick the latest message as the representative
+        const representatives: typeof all_emails = []
+        for (const [, threadMails] of threadMap) {
+            const sorted = threadMails.sort((a, b) => {
+                const dateA = new Date(a.timestamp || a.created_at || 0).getTime()
+                const dateB = new Date(b.timestamp || b.created_at || 0).getTime()
+                return dateB - dateA
+            })
+            representatives.push(sorted[0])
+        }
+
+        // Combine standalone + thread representatives, sort newest first
+        return [...representatives, ...standalone].sort((a, b) => {
             const dateA = new Date(a.timestamp || a.created_at || 0).getTime()
             const dateB = new Date(b.timestamp || b.created_at || 0).getTime()
             return dateB - dateA

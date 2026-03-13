@@ -18,7 +18,7 @@ import { API } from "@/lib/api/handler";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 import { Security } from "@/lib/security";
-import { filterNameAndEmail } from "@/lib/utils";
+import { } from "@/lib/utils";
 import { airsendDB } from "@/db";
 import {
     type ReplyMode,
@@ -235,7 +235,7 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
                 : selectedMail.references
                     ? [selectedMail.references]
                     : [];
-            const replyRefs = [...existingRefs, selectedMail.message_id].filter(Boolean);
+            const replyRefs = [...existingRefs, selectedMail.uid].filter(Boolean);
 
             const payload: Record<string, any> = {
                 from,
@@ -246,7 +246,7 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
                 html,
                 attachments: [],
                 ...(isReply ? {
-                    inReplyTo: selectedMail.message_id,
+                    inReplyTo: selectedMail.uid,
                     references: replyRefs,
                     thread_id: selectedMail.thread_id,
                 } : {}),
@@ -265,7 +265,7 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
                 to: payload.to,
                 cc: payload.cc,
                 bcc: [],
-                subject: payload.subject,
+                subject: s.encryptAES(payload.subject),
                 html: payload.html,
                 attachments: false,
                 trackers_detected: 0,
@@ -282,7 +282,8 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
                 is_starred: false,
                 message_id: res.data.result.message_id,
                 priority: "normal",
-                receipient: filterNameAndEmail(payload.from, payload.from, false),
+                receipient: currAccount?.email || "",
+                receipients: payload.to.map((addr: string) => s.encryptAES(addr)),
                 thread_id: res.data.result.thread_id,
                 timestamp: new Date().toString(),
                 plain_text: s.encryptAES(payload.html),

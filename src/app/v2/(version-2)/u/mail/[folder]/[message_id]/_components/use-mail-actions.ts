@@ -130,20 +130,20 @@ export function useMailActions() {
                 cc = f.recipients.filter((r) => r !== f.recipient);
             }
 
-            // Build references chain: existing references + current message_id
+            // Build references chain: existing references + current uid
             const existingRefs = Array.isArray(selectedMail.references)
                 ? selectedMail.references
                 : selectedMail.references
                     ? [selectedMail.references]
                     : [];
-            const replyRefs = [...existingRefs, selectedMail.message_id].filter(Boolean);
+            const replyRefs = [...existingRefs, selectedMail.uid].filter((r): r is string => Boolean(r));
 
             createTabWithData(`Re: ${f.subject || "(no subject)"}`, {
                 to: to.filter(Boolean),
                 cc: cc.length > 0 ? cc : undefined,
                 subject: f.subject?.startsWith("Re:") ? f.subject : `Re: ${f.subject || ""}`,
                 body,
-                inReplyTo: selectedMail.message_id,
+                inReplyTo: selectedMail.uid,
                 references: replyRefs,
                 thread_id: selectedMail.thread_id,
             });

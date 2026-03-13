@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { AxiosError } from "axios";
 import { useMultiTabStore } from "@/store/settings/multiTabSystem";
 import { API } from "@/lib/api/handler";
-import {   filterNameAndEmail } from "@/lib/utils";
+import { } from "@/lib/utils";
 import { Security } from "@/lib/security"
 const s  = new Security()
 interface EmailData {
@@ -103,7 +103,7 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
         to: newObjct.to,
         cc: newObjct.cc,
         bcc: newObjct.bcc,
-        subject: newObjct.subject,
+        subject: s.encryptAES(newObjct.subject),
         html: newObjct.html,
         attachments: newObjct.attachments.length > 0,
         trackers_detected: 0,
@@ -120,7 +120,8 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
         is_starred: false,
         message_id: res.data.result.message_id,
         priority: "normal",
-        receipient: filterNameAndEmail(newObjct.from ,newObjct.from,false),
+        receipient: currAccount?.email || "",
+        receipients: newObjct.to.map((addr: string) => s.encryptAES(addr)),
         thread_id: res.data.result.thread_id,
         timestamp: new Date().toString(),
         plain_text: s.encryptAES(newObjct.html),
