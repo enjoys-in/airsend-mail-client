@@ -11,34 +11,33 @@ export function SomethingWentWrong() {
     const handleRetry = () => {
         setIsShaking(true)
         setTimeout(() => setIsShaking(false), 500)
-        // Add your retry logic here
     }
 
     return (
-        <div className="flex items-center justify-center p-4 ">
+        <div className="flex items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
                 className="w-full max-w-md"
             >
-                <Card className="border-red-200 bg-slate-300 shadow-lg">
+                <Card className="border-border bg-background shadow-lg">
                     <CardHeader className="pb-4">
                         <motion.div
                             animate={isShaking ? { x: [-5, 5, -5, 5, 0] } : {}}
                             transition={{ duration: 0.5 }}
                             className="flex justify-center"
                         >
-                            <div className="rounded-full bg-red-100 p-3">
-                                <AlertCircle className="h-6 w-6 text-red-600" />
+                            <div className="rounded-full bg-red-500/10 p-3">
+                                <AlertCircle className="h-6 w-6 text-red-500" />
                             </div>
                         </motion.div>
-                        <CardTitle className="text-center text-2xl font-bold text-gray-800 mt-4">
+                        <CardTitle className="text-center text-2xl font-bold text-foreground mt-4">
                             Something Went Wrong
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-center text-gray-600">
+                        <p className="text-center text-muted-foreground">
                             We apologize for the inconvenience. An error occurred while processing your request.
                         </p>
                     </CardContent>
@@ -46,7 +45,7 @@ export function SomethingWentWrong() {
                         <Button
                             variant="outline"
                             onClick={handleRetry}
-                            className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-200"
+                            className="border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-400"
                         >
                             Try Again
                         </Button>
