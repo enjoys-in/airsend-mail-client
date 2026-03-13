@@ -96,7 +96,21 @@ function LoginContent() {
         }
     }, [])
     return (
-            <div className="min-h-screen dark bg-gradient-to-br from-teal-900 via-slate-900 to-orange-900 flex items-center justify-center p-4">
+            <div className="min-h-screen dark bg-[#0a0a1a] flex items-center justify-center p-4 relative overflow-hidden">
+                {/* Background decorations */}
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-violet-900/30 blur-[120px]" />
+                    <div className="absolute bottom-[-20%] right-[-10%] w-[400px] h-[400px] rounded-full bg-rose-950/25 blur-[120px]" />
+                    <div className="absolute top-[30%] right-[15%] w-[350px] h-[350px] rounded-full bg-blue-950/20 blur-[100px]" />
+                    <svg className="absolute inset-0 w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" />
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                    </svg>
+                </div>
                 {isLoading ? (
                     <Spinner >
                         <div className="flex flex-col items-center mb-4">
@@ -114,7 +128,7 @@ function LoginContent() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="w-full max-w-sm"
+                        className="w-full max-w-sm relative z-10"
                     >
 
                         <motion.div

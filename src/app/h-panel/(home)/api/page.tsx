@@ -47,7 +47,7 @@ const page = async () => {
                 result: API_Response[]
             }
         }
-        console.log(data)
+        
         if (!data.success) throw new Error(data.message)
 
         return (
@@ -87,8 +87,8 @@ const page = async () => {
                 </ScrollArea>
 
                 <Sheet>
-                    <SheetTrigger className='w-full'>
-                        <Button className='mt-4 bg-orange-400 rounded-none mx-auto' variant="outline">Generate API Credentials</Button>
+                    <SheetTrigger asChild>
+                        <Button className='mt-4 bg-orange-400 rounded-none' variant="outline" size="sm">Generate API Credentials</Button>
                     </SheetTrigger>
                     <SheetContent>
                         <SheetHeader>
