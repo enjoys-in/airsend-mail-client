@@ -105,7 +105,9 @@ export const DynamicNavigation = ({
     }
 
     button.appendChild(circle);
-    setTimeout(() => circle.remove(), 600);
+    setTimeout(() => {
+      if (circle.parentNode) circle.remove();
+    }, 600);
   };
 
   // Handle link click

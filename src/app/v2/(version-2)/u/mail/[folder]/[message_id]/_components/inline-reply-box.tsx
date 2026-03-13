@@ -132,6 +132,16 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
     const [sending, setSending] = useState(false);
     const editorRef = useRef<HTMLDivElement>(null);
 
+    // Clean up contentEditable children on unmount to prevent removeChild errors
+    useEffect(() => {
+        const editor = editorRef.current;
+        return () => {
+            if (editor) {
+                while (editor.firstChild) editor.removeChild(editor.firstChild);
+            }
+        };
+    }, []);
+
     // Fetch display_name from IDB settings on mount
     useEffect(() => {
         if (!currAccount?.email) return;
