@@ -10,7 +10,7 @@ const page = () => {
       <PricingPage />
       <MainPricing />
       <ComparePlanDetails />
-      {/* <CompetionPricing/> */}
+      <CompetionPricing/>
     </>
   )
 }

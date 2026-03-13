@@ -2,7 +2,7 @@ import React from 'react'
 import "./section.module.css"
 const HeroSection2 = () => {
     return (
-        <section className="flex items-center justify-center px-4 py-2 bg-gradient-to-b dark:from-[#18142b] dark:to-[#1d1e24fe] bg-neutral-200 rounded-3xl">
+        <section className="flex items-center justify-center px-4 py-2 bg-gradient-to-b dark:from-[#18142b] dark:to-[#1d1e24fe] bg-neutral-100 rounded-3xl">
             {/* Background decoration */}
 
             <div className="relative max-w-6xl mx-auto text-center">
@@ -10,22 +10,22 @@ const HeroSection2 = () => {
 
                 {/* Main headline */}
                 <div className="fade-in-up delay-100">
-                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-4 leading-tight">
+                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-neutral-800 dark:text-white mb-4 leading-tight">
                         Your Email, <span className="gradient-text">Your Way</span>
                     </h1>
-                    <div className="text-xl md:text-2xl text-gray-300 font-light mb-8">
+                    <div className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-300 font-light mb-8">
                         — No Domain Needed
                     </div>
                 </div>
                 {/* Subheadline */}
                 <div className=" fade-in-up delay-200">
-                    <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed mb-4">
+                    <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-300 max-w-3xl mx-auto leading-relaxed mb-4">
                         Create a custom address instantly and start sending today.
                     </p>
-                    <p className="text-base md:text-lg text-gray-400 max-w-2xl mx-auto mb-12">
+                    <p className="text-base md:text-lg text-neutral-500 dark:text-neutral-400 max-w-2xl mx-auto mb-12">
                         No domain? No problem. Pick any name you like, and we'll handle the
                         delivery.
-                        <span className="text-emerald-400 font-semibold">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                             Fast. Reliable. Private.
                         </span>
                     </p>
@@ -33,8 +33,8 @@ const HeroSection2 = () => {
                 {/* Email example demo */}
                 <div className="fade-in-up delay-300 mb-2">
                     <div className="glass-card rounded-2xl p-6 max-w-md mx-auto mb-8">
-                        <div className="text-sm text-gray-400 mb-2">Your custom email:</div>
-                        <div className="font-mono text-lg text-white bg-gray-900 rounded-lg p-3 border-l-4 border-emerald-500">
+                        <div className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">Your custom email:</div>
+                        <div className="font-mono text-lg text-neutral-800 dark:text-white bg-neutral-200 dark:bg-gray-900 rounded-lg p-3 border-l-4 border-emerald-500">
                             <span className="email-example">john.smith@ourmail.com</span>
                         </div>
                     </div>
@@ -59,13 +59,13 @@ const HeroSection2 = () => {
                             </svg>
                         </span>
                     </button>
-                    <button className="px-8 py-4 glass-card text-white font-medium rounded-xl hover:bg-white/20 transform hover:scale-105 transition-all duration-300">
+                    <button className="px-8 py-4 glass-card text-neutral-800 dark:text-white font-medium rounded-xl hover:bg-black/10 dark:hover:bg-white/20 transform hover:scale-105 transition-all duration-300">
                         Pick Your Address
                     </button>
                 </div>
                 {/* Feature highlights */}
                 <div className="  fade-in-up delay-500 grid grid-cols-1 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-                    <div className="glass-card rounded-xl p-4 hover:bg-white/15 transition-all duration-300 transform hover:-translate-y-2">
+                    <div className="glass-card rounded-xl p-4 hover:bg-black/10 dark:hover:bg-white/15 transition-all duration-300 transform hover:-translate-y-2">
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mb-3 mx-auto">
                             <svg
                                 className="w-5 h-5 text-white"
@@ -81,10 +81,10 @@ const HeroSection2 = () => {
                                 />
                             </svg>
                         </div>
-                        <h3 className="text-white font-semibold text-sm mb-1">Instant Setup</h3>
-                        <p className="text-gray-400 text-xs">Ready in seconds</p>
+                        <h3 className="text-neutral-800 dark:text-white font-semibold text-sm mb-1">Instant Setup</h3>
+                        <p className="text-neutral-500 dark:text-neutral-400 text-xs">Ready in seconds</p>
                     </div>
-                    <div className="glass-card rounded-xl p-4 hover:bg-white/15 transition-all duration-300 transform hover:-translate-y-2">
+                    <div className="glass-card rounded-xl p-4 hover:bg-black/10 dark:hover:bg-white/15 transition-all duration-300 transform hover:-translate-y-2">
                         <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center mb-3 mx-auto">
                             <svg
                                 className="w-5 h-5 text-white"
@@ -100,12 +100,12 @@ const HeroSection2 = () => {
                                 />
                             </svg>
                         </div>
-                        <h3 className="text-white font-semibold text-sm mb-1">
+                        <h3 className="text-neutral-800 dark:text-white font-semibold text-sm mb-1">
                             Private &amp; Secure
                         </h3>
-                        <p className="text-gray-400 text-xs">Your data protected</p>
+                        <p className="text-neutral-500 dark:text-neutral-400 text-xs">Your data protected</p>
                     </div>
-                    <div className="glass-card rounded-xl p-4 hover:bg-white/15 transition-all duration-300 transform hover:-translate-y-2">
+                    <div className="glass-card rounded-xl p-4 hover:bg-black/10 dark:hover:bg-white/15 transition-all duration-300 transform hover:-translate-y-2">
                         <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mb-3 mx-auto">
                             <svg
                                 className="w-5 h-5 text-white"
@@ -121,10 +121,10 @@ const HeroSection2 = () => {
                                 />
                             </svg>
                         </div>
-                        <h3 className="text-white font-semibold text-sm mb-1">Mobile Ready</h3>
-                        <p className="text-gray-400 text-xs">Access anywhere</p>
+                        <h3 className="text-neutral-800 dark:text-white font-semibold text-sm mb-1">Mobile Ready</h3>
+                        <p className="text-neutral-500 dark:text-neutral-400 text-xs">Access anywhere</p>
                     </div>
-                    <div className="glass-card rounded-xl p-4 hover:bg-white/15 transition-all duration-300 transform hover:-translate-y-2">
+                    <div className="glass-card rounded-xl p-4 hover:bg-black/10 dark:hover:bg-white/15 transition-all duration-300 transform hover:-translate-y-2">
                         <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center mb-3 mx-auto">
                             <svg
                                 className="w-5 h-5 text-white"
@@ -140,10 +140,10 @@ const HeroSection2 = () => {
                                 />
                             </svg>
                         </div>
-                        <h3 className="text-white font-semibold text-sm mb-1">
+                        <h3 className="text-neutral-800 dark:text-white font-semibold text-sm mb-1">
                             Spam Protection
                         </h3>
-                        <p className="text-gray-400 text-xs">Advanced filtering</p>
+                        <p className="text-neutral-500 dark:text-neutral-400 text-xs">Advanced filtering</p>
                     </div>
                 </div>
             </div>
