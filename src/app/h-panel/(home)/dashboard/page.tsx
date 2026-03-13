@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react'
 import AccountStatistics from './_components/AccountStatistics';
-import { StatCardSkeleton } from './_components/CardSkelton';
+import { StatCardSkeleton, ChartSkeleton } from './_components/CardSkelton';
 import MailStatistics from './_components/MailStatistics';
 import ChartsComponent from './_components/ChartsComponent';
 
@@ -14,7 +14,7 @@ const page = async () => {
                 <Suspense fallback={<StatCardSkeleton />}>
                     <MailStatistics />
                 </Suspense>
-                <Suspense fallback={<StatCardSkeleton />}>
+                <Suspense fallback={<ChartSkeleton />}>
                     <ChartsComponent />
                 </Suspense>
 
