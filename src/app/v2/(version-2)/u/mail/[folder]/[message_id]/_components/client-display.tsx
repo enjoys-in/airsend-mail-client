@@ -154,10 +154,10 @@ const ClientDisplay = ({
                     <ChevronLeft />
                 </Button>
 
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                    <div className="flex items-baseline gap-3">
-                        <h2 className="text-2xl font-bold truncate">{decryptedSubject}</h2>
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                <div className="flex flex-col gap-1 min-w-0 flex-1 overflow-hidden">
+                    <div className="flex items-baseline gap-3 min-w-0">
+                        <h2 className="text-lg font-bold truncate min-w-0 flex-1">{decryptedSubject}</h2>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                             {moment(selectedMail?.timestamp).format("MMM DD, YYYY hh:mm A")}
                         </span>
                     </div>
@@ -225,10 +225,10 @@ const ClientDisplay = ({
                                             </Button>
                                         </TooltipTrigger>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[450px] px-4 sm:px-6 md:px-8 lg:px-10">
-                                        <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 px-2 py-4 text-sm">
+                                    <PopoverContent className="w-[450px] max-w-[90vw] px-4 sm:px-6 md:px-8 lg:px-10 overflow-hidden">
+                                        <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 px-2 py-4 text-sm min-w-0">
                                             <div className="text-right text-muted-foreground">from:</div>
-                                            <div>
+                                            <div className="truncate">
                                                 <strong>
                                                     {senderEmail &&
                                                         formatEmail(
@@ -250,7 +250,7 @@ const ClientDisplay = ({
                                             </div>
 
                                             <div className="text-right text-muted-foreground">subject:</div>
-                                            <div>{decryptedSubject}</div>
+                                            <div className="line-clamp-2 break-all">{decryptedSubject}</div>
 
                                             <div className="text-right text-muted-foreground">mailed-by:</div>
                                             <div>{decryptedRecipient?.split("@")[1]}</div>
