@@ -33,16 +33,25 @@ const chartConfig = {
 
 } satisfies ChartConfig
 
-export function SentReciveChart({ chartData }: { chartData: { month: string, sent: string, received: string }[] }) {
+export function SentReciveChart({ chartData: rawChartData }: { chartData: { month: string, sent: string, received: string }[] }) {
   const [activeChart, setActiveChart] =
     React.useState<keyof typeof chartConfig>("sent")
 
+  const chartData = React.useMemo(
+    () => rawChartData.map(item => ({
+      ...item,
+      sent: Number(item.sent),
+      received: Number(item.received),
+    })),
+    [rawChartData]
+  )
+
   const total = React.useMemo(
     () => ({
-      sent: chartData.reduce((acc, curr) => acc + Number(curr.sent), 0),
-      received: chartData.reduce((acc, curr) => acc + Number(curr.received), 0),
+      sent: chartData.reduce((acc, curr) => acc + curr.sent, 0),
+      received: chartData.reduce((acc, curr) => acc + curr.received, 0),
     }),
-    []
+    [chartData]
   )
 
   return (
@@ -78,7 +87,7 @@ export function SentReciveChart({ chartData }: { chartData: { month: string, sen
       <CardContent className="px-2 sm:p-6">
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[350px] w-full"
+          className="aspect-auto h-[300px] w-full"
         >
           <LineChart
             accessibilityLayer
@@ -96,7 +105,10 @@ export function SentReciveChart({ chartData }: { chartData: { month: string, sen
               axisLine={false}
               tickMargin={8}
               width={40}
-              domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.3)]}
+              domain={[0, (dataMax: number) => {
+                const nice = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10000]
+                return nice.find(n => n >= dataMax * 1.2) ?? Math.ceil(dataMax * 1.2)
+              }]}
               allowDecimals={false}
             />
             <XAxis
