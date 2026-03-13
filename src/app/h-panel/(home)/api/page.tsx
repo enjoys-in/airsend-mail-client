@@ -47,50 +47,48 @@ const page = async () => {
                 result: API_Response[]
             }
         }
-
+ 
         if (!data.success) throw new Error(data.message)
 
         return (
             <div>
 
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[100px]">Key Name</TableHead>
-                            <TableHead className="w-[100px]">API Key</TableHead>
-                            <TableHead className="w-[100px]">API Secret</TableHead>
-                            <TableHead className="w-[100px]">Created At</TableHead>
-                            <TableHead className="w-[100px]">Used Times</TableHead>
-                            <TableHead className="w-[100px]">Last Time Used</TableHead>
-                            <TableHead className="w-[100px]">Action</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                </Table>
-                <ScrollArea className="h-[400px] rounded-none border-b">
-                    {data.result.length > 0 ? (
-                        <Table>
-                            <TableBody>
-                                {data.result.map((item: any) => (
-                                    <TableRow key={item.id}>
-                                        <TableCell className="">{item.name}</TableCell>
-                                        <TableCell className="items-center"><CopyToClipboard text={item.api_key} />  {item.api_key.substring(0, 10)}******</TableCell>
-                                        <TableCell className="items-center"><CopyToClipboard text={item.api_secret} />  *********************</TableCell>
-                                        <TableCell className='font-sans'>{moment(item.createdAt).format("YYYY-MM-DD hh:mm:ss A")}</TableCell>
-                                        <TableCell className='font-sans'>{item.used_times}</TableCell>
-                                        <TableCell className='font-sans'>{moment(item.updated_at).format("YYYY-MM-DD hh:mm:ss A")}</TableCell>
-                                        <TableCell>
-                                            <ServerButton key_id={item.id} name={item.name} domain_id={item.domain.id}><Trash2 className="h-4 w-4" color='red' /></ServerButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                            No API keys found
-                        </div>
-                    )}
-                </ScrollArea>
+                <div className="h-[400px] overflow-auto rounded-none border-b">
+                    <Table>
+                        <TableHeader className="sticky top-0 bg-background z-10">
+                            <TableRow>
+                                <TableHead className="w-[100px]">Key Name</TableHead>
+                                <TableHead className="w-[100px]">API Key</TableHead>
+                                <TableHead className="w-[100px]">API Secret</TableHead>
+                                <TableHead className="w-[100px]">Created At</TableHead>
+                                <TableHead className="w-[100px]">Used Times</TableHead>
+                                <TableHead className="w-[100px]">Last Time Used</TableHead>
+                                <TableHead className="w-[100px]">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {data.result.length > 0 ? data.result.map((item: any) => (
+                                <TableRow key={item.id}>
+                                    <TableCell className="">{item.name}</TableCell>
+                                    <TableCell className="items-center"><CopyToClipboard text={item.api_key} />  {item.api_key.substring(0, 10)}******</TableCell>
+                                    <TableCell className="items-center"><CopyToClipboard text={item.key_hash} />  *********************</TableCell>
+                                    <TableCell className='font-sans'>{moment(item.createdAt).format("YYYY-MM-DD hh:mm:ss A")}</TableCell>
+                                    <TableCell className='font-sans'>{item.used_times}</TableCell>
+                                    <TableCell className='font-sans'>{moment(item.updated_at).format("YYYY-MM-DD hh:mm:ss A")}</TableCell>
+                                    <TableCell>
+                                        <ServerButton key_id={item.id} name={item.name} domain_id={item.domain.id}><Trash2 className="h-4 w-4" color='red' /></ServerButton>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="h-[350px] text-center align-middle text-muted-foreground">
+                                        No API keys found
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
 
 
                 <Sheet>
