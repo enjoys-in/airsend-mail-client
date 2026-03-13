@@ -103,16 +103,15 @@ export class API {
         return instance.get(adminRoutes(`/claim-domain-ownership/${domainId}`))
     }
 
-    // BLOCKED IPs
-    static getBlockedIPs(query: string = "") {
-        return instance.get(adminRoutes(`/blocked-ips${query}`))
-    }
-    static unblockIP(id: string) {
-        return instance.delete(adminRoutes(`/blocked-ips/${id}`))
-    }
-    static purgeAllBlockedIPs(query: string = "") {
-        return instance.delete(adminRoutes(`/blocked-ips/purge${query}`))
-    }
+    // BLOCKED IPs - Global
+    static getGlobalBlockedIPs() { return instance.get(adminRoutes('/blocked-ips')) }
+    static removeGlobalBlockedIP(ip: string) { return instance.delete(adminRoutes(`/blocked-ips/${encodeURIComponent(ip)}`)) }
+    static purgeGlobalBlockedIPs() { return instance.delete(adminRoutes('/blocked-ips')) }
+
+    // BLOCKED IPs - Per Domain
+    static getDomainBlockedIPs(domain?: string) { return instance.get(adminRoutes(`/blocked-ips/domains${domain ? `?domain=${domain}` : ''}`)) }
+    static unblockDomainIP(domain: string, ip: string) { return instance.delete(adminRoutes('/blocked-ips/domains'), { data: { domain, ip } }) }
+    static purgeDomainBlockedIPs(domain: string) { return instance.delete(adminRoutes('/blocked-ips/domains/purge'), { data: { domain } }) }
 
     // ACCOUNTS
     static handleGetAllAccounts(domain: string) {
