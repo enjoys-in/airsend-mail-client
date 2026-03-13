@@ -33,6 +33,9 @@ interface EmailData {
   subject: string;
   html: string;
   attachments: File[];
+  inReplyTo?: string;
+  references?: string[];
+  thread_id?: string;
 }
 const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
   const { getHTML, setHTML, attachments } = useHtmlEditor();
@@ -70,7 +73,10 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
             const dir = att.id.split("-").pop();
             return `${dir}/${att.file.name}`;
           }),
-        }
+        },
+        data.inReplyTo ? { inReplyTo: data.inReplyTo } : {},
+        data.references ? { references: data.references } : {},
+        data.thread_id ? { thread_id: data.thread_id } : {}
       );
 
       if (newObjct.to.concat(newObjct.cc, newObjct.bcc).length === 0) {

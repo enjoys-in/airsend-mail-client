@@ -130,11 +130,22 @@ export function useMailActions() {
                 cc = f.recipients.filter((r) => r !== f.recipient);
             }
 
+            // Build references chain: existing references + current message_id
+            const existingRefs = Array.isArray(selectedMail.references)
+                ? selectedMail.references
+                : selectedMail.references
+                    ? [selectedMail.references]
+                    : [];
+            const replyRefs = [...existingRefs, selectedMail.message_id].filter(Boolean);
+
             createTabWithData(`Re: ${f.subject || "(no subject)"}`, {
                 to: to.filter(Boolean),
                 cc: cc.length > 0 ? cc : undefined,
                 subject: f.subject?.startsWith("Re:") ? f.subject : `Re: ${f.subject || ""}`,
                 body,
+                inReplyTo: selectedMail.message_id,
+                references: replyRefs,
+                thread_id: selectedMail.thread_id,
             });
         },
         [selectedMail, createTabWithData]

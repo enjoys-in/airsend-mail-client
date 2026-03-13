@@ -32,6 +32,9 @@ export interface ComposeInitialData {
   bcc?: string[];
   subject?: string;
   body?: string;
+  inReplyTo?: string;
+  references?: string[];
+  thread_id?: string;
 }
 
 export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?: boolean; tabId?: number; initialData?: ComposeInitialData }) {
@@ -501,6 +504,9 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
             subject,
             html: body,
             attachments,
+            ...(initialData?.inReplyTo ? { inReplyTo: initialData.inReplyTo } : {}),
+            ...(initialData?.references ? { references: initialData.references } : {}),
+            ...(initialData?.thread_id ? { thread_id: initialData.thread_id } : {}),
           }} />}
           defaultValue={initialData?.body || ``}
         />

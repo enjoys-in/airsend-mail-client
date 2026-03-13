@@ -218,7 +218,16 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
         try {
             const html = editorRef.current?.innerHTML || "";
             const from = displayName ? `${displayName} <${currAccount.email}>` : currAccount.email;
-            const payload = {
+            // Build threading fields for reply/reply-all
+            const isReply = mode === "reply" || mode === "reply-all";
+            const existingRefs = Array.isArray(selectedMail.references)
+                ? selectedMail.references
+                : selectedMail.references
+                    ? [selectedMail.references]
+                    : [];
+            const replyRefs = [...existingRefs, selectedMail.message_id].filter(Boolean);
+
+            const payload: Record<string, any> = {
                 from,
                 to: toList,
                 cc: ccList,
@@ -226,6 +235,11 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
                 subject: subject || "no subject",
                 html,
                 attachments: [],
+                ...(isReply ? {
+                    inReplyTo: selectedMail.message_id,
+                    references: replyRefs,
+                    thread_id: selectedMail.thread_id,
+                } : {}),
             };
 
             const res = await API.sendMailOG({
