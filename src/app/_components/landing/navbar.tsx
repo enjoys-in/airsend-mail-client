@@ -48,6 +48,7 @@ export const Navbar = () => {
             height={64}
             width={180}
             alt="logo"
+            className="h-10 w-auto"
           />
         </Link>
 
@@ -63,7 +64,7 @@ export const Navbar = () => {
           ))}
 
           <Link href={currAccount ? "/v2/u/mail/inbox" : "/v2"}>
-            <Button className="w-full rounded-full bg-[#5a61ff] py-2 dark:text-white dark:bg-pink-500 hover:bg-blue-500 text-sm font-medium ">
+            <Button className="min-w-[80px] rounded-full bg-[#5a61ff] py-2 dark:text-white dark:bg-pink-500 hover:bg-blue-500 text-sm font-medium truncate max-w-[120px]">
               {currAccount ? currAccount.name : "Login"}
             </Button>
           </Link>
@@ -105,7 +106,7 @@ export const Navbar = () => {
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            className="md:hidden absolute top-full -translate-x-1/2 max-w-sm w-full bg-[#31343cfe] border-secondary/30 border-[1px] rounded-b-2xl mt-1 px-4 py-4 shadow-lg"
+            className="md:hidden absolute top-full left-1/2 -translate-x-1/2 max-w-sm w-full bg-[#31343cfe] border-secondary/30 border-[1px] rounded-b-2xl mt-1 px-4 py-4 shadow-lg"
             initial="closed"
             animate="open"
             exit="closed"

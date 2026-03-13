@@ -4,7 +4,7 @@ import { Available, NotAvailable } from './CompetionPricing'
 const PLAN_DETAILS = [
   { feature: "Number of Domains", free: "10", startup: "Up to 25", scaler: "Up to 50", professional: "Unlimited", team: "Up to 10", },
   { feature: "Mailboxes", free: "Unlimited", startup: "Unlimited", scaler: "Unlimited", professional: "Unlimited", team: "Unlimited", },
-  { feature: "Storage", free: "5 GB", startup: "25 GB", scaler: "50 GB", professional: "Unlimited", team: "Unlimited", },
+  { feature: "Storage", free: "1 GB", startup: "25 GB", scaler: "50 GB", professional: "Unlimited", team: "Unlimited", },
   { feature: "Attachments Size Limit", free: "100 MB", startup: "500 MB", scaler: "true", professional: "true", team: "true", },
   { feature: "Per Day Emails", free: "300", startup: "600", scaler: "850", professional: "100", team: "1000", },
   { feature: "Incoming Outgoing Logs", free: "-", startup: "-", scaler: "true", professional: "true", team: "true", },

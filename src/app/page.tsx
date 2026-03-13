@@ -9,10 +9,8 @@ export default function Home() {
 
   return (
     <HomeLayout>
-      <PromoBanner />
       <LandingPage />
       <ConfirmationModal title="Confirmation" message="It's Under Development" onConfirm={() => { }} />
-
     </HomeLayout>
   )
 }

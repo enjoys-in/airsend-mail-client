@@ -69,6 +69,8 @@ const ProvidersPricingCompare = [
   },
 ];
 const CompetionPricing = () => {
+  const featureNames = ProvidersPricingCompare[0].features.map(f => f.service);
+
   return (
     <div className="relative">
       <div className="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 md:py-14 lg:py-20 mx-auto">
@@ -80,10 +82,9 @@ const CompetionPricing = () => {
             Increase your teams productivity. Get things done in rapid time.
           </p>
         </div>
-        <div className="relative after:absolute after:inset-x-0 after:bottom-0 after:z-10 after:w-full after:h-48 after:bg-linear-to-t after:from-white after:via-white/70 dark:after:from-neutral-900 dark:after:via-neutral-900/95">
+        <div className="relative overflow-x-auto">
           <div className="hidden lg:block sticky top-0 start-0 py-2 bg-white dark:bg-neutral-900">
-            {/* Grid */}
-            <div className="grid grid-cols-6 gap-6">
+            <div className="grid grid-cols-8 gap-6">
               <div className="col-span-2">
                 <div className="h-full"></div>
               </div>
@@ -104,52 +105,39 @@ const CompetionPricing = () => {
                 </div>
               ))}
             </div>
-            {/* End Grid */}
           </div>
 
-          {/* Section */}
           <div className="space-y-4 lg:space-y-0">
-            {/* List */}
-            <ul className="grid lg:grid-cols-6 lg:gap-6">
-              {/* Item */}
+            <ul className="grid lg:grid-cols-8 lg:gap-6">
               <li className="lg:col-span-2 lg:py-3">
                 <span className="text-lg font-semibold text-gray-800 dark:text-neutral-200">
                   General
                 </span>
               </li>
-              {/* End Item */}
-              {/* Item */}
-              <li className="hidden lg:block lg:col-span-1 py-1.5 lg:py-3 px-4 lg:px-0 lg:text-center"></li>
-              {/* End Item */}
-              {/* Item */}
-              <li className="hidden lg:block lg:col-span-1 py-1.5 lg:py-3 px-4 lg:px-0 lg:text-center"></li>
-              {/* End Item */}
-              {/* Item */}
-              <li className="hidden lg:block lg:col-span-1 py-1.5 lg:py-3 px-4 lg:px-0 lg:text-center"></li>
-              {/* End Item */}
-              {/* Item */}
-              <li className="hidden lg:block lg:col-span-1 py-1.5 lg:py-3 px-4 lg:px-0 lg:text-center"></li>
-              {/* End Item */}
+              {ProvidersPricingCompare.map((_, i) => (
+                <li key={i} className="hidden lg:block lg:col-span-1 py-1.5 lg:py-3 px-4 lg:px-0 lg:text-center"></li>
+              ))}
             </ul>
-            {ProvidersPricingCompare.map((plan, index) => plan.features.map((feature, iindex) => (
-              <ul className="grid lg:grid-cols-6 lg:gap-6" key={index + iindex}>
-                {/* Item */}
+            {featureNames.map((featureName, fIndex) => (
+              <ul className="grid lg:grid-cols-8 lg:gap-6" key={fIndex}>
                 <li className="lg:col-span-2 pb-1.5 lg:py-3">
                   <span className="text-sm text-gray-800 dark:text-neutral-200">
-                    {feature.service}
+                    {featureName}
                   </span>
                 </li>
-                <li className="col-span-1 py-1.5 lg:py-3 px-4 lg:px-0 lg:text-center bg-gray-100 dark:bg-neutral-800">
-                  <div className="grid grid-cols-6 lg:block">
-                    <span className="lg:hidden col-span-2 font-semibold text-sm text-gray-800 dark:text-neutral-200">
-                      {plan.name}
-                    </span>
-                    <span className="text-sm text-gray-800 dark:text-neutral-200">
-                      {feature.text}
-                    </span>
-                  </div>
-                </li>
-              </ul>)
+                {ProvidersPricingCompare.map((plan, pIndex) => (
+                  <li key={pIndex} className="col-span-1 py-1.5 lg:py-3 px-4 lg:px-0 lg:text-center bg-gray-100 dark:bg-neutral-800">
+                    <div className="grid grid-cols-6 lg:block">
+                      <span className="lg:hidden col-span-2 font-semibold text-sm text-gray-800 dark:text-neutral-200">
+                        {plan.name}
+                      </span>
+                      <span className="text-sm text-gray-800 dark:text-neutral-200">
+                        {plan.features[fIndex].text}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             ))}
           </div>
         </div>
