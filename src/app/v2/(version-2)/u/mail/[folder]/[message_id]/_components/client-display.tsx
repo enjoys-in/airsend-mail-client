@@ -91,6 +91,18 @@ const ClientDisplay = ({
         () => senderEmail?.split("@")[1] || "",
         [senderEmail]
     );
+    const decryptedRecipient = useMemo(
+        () => (selectedMail ? safeDecrypt(selectedMail.receipient) : ""),
+        [selectedMail?.receipient]
+    );
+    const decryptedRecipients = useMemo(
+        () => {
+            if (!selectedMail?.receipients) return [];
+            if (!Array.isArray(selectedMail.receipients)) return [safeDecrypt(selectedMail.receipients as any)];
+            return selectedMail.receipients.map((r: string) => safeDecrypt(r));
+        },
+        [selectedMail?.receipients]
+    );
 
     useEffect(() => {
         if (!selectedMail) {
@@ -190,13 +202,13 @@ const ClientDisplay = ({
                         <div className="flex flex-row gap-2 items-center">
                             {selectedMail.folder === "sent" ? (
                                 <div className="text-sm text-muted-foreground">
-                                    To: {Array.isArray(selectedMail?.receipients) ? selectedMail.receipients.join(", ") : selectedMail?.receipients}
+                                    To: {decryptedRecipients.join(", ")}
                                 </div>
                             ) : (
                                 <span className="group relative text-xs text-zinc-500 cursor-pointer">
                                     To me
                                     <span className="absolute left-0 top-full mt-1 hidden group-hover:block rounded-md bg-black text-white text-[10px] px-2 py-1 whitespace-nowrap shadow-md z-10">
-                                        {selectedMail?.receipient}
+                                        {decryptedRecipient}
                                     </span>
                                 </span>
                             )}
@@ -228,10 +240,8 @@ const ClientDisplay = ({
                                             <div className="text-right text-muted-foreground">to:</div>
                                             <div className="break-all">
                                                 {selectedMail.folder === "sent"
-                                                    ? (Array.isArray(selectedMail?.receipients)
-                                                        ? selectedMail.receipients.join(", ")
-                                                        : selectedMail?.receipients)
-                                                    : selectedMail?.receipient}
+                                                    ? decryptedRecipients.join(", ")
+                                                    : decryptedRecipient}
                                             </div>
 
                                             <div className="text-right text-muted-foreground">date:</div>
@@ -243,7 +253,7 @@ const ClientDisplay = ({
                                             <div>{decryptedSubject}</div>
 
                                             <div className="text-right text-muted-foreground">mailed-by:</div>
-                                            <div>{selectedMail?.receipient?.split("@")[1]}</div>
+                                            <div>{decryptedRecipient?.split("@")[1]}</div>
 
                                             <div className="text-right text-muted-foreground">security:</div>
                                             <div className="flex items-center gap-1">
