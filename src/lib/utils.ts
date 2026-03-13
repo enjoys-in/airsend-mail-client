@@ -134,11 +134,11 @@ export const getEmailStatusColor = (status: string) => {
     case "UNDELIVERED":
       return "bg-rose-950 text-rose-400 hover:bg-rose-900"
     case "BOUNCED":
-      return "bg-red-950 text-red-400 hover:bg-red-900"
+      return "bg-rose-950 text-rose-400 hover:bg-rose-900"
     case "SOFT_BOUNCED":
       return "bg-pink-950 text-pink-400 hover:bg-pink-900"
     case "REJECTED":
-      return "bg-fuchsia-950 text-fuchsia-400 hover:bg-fuchsia-900"
+      return "bg-red-950 text-red-400 hover:bg-red-900"
     case "DROPPED":
       return "bg-crimson-950 text-crimson-400 hover:bg-crimson-900" // fallback red tone
     case "FORWARDED":
