@@ -2,6 +2,27 @@ import { Info } from "lucide-react"
 
 const CHANGE_LOGS = [
     {
+        date: "Mar 13, 2026",
+        version: "2",
+        color: "from-pink-500 to-rose-600",
+        versionNumber: "2.1.0",
+        improvements: [
+            "Manage Blocked IPs Page — Global and Per-Domain Tabs with Unblock and Purge All",
+            "Super Admin Restriction for Global Blocked IPs Management",
+            "Dashboard Chart Skeleton Loading State",
+            "Sidebar Width Increased and Active Highlight Full-Width Fix",
+            "Sidebar Navigation Entry for Manage IP",
+        ],
+        bugfixes: [
+            "Fixed Dashboard Line Chart Y-Axis Scaling — Peaks No Longer Clipped",
+            "Fixed Line Chart Data Type — Converted String Values to Numbers for Proper Rendering",
+            "Fixed Dynamic Y-Axis Max with Nice Number Rounding",
+            "Fixed Rejected Email Status Badge Color from Purple to Red",
+            "Fixed SomethingWentWrong Component to Use Theme-Aware Colors",
+            "Fixed Sidebar Menu Button Rounded Corners Override",
+        ]
+    },
+    {
         date: "Mar 10, 2026",
         version: "2",
         color: "from-emerald-500 to-teal-600",
