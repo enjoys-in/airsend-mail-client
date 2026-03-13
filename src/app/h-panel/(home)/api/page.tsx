@@ -47,49 +47,58 @@ const page = async () => {
                 result: API_Response[]
             }
         }
-        
+
         if (!data.success) throw new Error(data.message)
 
         return (
             <div>
+
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[100px]">Key Name</TableHead>
+                            <TableHead className="w-[100px]">API Key</TableHead>
+                            <TableHead className="w-[100px]">API Secret</TableHead>
+                            <TableHead className="w-[100px]">Created At</TableHead>
+                            <TableHead className="w-[100px]">Used Times</TableHead>
+                            <TableHead className="w-[100px]">Last Time Used</TableHead>
+                            <TableHead className="w-[100px]">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                </Table>
                 <ScrollArea className="h-[400px] rounded-none border-b">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[100px]">Key Name</TableHead>
-                                <TableHead className="w-[100px]">API Key</TableHead>
-                                <TableHead className="w-[100px]">API Secret</TableHead>
-                                <TableHead className="w-[100px]">Created At</TableHead>
-                                <TableHead className="w-[100px]">Used Times</TableHead>
-                                <TableHead className="w-[100px]">Last Time Used</TableHead>
-                                <TableHead className="w-[100px]">Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {data.result.length > 0 ? data.result.map((item: any) => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="">{item.name}</TableCell>
-                                    <TableCell className="items-center"><CopyToClipboard text={item.api_key} />  {item.api_key.substring(0, 10)}******</TableCell>
-                                    <TableCell className="items-center"><CopyToClipboard text={item.api_secret} />  *********************</TableCell>
-                                    <TableCell className='font-sans'>{moment(item.createdAt).format("YYYY-MM-DD hh:mm:ss A")}</TableCell>
-                                    <TableCell className='font-sans'>{item.used_times}</TableCell>
-                                    <TableCell className='font-sans'>{moment(item.updated_at).format("YYYY-MM-DD hh:mm:ss A")}</TableCell>
-                                    <TableCell>
-                                        <ServerButton key_id={item.id} name={item.name} domain_id={item.domain.id}><Trash2 className="h-4 w-4" color='red' /></ServerButton>
-                                    </TableCell>
-                                </TableRow>
-                            )) : (<TableRow>
-                                <TableCell colSpan={7} className="text-center">No API keys found</TableCell>
-                            </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                    {data.result.length > 0 ? (
+                        <Table>
+                            <TableBody>
+                                {data.result.map((item: any) => (
+                                    <TableRow key={item.id}>
+                                        <TableCell className="">{item.name}</TableCell>
+                                        <TableCell className="items-center"><CopyToClipboard text={item.api_key} />  {item.api_key.substring(0, 10)}******</TableCell>
+                                        <TableCell className="items-center"><CopyToClipboard text={item.api_secret} />  *********************</TableCell>
+                                        <TableCell className='font-sans'>{moment(item.createdAt).format("YYYY-MM-DD hh:mm:ss A")}</TableCell>
+                                        <TableCell className='font-sans'>{item.used_times}</TableCell>
+                                        <TableCell className='font-sans'>{moment(item.updated_at).format("YYYY-MM-DD hh:mm:ss A")}</TableCell>
+                                        <TableCell>
+                                            <ServerButton key_id={item.id} name={item.name} domain_id={item.domain.id}><Trash2 className="h-4 w-4" color='red' /></ServerButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                            No API keys found
+                        </div>
+                    )}
                 </ScrollArea>
 
+
                 <Sheet>
-                    <SheetTrigger asChild>
-                        <Button className='mt-4 bg-orange-400 rounded-none' variant="outline" size="sm">Generate API Credentials</Button>
-                    </SheetTrigger>
+                    <div className="flex justify-center mt-4">
+                        <SheetTrigger asChild>
+                            <Button className='bg-orange-400 rounded-none' variant="outline" size="sm">Generate API Credentials</Button>
+                        </SheetTrigger>
+                    </div>
                     <SheetContent>
                         <SheetHeader>
                             <SheetTitle className='flex items-center gap-2'>
@@ -103,9 +112,9 @@ const page = async () => {
                         </div>
                     </SheetContent>
                 </Sheet>
-                <StickyNote/>
+                <StickyNote />
 
-            </div>
+            </div >
         )
     } catch (error) {
         return <SomethingWentWrong />
