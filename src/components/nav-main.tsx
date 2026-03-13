@@ -37,9 +37,9 @@ export function NavMain({
 }) {
   const path = usePathname()
   return (
-    <SidebarGroup className="rounded-none">
-      <SidebarGroupLabel>Main</SidebarGroupLabel>
-      <SidebarMenu className="rounded-none">
+    <SidebarGroup className="rounded-none px-0 pt-0">
+      <SidebarGroupLabel className="px-4">Main</SidebarGroupLabel>
+      <SidebarMenu className="rounded-none gap-1">
         {items.map((item) => item.enabled && (
           <Collapsible
             key={item.title}
@@ -49,8 +49,8 @@ export function NavMain({
           >
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
-                <Link className="flex items-center justify-center gap-2" href={item.url}>
-                  <SidebarMenuButton tooltip={item.title} className={path.includes(item.url) ? "dark:bg-[#ff5aa7] bg-[#5a61ff] hover:bg-[#5a61ff] text-sidebar-accent-foreground rounded-none text-gray-200 dark:text-gray-50 hover:text-gray-200 dark:hover:text-gray-100" : "rounded-none"}>
+                <Link href={item.url} className="block w-full">
+                  <SidebarMenuButton tooltip={item.title} className={path.includes(item.url) ? "dark:bg-[#ff5aa7] bg-[#5a61ff] hover:bg-[#5a61ff] text-sidebar-accent-foreground !rounded-none text-gray-200 dark:text-gray-50 hover:text-gray-200 dark:hover:text-gray-100 w-full" : "!rounded-none w-full"}>
                     {item?.icon && <item.icon className="h-4 w-4" />}
                     <span>{item.title}</span>
                     {item.items && item.items?.length > 0 && <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />}
