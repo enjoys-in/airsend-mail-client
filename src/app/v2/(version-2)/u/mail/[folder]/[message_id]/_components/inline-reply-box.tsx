@@ -226,9 +226,7 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
 
         setSending(true);
         try {
-            // Remove inline pasted image previews (blob: URLs)
-            let html = editorRef.current?.innerHTML || "";
-            html = html.replace(/<img[^>]*data-inline-attachment="[^"]*"[^>]*>/gi, "");
+            const html = editorRef.current?.innerHTML || "";
             const from = displayName ? `${displayName} <${currAccount.email}>` : currAccount.email;
             // Build threading fields for reply/reply-all
             const isReply = mode === "reply" || mode === "reply-all";

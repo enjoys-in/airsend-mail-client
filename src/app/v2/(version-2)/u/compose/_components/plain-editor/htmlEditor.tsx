@@ -229,7 +229,7 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
     });
   };
 
-  const sendFilesToServer = async (files: any[]) => {
+  const sendFilesToServer = async (files: any[], onUploaded?: (file: File, id: string, serverPath: string) => void) => {
     try {
       files.forEach((file) => {
         const id = `attachment-${file.name}-${moment().format("YYYYMMDD")}`;
@@ -271,6 +271,11 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
               u.id === id ? { ...u, progress: 100, uploaded: true } : u
             )
           );
+          if (onUploaded) {
+            const dir = id.split("-").pop();
+            const serverPath = `${dir}/${file.name}`;
+            onUploaded(file, id, serverPath);
+          }
         };
 
         xhr.onerror = () => {
@@ -452,19 +457,29 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
     });
 
     if (imageFiles.length > 0) {
-      // Upload images as attachments AND show inline preview via object URL
+      // Like Gmail: show blob preview immediately, upload, swap with server URL on success
+      const imgElements = new Map<string, HTMLImageElement>();
       imageFiles.forEach(file => {
         const objectUrl = URL.createObjectURL(file);
         const img = document.createElement("img");
         img.src = objectUrl;
         img.style.maxWidth = "100%";
-        img.dataset.inlineAttachment = file.name;
+        img.setAttribute("alt", file.name);
         range.insertNode(img);
         range.collapse(false);
         selection.removeAllRanges();
         selection.addRange(range);
+        imgElements.set(file.name, img);
       });
-      sendFilesToServer(imageFiles);
+      sendFilesToServer(imageFiles, (file, _id, serverPath) => {
+        const img = imgElements.get(file.name);
+        if (img) {
+          const hostedUrl = `${__config.APP.BASE_URL}/api/v1/attachment/preview/${serverPath}`;
+          URL.revokeObjectURL(img.src);
+          img.src = hostedUrl;
+          updateContent();
+        }
+      });
       updateContent();
     }
 

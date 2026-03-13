@@ -59,11 +59,7 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
   };
   const handleSend = async () => {
     try {
-      let newHTML = getHTML();
-
-      // Remove inline pasted image previews (blob: URLs) — the server
-      // will embed these as CID attachments from the uploaded files
-      newHTML = newHTML.replace(/<img[^>]*data-inline-attachment="[^"]*"[^>]*>/gi, "");
+      const newHTML = getHTML();
  
       const newObjct = Object.assign(
         {},
