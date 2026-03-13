@@ -16,13 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import {
   Table,
   TableBody,
   TableCaption,
@@ -31,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { BookOpen, Code, FileJson, Menu, Terminal, X } from "lucide-react"
+import { BookOpen, Code, FileJson, Terminal } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { __config } from "@/constants/config"
 import { Textarea } from "@/components/ui/textarea"
@@ -43,7 +36,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import StickyNote from "@/app/h-panel/(home)/api/_components/StickyNote"
 
 export default function ApiDocs() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [selectedValue, setSelectedValue] = useState({
     api_key: "",
     api_secret: "",
@@ -141,38 +133,8 @@ export default function ApiDocs() {
     }
   }
   return (
-    <div className="flex min-h-screen">
-
- 
-      {/* <div className="hidden md:block w-64 bg-card border-r p-4">
-        <Sidebar />
-      </div>   */}
-
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileJson className="h-6 w-6" />
-            <h2 className="text-lg font-semibold">AirSend</h2>
-          </div>
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-4">
-              <SheetHeader className="mb-4">
-                <SheetTitle>Navigation</SheetTitle>
-              </SheetHeader>
-              <Sidebar />
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
-
-
-      <div className="flex-1 md:p-6 p-4 mt-16 md:mt-0 ">
+    <div className="flex">
+      <div className="flex-1 md:p-6 p-4">
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="space-y-2">
             <div className="flex items-center gap-2">

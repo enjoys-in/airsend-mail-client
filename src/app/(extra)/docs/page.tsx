@@ -7,8 +7,8 @@ import Link from "next/link";
 
 export default function ApiDocs() {
   return (
-    <div className="flex min-h-screen">
-      <div className="flex-1 md:p-6 p-4 mt-16 md:mt-0 ">
+    <div className="flex">
+      <div className="flex-1 md:p-6 p-4">
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="space-y-2">
             <div className="flex items-center gap-2">

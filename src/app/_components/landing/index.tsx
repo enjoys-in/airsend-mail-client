@@ -11,7 +11,6 @@ import HeroSection2 from "./hero-section2";
 export function LandingPage() {
     return (
         <div>
-            
             <HeroSection />
             <HeroSection2 />
             <FeaturedSection />

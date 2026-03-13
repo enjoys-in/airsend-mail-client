@@ -51,7 +51,7 @@ const ComparePlanDetails = () => {
           <h2 className="text-2xl font-bold md:text-3xl md:leading-tight text-gray-800 dark:text-neutral-300">Compare Our plans</h2>
         </div>
 
-        <div className="hidden lg:block sticky top-0 start-0 py-2 bg-white/60 dark:bg-neutral-900 backdrop-blur-md">
+        <div className="hidden lg:block sticky top-0 start-0 py-2 bg-white/95 dark:bg-neutral-900/95 will-change-transform">
           <div className="grid grid-cols-7 gap-6">
             <div className="col-span-2">
               <span className="font-semibold text-lg text-gray-800 dark:text-neutral-300">

@@ -7,7 +7,7 @@ const HeroSection2 = () => {
 
             <div className="relative max-w-6xl mx-auto text-center">
                 {/* Floating email icon */}
-                
+
                 {/* Main headline */}
                 <div className="fade-in-up delay-100">
                     <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-4 leading-tight">
