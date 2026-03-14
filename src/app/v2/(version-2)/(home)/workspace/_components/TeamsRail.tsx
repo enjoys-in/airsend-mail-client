@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Activity,
@@ -16,7 +16,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useChatStore } from "../_lib/chat-store";
+import TeamCreateDialog from "./TeamCreateDialog";
 
 // ---------------------------------------------------------------------------
 // Teams Rail — vertical icon strip (leftmost column)
@@ -31,10 +33,12 @@ export default function TeamsRail() {
     getPendingTaskCount,
     setSidePanelView,
     sidePanelView,
+    isLoadingTeams,
   } = useChatStore();
 
   const unreadCount = getUnreadNotificationCount();
   const taskCount = getPendingTaskCount();
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -50,8 +54,15 @@ export default function TeamsRail() {
 
         <Separator className="mx-auto w-8 my-1" />
 
-        {/* Team icons */}
-        {teams.map((team) => (
+        {/* Team icons — skeleton while loading */}
+        {isLoadingTeams && teams.length === 0 ? (
+          <>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="size-10 rounded-xl" />
+            ))}
+          </>
+        ) : (
+        teams.map((team) => (
           <RailButton
             key={team.id}
             tooltip={team.name}
@@ -70,12 +81,14 @@ export default function TeamsRail() {
               </span>
             )}
           </RailButton>
-        ))}
+        ))
+        )}
 
         {/* Add team */}
-        <RailButton tooltip="Create Team" isActive={false} onClick={() => {}}>
+        <RailButton tooltip="Create Team" isActive={false} onClick={() => setCreateTeamOpen(true)}>
           <Plus className="size-5" />
         </RailButton>
+        <TeamCreateDialog open={createTeamOpen} onOpenChange={setCreateTeamOpen} />
 
         <Separator className="mx-auto w-8 my-1" />
 

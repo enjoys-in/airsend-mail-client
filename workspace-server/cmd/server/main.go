@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -15,7 +17,9 @@ import (
 	"github.com/AirSend/workspace-server/internal/cache"
 	"github.com/AirSend/workspace-server/internal/config"
 	"github.com/AirSend/workspace-server/internal/database"
+	"github.com/AirSend/workspace-server/internal/flush"
 	"github.com/AirSend/workspace-server/internal/handlers"
+	"github.com/AirSend/workspace-server/internal/msgbuffer"
 	"github.com/AirSend/workspace-server/internal/permissions"
 	"github.com/AirSend/workspace-server/internal/repository"
 	"github.com/AirSend/workspace-server/internal/router"
@@ -62,6 +66,23 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 
+	// ── PebbleDB message buffer ──
+	pebbleDir := getEnv("PEBBLE_DIR", "data/pebble-msgbuf")
+	msgBuf, err := msgbuffer.Open(pebbleDir)
+	if err != nil {
+		log.Fatalf("pebble: %v", err)
+	}
+	defer msgBuf.Close()
+	log.Printf("pebble message buffer opened at %s", pebbleDir)
+
+	// ── Flush worker context ──
+	flushCtx, flushCancel := context.WithCancel(context.Background())
+	defer flushCancel()
+
+	// Start periodic flusher (PebbleDB → PostgreSQL every 2s)
+	flushInterval := 2 * time.Second
+	flush.StartPeriodicFlusher(flushCtx, msgBuf, database.Pool, flushInterval)
+
 	// ── Build dependency graph ──
 	cacheSvc := cache.NewCacheService(database.Pool, cfg.Cache.TTLSeconds)
 	fga := permissions.NewFGA(database.Pool)
@@ -76,10 +97,13 @@ func main() {
 		Webhooks:    repository.NewWebhookRepo(database.Pool),
 		Invitations: repository.NewInvitationRepo(database.Pool),
 		Polls:       repository.NewPollRepo(database.Pool),
+		Attachments: repository.NewAttachmentRepo(database.Pool),
+		Voice:       repository.NewVoiceRepo(database.Pool),
 		Cache:       cacheSvc,
 		Stream:      stream,
 		Hub:         hub,
 		Permissions: fga,
+		MsgBuffer:   msgBuf,
 	}
 
 	// ── Services ──
@@ -92,9 +116,11 @@ func main() {
 	webhookSvc := service.NewWebhookService(deps)
 	invitationSvc := service.NewInvitationService(deps)
 	pollSvc := service.NewPollService(deps)
+	attachmentSvc := service.NewAttachmentService(deps)
+	voiceSvc := service.NewVoiceService(deps)
 
 	// ── Handlers ──
-	h := handlers.NewHandler(teamSvc, channelSvc, messageSvc, memberSvc, dmSvc, eventSvc, webhookSvc, invitationSvc, pollSvc)
+	h := handlers.NewHandler(teamSvc, channelSvc, messageSvc, memberSvc, dmSvc, eventSvc, webhookSvc, invitationSvc, pollSvc, attachmentSvc, voiceSvc)
 
 	// ── Background workers ──
 	workerMgr := worker.NewManager(database.Pool)
@@ -151,6 +177,14 @@ func main() {
 	log.Printf("workspace server listening on %s", addr)
 	<-quit
 	log.Println("shutting down...")
+	flushCancel() // stop flush worker + final drain
 	workerMgr.Stop()
 	_ = app.Shutdown()
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }

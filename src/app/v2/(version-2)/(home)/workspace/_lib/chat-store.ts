@@ -1,5 +1,5 @@
 // ============================================================================
-// Teams & Chat Zustand Store — with API integration
+// Teams & Chat Zustand Store — real API integration
 // ============================================================================
 
 import { create, type StoreApi, type UseBoundStore } from "zustand";
@@ -18,17 +18,6 @@ import type {
   Poll,
   CreatePollInput,
 } from "./chat-types";
-import {
-  CURRENT_USER_ID,
-  MOCK_TEAMS,
-  MOCK_CHANNELS,
-  MOCK_MEMBERS,
-  MOCK_MESSAGES,
-  MOCK_THREAD_REPLIES,
-  MOCK_DMS,
-  MOCK_NOTIFICATIONS,
-  MOCK_TASKS,
-} from "./mock-data";
 import {
   workspaceApi,
   toTeam,
@@ -49,11 +38,18 @@ interface ChatStore {
   channels: Channel[];
   members: TeamMember[];
   messages: ChatMessage[];
+  messageCursors: Record<string, string>; // channelId → next cursor
+  messageHasMore: Record<string, boolean>; // channelId → has more pages
+  isLoadingOlder: boolean;
   threadReplies: ChatMessage[];
   directMessages: DirectMessage[];
   notifications: ChatNotification[];
   tasks: ChatTask[];
   typingIndicators: TypingIndicator[];
+
+  // WebSocket reference for sending messages
+  _ws: WebSocket | null;
+  setWS: (ws: WebSocket | null) => void;
 
   // Selection state
   activeTeamId: string | null;
@@ -132,8 +128,12 @@ interface ChatStore {
   fetchChannels: (teamId: string, email: string) => Promise<void>;
   fetchMembers: (teamId: string, email: string) => Promise<void>;
   fetchMessages: (channelId: string, email: string) => Promise<void>;
+  fetchOlderMessages: (channelId: string, email: string) => Promise<void>;
   fetchDMs: (email: string) => Promise<void>;
   isLoading: boolean;
+  isLoadingTeams: boolean;
+  isLoadingChannels: boolean;
+  isLoadingMessages: boolean;
   apiError: string | null;
 
   // Selectors
@@ -151,20 +151,27 @@ interface ChatStore {
 export type { ChatStore };
 
 export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore>()((set, get) => ({
-  // Data — initialized with mock data
-  teams: MOCK_TEAMS,
-  channels: MOCK_CHANNELS,
-  members: MOCK_MEMBERS,
-  messages: MOCK_MESSAGES,
-  threadReplies: MOCK_THREAD_REPLIES,
-  directMessages: MOCK_DMS,
-  notifications: MOCK_NOTIFICATIONS,
-  tasks: MOCK_TASKS,
+  // Data — starts empty, populated from API
+  teams: [],
+  channels: [],
+  members: [],
+  messages: [],
+  messageCursors: {},
+  messageHasMore: {},
+  isLoadingOlder: false,
+  threadReplies: [],
+  directMessages: [],
+  notifications: [],
+  tasks: [],
   typingIndicators: [],
 
+  // WebSocket
+  _ws: null,
+  setWS: (ws) => set({ _ws: ws }),
+
   // Selection
-  activeTeamId: MOCK_TEAMS[0]?.id || null,
-  activeChannelId: MOCK_CHANNELS[0]?.id || null,
+  activeTeamId: null,
+  activeChannelId: null,
   activeDmId: null,
   activeThreadMessageId: null,
   sidePanelView: null,
@@ -178,9 +185,12 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
 
   // API state
   isLoading: false,
+  isLoadingTeams: false,
+  isLoadingChannels: false,
+  isLoadingMessages: false,
   apiError: null,
 
-  currentUserId: CURRENT_USER_ID,
+  currentUserId: "",
 
   // -----------------------------------------------------------------------
   // Team actions
@@ -198,41 +208,9 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     });
   },
 
-  addTeam: (team) =>
-    set((s) => ({
-      teams: [...s.teams, team],
-      channels: [
-        ...s.channels,
-        {
-          id: `ch-${Date.now()}-1`,
-          teamId: team.id,
-          name: "general",
-          description: "General discussion",
-          type: "text" as const,
-          visibility: "public" as const,
-          isPinned: false,
-          isDefault: true,
-          isLocked: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          unreadCount: 0,
-        },
-        {
-          id: `ch-${Date.now()}-2`,
-          teamId: team.id,
-          name: "announcements",
-          description: "Team announcements",
-          type: "announcement" as const,
-          visibility: "public" as const,
-          isPinned: true,
-          isDefault: true,
-          isLocked: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          unreadCount: 0,
-        },
-      ],
-    })),
+  addTeam: (team) => {
+    set((s) => ({ teams: [...s.teams, team] }));
+  },
 
   // -----------------------------------------------------------------------
   // Channel actions
@@ -263,28 +241,21 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   // -----------------------------------------------------------------------
 
   sendMessage: (content, mentions = [], attachments = [], priority = "normal") => {
-    const { activeChannelId, currentUserId, messages: allMsgs } = get();
-    if (!activeChannelId || !content.trim()) return;
+    const { activeChannelId, currentUserId, _ws } = get();
+    if (!activeChannelId || !content.trim() || !currentUserId) return;
 
-    // Ensure the new message timestamp is always after the latest message in
-    // the channel so it sorts to the bottom (mock data may have future UTC times).
-    const channelMsgs = allMsgs.filter((m) => m.channelId === activeChannelId);
-    const latestTs = channelMsgs.reduce(
-      (max, m) => Math.max(max, new Date(m.createdAt).getTime()),
-      0,
-    );
+    // Optimistic local message
     const now = Date.now();
-    const createdAt = new Date(Math.max(now, latestTs + 1)).toISOString();
-
-    const newMsg: ChatMessage = {
-      id: `msg-${now}`,
+    const tempId = `temp-${now}`;
+    const optimistic: ChatMessage = {
+      id: tempId,
       channelId: activeChannelId,
       authorId: currentUserId,
       authorName: "You",
       content: content.trim(),
       type: "text",
       priority,
-      createdAt,
+      createdAt: new Date(now).toISOString(),
       isEdited: false,
       isPinned: false,
       isPinnedPublic: false,
@@ -307,52 +278,111 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     };
 
     set((s) => ({
-      messages: [...s.messages, newMsg],
+      messages: [...s.messages, optimistic],
       replyingTo: null,
     }));
+
+    const parentId = get().replyingTo?.id;
+
+    // Send via WebSocket (preferred) or fallback to HTTP
+    if (_ws && _ws.readyState === WebSocket.OPEN) {
+      _ws.send(
+        JSON.stringify({
+          type: "message.send",
+          payload: {
+            channel_id: activeChannelId,
+            content: content.trim(),
+            type: "text",
+            priority,
+            parent_id: parentId ?? null,
+            mentions,
+            temp_id: tempId,
+          },
+        }),
+      );
+      // message.ack from server will replace the temp message
+    } else {
+      // Fallback: HTTP POST
+      workspaceApi
+        .sendMessage(
+          activeChannelId,
+          {
+            content: content.trim(),
+            type: "text",
+            priority,
+            parent_id: parentId,
+            mentions,
+          },
+          currentUserId,
+        )
+        .then((serverMsg) => {
+          const real = toMessage(serverMsg);
+          set((s) => ({
+            messages: s.messages.map((m) => (m.id === tempId ? real : m)),
+          }));
+        })
+        .catch(() => {
+          set((s) => ({
+            messages: s.messages.filter((m) => m.id !== tempId),
+            apiError: "Failed to send message",
+          }));
+        });
+    }
   },
 
-  editMessage: (messageId, newContent) =>
+  editMessage: (messageId, newContent) => {
+    const { currentUserId } = get();
+    // Optimistic update
     set((s) => ({
       messages: s.messages.map((m) =>
         m.id === messageId
-          ? {
-              ...m,
-              content: newContent,
-              isEdited: true,
-              editedAt: new Date().toISOString(),
-            }
+          ? { ...m, content: newContent, isEdited: true, editedAt: new Date().toISOString() }
           : m,
       ),
       editingMessageId: null,
-    })),
+    }));
+    workspaceApi.editMessage(messageId, newContent, currentUserId).catch(() => {
+      // Revert on failure — refetch
+      const channelId = get().messages.find((m) => m.id === messageId)?.channelId;
+      if (channelId) get().fetchMessages(channelId, currentUserId);
+    });
+  },
 
-  deleteMessage: (messageId) =>
+  deleteMessage: (messageId) => {
+    const { currentUserId } = get();
+    const msg = get().messages.find((m) => m.id === messageId);
+    // Optimistic
     set((s) => ({
       messages: s.messages.map((m) =>
         m.id === messageId
           ? { ...m, isDeleted: true, content: "This message has been deleted." }
           : m,
       ),
-    })),
+    }));
+    workspaceApi.deleteMessage(messageId, currentUserId).catch(() => {
+      if (msg?.channelId) get().fetchMessages(msg.channelId, currentUserId);
+    });
+  },
 
-  pinMessage: (messageId, isPublic) =>
+  pinMessage: (messageId, isPublic) => {
+    const { currentUserId } = get();
     set((s) => ({
       messages: s.messages.map((m) =>
-        m.id === messageId
-          ? { ...m, isPinned: true, isPinnedPublic: isPublic }
-          : m,
+        m.id === messageId ? { ...m, isPinned: true, isPinnedPublic: isPublic } : m,
       ),
-    })),
+    }));
+    workspaceApi.pinMessage(messageId, true, currentUserId).catch(() => {});
+  },
 
-  unpinMessage: (messageId) =>
+  unpinMessage: (messageId) => {
+    const { currentUserId } = get();
     set((s) => ({
       messages: s.messages.map((m) =>
-        m.id === messageId
-          ? { ...m, isPinned: false, isPinnedPublic: false }
-          : m,
+        m.id === messageId ? { ...m, isPinned: false, isPinnedPublic: false } : m,
       ),
-    })),
+    }));
+    workspaceApi.pinMessage(messageId, false, currentUserId).catch(() => {});
+  },
 
   addReaction: (messageId, emoji) => {
     const { currentUserId } = get();
@@ -377,6 +407,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
         };
       }),
     }));
+    workspaceApi.addReaction(messageId, emoji, currentUserId).catch(() => {});
   },
 
   removeReaction: (messageId, emoji) => {
@@ -396,6 +427,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
         };
       }),
     }));
+    workspaceApi.removeReaction(messageId, emoji, currentUserId).catch(() => {});
   },
 
   setReplyingTo: (message) => set({ replyingTo: message, editingMessageId: null }),
@@ -405,11 +437,24 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   // Thread actions
   // -----------------------------------------------------------------------
 
-  openThread: (messageId) =>
+  openThread: (messageId) => {
     set({
       activeThreadMessageId: messageId,
       sidePanelView: "thread",
-    }),
+    });
+    // Fetch thread replies from API
+    const { currentUserId } = get();
+    if (currentUserId) {
+      workspaceApi.getThread(messageId, currentUserId).then((serverMsgs) => {
+        const replies = serverMsgs.map((m) => {
+          const msg = toMessage(m);
+          msg.threadId = messageId;
+          return msg;
+        });
+        set({ threadReplies: replies });
+      }).catch(() => {});
+    }
+  },
 
   closeThread: () =>
     set({
@@ -419,10 +464,11 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
 
   sendThreadReply: (content, mentions = []) => {
     const { activeThreadMessageId, activeChannelId, currentUserId } = get();
-    if (!activeThreadMessageId || !activeChannelId || !content.trim()) return;
+    if (!activeThreadMessageId || !activeChannelId || !content.trim() || !currentUserId) return;
 
-    const newReply: ChatMessage = {
-      id: `tr-${Date.now()}`,
+    const tempId = `tr-${Date.now()}`;
+    const optimistic: ChatMessage = {
+      id: tempId,
       channelId: activeChannelId,
       authorId: currentUserId,
       authorName: "You",
@@ -442,7 +488,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     };
 
     set((s) => ({
-      threadReplies: [...s.threadReplies, newReply],
+      threadReplies: [...s.threadReplies, optimistic],
       messages: s.messages.map((m) =>
         m.id === activeThreadMessageId
           ? {
@@ -453,6 +499,21 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
           : m,
       ),
     }));
+
+    workspaceApi
+      .replyToThread(activeThreadMessageId, { content: content.trim(), mentions }, currentUserId)
+      .then((serverMsg) => {
+        const real = toMessage(serverMsg);
+        real.threadId = activeThreadMessageId;
+        set((s) => ({
+          threadReplies: s.threadReplies.map((r) => (r.id === tempId ? real : r)),
+        }));
+      })
+      .catch(() => {
+        set((s) => ({
+          threadReplies: s.threadReplies.filter((r) => r.id !== tempId),
+        }));
+      });
   },
 
   // -----------------------------------------------------------------------
@@ -591,7 +652,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   // -----------------------------------------------------------------------
 
   fetchTeams: async (email) => {
-    set({ isLoading: true, apiError: null });
+    set({ isLoading: true, isLoadingTeams: true, apiError: null, currentUserId: email });
     try {
       const serverTeams = await workspaceApi.listTeams(email);
       const teams = serverTeams.map(toTeam);
@@ -599,13 +660,15 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
         teams: teams.length > 0 ? teams : s.teams,
         activeTeamId: teams[0]?.id ?? s.activeTeamId,
         isLoading: false,
+        isLoadingTeams: false,
       }));
     } catch (err) {
-      set({ isLoading: false, apiError: (err as Error).message });
+      set({ isLoading: false, isLoadingTeams: false, apiError: (err as Error).message });
     }
   },
 
   fetchChannels: async (teamId, email) => {
+    set({ isLoadingChannels: true });
     try {
       const serverChannels = await workspaceApi.listChannels(teamId, email);
       const channels = serverChannels.map(toChannel);
@@ -614,9 +677,10 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
           ...s.channels.filter((c) => c.teamId !== teamId),
           ...channels,
         ],
+        isLoadingChannels: false,
       }));
     } catch {
-      // Keep existing channels on failure
+      set({ isLoadingChannels: false });
     }
   },
 
@@ -636,17 +700,49 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   fetchMessages: async (channelId, email) => {
+    set({ isLoadingMessages: true });
     try {
-      const res = await workspaceApi.listMessages(channelId, email);
-      const msgs = res.items.map(toMessage);
+      const res = await workspaceApi.listMessages(channelId, email, 100);
+      const msgs = (res.items ?? []).map(toMessage);
       set((s) => ({
         messages: [
           ...s.messages.filter((m) => m.channelId !== channelId),
           ...msgs,
         ],
+        messageCursors: { ...s.messageCursors, [channelId]: res.next_cursor ?? "" },
+        messageHasMore: { ...s.messageHasMore, [channelId]: res.has_more ?? false },
+        isLoadingMessages: false,
       }));
     } catch {
-      // Keep existing messages on failure
+      set({ isLoadingMessages: false });
+    }
+  },
+
+  fetchOlderMessages: async (channelId, email) => {
+    const { messageCursors, messageHasMore, isLoadingOlder } = get();
+    if (isLoadingOlder) return;
+    if (!messageHasMore[channelId]) return;
+    const cursor = messageCursors[channelId];
+    if (!cursor) return;
+    set({ isLoadingOlder: true });
+    try {
+      const res = await workspaceApi.listMessages(channelId, email, 100, cursor);
+      const older = (res.items ?? []).map(toMessage);
+      const olderIds = new Set(older.map((o) => o.id));
+      set((s) => {
+        const existing = s.messages.filter((m) => m.channelId !== channelId || !olderIds.has(m.id));
+        const merged = [...older, ...existing].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        return {
+          messages: merged,
+          messageCursors: { ...s.messageCursors, [channelId]: res.next_cursor ?? "" },
+          messageHasMore: { ...s.messageHasMore, [channelId]: res.has_more ?? false },
+          isLoadingOlder: false,
+        };
+      });
+    } catch {
+      set({ isLoadingOlder: false });
     }
   },
 

@@ -2,6 +2,7 @@ import { RiOrganizationChart } from "@remixicon/react";
 import {
     AudioWaveform,
     Bot,
+    Boxes,
     Command,
     Github,
     KeySquare,
@@ -302,6 +303,14 @@ export const MenuList = {
             title: "My Organizations",
             url: "/h-panel/org",
             icon: RiOrganizationChart as any,
+            isActive: false,
+            enabled: true,
+            items: [],
+        },
+        {
+            title: "Workspace",
+            url: "/h-panel/workspace",
+            icon: Boxes,
             isActive: false,
             enabled: true,
             items: [],

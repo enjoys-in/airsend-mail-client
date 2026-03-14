@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import {
   Hash,
@@ -16,6 +16,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAppSelector } from "@/store/hooks";
 import { useChatStore } from "../_lib/chat-store";
 import MessageActions from "./MessageActions";
@@ -40,39 +41,90 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
   const currAccount = useAppSelector((s) => s.accounts.currAccount);
   const currentUserId = currAccount?.email ?? "";
 
-  const {
-    channels,
-    activeChannelId,
-    activeDmId,
-    directMessages,
-    getChannelMessages,
-    members,
-    openThread,
-    addReaction,
-    removeReaction,
-    setSidePanelView,
-    getChannelPolls,
-    fetchPolls,
-  } = useChatStore();
+  const activeChannelId = useChatStore((s) => s.activeChannelId);
+  const activeDmId = useChatStore((s) => s.activeDmId);
+  const members = useChatStore((s) => s.members);
+  const openThread = useChatStore((s) => s.openThread);
+  const addReaction = useChatStore((s) => s.addReaction);
+  const removeReaction = useChatStore((s) => s.removeReaction);
+  const setSidePanelView = useChatStore((s) => s.setSidePanelView);
+  const getChannelPolls = useChatStore((s) => s.getChannelPolls);
+  const fetchPolls = useChatStore((s) => s.fetchPolls);
+  const fetchOlderMessages = useChatStore((s) => s.fetchOlderMessages);
+  const isLoadingOlder = useChatStore((s) => s.isLoadingOlder);
+  const isLoadingMessages = useChatStore((s) => s.isLoadingMessages);
 
   // Props from URL take priority, fallback to store
   const effectiveChannelId = channelId ?? activeChannelId;
   const effectiveDmId = dmId ?? activeDmId;
 
-  const channel = effectiveChannelId
-    ? channels.find((c:any) => c.id === effectiveChannelId)
-    : null;
+  const channel = useChatStore((s) =>
+    effectiveChannelId ? s.channels.find((c: any) => c.id === effectiveChannelId) : null,
+  );
 
-  const dm = effectiveDmId
-    ? directMessages.find((d:any) => d.id === effectiveDmId)
-    : null;
+  const dm = useChatStore((s) =>
+    effectiveDmId ? s.directMessages.find((d: any) => d.id === effectiveDmId) : null,
+  );
 
-  const messages = effectiveChannelId
-    ? getChannelMessages(effectiveChannelId)
-    : [];
+  // Get raw messages from store — use the existing getChannelMessages action
+  // which is stable, and memoize ourselves with useMemo
+  const allMessages = useChatStore((s) => s.messages);
+  const messages = useMemo(() => {
+    if (!effectiveChannelId) return [] as ChatMessage[];
+    return allMessages
+      .filter((m) => m.channelId === effectiveChannelId)
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+  }, [allMessages, effectiveChannelId]);
+
+  const hasMore = useChatStore((s) =>
+    effectiveChannelId ? s.messageHasMore[effectiveChannelId] ?? false : false,
+  );
 
   const endRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeightRef = useRef<number>(0);
+
+  // IntersectionObserver — load older messages when scrolling up
+  useEffect(() => {
+    const sentinel = topSentinelRef.current;
+    if (!sentinel || !effectiveChannelId || !currentUserId) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasMore && !isLoadingOlder) {
+          // Save scroll height before loading older messages
+          const viewport = scrollAreaRef.current?.querySelector(
+            "[data-radix-scroll-area-viewport]",
+          ) as HTMLElement | null;
+          prevScrollHeightRef.current = viewport?.scrollHeight ?? 0;
+
+          fetchOlderMessages(effectiveChannelId, currentUserId);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [effectiveChannelId, currentUserId, hasMore, isLoadingOlder, fetchOlderMessages]);
+
+  // Maintain scroll position after prepending older messages
+  useEffect(() => {
+    if (prevScrollHeightRef.current > 0) {
+      const viewport = scrollAreaRef.current?.querySelector(
+        "[data-radix-scroll-area-viewport]",
+      ) as HTMLElement | null;
+      if (viewport) {
+        const newHeight = viewport.scrollHeight;
+        viewport.scrollTop += newHeight - prevScrollHeightRef.current;
+        prevScrollHeightRef.current = 0;
+      }
+    }
+  }, [messages.length]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -90,12 +142,14 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
     });
   }, [messages.length]);
 
-  // Fetch polls for the active channel
+  // Fetch polls for the active channel — only when channel changes
+  const fetchPollsRef = useRef(fetchPolls);
+  fetchPollsRef.current = fetchPolls;
   useEffect(() => {
     if (effectiveChannelId && currentUserId) {
-      fetchPolls(effectiveChannelId, currentUserId);
+      fetchPollsRef.current(effectiveChannelId, currentUserId);
     }
-  }, [effectiveChannelId, currentUserId, fetchPolls]);
+  }, [effectiveChannelId, currentUserId]);
 
   const channelPolls = effectiveChannelId ? getChannelPolls(effectiveChannelId) : [];
 
@@ -147,6 +201,33 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
         <div className="text-center">
           <MessageSquare className="mx-auto size-12 opacity-30" />
           <p className="mt-2 text-sm">Select a channel to start chatting</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading skeleton for messages
+  if (isLoadingMessages && messages.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex h-12 shrink-0 items-center border-b border-border/40 px-4 gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="flex-1 px-4 py-4 space-y-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <Skeleton className="size-8 rounded-full shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+                <Skeleton className={`h-4 ${i % 3 === 0 ? "w-3/4" : i % 3 === 1 ? "w-1/2" : "w-2/3"}`} />
+                {i % 4 === 0 && <Skeleton className="h-4 w-1/3" />}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -210,7 +291,17 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
       {/* Messages */}
       <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
         <div className="space-y-0.5 py-4">
-          {/* Channel welcome */}
+          {/* Infinite scroll sentinel — triggers loading older messages */}
+          <div ref={topSentinelRef} className="h-1" />
+          {isLoadingOlder && (
+            <div className="flex items-center justify-center py-3">
+              <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <span className="ml-2 text-xs text-muted-foreground">Loading older messages...</span>
+            </div>
+          )}
+
+          {/* Channel welcome — only shown when no more older messages */}
+          {!hasMore && (
           <div className="mb-6">
             <div className="flex size-12 items-center justify-center rounded-xl bg-accent">
               <ChannelIcon className="size-6 text-muted-foreground" />
@@ -223,6 +314,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
                 `This is the start of the #${channel.name} channel.`}
             </p>
           </div>
+          )}
 
           {/* Active polls */}
           {channelPolls.length > 0 && (

@@ -34,6 +34,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Collapsible,
   CollapsibleContent,
@@ -57,6 +58,7 @@ import type { Channel } from "../_lib/chat-types";
 import TeamSettingsDialog from "./TeamSettingsDialog";
 import ChannelCreateEditDialog from "./ChannelCreateEditDialog";
 import InviteMemberDialog from "./InviteMemberDialog";
+import TeamCreateDialog from "./TeamCreateDialog";
 import StatusCard from "./StatusCard";
 
 // ==========================================================================
@@ -73,6 +75,7 @@ export default function WorkspaceSidebar() {
     members,
     myStatus,
     myCustomStatus,
+    currentUserId,
     setMyStatus,
     setMyCustomStatus,
     setActiveTeam,
@@ -82,6 +85,8 @@ export default function WorkspaceSidebar() {
     setSidePanelView,
     sidePanelView,
     toggleChannelPin,
+    isLoadingTeams,
+    isLoadingChannels,
   } = useChatStore();
 
   // Derive active channel/dm from URL
@@ -98,6 +103,7 @@ export default function WorkspaceSidebar() {
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
 
   const activeTeam = teams.find((t:any) => t.id === activeTeamId);
   const channels = activeTeamId ? getTeamChannels(activeTeamId) : [];
@@ -175,7 +181,7 @@ export default function WorkspaceSidebar() {
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2">
+              <DropdownMenuItem className="gap-2" onClick={() => setCreateTeamOpen(true)}>
                 <Plus className="size-3.5" />
                 Create Team
               </DropdownMenuItem>
@@ -214,7 +220,17 @@ export default function WorkspaceSidebar() {
                       setChannelDialogOpen(true);
                     }}
                   >
-                    {filtered.map((channel) => (
+                    {isLoadingChannels && filtered.length === 0 ? (
+                      <div className="space-y-1 px-2">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-2 py-1.5">
+                            <Skeleton className="size-3.5 rounded" />
+                            <Skeleton className={`h-3 ${i % 2 === 0 ? "w-20" : "w-16"}`} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                    filtered.map((channel) => (
                       <ChannelItem
                         key={channel.id}
                         channel={channel}
@@ -226,7 +242,8 @@ export default function WorkspaceSidebar() {
                         }}
                         onTogglePin={(id) => toggleChannelPin(id)}
                       />
-                    ))}
+                    ))
+                    )}
                   </ChannelSection>
 
                   {/* Voice Channels */}
@@ -265,7 +282,7 @@ export default function WorkspaceSidebar() {
                   >
                     {directMessages.map((dm) => {
                       const other = dm.participants.find(
-                        (p) => p.userId !== "u-self",
+                        (p) => p.userId !== currentUserId,
                       );
                       if (!other) return null;
                       return (
@@ -422,6 +439,12 @@ export default function WorkspaceSidebar() {
       <InviteMemberDialog
         open={inviteDialogOpen}
         onOpenChange={setInviteDialogOpen}
+      />
+
+      {/* Create team dialog */}
+      <TeamCreateDialog
+        open={createTeamOpen}
+        onOpenChange={setCreateTeamOpen}
       />
     </>
   );

@@ -69,7 +69,7 @@ func (r *TeamRepo) Create(ctx context.Context, input models.CreateTeamInput, own
 	var t models.Team
 	err = tx.QueryRow(ctx, `
 		INSERT INTO workspace.teams (name, description, logo_url, owner_email, is_private)
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES ($1, $2::text, $3::text, $4, $5)
 		RETURNING id, name, description, logo_url, owner_email, is_private, created_at, updated_at
 	`, input.Name, input.Description, input.LogoURL, ownerEmail, input.IsPrivate,
 	).Scan(&t.ID, &t.Name, &t.Description, &t.LogoURL,
@@ -78,12 +78,18 @@ func (r *TeamRepo) Create(ctx context.Context, input models.CreateTeamInput, own
 		return nil, err
 	}
 
-	// Add owner as member
+	// Add owner as member – look up display name first to avoid pgx parameter ambiguity
+	var displayName string
+	err = tx.QueryRow(ctx,
+		`SELECT COALESCE(name, $1) FROM public.mail_accounts WHERE email = $1`, ownerEmail,
+	).Scan(&displayName)
+	if err != nil {
+		displayName = ownerEmail // fallback if account row doesn't exist
+	}
 	_, err = tx.Exec(ctx, `
 		INSERT INTO workspace.team_members (team_id, email, role, display_name)
-		SELECT $1, $2, 'owner', ma.name
-		FROM public.mail_accounts ma WHERE ma.email = $2
-	`, t.ID, ownerEmail)
+		VALUES ($1, $2, 'owner', $3)
+	`, t.ID, ownerEmail, displayName)
 	if err != nil {
 		return nil, err
 	}

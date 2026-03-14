@@ -13,6 +13,7 @@ import DomainSkelton from './_components.tsx/domainSkelton'
 import Badge from '@/components/common/badges'
 import { AdditonalForm } from './_components.tsx/additonal-form'
 import RecordsTable from './_components.tsx/records-table'
+import { WorkspaceToggle } from './_components.tsx/workspace-toggle'
 export default async function DNSManager({ params }: { params: any }) {
   const { domain } = await params
   const { data } = await serverAxios.get(`/api/v1/admin/domain/${domain}`,{
@@ -88,6 +89,12 @@ export default async function DNSManager({ params }: { params: any }) {
             <AdditonalForm domainId={result.id} data={result} />
           </CardContent>
         </Card>
+
+        <WorkspaceToggle
+          domainId={result.id}
+          domainName={result.domain_name}
+          initialEnabled={result.workspace_enabled ?? false}
+        />
 
         {result?.records && (
           <Card>

@@ -48,13 +48,19 @@ export default function ChannelCreateEditDialog({
   const isEdit = !!channel;
   const currAccount = useAppSelector((s) => s.accounts.currAccount);
   const email = currAccount?.email ?? "";
-  const { activeTeamId, addChannel } = useChatStore();
+  const { activeTeamId, teams, addChannel } = useChatStore();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"text" | "voice" | "announcement">("text");
   const [isPrivate, setIsPrivate] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [loading, setLoading] = useState(false);
+
+  // Resolve the target team: private channels use picker, public use active team
+  const targetTeamId = isPrivate
+    ? selectedTeamId || activeTeamId
+    : activeTeamId || teams[0]?.id;
 
   // Reset form when dialog opens or channel changes
   useEffect(() => {
@@ -64,14 +70,16 @@ export default function ChannelCreateEditDialog({
         setDescription(channel.description || "");
         setType(channel.type);
         setIsPrivate(channel.visibility === "private");
+        setSelectedTeamId(channel.teamId || "");
       } else {
         setName("");
         setDescription("");
         setType("text");
         setIsPrivate(false);
+        setSelectedTeamId(activeTeamId || "");
       }
     }
-  }, [open, channel]);
+  }, [open, channel, activeTeamId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,8 +87,8 @@ export default function ChannelCreateEditDialog({
       toast.error("Channel name is required");
       return;
     }
-    if (!activeTeamId) {
-      toast.error("No active team selected");
+    if (!targetTeamId) {
+      toast.error("Please select a team first");
       return;
     }
 
@@ -105,7 +113,7 @@ export default function ChannelCreateEditDialog({
       } else {
         // Create channel
         const res = await workspaceApi.createChannel(
-          activeTeamId,
+          targetTeamId,
           {
             name: name.trim(),
             type,
@@ -118,7 +126,7 @@ export default function ChannelCreateEditDialog({
           // Add to store
           addChannel({
             id: res.id || `ch-${Date.now()}`,
-            teamId: activeTeamId,
+            teamId: targetTeamId,
             name: name.trim(),
             description: description.trim(),
             type,
@@ -251,6 +259,31 @@ export default function ChannelCreateEditDialog({
             </div>
             <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
           </div>
+
+          {/* Team selector — shown for private channels when multiple teams exist */}
+          {isPrivate && teams.length > 1 && !isEdit && (
+            <div className="space-y-2">
+              <Label>Team</Label>
+              <Select
+                value={selectedTeamId || activeTeamId || ""}
+                onValueChange={setSelectedTeamId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Private channels belong to a specific team.
+              </p>
+            </div>
+          )}
 
           {/* Preview */}
           <div className="flex items-center gap-2 rounded-md bg-accent/50 px-3 py-2 text-sm">

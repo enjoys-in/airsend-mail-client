@@ -1,8 +1,13 @@
 package router
 
 import (
+	"context"
+	"encoding/json"
+	"log"
+
 	"github.com/AirSend/workspace-server/internal/handlers"
 	"github.com/AirSend/workspace-server/internal/middleware"
+	"github.com/AirSend/workspace-server/internal/models"
 	"github.com/AirSend/workspace-server/internal/ws"
 	"github.com/gofiber/fiber/v2"
 )
@@ -54,6 +59,13 @@ func Setup(app *fiber.App, h *handlers.Handler, hub *ws.Hub) {
 	channels.Post("/:channelId/polls", h.CreatePoll)
 	channels.Get("/:channelId/polls", h.ListChannelPolls)
 
+	// ── Voice Channels ──
+	channels.Post("/:channelId/voice/join", h.JoinVoice)
+	channels.Post("/:channelId/voice/leave", h.LeaveVoice)
+	channels.Get("/:channelId/voice/participants", h.VoiceParticipants)
+	channels.Post("/:channelId/voice/signal", h.VoiceSignal)
+	channels.Put("/:channelId/voice/mute", h.VoiceMute)
+
 	// ── Polls (direct) ──
 	polls := api.Group("/polls")
 	polls.Get("/:pollId", h.GetPoll)
@@ -71,6 +83,11 @@ func Setup(app *fiber.App, h *handlers.Handler, hub *ws.Hub) {
 	messages.Delete("/:messageId/reactions/:emoji", h.RemoveReaction)
 	messages.Get("/:messageId/thread", h.GetThread)
 	messages.Post("/:messageId/thread", h.ReplyToThread)
+	messages.Post("/:messageId/attachments", h.UploadAttachment)
+
+	// ── Attachments (download) ──
+	attachments := api.Group("/attachments")
+	attachments.Get("/:attachmentId", h.DownloadAttachment)
 
 	// ── Direct Messages ──
 	dms := api.Group("/dms")
@@ -93,5 +110,78 @@ func Setup(app *fiber.App, h *handlers.Handler, hub *ws.Hub) {
 
 	// ── WebSocket ──
 	app.Use("/ws", ws.UpgradeMiddleware())
-	app.Get("/ws", ws.Handler(hub, nil))
+	app.Get("/ws", ws.Handler(hub, wsIncomingHandler(h, hub)))
+}
+
+// wsIncomingHandler handles typed WS messages (e.g. message.send, typing.*).
+func wsIncomingHandler(h *handlers.Handler, hub *ws.Hub) func(client *ws.Client, msgType string, payload json.RawMessage) {
+	return func(client *ws.Client, msgType string, payload json.RawMessage) {
+		switch msgType {
+		case "message.send":
+			var p struct {
+				ChannelID string   `json:"channel_id"`
+				Content   string   `json:"content"`
+				Type      string   `json:"type"`
+				Priority  string   `json:"priority"`
+				ParentID  *string  `json:"parent_id"`
+				Mentions  []string `json:"mentions"`
+				TempID    string   `json:"temp_id"`
+			}
+			if err := json.Unmarshal(payload, &p); err != nil || p.ChannelID == "" || p.Content == "" {
+				client.Send(mustJSON(map[string]interface{}{
+					"event": "message.error",
+					"data":  map[string]string{"error": "invalid payload", "temp_id": p.TempID},
+				}))
+				return
+			}
+
+			input := models.SendMessageInput{
+				Content:  p.Content,
+				Type:     p.Type,
+				Priority: p.Priority,
+				ParentID: p.ParentID,
+				Mentions: p.Mentions,
+			}
+
+			msg, err := h.Messages.Send(context.Background(), p.ChannelID, input, client.Email, "", "websocket")
+			if err != nil {
+				client.Send(mustJSON(map[string]interface{}{
+					"event": "message.error",
+					"data":  map[string]string{"error": err.Error(), "temp_id": p.TempID},
+				}))
+				return
+			}
+
+			// ACK back to sender with temp_id so frontend can replace optimistic msg
+			client.Send(mustJSON(map[string]interface{}{
+				"event": "message.ack",
+				"data": map[string]interface{}{
+					"temp_id": p.TempID,
+					"message": msg,
+				},
+			}))
+
+		case "typing.start", "typing.stop":
+			var p struct {
+				ChannelID string `json:"channel_id"`
+				Name      string `json:"name"`
+			}
+			if json.Unmarshal(payload, &p) == nil && p.ChannelID != "" {
+				hub.BroadcastToChannel(p.ChannelID, msgType, map[string]interface{}{
+					"channel_id": p.ChannelID,
+					"email":      client.Email,
+					"name":       p.Name,
+					"is_typing":  msgType == "typing.start",
+				})
+			}
+
+		default:
+			log.Printf("[ws] unhandled message type %q from %s", msgType, client.Email)
+		}
+	}
+}
+
+func mustJSON(v interface{}) []byte {
+	b, _ := json.Marshal(v)
+	return b
 }

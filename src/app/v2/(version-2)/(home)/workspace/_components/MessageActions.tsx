@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useChatStore } from "../_lib/chat-store";
 import type { ChatMessage } from "../_lib/chat-types";
-import { CURRENT_USER_ID } from "../_lib/mock-data";
 
 // ---------------------------------------------------------------------------
 // Message Actions — hover toolbar + dropdown on each message
@@ -40,6 +39,7 @@ export default function MessageActions({
   message: ChatMessage;
 }) {
   const {
+    currentUserId,
     setReplyingTo,
     setEditingMessage,
     deleteMessage,
@@ -49,7 +49,7 @@ export default function MessageActions({
     addReaction,
   } = useChatStore();
 
-  const isMine = message.authorId === CURRENT_USER_ID;
+  const isMine = message.authorId === currentUserId;
 
   const quickReactions = ["👍", "❤️", "😂", "🔥", "👀"];
 

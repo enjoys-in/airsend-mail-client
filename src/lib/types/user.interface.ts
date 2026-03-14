@@ -5,6 +5,11 @@ export interface IAdmin {
     role: ROLE_TYPE;
     picture: string | null
 }
+export interface UserWorkspace {
+    id: string;
+    name: string;
+    scopes: string[];
+}
 export interface IUser {
     mid: string;
     email: string;
@@ -13,6 +18,7 @@ export interface IUser {
     name: string;
     role: ROLE_TYPE;
     hasOrgs: string | null;
+    workspace: UserWorkspace | null;
 }
 export enum ROLE {
     USER = "USER",

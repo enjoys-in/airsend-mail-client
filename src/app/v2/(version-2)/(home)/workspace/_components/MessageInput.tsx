@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
+import { workspaceApi } from "../_lib/api";
 import MentionPopover from "./MentionPopover";
 import EmojiPicker from "./EmojiPicker";
 import GifPicker from "./GifPicker";
@@ -71,6 +72,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [pollDialogOpen, setPollDialogOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const channel = effectiveChannelId
     ? channels.find((c:any) => c.id === effectiveChannelId)
@@ -202,12 +204,42 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    // File handling would go here
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      // TODO: implement file upload
-      console.log("Files dropped:", files.map((f:any) => f.name));
+      handleFileUpload(files);
     }
+  };
+
+  // File upload — sends a message then attaches files to it
+  const handleFileUpload = async (files: File[]) => {
+    if (!effectiveChannelId || !currentUserId) return;
+
+    for (const file of files) {
+      // Send a file message
+      try {
+        const serverMsg = await workspaceApi.sendMessage(
+          effectiveChannelId,
+          { content: `📎 ${file.name}`, type: "file" },
+          currentUserId,
+        );
+
+        // Upload attachment to the message
+        await workspaceApi.uploadAttachment(serverMsg.id, file, currentUserId);
+
+        // Refetch messages to show the attachment
+        const { fetchMessages } = useChatStore.getState();
+        fetchMessages(effectiveChannelId, currentUserId);
+      } catch {
+        // Could show error toast
+      }
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) handleFileUpload(files);
+    // Reset input so same file can be selected again
+    e.target.value = "";
   };
 
   // Commands
@@ -387,7 +419,14 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
               <ToolbarButton
                 icon={<Paperclip className="size-3.5" />}
                 tooltip="Attach file"
-                onClick={() => {}}
+                onClick={() => fileInputRef.current?.click()}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
               />
               <GifPicker
                 onSelect={(url) => {

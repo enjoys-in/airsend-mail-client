@@ -11,7 +11,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useChatStore } from "../_lib/chat-store";
-import { CURRENT_USER_ID } from "../_lib/mock-data";
 
 // ---------------------------------------------------------------------------
 // ThreadPanel — right-side panel for thread replies (Slack-style)
@@ -24,6 +23,7 @@ export default function ThreadPanel() {
     threadReplies,
     closeThread,
     sendThreadReply,
+    currentUserId,
   } = useChatStore();
 
   const [content, setContent] = useState("");
@@ -181,7 +181,7 @@ function ThreadMessage({
           <span
             className={cn(
               "text-sm font-semibold",
-              authorId === CURRENT_USER_ID
+              authorId === currentUserId
                 ? "text-primary"
                 : "text-foreground",
             )}

@@ -14,6 +14,11 @@ import {
   Search,
   MessageCircle,
   X,
+  Mic,
+  MicOff,
+  Headphones,
+  HeadphoneOff,
+  PhoneOff,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -31,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
+import { useVoiceStore } from "../_lib/voice-store";
 import type { Channel } from "../_lib/chat-types";
 import type { Team } from "../_lib/chat-types";
 import TeamSettingsDialog from "./TeamSettingsDialog";
@@ -46,6 +52,7 @@ export default function ChannelSidebar() {
     activeChannelId,
     activeDmId,
     directMessages,
+    currentUserId,
     setActiveChannel,
     setActiveDm,
     setActiveTeam,
@@ -213,7 +220,7 @@ export default function ChannelSidebar() {
             >
               {directMessages.map((dm: any) => {
                 const other = dm.participants.find(
-                  (p: any) => p.userId !== "u-self",
+                  (p: any) => p.userId !== currentUserId,
                 );
                 if (!other) return null;
                 return (
@@ -257,6 +264,9 @@ export default function ChannelSidebar() {
             </ChannelSection>
           </div>
         </ScrollArea>
+
+        {/* Voice status bar */}
+        <VoiceStatusBar />
       </aside>
 
       {/* Team settings dialog */}
@@ -348,5 +358,58 @@ function ChannelItem({
         </span>
       )}
     </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Voice status bar — shows at bottom of sidebar when in a voice channel
+// ---------------------------------------------------------------------------
+
+function VoiceStatusBar() {
+  const { channelId, participants, isMuted, isDeafened, leave, toggleMute, toggleDeafen } =
+    useVoiceStore();
+  const { channels, currentUserId } = useChatStore();
+
+  if (!channelId) return null;
+
+  const channel = channels.find((c) => c.id === channelId);
+
+  return (
+    <div className="border-t border-border/40 bg-emerald-500/5 px-3 py-2">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-medium text-emerald-500">Voice Connected</span>
+          <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+            {channel?.name ?? "Voice"} • {participants.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("size-6", isMuted && "text-red-400")}
+            onClick={() => toggleMute(currentUserId)}
+          >
+            {isMuted ? <MicOff className="size-3" /> : <Mic className="size-3" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("size-6", isDeafened && "text-red-400")}
+            onClick={() => toggleDeafen(currentUserId)}
+          >
+            {isDeafened ? <HeadphoneOff className="size-3" /> : <Headphones className="size-3" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 text-red-400 hover:text-red-500"
+            onClick={() => leave(currentUserId)}
+          >
+            <PhoneOff className="size-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

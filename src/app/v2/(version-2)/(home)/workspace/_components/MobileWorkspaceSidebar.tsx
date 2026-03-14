@@ -61,6 +61,7 @@ export default function MobileWorkspaceSidebar({
     teams,
     activeTeamId,
     directMessages,
+    currentUserId,
     setActiveTeam,
     getTeamChannels,
   } = useChatStore();
@@ -220,7 +221,7 @@ export default function MobileWorkspaceSidebar({
               >
                 {directMessages.map((dm) => {
                   const other = dm.participants.find(
-                    (p) => p.userId !== "u-self",
+                    (p) => p.userId !== currentUserId,
                   );
                   if (!other) return null;
                   return (

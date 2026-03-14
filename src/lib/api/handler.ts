@@ -269,5 +269,22 @@ export class API {
     static getDomainHistory(query: string = "") {
         return instance.get(adminRoutes(`/domain-org-history${query}`))
     }
+
+    // WORKSPACE
+    static toggleWorkspace(data: { domain_id: string; enabled: boolean }) {
+        return instance.patch(adminRoutes("/workspace/toggle"), data)
+    }
+    static getWorkspace(domainId: string) {
+        return instance.get(adminRoutes(`/workspace/${domainId}`))
+    }
+    static addWorkspaceMembers(data: { domain_id: string; members: { email: string; scopes?: string[] }[] }) {
+        return instance.post(adminRoutes("/workspace/members"), data)
+    }
+    static updateWorkspaceMemberScopes(memberId: number, data: { scopes: string[] }) {
+        return instance.patch(adminRoutes(`/workspace/members/${memberId}`), data)
+    }
+    static removeWorkspaceMember(memberId: number) {
+        return instance.delete(adminRoutes(`/workspace/members/${memberId}`))
+    }
 }
 

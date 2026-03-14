@@ -28,6 +28,7 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
         name: raw.name,
         role: raw.role,
         hasOrgs: raw.hasOrgs ?? null,
+        workspace: raw.workspace ?? null,
       } as IUser;
     } catch (err) {
       deleteCookie("access_token")

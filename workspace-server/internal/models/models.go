@@ -106,13 +106,36 @@ type Reaction struct {
 }
 
 type MessageAttachment struct {
-	ID        string    `json:"id"`
-	MessageID string    `json:"message_id"`
-	FileName  string    `json:"file_name"`
-	FileURL   string    `json:"file_url"`
-	FileType  *string   `json:"file_type"`
-	FileSize  int64     `json:"file_size"`
-	CreatedAt time.Time `json:"created_at"`
+	ID          string    `json:"id"`
+	MessageID   string    `json:"message_id"`
+	FileName    string    `json:"file_name"`
+	FileURL     string    `json:"file_url"`
+	FileType    *string   `json:"file_type"`
+	FileSize    int64     `json:"file_size"`
+	FileContent []byte    `json:"-"` // bytea — never sent in JSON responses
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// ── Voice Sessions ──
+
+type VoiceSession struct {
+	ID         string     `json:"id"`
+	ChannelID  string     `json:"channel_id"`
+	UserEmail  string     `json:"user_email"`
+	JoinedAt   time.Time  `json:"joined_at"`
+	LeftAt     *time.Time `json:"left_at,omitempty"`
+	IsMuted    bool       `json:"is_muted"`
+	IsDeafened bool       `json:"is_deafened"`
+	// Joined
+	DisplayName *string `json:"display_name,omitempty"`
+}
+
+type VoiceSignal struct {
+	ChannelID  string      `json:"channel_id"`
+	FromEmail  string      `json:"from_email"`
+	ToEmail    string      `json:"to_email"`
+	SignalType string      `json:"signal_type"` // offer, answer, ice-candidate
+	Payload    interface{} `json:"payload"`
 }
 
 // ── Direct Messages ──
@@ -363,6 +386,14 @@ type PaginatedResponse struct {
 	Page       int         `json:"page"`
 	Limit      int         `json:"limit"`
 	TotalPages int         `json:"total_pages"`
+}
+
+// CursorPaginatedResponse is used for cursor-based (infinite scroll) pagination.
+type CursorPaginatedResponse struct {
+	Items      interface{} `json:"items"`
+	NextCursor string      `json:"next_cursor"`
+	HasMore    bool        `json:"has_more"`
+	Limit      int         `json:"limit"`
 }
 
 // ── API Response ──

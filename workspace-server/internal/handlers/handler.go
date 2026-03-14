@@ -23,6 +23,8 @@ type Handler struct {
 	Webhooks    *service.WebhookService
 	Invitations *service.InvitationService
 	Polls       *service.PollService
+	Attachments *service.AttachmentService
+	Voice       *service.VoiceService
 }
 
 func NewHandler(
@@ -35,6 +37,8 @@ func NewHandler(
 	webhooks *service.WebhookService,
 	invitations *service.InvitationService,
 	polls *service.PollService,
+	attachments *service.AttachmentService,
+	voice *service.VoiceService,
 ) *Handler {
 	return &Handler{
 		Teams:       teams,
@@ -46,6 +50,8 @@ func NewHandler(
 		Webhooks:    webhooks,
 		Invitations: invitations,
 		Polls:       polls,
+		Attachments: attachments,
+		Voice:       voice,
 	}
 }
 
@@ -220,7 +226,12 @@ func (h *Handler) LockChannel(c *fiber.Ctx) error {
 // ═══════════════════════════════════════════════════════════════════════════
 
 func (h *Handler) ListMessages(c *fiber.Ctx) error {
-	result, err := h.Messages.List(c.Context(), c.Params("channelId"), email(c), page(c), limit(c))
+	lim := limit(c)
+	if lim > 150 {
+		lim = 150
+	}
+	cursor := c.Query("cursor", "")
+	result, err := h.Messages.List(c.Context(), c.Params("channelId"), email(c), lim, cursor)
 	if err != nil {
 		return handleErr(c, err)
 	}
@@ -638,4 +649,135 @@ func (h *Handler) DeletePoll(c *fiber.Ctx) error {
 		return handleErr(c, err)
 	}
 	return ok(c, fiber.Map{"deleted": true})
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Attachments
+// ═══════════════════════════════════════════════════════════════════════════
+
+func (h *Handler) UploadAttachment(c *fiber.Ctx) error {
+	messageID := c.Params("messageId")
+
+	// Support multipart file upload
+	file, err := c.FormFile("file")
+	if err == nil && file != nil {
+		f, err := file.Open()
+		if err != nil {
+			return errResp(c, fiber.StatusBadRequest, "cannot read file")
+		}
+		defer f.Close()
+
+		data := make([]byte, file.Size)
+		if _, err := f.Read(data); err != nil {
+			return errResp(c, fiber.StatusBadRequest, "cannot read file content")
+		}
+
+		contentType := file.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+
+		att, err := h.Attachments.Upload(c.Context(), messageID, file.Filename, contentType, data, email(c))
+		if err != nil {
+			return handleErr(c, err)
+		}
+		return created(c, att)
+	}
+
+	// Fallback: JSON body with base64
+	var body struct {
+		FileName string `json:"file_name"`
+		FileType string `json:"file_type"`
+		Data     string `json:"data"` // base64 encoded
+	}
+	if err := c.BodyParser(&body); err != nil || body.Data == "" {
+		return errResp(c, fiber.StatusBadRequest, "provide a file upload or JSON with base64 data")
+	}
+
+	att, err := h.Attachments.UploadBase64(c.Context(), messageID, body.FileName, body.FileType, body.Data, email(c))
+	if err != nil {
+		return handleErr(c, err)
+	}
+	return created(c, att)
+}
+
+func (h *Handler) DownloadAttachment(c *fiber.Ctx) error {
+	att, content, err := h.Attachments.Download(c.Context(), c.Params("attachmentId"))
+	if err != nil {
+		return errResp(c, fiber.StatusNotFound, "attachment not found")
+	}
+
+	contentType := "application/octet-stream"
+	if att.FileType != nil {
+		contentType = *att.FileType
+	}
+
+	c.Set("Content-Type", contentType)
+	c.Set("Content-Disposition", "inline; filename=\""+att.FileName+"\"")
+	return c.Send(content)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Voice Channels
+// ═══════════════════════════════════════════════════════════════════════════
+
+func (h *Handler) JoinVoice(c *fiber.Ctx) error {
+	session, participants, err := h.Voice.Join(c.Context(), c.Params("channelId"), email(c))
+	if err != nil {
+		return handleErr(c, err)
+	}
+	return ok(c, fiber.Map{"session": session, "participants": participants})
+}
+
+func (h *Handler) LeaveVoice(c *fiber.Ctx) error {
+	if err := h.Voice.Leave(c.Context(), c.Params("channelId"), email(c)); err != nil {
+		return handleErr(c, err)
+	}
+	return ok(c, fiber.Map{"left": true})
+}
+
+func (h *Handler) VoiceParticipants(c *fiber.Ctx) error {
+	participants, err := h.Voice.ListParticipants(c.Context(), c.Params("channelId"), email(c))
+	if err != nil {
+		return handleErr(c, err)
+	}
+	return ok(c, participants)
+}
+
+func (h *Handler) VoiceSignal(c *fiber.Ctx) error {
+	var body struct {
+		ToEmail    string      `json:"to_email"`
+		SignalType string      `json:"signal_type"`
+		Payload    interface{} `json:"payload"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return errResp(c, fiber.StatusBadRequest, "invalid body")
+	}
+
+	signal := models.VoiceSignal{
+		ChannelID:  c.Params("channelId"),
+		FromEmail:  email(c),
+		ToEmail:    body.ToEmail,
+		SignalType: body.SignalType,
+		Payload:    body.Payload,
+	}
+
+	if err := h.Voice.Signal(c.Context(), signal, email(c)); err != nil {
+		return handleErr(c, err)
+	}
+	return ok(c, fiber.Map{"sent": true})
+}
+
+func (h *Handler) VoiceMute(c *fiber.Ctx) error {
+	var body struct {
+		IsMuted    bool `json:"is_muted"`
+		IsDeafened bool `json:"is_deafened"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return errResp(c, fiber.StatusBadRequest, "invalid body")
+	}
+	if err := h.Voice.UpdateMute(c.Context(), c.Params("channelId"), email(c), body.IsMuted, body.IsDeafened); err != nil {
+		return handleErr(c, err)
+	}
+	return ok(c, fiber.Map{"updated": true})
 }

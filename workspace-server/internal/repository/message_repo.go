@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/AirSend/workspace-server/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -72,6 +73,97 @@ func (r *MessageRepo) List(ctx context.Context, channelID string, page, limit in
 	}
 
 	return messages, total, nil
+}
+
+// ListCursor fetches messages using cursor-based pagination (for infinite scroll).
+// Returns messages ordered ascending (oldest → newest).
+// Cursor is a created_at timestamp in RFC3339Nano; empty cursor = latest messages.
+func (r *MessageRepo) ListCursor(ctx context.Context, channelID string, limit int, cursor string) ([]models.Message, string, error) {
+	var rows pgxRows
+	var err error
+
+	if cursor == "" {
+		// First load: get the latest `limit` messages
+		rows, err = r.db.Query(ctx, `
+			SELECT m.id, m.channel_id, m.sender_email, m.content, m.type, m.priority,
+			       m.parent_id, m.is_pinned, m.is_edited, m.is_deleted,
+			       m.mentions, m.created_at, m.updated_at,
+			       ma.name AS sender_name,
+			       (SELECT COUNT(*) FROM workspace.messages r WHERE r.parent_id = m.id) AS reply_count
+			FROM workspace.messages m
+			LEFT JOIN public.mail_accounts ma ON ma.email = m.sender_email
+			WHERE m.channel_id = $1 AND m.parent_id IS NULL AND m.is_deleted = false
+			ORDER BY m.created_at DESC
+			LIMIT $2
+		`, channelID, limit)
+	} else {
+		// Subsequent loads: get messages older than cursor
+		cursorTime, parseErr := time.Parse(time.RFC3339Nano, cursor)
+		if parseErr != nil {
+			return nil, "", parseErr
+		}
+		rows, err = r.db.Query(ctx, `
+			SELECT m.id, m.channel_id, m.sender_email, m.content, m.type, m.priority,
+			       m.parent_id, m.is_pinned, m.is_edited, m.is_deleted,
+			       m.mentions, m.created_at, m.updated_at,
+			       ma.name AS sender_name,
+			       (SELECT COUNT(*) FROM workspace.messages r WHERE r.parent_id = m.id) AS reply_count
+			FROM workspace.messages m
+			LEFT JOIN public.mail_accounts ma ON ma.email = m.sender_email
+			WHERE m.channel_id = $1 AND m.parent_id IS NULL AND m.is_deleted = false
+			  AND m.created_at < $3
+			ORDER BY m.created_at DESC
+			LIMIT $2
+		`, channelID, limit, cursorTime)
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+
+	var messages []models.Message
+	for rows.Next() {
+		var msg models.Message
+		if err := rows.Scan(
+			&msg.ID, &msg.ChannelID, &msg.SenderEmail, &msg.Content, &msg.Type, &msg.Priority,
+			&msg.ParentID, &msg.IsPinned, &msg.IsEdited, &msg.IsDeleted,
+			&msg.Mentions, &msg.CreatedAt, &msg.UpdatedAt,
+			&msg.SenderName, &msg.ReplyCount,
+		); err != nil {
+			return nil, "", err
+		}
+		messages = append(messages, msg)
+	}
+
+	// Build next cursor from the oldest message in this batch
+	var nextCursor string
+	if len(messages) == limit {
+		nextCursor = messages[len(messages)-1].CreatedAt.Format(time.RFC3339Nano)
+	}
+
+	// Reverse so messages are ascending (oldest first)
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
+	// Batch load reactions + attachments
+	if len(messages) > 0 {
+		ids := make([]string, len(messages))
+		for i, m := range messages {
+			ids[i] = m.ID
+		}
+		r.batchLoadReactions(ctx, messages, ids)
+		r.batchLoadAttachments(ctx, messages, ids)
+	}
+
+	return messages, nextCursor, nil
+}
+
+// pgxRows is a local alias so we can share the variable across branches.
+type pgxRows = interface {
+	Close()
+	Next() bool
+	Scan(dest ...interface{}) error
 }
 
 func (r *MessageRepo) GetByID(ctx context.Context, messageID string) (*models.Message, error) {

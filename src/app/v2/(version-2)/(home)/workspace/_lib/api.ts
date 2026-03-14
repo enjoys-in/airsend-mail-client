@@ -24,6 +24,13 @@ export interface PaginatedResponse<T> {
   total_pages: number
 }
 
+export interface CursorPaginatedResponse<T> {
+  items: T[]
+  next_cursor: string
+  has_more: boolean
+  limit: number
+}
+
 export interface APIResponse<T> {
   success: boolean
   result: T | null
@@ -135,6 +142,27 @@ export interface ServerPoll {
   updated_at: string
   options: ServerPollOption[]
   total_votes: number
+}
+
+export interface ServerAttachment {
+  id: string
+  message_id: string
+  file_name: string
+  file_url: string
+  file_type?: string
+  file_size: number
+  created_at: string
+}
+
+export interface ServerVoiceSession {
+  id: string
+  channel_id: string
+  user_email: string
+  joined_at: string
+  left_at?: string
+  is_muted: boolean
+  is_deafened: boolean
+  display_name?: string
 }
 
 // ── Generic fetch helper ──
@@ -309,8 +337,11 @@ export const workspaceApi = {
     apiFetch<{ deleted: boolean }>(`/api/v1/channels/${channelId}`, { method: "DELETE", email }),
 
   // ── Messages ──
-  listMessages: (channelId: string, email: string, page = 1, limit = 50) =>
-    apiFetch<PaginatedResponse<ServerMessage>>(`/api/v1/channels/${channelId}/messages?page=${page}&limit=${limit}`, { email }),
+  listMessages: (channelId: string, email: string, limit = 100, cursor?: string) => {
+    const params = new URLSearchParams({ limit: String(limit) })
+    if (cursor) params.set("cursor", cursor)
+    return apiFetch<CursorPaginatedResponse<ServerMessage>>(`/api/v1/channels/${channelId}/messages?${params}`, { email })
+  },
 
   sendMessage: (channelId: string, data: { content: string; type?: string; priority?: string; parent_id?: string; mentions?: string[] }, email: string) =>
     apiFetch<ServerMessage>(`/api/v1/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify(data), email }),
@@ -432,6 +463,55 @@ export const workspaceApi = {
 
   deletePoll: (pollId: string, email: string) =>
     apiFetch<{ deleted: boolean }>(`/api/v1/polls/${pollId}`, { method: "DELETE", email }),
+
+  // ── Attachments ──
+  uploadAttachment: (messageId: string, file: File, email: string) => {
+    const formData = new FormData()
+    formData.append("file", file)
+    return fetch(`${BASE}/api/v1/messages/${messageId}/attachments`, {
+      method: "POST",
+      headers: { "X-User-Email": email },
+      body: formData,
+    }).then(async (res) => {
+      const json: APIResponse<ServerAttachment> = await res.json()
+      if (!json.success) throw new Error(json.error ?? json.message)
+      return json.result!
+    })
+  },
+
+  uploadAttachmentBase64: (messageId: string, fileName: string, fileType: string, base64Data: string, email: string) =>
+    apiFetch<ServerAttachment>(`/api/v1/messages/${messageId}/attachments`, {
+      method: "POST",
+      body: JSON.stringify({ file_name: fileName, file_type: fileType, data: base64Data }),
+      email,
+    }),
+
+  getAttachmentUrl: (attachmentId: string) =>
+    `${BASE}/api/v1/attachments/${attachmentId}`,
+
+  // ── Voice Channels ──
+  joinVoice: (channelId: string, email: string) =>
+    apiFetch<{ session: ServerVoiceSession; participants: ServerVoiceSession[] }>(`/api/v1/channels/${channelId}/voice/join`, { method: "POST", email }),
+
+  leaveVoice: (channelId: string, email: string) =>
+    apiFetch<{ left: boolean }>(`/api/v1/channels/${channelId}/voice/leave`, { method: "POST", email }),
+
+  voiceParticipants: (channelId: string, email: string) =>
+    apiFetch<ServerVoiceSession[]>(`/api/v1/channels/${channelId}/voice/participants`, { email }),
+
+  voiceSignal: (channelId: string, toEmail: string, signalType: string, payload: unknown, email: string) =>
+    apiFetch<{ sent: boolean }>(`/api/v1/channels/${channelId}/voice/signal`, {
+      method: "POST",
+      body: JSON.stringify({ to_email: toEmail, signal_type: signalType, payload }),
+      email,
+    }),
+
+  voiceMute: (channelId: string, isMuted: boolean, isDeafened: boolean, email: string) =>
+    apiFetch<{ updated: boolean }>(`/api/v1/channels/${channelId}/voice/mute`, {
+      method: "PUT",
+      body: JSON.stringify({ is_muted: isMuted, is_deafened: isDeafened }),
+      email,
+    }),
 }
 
 export default workspaceApi

@@ -2,12 +2,18 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/AirSend/workspace-server/internal/models"
+	"github.com/AirSend/workspace-server/internal/msgbuffer"
+	"github.com/google/uuid"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MessageService — business logic for channel messages
+//
+// Send path: PebbleDB (instant) → WS broadcast → Asynq flush → PostgreSQL
+// Read path: PostgreSQL (cursor) + PebbleDB (latest) → merged response
 // ═══════════════════════════════════════════════════════════════════════════
 
 type MessageService struct {
@@ -18,7 +24,10 @@ func NewMessageService(d *Deps) *MessageService {
 	return &MessageService{d: d}
 }
 
-func (s *MessageService) List(ctx context.Context, channelID, email string, page, limit int) (*models.PaginatedResponse, error) {
+// List returns messages using cursor-based pagination.
+// It fetches from PostgreSQL first, then overlays any buffered (un-flushed)
+// messages from PebbleDB for the latest view.
+func (s *MessageService) List(ctx context.Context, channelID, email string, limit int, cursor string) (*models.CursorPaginatedResponse, error) {
 	ch, err := s.d.Channels.GetByID(ctx, channelID)
 	if err != nil {
 		return nil, err
@@ -28,20 +37,41 @@ func (s *MessageService) List(ctx context.Context, channelID, email string, page
 		return nil, ErrForbidden
 	}
 
-	msgs, total, err := s.d.Messages.List(ctx, channelID, page, limit)
+	// Fetch from Postgres (cursor-based, newest first)
+	dbMsgs, nextCursor, err := s.d.Messages.ListCursor(ctx, channelID, limit, cursor)
 	if err != nil {
 		return nil, err
 	}
 
-	return &models.PaginatedResponse{
-		Items:      msgs,
-		Total:      total,
-		Page:       page,
+	// If no cursor (first load), overlay buffered messages from PebbleDB
+	if cursor == "" && s.d.MsgBuffer != nil {
+		buffered, _ := s.d.MsgBuffer.LatestForChannel(channelID, limit)
+		if len(buffered) > 0 {
+			// Merge: deduplicate by ID (buffered messages may have been flushed already)
+			idSet := make(map[string]struct{}, len(dbMsgs))
+			for _, m := range dbMsgs {
+				idSet[m.ID] = struct{}{}
+			}
+			for _, bm := range buffered {
+				if _, exists := idSet[bm.ID]; !exists {
+					dbMsgs = append(dbMsgs, bufToMessage(bm))
+				}
+			}
+			// Re-sort ascending by created_at
+			sortMessagesAsc(dbMsgs)
+		}
+	}
+
+	return &models.CursorPaginatedResponse{
+		Items:      dbMsgs,
+		NextCursor: nextCursor,
+		HasMore:    nextCursor != "",
 		Limit:      limit,
-		TotalPages: (total + limit - 1) / limit,
 	}, nil
 }
 
+// Send writes the message to PebbleDB for instant response and broadcasts
+// via WebSocket immediately. The flush worker will batch-INSERT to PostgreSQL.
 func (s *MessageService) Send(ctx context.Context, channelID string, input models.SendMessageInput, email, ip, ua string) (*models.Message, error) {
 	ch, err := s.d.Channels.GetByID(ctx, channelID)
 	if err != nil {
@@ -52,7 +82,7 @@ func (s *MessageService) Send(ctx context.Context, channelID string, input model
 		return nil, ErrForbidden
 	}
 
-	// Channel lock enforcement — only owner/admin/moderator can post to locked channels
+	// Channel lock enforcement
 	if ch.IsLocked {
 		role, _ := s.d.Members.GetRole(ctx, ch.TeamID, email)
 		if role != "owner" && role != "admin" && role != "moderator" {
@@ -60,19 +90,70 @@ func (s *MessageService) Send(ctx context.Context, channelID string, input model
 		}
 	}
 
-	msg, err := s.d.Messages.Send(ctx, channelID, input, email)
-	if err != nil {
-		return nil, err
+	// Generate message ID and timestamp upfront
+	msgID := uuid.New().String()
+	now := time.Now()
+	msgType := input.Type
+	if msgType == "" {
+		msgType = "text"
+	}
+	priority := input.Priority
+	if priority == "" {
+		priority = "normal"
 	}
 
-	// Real-time broadcast
+	// Build the message model (returned to caller + broadcast)
+	msg := &models.Message{
+		ID:          msgID,
+		ChannelID:   channelID,
+		SenderEmail: email,
+		Content:     input.Content,
+		Type:        msgType,
+		Priority:    priority,
+		ParentID:    input.ParentID,
+		Mentions:    input.Mentions,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	// Write to PebbleDB buffer (fast path)
+	if s.d.MsgBuffer != nil {
+		bm := &msgbuffer.BufferedMessage{
+			ID:          msgID,
+			ChannelID:   channelID,
+			SenderEmail: email,
+			Content:     input.Content,
+			Type:        msgType,
+			Priority:    priority,
+			ParentID:    input.ParentID,
+			Mentions:    input.Mentions,
+			CreatedAt:   now.UnixNano(),
+		}
+		if err := s.d.MsgBuffer.Put(bm); err != nil {
+			// Fallback: write directly to Postgres if PebbleDB fails
+			dbMsg, dbErr := s.d.Messages.Send(ctx, channelID, input, email)
+			if dbErr != nil {
+				return nil, dbErr
+			}
+			msg = dbMsg
+		}
+	} else {
+		// No PebbleDB configured — direct write (original behavior)
+		dbMsg, err := s.d.Messages.Send(ctx, channelID, input, email)
+		if err != nil {
+			return nil, err
+		}
+		msg = dbMsg
+	}
+
+	// Real-time broadcast (instant — before Postgres flush)
 	s.d.Hub.BroadcastToChannel(channelID, "message.created", map[string]interface{}{
 		"message":    msg,
 		"channel_id": channelID,
 		"team_id":    ch.TeamID,
 	})
 
-	// Redis Stream for persistence/replay
+	// Redis Stream for event log
 	if s.d.Stream != nil {
 		s.d.Stream.PublishMessage(ctx, channelID, "message.created", map[string]interface{}{
 			"message_id": msg.ID,
@@ -82,7 +163,7 @@ func (s *MessageService) Send(ctx context.Context, channelID string, input model
 		})
 	}
 
-	// Audit (sample — only log if it's a thread start or has mentions)
+	// Audit for mentions
 	if input.ParentID == nil && len(input.Mentions) > 0 {
 		s.d.Events.Log(ctx, models.Event{
 			ActorEmail:   email,
@@ -111,7 +192,7 @@ func (s *MessageService) Send(ctx context.Context, channelID string, input model
 	// Cache invalidation
 	s.d.Cache.Invalidate(ctx, "messages:"+channelID)
 
-	// Webhook trigger
+	// Webhooks
 	s.triggerWebhooks(ctx, ch.TeamID, "message.created", map[string]interface{}{
 		"message":    msg,
 		"channel_id": channelID,
@@ -276,5 +357,32 @@ func (s *MessageService) triggerWebhooks(ctx context.Context, teamID, event stri
 			"event":      event,
 			"payload":    payload,
 		})
+	}
+}
+
+// ── Helpers for Pebble ↔ Model conversion ──
+
+func bufToMessage(bm msgbuffer.BufferedMessage) models.Message {
+	t := time.Unix(0, bm.CreatedAt)
+	return models.Message{
+		ID:          bm.ID,
+		ChannelID:   bm.ChannelID,
+		SenderEmail: bm.SenderEmail,
+		Content:     bm.Content,
+		Type:        bm.Type,
+		Priority:    bm.Priority,
+		ParentID:    bm.ParentID,
+		Mentions:    bm.Mentions,
+		CreatedAt:   t,
+		UpdatedAt:   t,
+	}
+}
+
+func sortMessagesAsc(msgs []models.Message) {
+	n := len(msgs)
+	for i := 1; i < n; i++ {
+		for j := i; j > 0 && msgs[j].CreatedAt.Before(msgs[j-1].CreatedAt); j-- {
+			msgs[j], msgs[j-1] = msgs[j-1], msgs[j]
+		}
 	}
 }

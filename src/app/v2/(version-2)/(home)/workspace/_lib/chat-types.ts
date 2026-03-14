@@ -216,3 +216,25 @@ export interface TypingIndicator {
   channelId: string;
   timestamp: number;
 }
+
+// ---------------------------------------------------------------------------
+// Voice Channels
+// ---------------------------------------------------------------------------
+
+export interface VoiceParticipant {
+  id: string;
+  channelId: string;
+  userEmail: string;
+  displayName?: string;
+  joinedAt: string;
+  isMuted: boolean;
+  isDeafened: boolean;
+}
+
+export interface VoiceState {
+  channelId: string | null;
+  participants: VoiceParticipant[];
+  isMuted: boolean;
+  isDeafened: boolean;
+  isConnecting: boolean;
+}
