@@ -17,6 +17,7 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  MonitorSmartphone,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -116,6 +117,16 @@ const navigation: NavItem[] = [
     ],
   },
   {
+    title: "IMAP & SMTP Setup",
+    href: "/docs/imap-smtp",
+    icon: <MonitorSmartphone className="h-4 w-4" />,
+    children: [
+      { title: "IMAP Configuration", href: "/docs/imap-smtp#imap" },
+      { title: "SMTP Configuration", href: "/docs/imap-smtp#smtp" },
+      { title: "Email Clients", href: "/docs/imap-smtp#email-clients" },
+    ],
+  },
+  {
     title: "SMTP Response Codes",
     href: "/docs/smtp-codes",
     icon: <Server className="h-4 w-4" />,
@@ -141,7 +152,7 @@ export default function DocsSidebar() {
   }
 
   return (
-    <aside className="hidden md:block w-64 shrink-0 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-y-auto h-[calc(100vh-4rem)] sticky top-16">
+    <aside className="hidden md:block w-64 shrink-0 border-r border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100/80 dark:bg-[#201B39]/80 backdrop-blur-sm overflow-y-auto h-[calc(100vh-4rem)] sticky top-16">
       <nav className="p-4 space-y-1">
         <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-3 px-2">
           Documentation
@@ -154,8 +165,8 @@ export default function DocsSidebar() {
                 className={cn(
                   "flex items-center gap-2 px-2 py-1.5 text-sm rounded-md flex-1 transition-colors",
                   isActive(item.href)
-                    ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-medium"
-                    : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    ? "bg-blue-500/10 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 font-medium"
+                    : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200/50 dark:hover:bg-white/5"
                 )}
               >
                 {item.icon}
@@ -164,7 +175,7 @@ export default function DocsSidebar() {
               {item.children && (
                 <button
                   onClick={() => toggleExpand(item.href)}
-                  className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                  className="p-1 rounded hover:bg-neutral-200/50 dark:hover:bg-white/5"
                 >
                   {expanded[item.href] || isActive(item.href) ? (
                     <ChevronDown className="h-3 w-3 text-neutral-500" />
@@ -175,7 +186,7 @@ export default function DocsSidebar() {
               )}
             </div>
             {item.children && (expanded[item.href] || isActive(item.href)) && (
-              <div className="ml-6 mt-1 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2">
+              <div className="ml-6 mt-1 space-y-0.5 border-l border-neutral-300/50 dark:border-neutral-700/50 pl-2">
                 {item.children.map((child) => (
                   <Link
                     key={child.href}

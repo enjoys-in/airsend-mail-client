@@ -14,6 +14,7 @@ import {
   Send,
   Settings,
   ArrowRight,
+  MonitorSmartphone,
 } from "lucide-react";
 
 const sections = [
@@ -70,6 +71,12 @@ const sections = [
     description: "Understand common email server errors and how to resolve them.",
     href: "/docs/error-messages",
     icon: <AlertTriangle className="h-6 w-6" />,
+  },
+  {
+    title: "IMAP & SMTP Setup",
+    description: "Configure email clients with IMAP and SMTP server settings.",
+    href: "/docs/imap-smtp",
+    icon: <MonitorSmartphone className="h-6 w-6" />,
   },
   {
     title: "SMTP Response Codes",

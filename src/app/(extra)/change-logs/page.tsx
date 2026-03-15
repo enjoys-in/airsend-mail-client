@@ -4,7 +4,22 @@ const CHANGE_LOGS = [
     {
         date: "Mar 15, 2026",
         version: "2",
-        color: "from-blue-500 to-indigo-600",
+        color: "from-violet-500 to-purple-600",
+        versionNumber: "2.3.0",
+        improvements: [
+            "IMAP & SMTP Docs — New documentation page with server configuration and email client setup guides",
+            "Docs Gradient Background — Docs section background now flows seamlessly from navbar to footer",
+            "Sidebar & Mobile Nav — Updated with translucent backdrop-blur to match gradient theme",
+            "SMTP Port Update — Changed recommended SMTP port to 587 (STARTTLS) across all docs",
+        ],
+        bugfixes: [
+            "Removed deprecated port 465 (SSL/TLS) as recommended SMTP option",
+        ]
+    },
+    {
+        date: "Mar 14, 2026",
+        version: "2",
+        color: "from-purple-600 to-fuchsia-500",
         versionNumber: "2.2.0",
         improvements: [
             "Full Documentation Section — Nested routes for all docs pages with sidebar navigation",
@@ -25,7 +40,7 @@ const CHANGE_LOGS = [
     {
         date: "Mar 13, 2026",
         version: "2",
-        color: "from-pink-500 to-emerald-600",
+        color: "from-fuchsia-500 to-pink-600",
         versionNumber: "2.1.0",
         improvements: [
             "Manage Blocked IPs Page — Global and Per-Domain Tabs with Unblock and Purge All",
@@ -46,7 +61,7 @@ const CHANGE_LOGS = [
     {
         date: "Mar 10, 2026",
         version: "2",
-        color: "from-emerald-500 to-teal-600",
+        color: "from-pink-600 to-rose-500",
         versionNumber: "2.0.0",
         improvements: [
             "Introduced CalDAV/JMAP Calendar Integration with Go-based CalDev Server",
@@ -73,7 +88,7 @@ const CHANGE_LOGS = [
     {
         date: "Mar 1, 2026",
         version: "2",
-        color: "from-teal-500 to-cyan-600",
+        color: "from-rose-500 to-red-600",
         versionNumber: "1.17",
         improvements: [
             "Inline Reply Box for Message Thread View",
@@ -99,7 +114,7 @@ const CHANGE_LOGS = [
     {
         date: "Feb 28, 2026",
         version: "2",
-        color: "from-cyan-500 to-blue-600",
+        color: "from-red-600 to-orange-500",
         versionNumber: "1.16",
         improvements: [
             "Organization Management — Create, Edit, Settings, Members, Roles",
@@ -129,7 +144,7 @@ const CHANGE_LOGS = [
     {
         date: "Feb 26, 2026",
         version: "2",
-        color: "from-blue-500 to-indigo-600",
+        color: "from-orange-500 to-amber-600",
         versionNumber: "1.15",
         improvements: [
             "Full Calendar UI with Day, Week, Month, and Agenda Views",
@@ -160,7 +175,7 @@ const CHANGE_LOGS = [
     {
         date: "Feb 10, 2026",
         version: "2",
-        color: "from-indigo-500 to-violet-600",
+        color: "from-amber-600 to-yellow-600",
         versionNumber: "1.14",
         improvements: [
             "Docker Build with Standalone Output and Build Script",
@@ -173,7 +188,7 @@ const CHANGE_LOGS = [
     {
         date: "Oct 31, 2025",
         version: "1",
-        color: "from-violet-500 to-purple-600",
+        color: "from-yellow-600 to-lime-600",
         versionNumber: "1.13",
         improvements: [
             "SMTP Relay Configuration with Enhanced Relay Form and Table",
@@ -188,7 +203,7 @@ const CHANGE_LOGS = [
     {
         date: "Oct 30, 2025",
         version: "1",
-        color: "from-purple-500 to-fuchsia-600",
+        color: "from-lime-600 to-green-500",
         versionNumber: "1.12",
         improvements: [
             "WIP- Sync Engine Under Integration",
@@ -208,7 +223,7 @@ const CHANGE_LOGS = [
     {
         date: "Oct 25, 2025",
         version: "1",
-        color: "from-fuchsia-500 to-indigo-600",
+        color: "from-green-500 to-emerald-600",
         versionNumber: "1.11",
         improvements: [
 
@@ -228,7 +243,7 @@ const CHANGE_LOGS = [
     {
         date: "Oct 20, 2025",
         version: "1",
-        color: "from-indigo-500 to-blue-600",
+        color: "from-emerald-600 to-teal-500",
         versionNumber: "1.10",
         improvements: [
             "Implemented send mail2 with improved dispatch logic and fallback handling",
@@ -251,7 +266,7 @@ const CHANGE_LOGS = [
     {
         date: "Oct 12, 2025",
         version: "1",
-        color: "from-blue-500 to-sky-600",
+        color: "from-teal-500 to-cyan-600",
         versionNumber: "1.9",
         improvements: [
             "IP Block and Rate Limiting Added",
@@ -266,7 +281,7 @@ const CHANGE_LOGS = [
     {
         date: "Sep 27, 2025",
         version: "1",
-        color: "from-sky-500 to-cyan-600",
+        color: "from-cyan-600 to-sky-500",
         versionNumber: "1.7",
         improvements: [
             "Added Attachment Support",
@@ -285,7 +300,7 @@ const CHANGE_LOGS = [
     {
         date: "Aug 30, 2025",
         version: "1",
-        color: "from-cyan-500 to-teal-600",
+        color: "from-sky-500 to-blue-600",
         versionNumber: "1.6",
         improvements: [
             "Update the Version",
@@ -304,7 +319,7 @@ const CHANGE_LOGS = [
     {
         date: "Aug 27, 2025",
         version: "1",
-        color: "from-teal-500 to-orange-600",
+        color: "from-blue-600 to-indigo-500",
         versionNumber: "1.5",
         improvements: [
             "User Can Now Send Mails",
@@ -320,7 +335,7 @@ const CHANGE_LOGS = [
     {
         date: "Aug 20, 2025",
         version: "1",
-        color: "from-orange-500 to-yellow-600",
+        color: "from-indigo-500 to-[#7E22CE]",
         versionNumber: "1.4",
         improvements: [
             "Fixing the on going Bugs",
@@ -336,7 +351,7 @@ const CHANGE_LOGS = [
     {
         date: "May 20, 2025",
         version: "1",
-        color: "from-yellow-500 to-red-600",
+        color: "from-[#7E22CE] to-[#BE185D]",
         versionNumber: "1.3",
         improvements: [
             "Fixing the on going Bugs",
@@ -352,7 +367,7 @@ const CHANGE_LOGS = [
     {
         date: "May 1, 2025",
         version: "1",
-        color: "from-red-500 to-blue-600",
+        color: "from-[#BE185D] to-[#0E7490]",
         versionNumber: "1.2",
         improvements: [
             "Update the UI, Added Logo, and Changelog",
@@ -370,7 +385,7 @@ const CHANGE_LOGS = [
     {
         date: "Mar 20, 2025",
         version: "1",
-        color: "from-blue-500 to-purple-600",
+        color: "from-[#0E7490] to-[#1E40AF]",
         versionNumber: "1.1",
         improvements: [
             "Added some new pages Pricing,Features and Changelog",
@@ -388,7 +403,7 @@ const CHANGE_LOGS = [
     {
         date: "Jan 20, 2025",
         version: "1",
-        color: "from-purple-600 to-pink-500",
+        color: "from-[#1E40AF] to-[#5B21B6]",
         versionNumber: "1.0",
         improvements: [
             "Initial release",
