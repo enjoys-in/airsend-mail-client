@@ -2,6 +2,27 @@ import { Info } from "lucide-react"
 
 const CHANGE_LOGS = [
     {
+        date: "Mar 15, 2026",
+        version: "2",
+        color: "from-blue-500 to-indigo-600",
+        versionNumber: "2.2.0",
+        improvements: [
+            "Full Documentation Section — Nested routes for all docs pages with sidebar navigation",
+            "Account & Workspace Docs — Account creation, workspace management, API keys guide",
+            "Domain Setup Docs — Add domain, verify domain, domain settings",
+            "DNS Records Docs — MX, SPF, DKIM, DMARC, PTR record configuration guides",
+            "Sending Emails Docs — Compose, attachments, templates, requirements",
+            "Bulk Sending Docs — IP warmup, best practices, mailing list hygiene",
+            "Calendar Docs — Event creation, invitations, reminders",
+            "Logs Docs — Activity logs, email logs, bounce logs",
+            "Error Messages Reference — Common email server errors with fixes",
+            "SMTP Response Codes Reference — Complete 2xx, 4xx, 5xx code reference",
+        ],
+        bugfixes: [
+            "Fixed deprecated images.domains config — migrated to images.remotePatterns in next.config",
+        ]
+    },
+    {
         date: "Mar 13, 2026",
         version: "2",
         color: "from-pink-500 to-emerald-600",

@@ -1,124 +1,134 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { __config } from "@/constants/config";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import StickyNote from "@/app/h-panel/(home)/api/_components/StickyNote";
 import Link from "next/link";
+import {
+  BookOpen,
+  Mail,
+  Globe,
+  Shield,
+  Server,
+  Users,
+  Calendar,
+  ScrollText,
+  AlertTriangle,
+  Send,
+  Settings,
+  ArrowRight,
+} from "lucide-react";
 
-export default function ApiDocs() {
+const sections = [
+  {
+    title: "Getting Started",
+    description: "Set up your account and start using Airsend in minutes.",
+    href: "/docs/getting-started",
+    icon: <Settings className="h-6 w-6" />,
+  },
+  {
+    title: "Account & Workspace",
+    description: "Create accounts, manage workspaces, and generate API keys.",
+    href: "/docs/account",
+    icon: <Users className="h-6 w-6" />,
+  },
+  {
+    title: "Domain Setup",
+    description: "Add and verify your custom domain for sending emails.",
+    href: "/docs/domain",
+    icon: <Globe className="h-6 w-6" />,
+  },
+  {
+    title: "DNS Records",
+    description: "Configure MX, SPF, DKIM, DMARC, and PTR records for email authentication.",
+    href: "/docs/dns-records",
+    icon: <Shield className="h-6 w-6" />,
+  },
+  {
+    title: "Sending Emails",
+    description: "Learn how to compose, send, and manage emails with Airsend.",
+    href: "/docs/sending-emails",
+    icon: <Send className="h-6 w-6" />,
+  },
+  {
+    title: "Bulk Sending",
+    description: "Guidelines for sending at scale while maintaining deliverability.",
+    href: "/docs/bulk-sending",
+    icon: <Mail className="h-6 w-6" />,
+  },
+  {
+    title: "Calendar",
+    description: "Manage events and scheduling with the built-in calendar.",
+    href: "/docs/calendar",
+    icon: <Calendar className="h-6 w-6" />,
+  },
+  {
+    title: "Logs",
+    description: "Track activity, email delivery, and bounce logs.",
+    href: "/docs/logs",
+    icon: <ScrollText className="h-6 w-6" />,
+  },
+  {
+    title: "Error Messages",
+    description: "Understand common email server errors and how to resolve them.",
+    href: "/docs/error-messages",
+    icon: <AlertTriangle className="h-6 w-6" />,
+  },
+  {
+    title: "SMTP Response Codes",
+    description: "Complete reference of SMTP status codes and their meanings.",
+    href: "/docs/smtp-codes",
+    icon: <Server className="h-6 w-6" />,
+  },
+];
+
+export default function DocsHome() {
   return (
-    <div className="flex">
-      <div className="flex-1 md:p-6 p-4">
-        <div className="space-y-6 max-w-4xl mx-auto">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Link href="/docs/getting-started">
-                {" "}
-                <h1 className="text-2xl text-blue-800 dark:text-blue-300 underline md:text-3xl font-bold">
-                  See Docs
-                </h1>
-              </Link>
-              <Badge
-                variant="secondary"
-                className="bg-orange-500 text-netural-500 dark:text-gray-200"
-              >
-                Beta
-              </Badge>
-            </div>
-
-            <Alert variant={"destructive"}>
-              <AlertTitle className="text-orange-500 text-2xl">
-                <strong>Warning</strong>
-              </AlertTitle>
-              <AlertDescription className="text-netural-800 dark:text-gray-400 text-sm font-sans">
-                Never Expose API Keys on the Frontend Since frontend code is
-                visible to users, exposing API keys in requests (even in
-                headers) makes them vulnerable. Instead, use a backend proxy
-              </AlertDescription>
-            </Alert>
-
-            <Alert variant={"default"}>
-              <AlertTitle className="text-orange-500 text-2xl">
-                <strong>Use a Backend Proxy (Recommended)</strong>
-              </AlertTitle>
-              <AlertDescription className="text-netural-800 dark:text-gray-400 text-sm font-sans">
-                Never Expose API Keys on the Frontend Since frontend code is
-                visible to users, exposing API keys in requests (even in
-                headers) makes them vulnerable. Instead, use a backend proxy
-              </AlertDescription>
-            </Alert>
-            <Alert variant={"default"}>
-              <AlertTitle className="text-orange-500 text-2xl">
-                <strong>Restrict API Usage by IP or Domain</strong>
-              </AlertTitle>
-              <AlertDescription className="text-netural-800 dark:text-gray-400 text-sm font-sans">
-                If you're using third-party APIs, check if they allow you to
-                restrict access by: IP Address: Only allow requests from your
-                backend server IP. Referrer Header / CORS: Only allow requests
-                from specific domains.
-              </AlertDescription>
-            </Alert>
-            <Alert variant={"default"}>
-              <AlertTitle className="text-orange-500 text-2xl">
-                <strong> Use OAuth or JWT Tokens for Authentication</strong>
-              </AlertTitle>
-              <AlertDescription className="text-netural-800 dark:text-gray-400 text-sm font-sans">
-                Instead of API keys, use a secure authentication mechanism:
-                OAuth: Many APIs offer OAuth authentication, which provides
-                temporary access tokens. JWT (JSON Web Token): Authenticate
-                users via JWT tokens instead of exposing API secrets.
-              </AlertDescription>
-            </Alert>
-
-            <Alert variant={"default"}>
-              <AlertTitle className="text-orange-500 text-2xl">
-                <strong> Implement Rate Limiting & Logging</strong>
-              </AlertTitle>
-              <AlertDescription className="text-netural-800 dark:text-gray-400 text-sm font-sans">
-                To prevent abuse: Rate Limiting: Limit the number of requests
-                per user/IP using tools like express-rate-limit. Logging &
-                Monitoring: Monitor API usage with logs to detect suspicious
-                activity.
-              </AlertDescription>
-            </Alert>
-          </div>
-
-          <Card className="rounded-none">
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <pre>
-                  <code className="text-sm text-gray-400 whitespace-pre">
-                    {`
-import express from 'express';
-import axios from 'axios';
-
-const app = express();
-app.use(express.json());
-
-app.post('/api/proxy-endpoint', async (req, res) => {
-  try {
-    const response = await axios.post('https://thirdparty.com/api', req.body, {
-      headers: {
-        'API-KEY': process.env.API_KEY,
-        'API-SECRET': process.env.API_SECRET,
-      },
-    });
-    res.json(response.data);
-  } catch (error) {
-    res.status(500).json({ error: 'Something went wrong' });
-  }
-});
-
-app.listen(3001, () => console.log('Server running on port 3001'));
-`}
-                  </code>
-                </pre>
-              </div>
-            </CardContent>
-          </Card>
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-neutral-100">
+            Airsend Documentation
+          </h1>
+          <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+            v2
+          </Badge>
         </div>
+        <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl">
+          Everything you need to set up, configure, and use Airsend for reliable email delivery.
+          From account creation to DNS configuration and troubleshooting.
+        </p>
       </div>
-      <StickyNote />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {sections.map((section) => (
+          <Link key={section.href} href={section.href} className="group">
+            <Card className="h-full transition-colors border-neutral-200 dark:border-neutral-800 hover:border-blue-300 dark:hover:border-blue-700">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-blue-600 dark:text-blue-400">{section.icon}</div>
+                    <CardTitle className="text-lg">{section.title}</CardTitle>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-neutral-400 group-hover:text-blue-500 transition-colors" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>{section.description}</CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
+
+      <Card className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/50">
+        <CardContent className="pt-6">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
+            <strong>Need the API reference?</strong> Check out the{" "}
+            <Link href="/docs/getting-started" className="underline font-medium">
+              Getting Started
+            </Link>{" "}
+            guide which includes interactive API documentation and testing tools.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
