@@ -11,12 +11,12 @@ class SocketListeners {
     }
 }
 export const socketAddListeners = (appSocket: Socket) => {
-   
-  
+
+
 
     appSocket.on(SocketEventConstants.WARNING, SocketListeners.onWarning)
 }
-export const socketRemoveListeners = (appSocket: Socket) => {   
+export const socketRemoveListeners = (appSocket: Socket) => {
     appSocket.off(SocketEventConstants.WARNING)
 
 }

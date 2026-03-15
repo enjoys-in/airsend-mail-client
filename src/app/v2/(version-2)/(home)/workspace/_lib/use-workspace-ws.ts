@@ -11,9 +11,7 @@ import { toMessage } from "./api";
 import type { ServerMessage } from "./api";
 
 const WS_BASE =
-  (typeof window !== "undefined" && (window as any).__RUNTIME_CONFIG__?.WORKSPACE_WS_URL) ||
-  process.env.NEXT_PUBLIC_WORKSPACE_WS_URL ||
-  "ws://localhost:8090";
+  (typeof window !== "undefined" && (window as any).__RUNTIME_CONFIG__?.WORKSPACE_API_URL) || "ws://localhost:8090";
 
 interface WSIncoming {
   event: string;
