@@ -188,6 +188,7 @@ export const FOOTER_LINKS = [
         // { name: "Community", href: "#" },
         { name: "Help & Support", href: "#" },
         { name: "FAQ", href: "/faq" },
+        { name: "How we handle emails", href: "/how-we-handle-mails" },
         // { name: "What's New", href: "#" },
         // { name: "Status", href: "#" },
       ],
