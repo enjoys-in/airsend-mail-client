@@ -42,6 +42,7 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
   const { currAccount } = useAppSelector((state) => state.accounts);
   const { focusedTab, closeTab } = useMultiTabStore();
   const [signatures, setSignatures] = useState<any[]>([]);
+  const [sending, setSending] = useState(false);
 
   const fetchSignatures = async () => {
     if (!currAccount?.email) return;
@@ -58,6 +59,8 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
     setHTML(newHTML);
   };
   const handleSend = async () => {
+    if (sending) return;
+    setSending(true);
     try {
       const newHTML = getHTML();
  
@@ -141,6 +144,8 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
         return;
       }
       toast.error(error.message);
+    } finally {
+      setSending(false);
     }
   };
   React.useLayoutEffect(() => {
@@ -213,9 +218,10 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
               type="button"
               variant={"ghost"}
               onClick={handleSend}
-              className="inline-flex items-center justify-center gap-2 rounded-none text-sm font-medium h-9 px-4 bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
+              disabled={sending}
+              className="inline-flex items-center justify-center gap-2 rounded-none text-sm font-medium h-9 px-4 bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50"
             >
-              Send Now
+              {sending ? "Sending..." : "Send Now"}
             </Button>
             <DropdownMenuTrigger asChild>
               <Button
