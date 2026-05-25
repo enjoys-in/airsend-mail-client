@@ -10,19 +10,27 @@ const hPanelRegex = /^\/h-panel\/(.+)/;
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const access_token = request.cookies.get('access_token')?.value;
+    const isValidToken = access_token ? validateTokenExpiry(access_token) : false;
 
     const isLoginPage = pathname === '/v2';
     const isProtectedPath = pathname.startsWith('/v2/u');
-    // Case 1: Logged in user accessing login page — redirect to dashboard
-    if (access_token && isLoginPage) {
+
+    // Case 1: Logged in user with VALID token accessing login page — redirect to dashboard
+    if (isValidToken && isLoginPage) {
         return NextResponse.redirect(new URL('/v2/u/mail', request.url));
     }
 
-    // Case 2: Not logged in and accessing a protected page — redirect to login
-    if (!access_token && isProtectedPath) {
-        return NextResponse.redirect(new URL('/v2', request.url));
+    // Case 2: No token OR expired token, accessing protected page — redirect to login
+    if (!isValidToken && isProtectedPath) {
+        const response = NextResponse.redirect(new URL('/v2', request.url));
+        // Clear the expired cookie server-side to prevent redirect loop
+        if (access_token) {
+            response.cookies.delete('access_token');
+        }
+        return response;
     }
-    if (access_token && isProtectedPath) {
+
+    if (isValidToken && isProtectedPath) {
         return NextResponse.next();
     }
 

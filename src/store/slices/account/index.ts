@@ -10,12 +10,6 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
       const { data } = await instance.get(`/api/v1/profile`);
       
       if (!data.success) {
-        await instance.post('/api/v1/auth/logout');
-        deleteCookie("access_token")
-        window.location.href = "/v2";
-      }
-
-      if (!data.success) {
         throw new Error(data.message || "Failed to fetch user profile")
       }
       // Only pick declared IUser fields — strip sensitive data (PGP keys, DKIM private, etc.)
@@ -31,7 +25,7 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
         workspace: raw.workspace ?? null,
       } as IUser;
     } catch (err) {
-      deleteCookie("access_token")
+      // 401 is already handled by the axios interceptor (clears cookie + redirects)
       return rejectWithValue("Failed to fetch current user");
     }
   }

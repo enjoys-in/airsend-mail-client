@@ -2,6 +2,68 @@ import { Info } from "lucide-react"
 
 const CHANGE_LOGS = [
     {
+        date: "May 25, 2026",
+        version: "2",
+        color: "from-blue-500 to-indigo-600",
+        versionNumber: "2.5.0",
+        improvements: [
+            "Auth Token Expiry Validation — Middleware now validates JWT expiry before granting access to protected routes",
+            "Server-Side Cookie Cleanup — Expired tokens are cleared via Set-Cookie header, preventing client-side race conditions",
+            "Login Redirect Loop Fix — Users returning after token expiry no longer get stuck in infinite redirect between /v2 and dashboard",
+        ],
+        bugfixes: [
+            "Fixed redirect loop caused by middleware only checking cookie existence instead of token validity",
+            "Fixed duplicate 401 handling in fetchCurrentUser thunk (now handled exclusively by axios interceptor)",
+            "Removed redundant logout API call and cookie deletion that conflicted with interceptor flow",
+        ]
+    },
+    {
+        date: "May 24, 2026",
+        version: "2",
+        color: "from-indigo-500 to-violet-600",
+        versionNumber: "2.4.0",
+        improvements: [
+            "Messages now only accepted (250 OK) after successfully queuing — no more silent mail loss",
+            "25 MB message size limit enforced — oversized messages rejected immediately with 552 error",
+            "DKIM signing fails fast if private key unavailable — returns 451 temporary error instead of sending unsigned",
+            "Brute-force login protection — IPs rate-limited on authentication attempts before credential validation",
+            "Wildcard sender accounts restricted to their own domain — prevents cross-domain spoofing",
+            "Maximum 50 recipients per message enforced — exceeding returns 452",
+            "iCloud/Apple domain block uses exact domain matching (icloud.com, me.com, mac.com)",
+        ],
+        bugfixes: [
+            "Fixed double-callback protocol corruption if error occurred after response was sent",
+            "Fixed post-send background tasks (tracking, encryption) crashing handler on failure",
+            "Fixed null date in parsed emails causing crashes — now uses current time as fallback",
+        ]
+    },
+    {
+        date: "May 10, 2026",
+        version: "2",
+        color: "from-violet-600 to-purple-500",
+        versionNumber: "2.3.1",
+        improvements: [
+            "DKIM Signing Fix — mailauth library now receives signing keys in correct signatureData array format",
+            "Emails sent via API (SendMailService) now correctly produce valid DKIM-Signature headers",
+        ],
+        bugfixes: [
+            "Fixed DKIM signatures being empty/invalid due to keys passed as top-level options instead of signatureData array",
+        ]
+    },
+    {
+        date: "May 2, 2026",
+        version: "2",
+        color: "from-purple-500 to-violet-600",
+        versionNumber: "2.3.0a",
+        improvements: [
+            "RFC 5322 From Header Compliance — SMTP handler auto-injects From header when client omits it",
+            "From header injection occurs before DKIM signing to ensure valid signatures",
+        ],
+        bugfixes: [
+            "Fixed Gmail and strict providers rejecting emails with '550-5.7.1' due to missing From header in raw MIME",
+        ]
+    },
+    {
         date: "Mar 15, 2026",
         version: "2",
         color: "from-violet-500 to-purple-600",
