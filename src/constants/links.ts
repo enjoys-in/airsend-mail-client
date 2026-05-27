@@ -3,7 +3,7 @@ import { Archive, File, Inbox, Send, Trash } from "lucide-react";
 export const MAIL_LINKS = [
   {
     title: "Inbox",
-    unreadCount: 1,
+    unreadCount: 0,
     icon: Inbox,
     href: "/u/inbox",
   },

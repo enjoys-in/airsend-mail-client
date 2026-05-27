@@ -1,5 +1,5 @@
 "use client"
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 
 import {
     Accordion,
@@ -13,6 +13,24 @@ import { RiTimeLine } from "@remixicon/react"
 const ShowMeetings = () => {
   const rawEvents = useCalDevStore((s) => s.rawEvents)
   const calendars = useCalDevStore((s) => s.calendars)
+  const fetchEvents = useCalDevStore((s) => s.fetchEvents)
+  const initSession = useCalDevStore((s) => s.initSession)
+  const accountId = useCalDevStore((s) => s.accountId)
+
+  // Fetch today's events independently on mount if not already loaded
+  useEffect(() => {
+    const bootstrap = async () => {
+      if (!accountId) {
+        await initSession();
+      }
+      // Fetch events for today ± 1 day to catch upcoming meetings
+      const now = new Date();
+      const after = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const before = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2).toISOString();
+      await fetchEvents(after, before);
+    };
+    bootstrap();
+  }, [accountId, fetchEvents, initSession])
 
   const upcomingEvents = useMemo(() => {
     const now = new Date()

@@ -276,17 +276,32 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   addEvent: async (uiEvent, calendarId) => {
     const { accountId } = get();
     if (!accountId) return null;
+
+    const payload = toCreateEventPayload(uiEvent, calendarId);
+
+    // Optimistic: add immediately with a temporary ID
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const optimisticEvent = buildFullEvent(payload, { id: tempId } as any);
+    const prev = get().rawEvents;
+    set((s) => ({ rawEvents: [...s.rawEvents, optimisticEvent] }));
+
     try {
-      const payload = toCreateEventPayload(uiEvent, calendarId);
       const created = await api.createEvent(accountId, payload);
       if (created) {
-        // Merge payload + server response for a complete CalDevEvent
+        // Replace temp event with real server event
         const fullEvent = buildFullEvent(payload, created);
-        set((s) => ({ rawEvents: [...s.rawEvents, fullEvent] }));
+        set((s) => ({
+          rawEvents: s.rawEvents.map((e) => (e.id === tempId ? fullEvent : e)),
+        }));
         return fullEvent;
       }
+      // API returned null — rollback
+      set({ rawEvents: prev });
+      toast.error("Failed to create event");
       return null;
     } catch {
+      // Rollback on failure
+      set({ rawEvents: prev });
       toast.error("Failed to create event");
       return null;
     }

@@ -277,6 +277,7 @@ export function useMailActions() {
             setAllEmails(updated);
             await airsendDB.bulkDeleteItems("mails", [selectedMail.message_id]);
             emitSyncCounts(currentFolder);
+            emitSyncCounts("Spam");
             setSelectedMail(null as any);
             toast.success("Reported as spam");
             router.push(`/v2/u/mail/${currentFolder}`);
@@ -303,7 +304,9 @@ export function useMailActions() {
                 const updated = all_emails?.filter((m) => m.message_id !== selectedMail.message_id) || [];
                 setAllEmails(updated);
                 await airsendDB.bulkDeleteItems("mails", [selectedMail.message_id]);
+                // Sync counts for both source and destination folders
                 emitSyncCounts(currentFolder);
+                emitSyncCounts(targetFolder);
                 setSelectedMail(null as any);
                 toast.success(`Moved to ${targetFolder}`);
                 router.push(`/v2/u/mail/${currentFolder}`);

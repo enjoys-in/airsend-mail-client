@@ -14,6 +14,7 @@ const GATE_WHITELIST: string[] = [
   '/mail/send',        // sending mail is always allowed
   '/mail/compose',     // compose/send
   '/auth/',            // auth operations
+  '/api/v1/draft',     // draft save/update must work during sync
 ];
 
 /** HTTP methods blocked by the gate */

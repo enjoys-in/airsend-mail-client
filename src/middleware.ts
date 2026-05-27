@@ -53,9 +53,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
 }
 
-// Configure the middleware to match specific paths
+// Configure the middleware to match only routes that need auth checks
 export const config = {
     matcher: [
-        '/u/:path*', '/h-panel/:path*',
-        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|service-worker.js|.js|.css|.mp3|.svg).*)'],
+        '/u/:path*',
+        '/v2/:path*',
+        '/h-panel/:path*',
+    ],
 }

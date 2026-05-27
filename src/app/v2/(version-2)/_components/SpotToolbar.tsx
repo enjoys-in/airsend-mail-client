@@ -93,8 +93,8 @@ export function SpotToolbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="rounded-lg">
-            <DropdownMenuItem className="text-xs">Report spam</DropdownMenuItem>
-            <DropdownMenuItem className="text-xs">Report phishing</DropdownMenuItem>
+            <DropdownMenuItem className="text-xs" onClick={() => handleImapEvents({ action: "spam", message_id: checkedItems })}>Report spam</DropdownMenuItem>
+            <DropdownMenuItem className="text-xs" onClick={() => handleImapEvents({ action: "spam", message_id: checkedItems })}>Report phishing</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -107,8 +107,8 @@ export function SpotToolbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="rounded-lg">
-            <DropdownMenuItem className="text-xs">Flag as important</DropdownMenuItem>
-            <DropdownMenuItem className="text-xs">Flag for follow-up</DropdownMenuItem>
+            <DropdownMenuItem className="text-xs" onClick={() => handleImapEvents({ action: "importance", message_id: checkedItems })}>Flag as important</DropdownMenuItem>
+            <DropdownMenuItem className="text-xs" onClick={() => handleImapEvents({ action: "flag", message_id: checkedItems })}>Flag for follow-up</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -117,7 +117,7 @@ export function SpotToolbar() {
           Delete
         </Button>
 
-        <Button variant="ghost" size="sm" className="h-7 text-xs rounded-lg gap-1.5">
+        <Button variant="ghost" size="sm" className="h-7 text-xs rounded-lg gap-1.5" onClick={() => handleImapEvents({ action: "archive", message_id: checkedItems })}>
           <Archive className="w-3.5 h-3.5" />
           Archive
         </Button>
@@ -131,19 +131,19 @@ export function SpotToolbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44 rounded-lg">
-            <DropdownMenuItem className="text-xs gap-2">
+            <DropdownMenuItem className="text-xs gap-2" onClick={() => handleImapEvents({ action: "mark_as_unread", message_id: checkedItems })}>
               <RefreshCw className="w-3.5 h-3.5" /> Mark as Unread
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-xs gap-2" disabled={checkedItems.length > 1}>
+            <DropdownMenuItem className="text-xs gap-2" onClick={() => handleImapEvents({ action: "mark_all_as_unread", message_id: checkedItems })}>
               <RefreshCw className="w-3.5 h-3.5" /> Mark All as Unread
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-xs gap-2">
+            <DropdownMenuItem className="text-xs gap-2" onClick={() => handleImapEvents({ action: "move", message_id: checkedItems })}>
               Move
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-xs gap-2" disabled={checkedItems.length > 1}>
+            <DropdownMenuItem className="text-xs gap-2" onClick={() => handleImapEvents({ action: "move_all", message_id: checkedItems })}>
               Move All
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-xs gap-2" disabled={checkedItems.length > 1}>
+            <DropdownMenuItem className="text-xs gap-2 text-destructive" onClick={() => handleImapEvents({ action: "delete_all", message_id: checkedItems })}>
               Delete All
             </DropdownMenuItem>
           </DropdownMenuContent>
