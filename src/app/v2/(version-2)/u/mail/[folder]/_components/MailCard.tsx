@@ -13,10 +13,12 @@ import { RiAttachment2 } from '@remixicon/react';
 import { useParams, useRouter } from 'next/navigation';
 import { EmailContextMenu } from './EmailContextMenu';
 import { MailStatusIndicators } from './MailStatusIndicators';
+import { DomainFavicon } from './DomainFavicon';
 
 import { GetAllMailsPayload } from '@/lib/types/mail.interface';
 import { Security } from '@/lib/security';
 import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event';
+import { useSettingsStore } from '@/store/settings';
 
 const s = new Security();
 
@@ -79,6 +81,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
     const checkedItems = useMailStore((state) => state.checkedItems)
     const setCheckedItems = useMailStore((state) => state.setCheckedItems)
     const { emit } = useCustomEvent(CustomEventKey.MailEvents)
+    const showFavicon = useSettingsStore((s) => s.settings?.email_privacy?.show_sender_favicon ?? false)
 
     const decryptedFromEmail = React.useMemo(() => safeDecrypt(item.from_email), [item.from_email])
     const decryptedSubject = React.useMemo(() => safeDecrypt(item?.subject), [item?.subject])
@@ -168,11 +171,19 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                             "transition-all duration-150",
                             (hovered || anyChecked) ? "opacity-0 scale-75" : "opacity-100 scale-100"
                         )}>
-                            <Avatar className="h-9 w-9">
-                                <AvatarFallback className={cn("text-xs font-semibold", avatarColor)}>
-                                    {avatarInitials}
-                                </AvatarFallback>
-                            </Avatar>
+                            {showFavicon && !isSentByMe ? (
+                                <DomainFavicon
+                                    email={decryptedFromEmail}
+                                    initials={avatarInitials}
+                                    colorClass={avatarColor}
+                                />
+                            ) : (
+                                <Avatar className="h-9 w-9">
+                                    <AvatarFallback className={cn("text-xs font-semibold", avatarColor)}>
+                                        {avatarInitials}
+                                    </AvatarFallback>
+                                </Avatar>
+                            )}
                         </div>
                         {(hovered || anyChecked) && (
                             <div className="absolute inset-0 flex items-center justify-center">

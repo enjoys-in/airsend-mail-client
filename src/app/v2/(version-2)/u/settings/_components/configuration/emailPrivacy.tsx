@@ -17,10 +17,11 @@ function EmailPrivacy() {
   const currAccount = useAppSelector((state) => state.accounts.currAccount)
   const { settings, save } = useSettingsPersist(currAccount?.email)
 
-  const handleChange = (field: "autoShowImages" | "block_email_tracking", checked: boolean) => {
+  const handleChange = (field: "autoShowImages" | "block_email_tracking" | "show_sender_favicon", checked: boolean) => {
     const updated = {
       autoShowImages: settings?.email_privacy?.autoShowImages ?? false,
       block_email_tracking: settings?.email_privacy?.block_email_tracking ?? false,
+      show_sender_favicon: settings?.email_privacy?.show_sender_favicon ?? false,
       [field]: checked,
     }
     save("email_privacy", updated)
@@ -43,6 +44,13 @@ function EmailPrivacy() {
             tooltip="Block tracking pixels and read receipts from external senders"
             checked={settings?.email_privacy?.block_email_tracking ?? false}
             onCheckedChange={(v) => handleChange("block_email_tracking", v)}
+          />
+          <SettingToggleRow
+            label="Show sender favicon"
+            description="Display the sender's domain favicon as avatar in mail list"
+            tooltip="Fetches the favicon of the sender's email domain and shows it instead of initials. Cached in browser."
+            checked={settings?.email_privacy?.show_sender_favicon ?? false}
+            onCheckedChange={(v) => handleChange("show_sender_favicon", v)}
           />
         </SettingsSection>
       </div>
