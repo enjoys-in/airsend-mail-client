@@ -9,10 +9,7 @@ const HelpPopup = () => {
     const removeSplashScreen = () => {
         const splashElement = document.getElementById('splash');
         if (splashElement) {
-            splashElement.remove();
-
-        } else {
-
+            splashElement.style.display = 'none';
         }
     };
 
