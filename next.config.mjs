@@ -5,6 +5,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   devIndicators: false,
+  turbopack: {},
   webpack: (config) => {
     config.infrastructureLogging = { level: 'error' }
     return config
