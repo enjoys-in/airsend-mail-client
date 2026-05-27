@@ -4,7 +4,7 @@ import {
     Bot,
     Boxes,
     Command,
-    Github,
+    GitFork,
     KeySquare,
     LayoutDashboard,
     Mail,
@@ -373,7 +373,7 @@ export const MenuList = {
         {
             name: "Github",
             url: "https://github.com/Mullayam/node-mail-server",
-            icon: Github,
+            icon: GitFork,
         },
         {
             name: "Api",

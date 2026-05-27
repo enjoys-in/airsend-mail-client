@@ -1,13 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
   devIndicators: false,
+  webpack: (config) => {
+    config.infrastructureLogging = { level: 'error' }
+    return config
+  },
   images: {
     remotePatterns: [
       {

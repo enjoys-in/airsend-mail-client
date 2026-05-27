@@ -7,7 +7,7 @@ import { validateTokenExpiry } from './lib/utils';
 const regex = /^\/u\/(.+)/;
 const hPanelRegex = /^\/h-panel\/(.+)/;
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const access_token = request.cookies.get('access_token')?.value;
     const isValidToken = access_token ? validateTokenExpiry(access_token) : false;
