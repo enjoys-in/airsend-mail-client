@@ -32,6 +32,8 @@ import { useAppSelector } from "@/store/hooks";
  
 import { Card } from "./ui/card";
 import { X } from "lucide-react";
+import { useDraftAutoSave } from "@/lib/event-bridge/useDraftAutoSave";
+
 export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
   const [open, setOpen] = React.useState(false);
   const currAccount = useAppSelector(state => state.accounts.currAccount)
@@ -46,6 +48,9 @@ export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
     is_scheduled: false,
     scheduled_time: "",
   })
+
+  // ─── Draft Auto-Save ───
+  const { update: updateDraft, flush: flushDraft, discard: discardDraft, status: draftStatus } = useDraftAutoSave();
 
   const { toast } = useToast();
 
@@ -79,7 +84,16 @@ export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
     }
   }
   const handleInputChange = (key: string, value: any) => {
-    setMailOptions({ ...mailOptions, [key]: value })
+    const updated = { ...mailOptions, [key]: value };
+    setMailOptions(updated);
+    // Push to draft auto-save
+    updateDraft({
+      to: updated.to,
+      cc: updated.cc,
+      bcc: updated.bcc,
+      subject: updated.subject,
+      html: updated.html,
+    });
   }
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
@@ -95,6 +109,13 @@ export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
         </div>
         {open &&
           <Card className="fixed bottom-0 right-4 h-[550px]  md:w-[600px]  p-4 shadow-xl z-50 md:bottom-24 md:right-12 lg:bottom-0 lg:right-12">
+
+            {/* Draft status indicator */}
+            <div className="absolute top-3 left-4 text-xs text-muted-foreground">
+              {draftStatus.saving && "Saving draft…"}
+              {!draftStatus.saving && draftStatus.lastSavedAt && "Draft saved"}
+              {draftStatus.dirty && !draftStatus.saving && !draftStatus.lastSavedAt && ""}
+            </div>
 
             <Button
               onClick={() => setOpen(false)}

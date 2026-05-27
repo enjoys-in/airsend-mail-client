@@ -2,6 +2,28 @@ import { Info } from "lucide-react"
 
 const CHANGE_LOGS = [
     {
+        date: "May 28, 2026",
+        version: "2",
+        color: "from-emerald-500 to-teal-600",
+        versionNumber: "2.6.0",
+        improvements: [
+            "Event Bridge Sync Service — Real-time IMAP ↔ Web client synchronization via socket events with Dexie as single source of truth",
+            "Sync Gate — Destructive actions (move, delete, flag) are blocked during sync; read and send always allowed",
+            "Optimistic Updates — Local changes write to IndexedDB instantly, rolled back if server rejects",
+            "Draft Auto-Save — Compose drafts saved automatically every 3 seconds with debounce, persisted to server and Dexie",
+            "Draft Recovery — Unsaved drafts flush on tab close (beforeunload), surviving accidental page refreshes",
+            "Sync Cursor Persistence — Last sync position stored in Dexie (sync_meta table), survives sessions for seamless reconnect",
+            "Event Deduplication — Prevents duplicate processing during replay/real-time overlap using eventId tracking",
+            "Msgpack Decoding — Real-time events decoded from binary msgpack for reduced bandwidth",
+            "Sync Overlay UI — Non-blocking progress indicator with transition-safe rendering (no layout shift)",
+            "Selective React Hooks — useSyncState, useCanMutate via useSyncExternalStore (no unnecessary re-renders)",
+        ],
+        bugfixes: [
+            "Fixed compose losing all content on unmount — drafts now persist across open/close cycles",
+            "Fixed potential re-render cascade from socket events — Dexie live queries update UI without prop drilling",
+        ]
+    },
+    {
         date: "May 25, 2026",
         version: "2",
         color: "from-blue-500 to-indigo-600",

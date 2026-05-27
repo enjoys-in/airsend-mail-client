@@ -165,6 +165,19 @@ export class API {
     static fetchMails() {
         return instance.get(`/api/v1/client/get`)
     }
+    // DRAFTS
+    static saveDraft(data: { to?: string[]; cc?: string[]; bcc?: string[]; subject?: string; html?: string; message_id?: string }) {
+        return instance.post<ApiResponse<{ message_id: string; uid: string }>>(`/api/v1/draft`, data)
+    }
+    static updateDraft(messageId: string, data: { to?: string[]; cc?: string[]; bcc?: string[]; subject?: string; html?: string }) {
+        return instance.put<ApiResponse<{ message_id: string; uid: string }>>(`/api/v1/draft/${messageId}`, data)
+    }
+    static deleteDraft(messageId: string) {
+        return instance.delete<ApiResponse<null>>(`/api/v1/draft/${messageId}`)
+    }
+    static getDrafts(query: string = "") {
+        return instance.get<ApiResponse<any[]>>(`/api/v1/drafts${query}`)
+    }
     // MAIL USER SETTING
     static handleGetMailUserSetting(key?: string | undefined) {
         return instance.get(`/api/v1/get-user-settings${key ? `?key=${key}` : ''}`)

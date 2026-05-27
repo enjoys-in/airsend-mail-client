@@ -30,11 +30,16 @@ interface StoredFiles {
   files: { blob: Blob; name: string; type: string }[]; // store blob + metadata
   tabId: string
 }
+interface SyncMeta {
+  key: string;
+  value: string;
+}
 type Tables = {
   mails: EntityTable<Partial<GetAllMailsPayload>, "message_id">;
   mailboxes: EntityTable<MailBoxListAPIResponse, "path">;
   settings: EntityTable<UserMailAccountSettings, "email">;
-  files: EntityTable<StoredFiles, "email">
+  files: EntityTable<StoredFiles, "email">;
+  sync_meta: EntityTable<SyncMeta, "key">;
 };
 
 type TableValue<T> = T extends Table<infer U, any> ? U : never;
@@ -209,15 +214,14 @@ const tables: TableSchema = {
   mailboxes: "++id, path,type,[path+type]",
   settings: "email",
   files: "email,[email+tabId]",
-
-  // attachments: "message_id"
+  sync_meta: "key",
 };
 
 const db = new Dexie("airsend") as Dexie & Tables;
-db.version(2.2)
+db.version(2.3)
   .stores(tables)
   .upgrade((tx) => {
-    // tx. objectStore('mails').index('message_id');
+    // Migration: added sync_meta table
   });
 class AirsendDB {
   constructor() {
