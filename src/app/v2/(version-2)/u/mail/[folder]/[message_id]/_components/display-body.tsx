@@ -105,10 +105,10 @@ export const MailDisplay = ({
       <Separator />
       <ScrollArea className="flex-1 flex flex-col overflow-auto border-t border-gray-300 dark:border-gray-800">
         {selectedMail && children}
-
-        {/* Gmail-style inline reply / forward box */}
-        <InlineReplyBox onPopOut={handlePopOut} />
       </ScrollArea>
+
+      {/* Gmail-style inline reply / forward box — fixed at bottom, outside scroll */}
+      <InlineReplyBox onPopOut={handlePopOut} />
     </Fragment>
   );
 };

@@ -155,21 +155,17 @@ const ClientDisplay = ({
                 </Button>
 
                 <div className="flex flex-col gap-1 min-w-0 flex-1 overflow-hidden">
-                    <div className="flex items-baseline gap-3 min-w-0">
-                        <h2 className="text-lg font-bold truncate min-w-0 flex-1">{decryptedSubject}</h2>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-                            {moment(selectedMail?.timestamp).format("MMM DD, YYYY hh:mm A")}
-                        </span>
-                    </div>
-                    {/* Mail status indicators */}
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <h2 className="text-lg font-bold truncate min-w-0">{decryptedSubject}</h2>
                         <MailStatusIndicators item={selectedMail as any} />
                         {(selectedMail?.has_attachments || (Array.isArray(selectedMail?.hasAttachment) && (selectedMail?.hasAttachment as any[]).length > 0)) && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
                                 <Paperclip className="w-3.5 h-3.5" />
-                                Attachments
                             </span>
                         )}
+                        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-auto">
+                            {moment(selectedMail?.timestamp).format("MMM DD, YYYY hh:mm A")}
+                        </span>
                     </div>
                 </div>
             </div>
