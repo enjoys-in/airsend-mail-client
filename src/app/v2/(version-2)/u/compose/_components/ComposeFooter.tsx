@@ -72,10 +72,13 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
           subject: data.subject === "" ? "no subject" : data.subject,
         },
         {
-          attachments: attachments.map((att) => {
-            const dir = att.id.split("-").pop();
-            return `${dir}/${att.file.name}`;
-          }),
+          attachments: attachments
+            .filter((att) => att.uploaded)
+            .map((att) => {
+              // ID format: "attachment-{uniqueDir}"
+              const dir = att.id.replace(/^attachment-/, "");
+              return `${dir}/${att.file.name}`;
+            }),
         },
         data.inReplyTo ? { inReplyTo: data.inReplyTo } : {},
         data.references ? { references: data.references } : {},
@@ -88,6 +91,17 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
           toInput.focus();
         }
         return toast.error("Please Enter Recipients");
+      }
+
+      // Block send if any recipient is invalid (red chip)
+      const allChipEmails = [...data.to, ...data.cc, ...data.bcc];
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const namedEmailRegex = /^.+<([^\s@]+@[^\s@]+\.[^\s@]+)>$/;
+      const hasInvalid = allChipEmails.some(
+        (e) => !emailRegex.test(e) && !namedEmailRegex.test(e)
+      );
+      if (hasInvalid) {
+        return toast.error("Please fix invalid email addresses before sending");
       }
 
       const res = await API.sendMailOG({

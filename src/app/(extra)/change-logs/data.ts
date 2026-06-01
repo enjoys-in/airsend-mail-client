@@ -1,5 +1,27 @@
 export const CHANGE_LOGS = [
     {
+        date: "June 1, 2026",
+        version: "2",
+        color: "from-rose-500 to-pink-600",
+        versionNumber: "2.6.1",
+        improvements: [
+            "HTML Sanitization — Reply/forward bodies now sanitized with DOMPurify to prevent XSS from malicious email content",
+            "Attachment Upload Verification — Upload success is now verified via HTTP status code; failed uploads are removed from UI",
+            "Attachment Path Consistency — Attachment IDs use a stable unique directory format, fixing path mismatches on send",
+            "Invalid Recipient Blocking — Send is blocked when any recipient chip is invalid (red), preventing bad emails from reaching API",
+            "Email Validation — 'Name <email>' format now accepted as valid across all compose and reply flows",
+            "Reply/Forward Buttons — Moved outside scroll area so they stay fixed at bottom of email preview",
+            "Status Icons Inline — Replied/forwarded/starred indicators now display inline with subject instead of on a separate line",
+            "Accessibility — All chip remove buttons now include aria-labels for screen readers",
+        ],
+        bugfixes: [
+            "Fixed ConstraintError when new mail received — duplicate insert from EventBridge and socket handler resolved by using putItem (upsert)",
+            "Fixed AI prompt timer leak — nested setTimeout/setInterval now stored in refs and cleaned up on unmount",
+            "Fixed swallowed errors in attachment upload/delete — errors now logged to console for debugging",
+            "Disabled MESSAGE_RECEIVED handler in EventBridge — custom @@NEW_MAIL_RECEIVED socket handles new mail with upsert semantics",
+        ]
+    },
+    {
         date: "May 28, 2026",
         version: "2",
         color: "from-emerald-500 to-teal-600",

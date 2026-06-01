@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import moment from "moment";
 import { toast } from "sonner";
+import DOMPurify from "dompurify";
 
 import { useMailStore } from "@/store/mails";
 import { useMultiTabStore } from "@/store/settings/multiTabSystem";
@@ -52,26 +53,50 @@ export function getDecryptedFields(mail: GetAllMailsPayload): DecryptedMailField
     };
 }
 
+/** Escape text for safe HTML interpolation */
+function escapeHtml(str: string): string {
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/** Sanitize untrusted HTML body content */
+function sanitizeBody(html: string): string {
+    return DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'b', 'i', 'u', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'hr'],
+        ALLOWED_ATTR: ['href', 'src', 'alt', 'style', 'target', 'rel', 'class'],
+    });
+}
+
 /** Build quoted reply body (HTML) */
 export function buildReplyBody(mail: GetAllMailsPayload, fields: DecryptedMailFields): string {
+    const safeFrom = escapeHtml(fields.fromEmail);
+    const safeBody = sanitizeBody(fields.plainText);
     return `<br/><br/>
 <div style="border-left:2px solid #ccc; padding-left:12px; margin-left:4px; color:#666;">
-<p>On ${moment(mail.timestamp).format("ddd, MMM DD, YYYY [at] hh:mm A")}, ${fields.fromEmail} wrote:</p>
-${fields.plainText}
+<p>On ${moment(mail.timestamp).format("ddd, MMM DD, YYYY [at] hh:mm A")}, ${safeFrom} wrote:</p>
+${safeBody}
 </div>`;
 }
 
 /** Build forwarded body (HTML) */
 export function buildForwardBody(mail: GetAllMailsPayload, fields: DecryptedMailFields): string {
+    const safeFrom = escapeHtml(fields.fromEmail);
+    const safeSubject = escapeHtml(fields.subject || "");
+    const safeTo = escapeHtml(fields.recipient || "");
+    const safeBody = sanitizeBody(fields.plainText);
     return `<br/><br/>
 <div style="border-left:2px solid #ccc; padding-left:12px; margin-left:4px; color:#666;">
 <p>---------- Forwarded message ----------</p>
-<p>From: ${fields.fromEmail}</p>
+<p>From: ${safeFrom}</p>
 <p>Date: ${moment(mail.timestamp).format("ddd, MMM DD, YYYY [at] hh:mm A")}</p>
-<p>Subject: ${fields.subject || ""}</p>
-<p>To: ${fields.recipient || ""}</p>
+<p>Subject: ${safeSubject}</p>
+<p>To: ${safeTo}</p>
 <br/>
-${fields.plainText}
+${safeBody}
 </div>`;
 }
 

@@ -232,7 +232,8 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
   const sendFilesToServer = async (files: any[], onUploaded?: (file: File, id: string, serverPath: string) => void) => {
     try {
       files.forEach((file) => {
-        const id = `attachment-${file.name}-${moment().format("YYYYMMDD")}`;
+        const uniqueDir = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const id = `attachment-${uniqueDir}`;
         const abort = new AbortController();
 
         const newAttachment: AttachmentWithProgress = {
@@ -266,20 +267,25 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
         };
 
         xhr.onload = () => {
-          setAttachments((prev) =>
-            prev.map((u) =>
-              u.id === id ? { ...u, progress: 100, uploaded: true } : u
-            )
-          );
-          if (onUploaded) {
-            const dir = id.split("-").pop();
-            const serverPath = `${dir}/${file.name}`;
-            onUploaded(file, id, serverPath);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setAttachments((prev) =>
+              prev.map((u) =>
+                u.id === id ? { ...u, progress: 100, uploaded: true } : u
+              )
+            );
+            if (onUploaded) {
+              const serverPath = `${uniqueDir}/${file.name}`;
+              onUploaded(file, id, serverPath);
+            }
+          } else {
+            console.error("Upload failed with status:", xhr.status, file.name);
+            setAttachments((prev) => prev.filter((u) => u.id !== id));
           }
         };
 
         xhr.onerror = () => {
-          console.error("Upload failed:", file.name);
+          console.error("Upload network error:", file.name);
+          setAttachments((prev) => prev.filter((u) => u.id !== id));
         };
 
 
@@ -290,12 +296,11 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
 
 
     } catch (error) {
-
+      console.error("sendFilesToServer error:", error);
     }
   }
   const removeAttachment = async (attachmentId: string) => {
     try {
-
       if (attachments.length > 0) {
         const file = attachments.filter(att => att.id === attachmentId)[0]
 
@@ -306,14 +311,11 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
             ofss.deleteFile(currAccount!.email, currentTabId, fileName)
             setAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
           }
-
         }
       }
     } catch (error) {
-
+      console.error("removeAttachment error:", error);
     }
-
-
   }
   const fetchUploadedFiles = React.useCallback(async () => {
     if (!currAccount?.email) return;

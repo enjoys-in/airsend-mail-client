@@ -331,6 +331,7 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
                     <button
                       onClick={() => removeChip(chip.id, "to")}
                       className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 mr-1"
+                      aria-label={`Remove ${chip.email}`}
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -392,6 +393,7 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
                       <button
                         onClick={() => removeChip(chip.id, "cc")}
                         className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 mr-1"
+                        aria-label={`Remove ${chip.email}`}
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -452,6 +454,7 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
                       <button
                         onClick={() => removeChip(chip.id, "bcc")}
                         className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 mr-1"
+                        aria-label={`Remove ${chip.email}`}
                       >
                         <X className="w-3 h-3" />
                       </button>

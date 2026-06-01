@@ -38,7 +38,9 @@ interface EmailChip {
 }
 
 function validateEmail(email: string) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const plain = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const named = /^.+<([^\s@]+@[^\s@]+\.[^\s@]+)>$/.test(email);
+    return plain || named;
 }
 
 function ChipInput({
@@ -95,6 +97,7 @@ function ChipInput({
                             type="button"
                             onClick={() => setChips((prev) => prev.filter((c) => c.id !== chip.id))}
                             className="hover:bg-black/10 rounded-full p-0.5"
+                            aria-label={`Remove ${chip.email}`}
                         >
                             <X className="w-2.5 h-2.5" />
                         </button>
@@ -221,6 +224,13 @@ export default function InlineReplyBox({ onPopOut }: InlineReplyBoxProps) {
 
         if (toList.length === 0) {
             toast.error("Please add at least one recipient");
+            return;
+        }
+
+        // Block send if any recipient chip is invalid
+        const hasInvalid = [...toChips, ...ccChips].some((c) => !c.isValid);
+        if (hasInvalid) {
+            toast.error("Please fix invalid email addresses before sending");
             return;
         }
 

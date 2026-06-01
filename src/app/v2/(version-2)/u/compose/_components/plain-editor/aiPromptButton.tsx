@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Wand2, Sparkles, X, Minimize2, Maximize2 } from 'lucide-react';
 
 const AiPromptButton: React.FC = () => {
@@ -10,6 +10,8 @@ const AiPromptButton: React.FC = () => {
     const [isFullWidth, setIsFullWidth] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const typewriterRef = useRef<NodeJS.Timeout | null>(null);
 
     // Auto-resize textarea
     useEffect(() => {
@@ -25,6 +27,14 @@ const AiPromptButton: React.FC = () => {
             textareaRef.current.focus();
         }
     }, [showPrompt]);
+
+    // Cleanup timers on unmount
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            if (typewriterRef.current) clearTimeout(typewriterRef.current);
+        };
+    }, []);
 
     // Handle clicks outside modal
     useEffect(() => {
@@ -54,14 +64,14 @@ const AiPromptButton: React.FC = () => {
         const mockResponse = `I understand you're asking about: "${promptText}". But This is feature is under developement, we are working on it.`;
 
         // Simulate typing effect
-        setTimeout(() => {
+        timerRef.current = setTimeout(() => {
             setLoading(false);
             let i = 0;
             const typeWriter = () => {
                 if (i < mockResponse.length) {
                     setResponseText(mockResponse.slice(0, i + 1));
                     i++;
-                    setTimeout(typeWriter, 20);
+                    typewriterRef.current = setTimeout(typeWriter, 20);
                 }
             };
             typeWriter();

@@ -251,7 +251,7 @@ const handleLabelRemoved: EventHandler<LabelPayload> = async (event) => {
 // ─── Handler Registry ───
 
 export const eventHandlerMap: Partial<Record<BridgeEvent, EventHandler<any>>> = {
-  [BridgeEvent.MESSAGE_RECEIVED]: handleMessageReceived,
+  // [BridgeEvent.MESSAGE_RECEIVED]: handleMessageReceived, // handled by custom @@NEW_MAIL_RECEIVED socket
   [BridgeEvent.MESSAGE_SENT]: handleMessageReceived, // same shape as received
   [BridgeEvent.MESSAGE_DELETED]: handleMessageDeleted,
   [BridgeEvent.MESSAGE_TRASHED]: handleMessageTrashed,
