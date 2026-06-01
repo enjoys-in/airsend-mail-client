@@ -35,8 +35,9 @@ const NewMailRecived = () => {
             setHasNewMessage(true);
             audio.play()
 
-            // Store in IDB first
-            await airsendDB.addItem("mails", obj)
+            // Store in IDB (use putItem to upsert — avoids ConstraintError
+            // when EventBridge's message.received handler already inserted it)
+            await airsendDB.putItem("mails", obj)
 
             // Only prepend to the mail list if the incoming mail belongs
             // to the folder the user is currently viewing

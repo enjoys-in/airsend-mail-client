@@ -64,7 +64,9 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
   const [attachments, setAttachments] = useState<any[]>([]);
   function validateEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    // Support "Name <email>" format
+    const namedEmailRegex = /^.+<([^\s@]+@[^\s@]+\.[^\s@]+)>$/;
+    return emailRegex.test(email) || namedEmailRegex.test(email);
   }
 
   const addChip = useCallback((email: string, type: "to" | "cc" | "bcc") => {
