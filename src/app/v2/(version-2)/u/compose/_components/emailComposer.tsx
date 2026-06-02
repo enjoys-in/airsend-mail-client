@@ -11,8 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
-import { ArrowLeft, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, X, Mail, Copy, ExternalLink } from "lucide-react";
 import { useState, useCallback, type KeyboardEvent, useEffect } from "react";
 import { HtmlEditor } from "./plain-editor/htmlEditor";
 
@@ -24,6 +29,27 @@ interface EmailChip {
   id: string;
   email: string;
   isValid: boolean;
+}
+
+/** Parse "Name <email>" format — returns { name, address } or just { address } for plain emails */
+function parseEmailChip(raw: string): { name: string | null; address: string } {
+  const match = raw.match(/^(.+?)\s*<([^\s@]+@[^\s@]+\.[^\s@]+)>$/);
+  if (match) {
+    return { name: match[1].trim(), address: match[2] };
+  }
+  return { name: null, address: raw };
+}
+
+/** Get display label for a chip */
+function getChipDisplay(raw: string): string {
+  const { name } = parseEmailChip(raw);
+  return name || raw;
+}
+
+/** Get the first character for avatar */
+function getChipInitial(raw: string): string {
+  const { name, address } = parseEmailChip(raw);
+  return (name || address).charAt(0).toUpperCase();
 }
 
 export interface ComposeInitialData {
@@ -303,39 +329,57 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
       min-h-[36px] focus-within:ring-0 focus-within:border-purple-500"
               >
                 {toChips.map((chip) => (
-                  <div
-                    key={chip.id}
-                    className={`flex items-center text-xs font-medium overflow-hidden border 
+                  <Popover key={chip.id}>
+                    <PopoverTrigger asChild>
+                      <div
+                        className={`flex items-center text-xs font-medium overflow-hidden border cursor-pointer
           ${chip.isValid
-                        ? "bg-purple-50 dark:bg-purple-900/40 border-purple-200 dark:border-purple-700 text-purple-800 dark:text-purple-200"
-                        : "bg-red-50 dark:bg-red-900/40 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200"
-                      } rounded-full`}
-                  >
-                    {/* Avatar pill */}
-                    <div className="flex items-center">
-                      <span
-                        className={`w-5 h-5 flex items-center justify-center rounded-full text-white text-[10px]
-              ${chip.isValid
-                            ? "bg-purple-500 dark:bg-purple-700"
-                            : "bg-red-500 dark:bg-red-700"
-                          }`}
+                            ? "bg-purple-50 dark:bg-purple-900/40 border-purple-200 dark:border-purple-700 text-purple-800 dark:text-purple-200"
+                            : "bg-red-50 dark:bg-red-900/40 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200"
+                          } rounded-full`}
                       >
-                        {chip.email.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                        {/* Avatar pill */}
+                        <div className="flex items-center">
+                          <span
+                            className={`w-5 h-5 flex items-center justify-center rounded-full text-white text-[10px]
+              ${chip.isValid
+                                ? "bg-purple-500 dark:bg-purple-700"
+                                : "bg-red-500 dark:bg-red-700"
+                              }`}
+                          >
+                            {getChipInitial(chip.email)}
+                          </span>
+                        </div>
 
-                    {/* Email text */}
-                    <span className="px-2 truncate text-xs">{chip.email}</span>
+                        {/* Display name or email */}
+                        <span className="px-2 truncate text-xs">{getChipDisplay(chip.email)}</span>
 
-                    {/* Remove button */}
-                    <button
-                      onClick={() => removeChip(chip.id, "to")}
-                      className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 mr-1"
-                      aria-label={`Remove ${chip.email}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
+                        {/* Remove button */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeChip(chip.id, "to"); }}
+                          className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 mr-1"
+                          aria-label={`Remove ${chip.email}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-3" side="bottom" align="start">
+                      <div className="flex flex-col items-center gap-2">
+                        <Avatar className="w-12 h-12">
+                          <AvatarFallback className="bg-pink-500 text-white text-lg">
+                            {getChipInitial(chip.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="text-center">
+                          {parseEmailChip(chip.email).name && (
+                            <p className="font-semibold text-sm">{parseEmailChip(chip.email).name}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">{parseEmailChip(chip.email).address}</p>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 ))}
 
                 {/* Input */}
@@ -363,41 +407,52 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
               <div className="flex-1">
                 <div className="flex flex-wrap gap-2 p-2 border-0 border-b border-gray-300 dark:border-gray-700 min-h-[36px] focus-within:ring-0 focus-within:border-purple-500">
                   {ccChips.map((chip) => (
-                    <div
-                      key={chip.id}
-                      className={`flex items-center text-xs font-medium overflow-hidden border 
+                    <Popover key={chip.id}>
+                      <PopoverTrigger asChild>
+                        <div
+                          className={`flex items-center text-xs font-medium overflow-hidden border cursor-pointer
               ${chip.isValid
-                          ? "bg-purple-50 dark:bg-purple-900/40 border-purple-200 dark:border-purple-700 text-purple-800 dark:text-purple-200"
-                          : "bg-red-50 dark:bg-red-900/40 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200"
-                        } rounded-full`}
-                    >
-                      {/* Avatar pill start */}
-                      <div className="flex items-center">
-                        <span
-                          className={`w-5 h-5 flex items-center justify-center rounded-full text-white text-[10px]
-                  ${chip.isValid
-                              ? "bg-purple-500 dark:bg-purple-700"
-                              : "bg-red-500 dark:bg-red-700"
-                            }`}
+                              ? "bg-purple-50 dark:bg-purple-900/40 border-purple-200 dark:border-purple-700 text-purple-800 dark:text-purple-200"
+                              : "bg-red-50 dark:bg-red-900/40 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200"
+                            } rounded-full`}
                         >
-                          {chip.email.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-
-                      {/* Email text */}
-                      <span className="px-2 truncate text-xs">
-                        {chip.email}
-                      </span>
-
-                      {/* Remove button */}
-                      <button
-                        onClick={() => removeChip(chip.id, "cc")}
-                        className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 mr-1"
-                        aria-label={`Remove ${chip.email}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
+                          <div className="flex items-center">
+                            <span
+                              className={`w-5 h-5 flex items-center justify-center rounded-full text-white text-[10px]
+                  ${chip.isValid
+                                  ? "bg-purple-500 dark:bg-purple-700"
+                                  : "bg-red-500 dark:bg-red-700"
+                                }`}
+                            >
+                              {getChipInitial(chip.email)}
+                            </span>
+                          </div>
+                          <span className="px-2 truncate text-xs">{getChipDisplay(chip.email)}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeChip(chip.id, "cc"); }}
+                            className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 mr-1"
+                            aria-label={`Remove ${chip.email}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-3" side="bottom" align="start">
+                        <div className="flex flex-col items-center gap-2">
+                          <Avatar className="w-12 h-12">
+                            <AvatarFallback className="bg-pink-500 text-white text-lg">
+                              {getChipInitial(chip.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="text-center">
+                            {parseEmailChip(chip.email).name && (
+                              <p className="font-semibold text-sm">{parseEmailChip(chip.email).name}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground">{parseEmailChip(chip.email).address}</p>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   ))}
                   <input
                     value={ccInput}
@@ -424,41 +479,52 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
               <div className="flex-1">
                 <div className="flex flex-wrap gap-2 p-2 border-0 border-b border-gray-300 dark:border-gray-700 min-h-[36px] focus-within:ring-0 focus-within:border-purple-500">
                   {bccChips.map((chip) => (
-                    <div
-                      key={chip.id}
-                      className={`flex items-center text-xs font-medium overflow-hidden border 
+                    <Popover key={chip.id}>
+                      <PopoverTrigger asChild>
+                        <div
+                          className={`flex items-center text-xs font-medium overflow-hidden border cursor-pointer
               ${chip.isValid
-                          ? "bg-purple-50 dark:bg-purple-900/40 border-purple-200 dark:border-purple-700 text-purple-800 dark:text-purple-200"
-                          : "bg-red-50 dark:bg-red-900/40 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200"
-                        } rounded-full`}
-                    >
-                      {/* Avatar pill */}
-                      <div className="flex items-center">
-                        <span
-                          className={`w-5 h-5 flex items-center justify-center rounded-full text-white text-[10px]
-                  ${chip.isValid
-                              ? "bg-purple-500 dark:bg-purple-700"
-                              : "bg-red-500 dark:bg-red-700"
-                            }`}
+                              ? "bg-purple-50 dark:bg-purple-900/40 border-purple-200 dark:border-purple-700 text-purple-800 dark:text-purple-200"
+                              : "bg-red-50 dark:bg-red-900/40 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200"
+                            } rounded-full`}
                         >
-                          {chip.email.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-
-                      {/* Email text */}
-                      <span className="px-2 truncate text-xs">
-                        {chip.email}
-                      </span>
-
-                      {/* Remove button */}
-                      <button
-                        onClick={() => removeChip(chip.id, "bcc")}
-                        className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 mr-1"
-                        aria-label={`Remove ${chip.email}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
+                          <div className="flex items-center">
+                            <span
+                              className={`w-5 h-5 flex items-center justify-center rounded-full text-white text-[10px]
+                  ${chip.isValid
+                                  ? "bg-purple-500 dark:bg-purple-700"
+                                  : "bg-red-500 dark:bg-red-700"
+                                }`}
+                            >
+                              {getChipInitial(chip.email)}
+                            </span>
+                          </div>
+                          <span className="px-2 truncate text-xs">{getChipDisplay(chip.email)}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeChip(chip.id, "bcc"); }}
+                            className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 mr-1"
+                            aria-label={`Remove ${chip.email}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-3" side="bottom" align="start">
+                        <div className="flex flex-col items-center gap-2">
+                          <Avatar className="w-12 h-12">
+                            <AvatarFallback className="bg-pink-500 text-white text-lg">
+                              {getChipInitial(chip.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="text-center">
+                            {parseEmailChip(chip.email).name && (
+                              <p className="font-semibold text-sm">{parseEmailChip(chip.email).name}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground">{parseEmailChip(chip.email).address}</p>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   ))}
 
                   {/* Input field */}

@@ -12,6 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useMailStore } from "@/store/mails";
 import { useAppSelector } from "@/store/hooks";
 import { API } from "@/lib/api/handler";
@@ -41,6 +47,23 @@ function validateEmail(email: string) {
     const plain = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const named = /^.+<([^\s@]+@[^\s@]+\.[^\s@]+)>$/.test(email);
     return plain || named;
+}
+
+/** Parse "Name <email>" format */
+function parseEmailChip(raw: string): { name: string | null; address: string } {
+    const match = raw.match(/^(.+?)\s*<([^\s@]+@[^\s@]+\.[^\s@]+)>$/);
+    if (match) return { name: match[1].trim(), address: match[2] };
+    return { name: null, address: raw };
+}
+
+function getChipDisplay(raw: string): string {
+    const { name } = parseEmailChip(raw);
+    return name || raw;
+}
+
+function getChipInitial(raw: string): string {
+    const { name, address } = parseEmailChip(raw);
+    return (name || address).charAt(0).toUpperCase();
 }
 
 function ChipInput({
@@ -85,23 +108,41 @@ function ChipInput({
             <span className="text-xs text-muted-foreground w-8 pt-1.5 shrink-0">{label}</span>
             <div className="flex flex-wrap gap-1.5 flex-1 min-h-[28px] items-center">
                 {chips.map((chip) => (
-                    <span
-                        key={chip.id}
-                        className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${chip.isValid
-                            ? "bg-primary/10 border-primary/20 text-primary"
-                            : "bg-destructive/10 border-destructive/20 text-destructive"
-                            }`}
-                    >
-                        {chip.email}
-                        <button
-                            type="button"
-                            onClick={() => setChips((prev) => prev.filter((c) => c.id !== chip.id))}
-                            className="hover:bg-black/10 rounded-full p-0.5"
-                            aria-label={`Remove ${chip.email}`}
-                        >
-                            <X className="w-2.5 h-2.5" />
-                        </button>
-                    </span>
+                    <Popover key={chip.id}>
+                        <PopoverTrigger asChild>
+                            <span
+                                className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border cursor-pointer ${chip.isValid
+                                    ? "bg-primary/10 border-primary/20 text-primary"
+                                    : "bg-destructive/10 border-destructive/20 text-destructive"
+                                    }`}
+                            >
+                                {getChipDisplay(chip.email)}
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setChips((prev) => prev.filter((c) => c.id !== chip.id)); }}
+                                    className="hover:bg-black/10 rounded-full p-0.5"
+                                    aria-label={`Remove ${chip.email}`}
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                            </span>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-3" side="bottom" align="start">
+                            <div className="flex flex-col items-center gap-2">
+                                <Avatar className="w-10 h-10">
+                                    <AvatarFallback className="bg-pink-500 text-white">
+                                        {getChipInitial(chip.email)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="text-center">
+                                    {parseEmailChip(chip.email).name && (
+                                        <p className="font-semibold text-xs">{parseEmailChip(chip.email).name}</p>
+                                    )}
+                                    <p className="text-[11px] text-muted-foreground">{parseEmailChip(chip.email).address}</p>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 ))}
                 <input
                     value={input}
