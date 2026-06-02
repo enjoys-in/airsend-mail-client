@@ -37,7 +37,7 @@ interface EmailData {
   references?: string[];
   thread_id?: string;
 }
-const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
+const ComposeFooter: React.FC<{ data: EmailData; onDiscardDraft?: () => Promise<void> }> = ({ data, onDiscardDraft }) => {
   const { getHTML, setHTML, attachments } = useHtmlEditor();
   const { currAccount } = useAppSelector((state) => state.accounts);
   const { focusedTab, closeTab } = useMultiTabStore();
@@ -145,6 +145,8 @@ const ComposeFooter: React.FC<{ data: EmailData }> = ({ data }) => {
         uid: res.data.result.uid,
       };
       await airsendDB.addNestedItem("mails", res.data.result.message_id, obj as any);
+      // Discard the draft since the email was sent successfully
+      if (onDiscardDraft) await onDiscardDraft();
       toast.success("Email sent successfully");
       closeTab(focusedTab);
     } catch (error: any) {

@@ -18,12 +18,13 @@ import {
 } from "@/components/ui/popover";
 
 import { ArrowLeft, ChevronDown, X, Mail, Copy, ExternalLink } from "lucide-react";
-import { useState, useCallback, type KeyboardEvent, useEffect } from "react";
+import { useState, useCallback, type KeyboardEvent, useEffect, useRef } from "react";
 import { HtmlEditor } from "./plain-editor/htmlEditor";
 
 import ComposeFooter from "./ComposeFooter";
 import { useAppSelector } from "@/store/hooks";
 import { airsendDB } from "@/db";
+import { useDraftAutoSave } from "@/lib/event-bridge/useDraftAutoSave";
 
 interface EmailChip {
   id: string;
@@ -65,6 +66,17 @@ export interface ComposeInitialData {
 
 export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?: boolean; tabId?: number; initialData?: ComposeInitialData }) {
   const { currAccount, accounts } = useAppSelector((state) => state.accounts);
+
+  // ─── Draft Auto-Save ───
+  const { update: updateDraft, flush: flushDraft, discard: discardDraft, status: draftStatus } = useDraftAutoSave({
+    initialData: {
+      to: initialData?.to,
+      cc: initialData?.cc,
+      bcc: initialData?.bcc,
+      subject: initialData?.subject,
+      html: initialData?.body,
+    },
+  });
 
   const [selectedAccount, setSelectedAccount] = useState({
     email: currAccount?.email || "",
@@ -191,6 +203,25 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
         }
       })
   }, [selectedAccount?.email]);
+
+  // ─── Push field changes to draft auto-save ───
+  const draftUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    // Debounce slightly to avoid excessive calls during rapid typing
+    if (draftUpdateTimer.current) clearTimeout(draftUpdateTimer.current);
+    draftUpdateTimer.current = setTimeout(() => {
+      updateDraft({
+        to: toChips.map((c) => c.email),
+        cc: ccChips.map((c) => c.email),
+        bcc: bccChips.map((c) => c.email),
+        subject,
+        html: body,
+      });
+    }, 500);
+    return () => {
+      if (draftUpdateTimer.current) clearTimeout(draftUpdateTimer.current);
+    };
+  }, [toChips, ccChips, bccChips, subject, body, updateDraft]);
   return (
     <div className="w-full h-full flex flex-col bg-background text-foreground transition-colors">
       {showHeader && (
@@ -567,18 +598,21 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
           setAttachments={setAttachments}
           onChange={(html) => setBody(html)}
           tabId={tabId}
-          footerElement={<ComposeFooter data={{
-            from: `${selectedAccount?.name} <${selectedAccount.email}>`,
-            to: toChips.map((chip) => chip.email),
-            cc: ccChips.map((chip) => chip.email),
-            bcc: bccChips.map((chip) => chip.email),
-            subject,
-            html: body,
-            attachments,
-            ...(initialData?.inReplyTo ? { inReplyTo: initialData.inReplyTo } : {}),
-            ...(initialData?.references ? { references: initialData.references } : {}),
-            ...(initialData?.thread_id ? { thread_id: initialData.thread_id } : {}),
-          }} />}
+          footerElement={<ComposeFooter
+            onDiscardDraft={discardDraft}
+            data={{
+              from: `${selectedAccount?.name} <${selectedAccount.email}>`,
+              to: toChips.map((chip) => chip.email),
+              cc: ccChips.map((chip) => chip.email),
+              bcc: bccChips.map((chip) => chip.email),
+              subject,
+              html: body,
+              attachments,
+              ...(initialData?.inReplyTo ? { inReplyTo: initialData.inReplyTo } : {}),
+              ...(initialData?.references ? { references: initialData.references } : {}),
+              ...(initialData?.thread_id ? { thread_id: initialData.thread_id } : {}),
+            }}
+          />}
           defaultValue={initialData?.body || ``}
         />
       </div>
