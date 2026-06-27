@@ -322,12 +322,6 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
               components={{
                 DayContent: DayContentWithDots,
               }}
-              classNames={{
-                day_button:
-                  "transition-none! hover:not-in-data-selected:bg-sidebar-accent group-[.range-middle]:group-data-selected:bg-sidebar-accent text-sidebar-foreground in-data-selected:text-primary-foreground in-data-selected:font-medium",
-                today: "*:after:transition-none",
-                outside: "data-selected:bg-sidebar-accent/50",
-              } as any}
             />
           </div>
         </SidebarHeader>
