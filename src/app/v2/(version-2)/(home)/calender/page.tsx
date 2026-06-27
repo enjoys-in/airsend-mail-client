@@ -19,7 +19,7 @@ const CalendarPage = () => {
   // Calendar not enabled — show setup prompt
   if (!canAccessCalendar) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/10 p-8">
+      <div className="flex h-[calc(100svh-3.5rem)] md:h-[calc(100svh-3rem)] w-full flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/10 p-8">
         <CalendarX2 className="h-16 w-16 text-muted-foreground/50" />
         <div className="text-center space-y-2">
           <h3 className="text-lg font-semibold text-foreground">
@@ -40,7 +40,7 @@ const CalendarPage = () => {
   }
 
   return (
-    <div className="flex flex-1 flex-col h-full overflow-hidden">
+    <div className="flex flex-1 flex-col h-[calc(100svh-3.5rem)] md:h-[calc(100svh-3rem)] overflow-hidden">
       <BigCalendar />
     </div>
   )
