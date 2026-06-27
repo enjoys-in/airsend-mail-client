@@ -322,6 +322,10 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
               components={{
                 DayContent: DayContentWithDots,
               }}
+              classNames={{
+                selected:
+                  "!bg-primary !text-primary-foreground hover:!bg-primary hover:!text-primary-foreground focus:!bg-primary focus:!text-primary-foreground",
+              }}
             />
           </div>
         </SidebarHeader>
