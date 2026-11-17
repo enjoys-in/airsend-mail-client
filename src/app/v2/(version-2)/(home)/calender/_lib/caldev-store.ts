@@ -102,6 +102,10 @@ interface CalDevState {
   removeSubscription: (id: string, deleteCalendar?: boolean) => Promise<void>;
   triggerSync: (id: string) => Promise<void>;
 
+  // Live updates (SSE /jmap/eventsource — UI_GUIDE §10)
+  startLiveSync: () => void;
+  stopLiveSync: () => void;
+
   // Reset
   reset: () => void;
 }
@@ -127,6 +131,39 @@ const initialState = {
 
 /** Range requested while a fetch was in flight (replayed afterwards). */
 let pendingFetch: { after: string; before: string; force: boolean } | null = null;
+
+function errMessage(err: unknown): string | undefined {
+  return err instanceof Error && err.message ? err.message : undefined;
+}
+
+/**
+ * Merge an update into an event. `recurrence_overrides` is a PATCH of the
+ * overrides map (a null value removes that override), like the server does.
+ */
+function applyEventUpdates(e: CalDevEvent, updates: Partial<CalDevEvent>): CalDevEvent {
+  const { recurrence_overrides, ...rest } = updates;
+  const next: CalDevEvent = { ...e, ...rest };
+  if (recurrence_overrides) {
+    const merged = { ...(e.recurrence_overrides || {}) };
+    for (const [k, v] of Object.entries(recurrence_overrides)) {
+      if (v === null) delete merged[k];
+      else merged[k] = { ...(merged[k] || {}), ...v };
+    }
+    next.recurrence_overrides = merged;
+  }
+  return next;
+}
+
+// ---------------------------------------------------------------------------
+// Live stream (one EventSource; reconnects with backoff — the server closes
+// every stream after 30 min on purpose)
+// ---------------------------------------------------------------------------
+let liveES: EventSource | null = null;
+let liveTimer: ReturnType<typeof setTimeout> | null = null;
+let liveBackoff = 1000;
+let liveFailures = 0; // consecutive failures without a successful open
+let liveWanted = false;
+let calendarState = "";
 
 export const useCalDevStore = create<CalDevState>()((set, get) => ({
   ...initialState,
@@ -269,7 +306,7 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
 
     set({ eventsLoading: true });
     try {
-      const events = await api.queryAndFetchEvents(accountId, mergedRange);
+      const { events, state } = await api.queryAndFetchEvents(accountId, mergedRange);
 
       // Keep optimistic (not yet confirmed) events created during the fetch
       const pendingTemp = get().rawEvents.filter((e) => e.id?.startsWith("temp-"));
@@ -278,6 +315,7 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
         rawEvents: pendingTemp.length ? [...events, ...pendingTemp] : events,
         eventsLoading: false,
         lastFetchRange: mergedRange,
+        ...(state && { eventsSyncState: state }),
       });
     } catch {
       set({ eventsLoading: false });
@@ -306,7 +344,7 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
 
     try {
       const created = await api.createEvent(accountId, payload);
-      if (created) {
+      if (created?.id) {
         // Replace temp event with real server event
         const fullEvent = buildFullEvent(payload, created);
         set((s) => ({
@@ -321,10 +359,10 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
       set({ rawEvents: prev });
       toast.error("Failed to create event");
       return null;
-    } catch {
+    } catch (err) {
       // Rollback on failure
       set({ rawEvents: prev });
-      toast.error("Failed to create event");
+      toast.error("Failed to create event", { description: errMessage(err) });
       return null;
     }
   },
@@ -337,21 +375,15 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
     const prev = get().rawEvents;
     set((s) => ({
       rawEvents: s.rawEvents.map((e) =>
-        e.id === eventId ? { ...e, ...updates } : e,
+        e.id === eventId ? applyEventUpdates(e, updates) : e,
       ),
     }));
 
     try {
-      const ok = await api.updateEvent(accountId, eventId, updates);
-      if (!ok) {
-        // Revert on failure
-        set({ rawEvents: prev });
-        toast.error("Failed to update event");
-      }
-      return ok;
-    } catch {
+      return await api.updateEvent(accountId, eventId, updates);
+    } catch (err) {
       set({ rawEvents: prev });
-      toast.error("Failed to update event");
+      toast.error("Failed to update event", { description: errMessage(err) });
       return false;
     }
   },
@@ -367,15 +399,10 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
     }));
 
     try {
-      const ok = await api.deleteEvent(accountId, eventId);
-      if (!ok) {
-        set({ rawEvents: prev });
-        toast.error("Failed to delete event");
-      }
-      return ok;
-    } catch {
+      return await api.deleteEvent(accountId, eventId);
+    } catch (err) {
       set({ rawEvents: prev });
-      toast.error("Failed to delete event");
+      toast.error("Failed to delete event", { description: errMessage(err) });
       return false;
     }
   },
@@ -393,15 +420,10 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
     }));
 
     try {
-      const ok = await api.updateEvent(accountId, eventId, { dtstart, dtend });
-      if (!ok) {
-        set({ rawEvents: prev });
-        toast.error("Failed to move event");
-      }
-      return ok;
-    } catch {
+      return await api.updateEvent(accountId, eventId, { dtstart, dtend });
+    } catch (err) {
       set({ rawEvents: prev });
-      toast.error("Failed to move event");
+      toast.error("Failed to move event", { description: errMessage(err) });
       return false;
     }
   },
@@ -485,10 +507,82 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   },
 
   // -----------------------------------------------------------------------
+  // Live updates — `state` frames say *that* something changed; refetch.
+  // -----------------------------------------------------------------------
+  startLiveSync: () => {
+    liveWanted = true;
+    liveFailures = 0;
+    if (liveES || liveTimer || typeof window === "undefined" || typeof EventSource === "undefined") return;
+
+    const open = () => {
+      liveTimer = null;
+      if (!liveWanted) return;
+      const base = (api.getCalDevBaseURL() || "").replace(/\/+$/, "");
+      if (!base) return;
+      // Auth: the access_token cookie (withCredentials), like every other CalDev call.
+      const es = new EventSource(`${base}/jmap/eventsource`, { withCredentials: true });
+      liveES = es;
+
+      es.addEventListener("state", (e) => {
+        try {
+          const data = JSON.parse((e as MessageEvent).data);
+          const changed = Object.values(data?.changed || {})[0] as
+            | { CalendarEvent?: string; Calendar?: string }
+            | undefined;
+          if (!changed) return;
+          const st = get();
+          if (changed.Calendar && changed.Calendar !== calendarState) {
+            const first = !calendarState;
+            calendarState = changed.Calendar;
+            if (!first) st.fetchCalendars();
+          }
+          if (changed.CalendarEvent && changed.CalendarEvent !== st.eventsSyncState) {
+            set({ eventsSyncState: changed.CalendarEvent });
+            const range = st.lastFetchRange;
+            if (range) st.fetchEvents(range.after, range.before, true);
+          }
+        } catch {
+          /* ignore malformed frames */
+        }
+      });
+      es.addEventListener("resync", () => {
+        const st = get();
+        st.fetchCalendars();
+        if (st.lastFetchRange) st.fetchEvents(st.lastFetchRange.after, st.lastFetchRange.before, true);
+      });
+      es.onopen = () => {
+        liveBackoff = 1000;
+        liveFailures = 0;
+      };
+      es.onerror = () => {
+        es.close();
+        if (liveES === es) liveES = null;
+        if (!liveWanted) return;
+        // Never connected after several tries (auth/CORS/unreachable): stop;
+        // the calendar still works, it just won't update live.
+        if (++liveFailures > 6) return;
+        liveTimer = setTimeout(open, liveBackoff);
+        liveBackoff = Math.min(liveBackoff * 2, 30_000);
+      };
+    };
+    open();
+  },
+
+  stopLiveSync: () => {
+    liveWanted = false;
+    if (liveTimer) clearTimeout(liveTimer);
+    liveTimer = null;
+    liveES?.close();
+    liveES = null;
+  },
+
+  // -----------------------------------------------------------------------
   // Reset
   // -----------------------------------------------------------------------
   reset: () => {
     pendingFetch = null;
+    get().stopLiveSync();
+    calendarState = "";
     set(initialState);
   },
 }));

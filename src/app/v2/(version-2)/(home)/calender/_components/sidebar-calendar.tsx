@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo, useCallback, useRef, createContext, useContext } from "react";
 import { useCalendarContext } from "./event-calendar/calendar-context";
 import { useCalDevStore } from "../_lib/caldev-store";
-import { hexToEventColor, type CalDevEvent } from "../_lib/caldev-types";
+import { hexToEventColor } from "../_lib/caldev-types";
+import { expandEvents } from "../_lib/recurrence";
 import { Calendar } from "@/components/ui/calendar";
 import type { DayButtonProps } from "react-day-picker";
 import { cn } from "@/lib/utils";
@@ -175,20 +176,24 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
     const rangeEnd = new Date(year, month + 1, 7);
 
     const dateMap = new Map<string, string[]>(); // "YYYY-MM-DD" → color hex[]
+    const colorOf = new Map(calendars.map((c) => [c.id, c.color]));
 
-    for (const ev of rawEvents) {
-      const start = new Date(ev.dtstart);
-      const end = new Date(ev.dtend || ev.dtstart);
-      if (end < rangeStart || start > rangeEnd) continue;
+    // Expanded occurrences (recurring series + all-day dates handled)
+    for (const ev of expandEvents(rawEvents, (id) => colorOf.get(id), rangeStart, rangeEnd)) {
+      const start = ev.start;
+      const end = ev.end;
+      if (ev.status === "CANCELLED") continue;
 
-      // Find the calendar to get its color
-      const cal = calendars.find((c) => c.id === ev.calendar_id);
-      if (!cal) continue;
-      const color = cal.color;
+      const color = ev.calendarId ? colorOf.get(ev.calendarId) : undefined;
+      if (!color) continue;
 
       // For multi-day events, place a dot on each day in range
       const cursor = new Date(Math.max(start.getTime(), rangeStart.getTime()));
-      const limit = new Date(Math.min(end.getTime(), rangeEnd.getTime()));
+      cursor.setHours(0, 0, 0, 0);
+      // an event ending exactly at midnight does not occupy the next day
+      const limit = new Date(
+        Math.min(Math.max(end.getTime() - 1, start.getTime()), rangeEnd.getTime()),
+      );
       while (cursor <= limit) {
         const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
         const existing = dateMap.get(key) || [];
@@ -204,18 +209,17 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
   const upcomingEvents = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const horizon = new Date(todayStart.getFullYear(), todayStart.getMonth() + 2, todayStart.getDate());
+    const colorOf = new Map(calendars.map((c) => [c.id, c.color]));
 
-    // Get future/current events sorted by start time
-    const future = rawEvents
-      .filter((e) => {
-        const end = new Date(e.dtend || e.dtstart);
-        return end >= now && e.status !== "CANCELLED";
-      })
-      .sort((a, b) => new Date(a.dtstart).getTime() - new Date(b.dtstart).getTime());
+    // Get future/current occurrences sorted by start time
+    const future = expandEvents(rawEvents, (id) => colorOf.get(id), todayStart, horizon)
+      .filter((e) => e.end >= now && e.status !== "CANCELLED")
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
 
     // Try to fill from today first
     const todayEvts = future.filter((e) => {
-      const s = new Date(e.dtstart);
+      const s = e.start;
       return s.getFullYear() === todayStart.getFullYear() &&
         s.getMonth() === todayStart.getMonth() &&
         s.getDate() === todayStart.getDate();
@@ -225,7 +229,7 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
 
     // Not enough today — grab the next upcoming events across any day
     return future.slice(0, 3);
-  }, [rawEvents]);
+  }, [rawEvents, calendars]);
 
   // ── Custom DayContent with event dots ──
   const handleSelect = (date: Date | undefined) => {
@@ -499,9 +503,9 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
               <SidebarGroupContent>
                 <div className="flex flex-col gap-0 px-2">
                   {upcomingEvents.map((ev, idx) => {
-                    const cal = calendars.find((c) => c.id === ev.calendar_id);
-                    const start = new Date(ev.dtstart);
-                    const end = ev.dtend ? new Date(ev.dtend) : null;
+                    const cal = calendars.find((c) => c.id === ev.calendarId);
+                    const start = ev.start;
+                    const end = ev.allDay ? null : ev.end;
                     const isToday = (() => {
                       const now = new Date();
                       return start.getFullYear() === now.getFullYear() &&
@@ -511,7 +515,7 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
                     const isExpanded = expandedEventId === ev.id;
 
                     const timeFmt = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                    const timeLabel = ev.all_day
+                    const timeLabel = ev.allDay
                       ? "All day"
                       : `${timeFmt(start)}${end ? ` – ${timeFmt(end)}` : ""}`;
 
@@ -523,7 +527,7 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
                     const nextEv = upcomingEvents[idx + 1];
                     let gapLabel: string | null = null;
                     if (nextEv && end) {
-                      const nextStart = new Date(nextEv.dtstart);
+                      const nextStart = nextEv.start;
                       const gapMs = nextStart.getTime() - end.getTime();
                       if (gapMs > 0) {
                         const gapMin = Math.round(gapMs / 60000);
@@ -555,7 +559,7 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
                             />
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium truncate text-sidebar-foreground">
-                                {ev.summary || "Untitled event"}
+                                {ev.title || "Untitled event"}
                               </p>
                               <div className="flex items-center gap-1 mt-0.5">
                                 <RiTimeLine size={11} className="shrink-0 text-muted-foreground/60" />

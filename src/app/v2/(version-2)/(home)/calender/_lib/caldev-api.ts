@@ -9,6 +9,7 @@ import type {
   CalDevEvent,
   CalDevSubscription,
   CalDevAppPassword,
+  CalDevAttendee,
   CalDevRestResponse,
   JMAPRequest,
   JMAPResponse,
@@ -37,6 +38,11 @@ const JMAP_USING = [
   "urn:ietf:params:jmap:core",
   "urn:ietf:params:jmap:calendars",
 ];
+
+/** CalDev server origin (used to open the SSE stream). */
+export function getCalDevBaseURL(): string {
+  return caldevInstance.defaults.baseURL || "";
+}
 
 // ---------------------------------------------------------------------------
 // Backend config-array helpers
@@ -127,6 +133,27 @@ async function jmapCall(
   return data;
 }
 
+/** `/set` success: the id is a key of `updated` (its value is null per RFC 8620). */
+function isUpdated(resp: JMAPMethodResponse | null, id: string): boolean {
+  const updated = resp?.updated;
+  return !!updated && !Array.isArray(updated) && Object.prototype.hasOwnProperty.call(updated, id);
+}
+
+/** Readable reason from a JMAP method error or a per-object notCreated/notUpdated/notDestroyed. */
+function setErrorMessage(
+  res: JMAPResponse,
+  callId: string,
+  bucket: "notCreated" | "notUpdated" | "notDestroyed",
+  id: string,
+): string | null {
+  const entry = res.methodResponses.find(([, , cid]) => cid === callId);
+  if (!entry) return "No response from calendar server";
+  const [name, body] = entry as [string, any, string];
+  if (name === "error") return body?.description || body?.type || "Calendar server error";
+  const err = (body?.[bucket] as Record<string, any> | undefined)?.[id];
+  return err ? err.description || err.type || "Rejected by calendar server" : null;
+}
+
 function findResponse(
   res: JMAPResponse,
   callId: string,
@@ -209,7 +236,8 @@ export async function updateCalendar(
     ],
   ]);
   const resp = findResponse(res, "c0");
-  return !!(resp?.updated as Record<string, any>)?.[calendarId];
+  // Success is `updated: { "<id>": null }` — the value is null, so check the key.
+  return isUpdated(resp, calendarId);
 }
 
 export async function deleteCalendar(
@@ -234,9 +262,26 @@ export async function deleteCalendar(
 // Payload converters – snake_case internal → camelCase JMAP
 // ---------------------------------------------------------------------------
 
+/** CalDev attendees → JMAP `participants` map (UI_GUIDE §5). */
+function toJMAPParticipants(
+  attendees: Array<Partial<CalDevAttendee> & { email: string }>,
+): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = {};
+  attendees
+    .filter((a) => a?.email)
+    .forEach((a, i) => {
+      out[String(i + 1)] = {
+        email: a.email,
+        name: a.display_name || "",
+        ...(a.status && { participationStatus: a.status }),
+        expectReply: a.rsvp ?? true,
+      };
+    });
+  return out;
+}
+
 function toJMAPCreatePayload(p: CreateEventPayload): Record<string, any> {
   const result: Record<string, any> = {
-    calendarId: p.calendar_id,
     title: p.summary,
     start: p.dtstart,
     description: p.description ?? "",
@@ -244,10 +289,14 @@ function toJMAPCreatePayload(p: CreateEventPayload): Record<string, any> {
     isAllDay: p.all_day ?? false,
     status: p.status ?? "CONFIRMED",
   };
+  // Omit calendarId → server uses the default writable calendar
+  if (p.calendar_id) result.calendarId = p.calendar_id;
   if (p.dtend) result.end = p.dtend;
-  if (p.recurrence_rule) result.recurrenceRule = p.recurrence_rule;
-  if (p.attendees) result.attendees = p.attendees;
-  if (p.categories) result.categories = p.categories;
+  // Always send the zone on timed events; never on all-day ones
+  if (!result.isAllDay && p.time_zone) result.timeZone = p.time_zone;
+  if (p.recurrence_rule) result.recurrenceRules = [{ rule: p.recurrence_rule }];
+  if (p.attendees?.length) result.participants = toJMAPParticipants(p.attendees);
+  // NOTE: never send `organizer` — the server sets it (UI_GUIDE §5)
   return result;
 }
 
@@ -259,11 +308,16 @@ function toJMAPUpdatePayload(p: UpdateEventPayload): Record<string, any> {
   if (p.dtstart !== undefined) result.start = p.dtstart;
   if (p.dtend !== undefined) result.end = p.dtend;
   if (p.all_day !== undefined) result.isAllDay = p.all_day;
+  if (p.time_zone !== undefined && p.all_day !== true) result.timeZone = p.time_zone;
   if (p.status !== undefined) result.status = p.status;
-  if (p.calendar_id !== undefined) result.calendarId = p.calendar_id;
-  if (p.recurrence_rule !== undefined) result.recurrenceRule = p.recurrence_rule;
-  if (p.attendees !== undefined) result.attendees = p.attendees;
-  if (p.categories !== undefined) result.categories = p.categories;
+  if (p.calendar_id) result.calendarId = p.calendar_id;
+  // "" → [] removes recurrence
+  if (p.recurrence_rule !== undefined) {
+    result.recurrenceRules = p.recurrence_rule ? [{ rule: p.recurrence_rule }] : [];
+  }
+  // replaces the guest list (removed guests get a cancellation)
+  if (p.attendees !== undefined) result.participants = toJMAPParticipants(p.attendees);
+  if (p.recurrence_overrides !== undefined) result.recurrenceOverrides = p.recurrence_overrides;
   return result;
 }
 
@@ -297,10 +351,14 @@ export async function queryEvents(
   return (resp?.ids as string[]) || [];
 }
 
+/** Max ids per CalendarEvent/get (server limit). */
+const QUERY_PAGE = 500;
+
 /**
- * Fetch events — uses CalendarEvent/get (all events) then filters client-side.
- * This is more reliable than CalendarEvent/query which depends on server-side
- * filter support and back-references.
+ * Fetch every series with an occurrence in [after, before) — UI_GUIDE §5:
+ * CalendarEvent/query + CalendarEvent/get with a `#ids` back-reference.
+ * `query` returns series (recurring ones included); the UI expands them.
+ * Returns the events and the CalendarEvent `state` (for live updates).
  */
 export async function queryAndFetchEvents(
   accountId: string,
@@ -309,17 +367,42 @@ export async function queryAndFetchEvents(
     after?: string;
     before?: string;
   },
-): Promise<CalDevEvent[]> {
-  // Get ALL events via CalendarEvent/get (no ids = return all)
-  const allEvents = await getEvents(accountId);
+): Promise<{ events: CalDevEvent[]; state: string }> {
+  const jmapFilter: Record<string, string> = {};
+  if (filter.calendarId) jmapFilter.calendarId = filter.calendarId;
+  if (filter.after) jmapFilter.after = toRFC3339(filter.after);
+  if (filter.before) jmapFilter.before = toRFC3339(filter.before);
 
-  // Client-side filter by date range + calendar
-  return allEvents.filter((e) => {
-    if (filter.calendarId && e.calendar_id !== filter.calendarId) return false;
-    if (filter.after && e.dtstart < filter.after) return false;
-    if (filter.before && e.dtstart > filter.before) return false;
-    return true;
-  });
+  const events: CalDevEvent[] = [];
+  let state = "";
+  for (let position = 0; position < 50 * QUERY_PAGE; position += QUERY_PAGE) {
+    const res = await jmapCall([
+      ["CalendarEvent/query", { accountId, filter: jmapFilter, position, limit: QUERY_PAGE }, "q0"],
+      [
+        "CalendarEvent/get",
+        { accountId, "#ids": { resultOf: "q0", name: "CalendarEvent/query", path: "/ids" } },
+        "g0",
+      ],
+    ]);
+    const err = res.methodResponses.find(([name]) => name === "error");
+    if (err) throw new Error((err[1] as any)?.description || (err[1] as any)?.type || "query failed");
+
+    const q = findResponse(res, "q0");
+    const g = findResponse(res, "g0");
+    events.push(...((g?.list as Record<string, any>[]) || []).map(normalizeJMAPEvent));
+    if (g?.state) state = g.state;
+
+    const ids = q?.ids || [];
+    const total = q?.total ?? ids.length;
+    if (ids.length < QUERY_PAGE || position + ids.length >= total) break;
+  }
+  return { events, state };
+}
+
+/** RFC 3339 without milliseconds (the server parses with time.RFC3339). */
+function toRFC3339(v: string): string {
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? v : d.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 export async function createEvent(
@@ -338,8 +421,12 @@ export async function createEvent(
     ],
   ]);
   const resp = findResponse(res, "e0");
+  // created.e1 is only { id, uid, etag } — the caller merges it with the payload
   const created = (resp?.created as Record<string, any>)?.["e1"];
-  return created ? normalizeJMAPEvent(created) : null;
+  if (!created) {
+    throw new Error(setErrorMessage(res, "e0", "notCreated", "e1") || "Failed to create event");
+  }
+  return created as CalDevEvent;
 }
 
 export async function updateEvent(
@@ -359,7 +446,9 @@ export async function updateEvent(
     ],
   ]);
   const resp = findResponse(res, "e0");
-  return !!(resp?.updated as Record<string, any>)?.[eventId];
+  // Success is `updated: { "<id>": null }` — check the key, not the value.
+  if (isUpdated(resp, eventId)) return true;
+  throw new Error(setErrorMessage(res, "e0", "notUpdated", eventId) || "Failed to update event");
 }
 
 export async function deleteEvent(
@@ -377,7 +466,8 @@ export async function deleteEvent(
     ],
   ]);
   const resp = findResponse(res, "e0");
-  return (resp?.destroyed || []).includes(eventId);
+  if ((resp?.destroyed || []).includes(eventId)) return true;
+  throw new Error(setErrorMessage(res, "e0", "notDestroyed", eventId) || "Failed to delete event");
 }
 
 export async function getEventChanges(

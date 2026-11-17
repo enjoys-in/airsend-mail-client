@@ -29,6 +29,7 @@ import {
   CalendarEvent,
   CalendarView,
   DayView,
+  EditScope,
   EventDialog,
   EventGap,
   EventHeight,
@@ -53,7 +54,8 @@ export interface EventCalendarProps {
   events?: CalendarEvent[];
   onEventAdd?: (event: CalendarEvent) => void;
   onEventUpdate?: (event: CalendarEvent) => void;
-  onEventDelete?: (eventId: string) => void;
+  /** scope: for a recurring occurrence, cancel only it ("occurrence") or the whole series */
+  onEventDelete?: (eventId: string, scope?: EditScope) => void;
   className?: string;
   initialView?: CalendarView;
 }
@@ -184,9 +186,9 @@ export function EventCalendar({
     setSelectedEvent(null);
   }, [onEventAdd, onEventUpdate]);
 
-  const handleEventDelete = useCallback((eventId: string) => {
+  const handleEventDelete = useCallback((eventId: string, scope?: EditScope) => {
     const deletedEvent = events.find((e) => e.id === eventId);
-    onEventDelete?.(eventId);
+    onEventDelete?.(eventId, scope);
     setIsEventDialogOpen(false);
     setSelectedEvent(null);
 
@@ -199,7 +201,8 @@ export function EventCalendar({
   }, [events, onEventDelete]);
 
   const handleEventUpdate = useCallback((updatedEvent: CalendarEvent) => {
-    onEventUpdate?.(updatedEvent);
+    // Drag & drop moves only this event / this occurrence of a series
+    onEventUpdate?.({ ...updatedEvent, editScope: "occurrence" });
     toast(`Event "${updatedEvent.title}" moved`, {
       description: format(new Date(updatedEvent.start), "MMM d, yyyy"),
       position: "bottom-left",

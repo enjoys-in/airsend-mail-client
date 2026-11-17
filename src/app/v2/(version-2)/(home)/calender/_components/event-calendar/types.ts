@@ -16,7 +16,15 @@ export interface CalendarEvent {
   categories?: string[];
   recurrenceRule?: string;
   status?: string;
+  /** Recurring occurrences: id of the series (`id` is `${seriesId}::${occurrenceKey}`) */
+  seriesId?: string;
+  /** Recurring occurrences: original start key used by `recurrenceOverrides` */
+  occurrenceKey?: string;
+  /** For updates of a recurring occurrence: change only this occurrence or the whole series */
+  editScope?: EditScope;
 }
+
+export type EditScope = "occurrence" | "series";
 
 export interface CalendarEventAttendee {
   email: string;

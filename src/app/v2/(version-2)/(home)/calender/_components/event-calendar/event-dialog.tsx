@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { RiCalendarLine, RiDeleteBinLine, RiAddLine, RiCloseLine, RiMapPinLine, RiRepeatLine, RiGroupLine, RiBookmarkLine } from "@remixicon/react";
 import { format, isBefore } from "date-fns";
 
-import type { CalendarEvent, EventColor } from ".";
+import type { CalendarEvent, EditScope, EventColor } from ".";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -48,7 +48,8 @@ interface EventDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (event: CalendarEvent) => void;
-  onDelete: (eventId: string) => void;
+  /** scope is set for occurrences of a recurring series */
+  onDelete: (eventId: string, scope?: EditScope) => void;
 }
 
 export function EventDialog({
@@ -80,6 +81,9 @@ export function EventDialog({
   const [newCategory, setNewCategory] = useState("");
   const [recurrenceRule, setRecurrenceRule] = useState("");
   const [status, setEventStatus] = useState<"CONFIRMED" | "TENTATIVE" | "CANCELLED">("CONFIRMED");
+  // Recurring occurrence: change only this occurrence or every occurrence
+  const [editScope, setEditScope] = useState<EditScope>("occurrence");
+  const isOccurrence = !!event?.seriesId;
 
   // CalDev store – calendars list
   const calendars = useCalDevStore((s) => s.calendars);
@@ -102,9 +106,11 @@ export function EventDialog({
       setError(null);
 
       // CalDev fields — populated from raw event if editing
-      const rawEvent = event.id
-        ? useCalDevStore.getState().rawEvents.find((e) => e.id === event.id)
+      const rawId = event.seriesId || event.id;
+      const rawEvent = rawId
+        ? useCalDevStore.getState().rawEvents.find((e) => e.id === rawId)
         : null;
+      setEditScope("occurrence");
       if (rawEvent) {
         setCalendarId(rawEvent.calendar_id || "");
         setAttendees(rawEvent.attendees || []);
@@ -259,12 +265,18 @@ export function EventDialog({
       categories: categories.length > 0 ? categories : undefined,
       recurrenceRule: recurrenceRule || undefined,
       status: status,
+      // occurrence identity (recurring series)
+      ...(event?.seriesId && {
+        seriesId: event.seriesId,
+        occurrenceKey: event.occurrenceKey,
+        editScope,
+      }),
     });
   };
 
   const handleDelete = () => {
     if (event?.id) {
-      onDelete(event.id);
+      onDelete(event.id, isOccurrence ? editScope : undefined);
     }
   };
 
@@ -676,17 +688,35 @@ export function EventDialog({
         </div>
 
         <DialogFooter className="flex-row sm:justify-between">
-          {event?.id && (
-            <Button
-              variant="outline"
-              className="text-destructive hover:text-destructive"
-              size="icon"
-              onClick={handleDelete}
-              aria-label="Delete event"
-            >
-              <RiDeleteBinLine size={16} aria-hidden="true" />
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {event?.id && (
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                size="icon"
+                onClick={handleDelete}
+                aria-label={
+                  isOccurrence && editScope === "occurrence"
+                    ? "Delete this occurrence"
+                    : "Delete event"
+                }
+              >
+                <RiDeleteBinLine size={16} aria-hidden="true" />
+              </Button>
+            )}
+            {isOccurrence && (
+              <Select value={editScope} onValueChange={(v) => setEditScope(v as EditScope)}>
+                <SelectTrigger className="h-9 w-[150px] text-xs" aria-label="Apply changes to">
+                  <RiRepeatLine size={12} className="shrink-0 opacity-60" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="occurrence">This event</SelectItem>
+                  <SelectItem value="series">All events</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           <div className="flex flex-1 justify-end gap-2">
             <Button variant="outline" onClick={onClose}>
               Cancel

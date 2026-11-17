@@ -53,6 +53,10 @@ export interface CalDevEvent {
   all_day: boolean;
   recurrence_rule: string;
   recurrence_id: string;
+  /** IANA zone of a timed event's wall-clock times ("Etc/UTC" = fixed UTC) */
+  time_zone: string;
+  /** Single-occurrence changes, keyed by original start (UI_GUIDE §6) */
+  recurrence_overrides: Record<string, OccurrencePatch | null>;
   sequence: number;
   status: "CONFIRMED" | "TENTATIVE" | "CANCELLED";
   transparency: "OPAQUE" | "TRANSPARENT";
@@ -71,6 +75,17 @@ export interface CalDevEvent {
   properties: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+/** JMAP recurrenceOverrides value: only what differs from the series */
+export interface OccurrencePatch {
+  start?: string;
+  end?: string;
+  title?: string;
+  description?: string;
+  location?: string;
+  status?: string;
+  excluded?: boolean;
 }
 
 export interface CalDevSubscription {
@@ -204,6 +219,7 @@ export interface CreateEventPayload {
   dtend: string;
   all_day?: boolean;
   status?: string;
+  time_zone?: string;
   recurrence_rule?: string;
   attendees?: Omit<CalDevAttendee, "status">[];
   categories?: string[];
@@ -218,7 +234,10 @@ export interface UpdateEventPayload {
   all_day?: boolean;
   status?: string;
   calendar_id?: string;
+  time_zone?: string;
   recurrence_rule?: string;
+  /** null value removes an override (occurrence returns to the series) */
+  recurrence_overrides?: Record<string, OccurrencePatch | null>;
   attendees?: CalDevAttendee[];
   categories?: string[];
 }
@@ -246,8 +265,7 @@ export interface UpdateSubscriptionPayload {
 
 export interface RSVPPayload {
   event_uid: string;
-  response: "ACCEPTED" | "DECLINED" | "TENTATIVE";
-  comment?: string;
+  response: "ACCEPTED" | "DECLINED" | "TENTATIVE" | "accept" | "decline" | "maybe";
 }
 
 // ---------------------------------------------------------------------------
@@ -255,6 +273,7 @@ export interface RSVPPayload {
 // ---------------------------------------------------------------------------
 
 import type { CalendarEvent } from "../_components/event-calendar/types";
+import { allDayFromAPI, uiRangeToAPI, userTimeZone } from "./recurrence";
 
 /** Map hex color to nearest EventColor */
 export function hexToEventColor(hex: string): EventColor {
@@ -437,6 +456,8 @@ export function normalizeJMAPEvent(raw: Record<string, any>): CalDevEvent {
     all_day:          raw.all_day ?? raw.isAllDay ?? false,
     recurrence_rule:  extractRecurrenceRule(raw),
     recurrence_id:    raw.recurrence_id ?? raw.recurrenceId ?? "",
+    time_zone:        raw.time_zone ?? raw.timeZone ?? "",
+    recurrence_overrides: raw.recurrence_overrides ?? raw.recurrenceOverrides ?? {},
     sequence:         raw.sequence ?? 0,
     status:           raw.status ?? "CONFIRMED",
     transparency:     raw.transparency ?? "OPAQUE",
@@ -463,12 +484,17 @@ export function toCalendarEvent(
   apiEvent: CalDevEvent,
   calendarColor?: string,
 ): CalendarEvent {
+  // All-day events are stored as 00:00Z of the first day with an exclusive
+  // end — render them by date, not by local midnight (UI_GUIDE §11).
+  const range = apiEvent.all_day
+    ? allDayFromAPI(apiEvent.dtstart, apiEvent.dtend)
+    : { start: new Date(apiEvent.dtstart), end: new Date(apiEvent.dtend) };
   return {
     id: apiEvent.id,
     title: apiEvent.summary || "(no title)",
     description: apiEvent.description,
-    start: new Date(apiEvent.dtstart),
-    end: new Date(apiEvent.dtend),
+    start: range.start,
+    end: range.end,
     allDay: apiEvent.all_day,
     color: hexToEventColor(calendarColor || "#3B82F6"),
     location: apiEvent.location,
@@ -487,14 +513,18 @@ export function toCreateEventPayload(
   uiEvent: CalendarEvent,
   calendarId: string,
 ): CreateEventPayload {
+  const allDay = uiEvent.allDay || false;
+  const range = uiRangeToAPI(uiEvent.start, uiEvent.end, allDay);
   return {
     calendar_id: calendarId,
     summary: uiEvent.title,
     description: uiEvent.description || "",
     location: uiEvent.location || "",
-    dtstart: uiEvent.start.toISOString(),
-    dtend: uiEvent.end.toISOString(),
-    all_day: uiEvent.allDay || false,
+    dtstart: range.start,
+    dtend: range.end,
+    all_day: allDay,
+    // UI_GUIDE §5: always send the user's zone on timed events
+    ...(!allDay && { time_zone: userTimeZone() }),
     status: uiEvent.status || "CONFIRMED",
     attendees: uiEvent.attendees as any,
     categories: uiEvent.categories,
@@ -519,6 +549,8 @@ export function buildFullEvent(
     uid: "",
     duration: "",
     recurrence_id: "",
+    time_zone: payload.time_zone || "",
+    recurrence_overrides: {},
     sequence: 0,
     transparency: "OPAQUE",
     classification: "PUBLIC",
@@ -546,7 +578,10 @@ export function buildFullEvent(
     recurrence_rule: payload.recurrence_rule || "",
     attendees: (payload.attendees || []) as CalDevAttendee[],
     categories: payload.categories || [],
-    // Server overrides — these take precedence
-    ...serverResponse,
+    // Server-assigned identity only. JMAP create returns just { id, uid, etag }:
+    // spreading a whole normalized object here used to blank the title/dates.
+    ...(serverResponse.id && { id: serverResponse.id }),
+    ...(serverResponse.uid && { uid: serverResponse.uid }),
+    ...(serverResponse.etag && { etag: serverResponse.etag }),
   };
 }
