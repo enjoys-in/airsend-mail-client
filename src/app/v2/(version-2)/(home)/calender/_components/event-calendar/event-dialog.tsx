@@ -34,6 +34,7 @@ import {
 } from "./constants";
 import { useCalDevStore } from "../../_lib/caldev-store";
 import { sendRSVP } from "../../_lib/caldev-api";
+import { useGuestAvailability, useGuestSuggestions, type GuestSuggestion } from "../../_lib/use-guest-suggestions";
 import { useAppSelector } from "@/store/hooks";
 import { toast } from "sonner";
 import { RsvpButtons, type RsvpReply } from "@/components/common/rsvp-buttons";
@@ -228,6 +229,25 @@ export function EventDialog({
     setNewAttendeeName("");
   };
 
+  /** A person picked from the suggestions becomes a guest straight away. */
+  const handlePickGuest = (person: GuestSuggestion) => {
+    if (!attendees.some((a) => a.email.toLowerCase() === person.email.toLowerCase())) {
+      setAttendees([
+        ...attendees,
+        {
+          email: person.email,
+          display_name: person.name || person.email,
+          role: "REQ-PARTICIPANT",
+          status: "NEEDS-ACTION",
+          rsvp: true,
+          type: "INDIVIDUAL",
+        },
+      ]);
+    }
+    setNewAttendeeEmail("");
+    setNewAttendeeName("");
+  };
+
   const handleRemoveAttendee = (email: string) => {
     setAttendees(attendees.filter((a) => a.email !== email));
   };
@@ -413,6 +433,22 @@ export function EventDialog({
   const myGuest = attendees.find((a) => sameEmail(a.email, myEmail));
   const isGuest = isEditing && !!organizer && !sameEmail(organizer, myEmail) && !!myGuest;
 
+  // ── guest suggestions (team + contacts) and free/busy dots for the event's time ──
+  const guestSuggestions = useGuestSuggestions({
+    query: newAttendeeEmail,
+    start: preview.start,
+    end: preview.end,
+    exclude: attendees.map((a) => a.email),
+    myEmail,
+    enabled: isOpen && !isGuest,
+  });
+  const guestAvailability = useGuestAvailability({
+    emails: attendees.map((a) => a.email),
+    start: preview.start,
+    end: preview.end,
+    enabled: isOpen,
+  });
+
   const handleRsvp = async (reply: RsvpReply) => {
     if (!eventUid || rsvpPending) return;
     setRsvpPending(reply);
@@ -570,6 +606,10 @@ export function EventDialog({
               onDraftChange={setNewAttendeeEmail}
               onAdd={handleAddAttendee}
               onRemove={handleRemoveAttendee}
+              suggestions={guestSuggestions.suggestions}
+              suggestionsLoading={guestSuggestions.loading}
+              onPick={handlePickGuest}
+              availability={guestAvailability}
               readOnly={isGuest}
               organizer={organizer || undefined}
               myEmail={myEmail}

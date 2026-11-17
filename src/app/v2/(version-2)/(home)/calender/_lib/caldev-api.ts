@@ -636,6 +636,56 @@ export async function sendIncomingScheduling(
 }
 
 // ---------------------------------------------------------------------------
+// People & availability (REST) — guest suggestions and free/busy dots
+// ---------------------------------------------------------------------------
+
+export interface PersonAvailability {
+  email: string;
+  name?: string;
+  /** false when the person has not shared availability with the caller (or does not exist) */
+  allowed: boolean;
+  current?: { busy: boolean; busyStatus?: string; until?: string; nextBusyAt?: string };
+  /** merged busy blocks inside the requested window (empty when free or not allowed) */
+  busy: { start: string; end: string; status: "confirmed" | "tentative" }[];
+}
+
+interface AvailabilityWindow {
+  start?: Date;
+  end?: Date;
+}
+
+const windowParams = ({ start, end }: AvailabilityWindow) =>
+  start && end && end > start ? { start: start.toISOString(), end: end.toISOString() } : {};
+
+/** Teammates of the caller's own organisation matching `q`, with free/busy for the window. */
+export async function searchPeople(
+  q: string,
+  window: AvailabilityWindow = {},
+  limit = 8,
+  signal?: AbortSignal,
+): Promise<PersonAvailability[]> {
+  const { data } = await caldevInstance.get<CalDevRestResponse<{ results: PersonAvailability[] }>>(
+    "/api/availability/people",
+    { params: { q, limit, ...windowParams(window) }, signal },
+  );
+  return data.result?.results ?? [];
+}
+
+/** Free/busy of specific people (only those who shared with the caller come back allowed). */
+export async function getAvailability(
+  emails: string[],
+  window: AvailabilityWindow = {},
+  signal?: AbortSignal,
+): Promise<PersonAvailability[]> {
+  if (emails.length === 0) return [];
+  const { data } = await caldevInstance.get<CalDevRestResponse<{ results: PersonAvailability[] }>>(
+    "/api/availability/",
+    { params: { emails: emails.slice(0, 50).join(","), ...windowParams(window) }, signal },
+  );
+  return data.result?.results ?? [];
+}
+
+// ---------------------------------------------------------------------------
 // ICS Feeds (REST, read-only)
 // ---------------------------------------------------------------------------
 
