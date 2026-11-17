@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RiCalendarLine, RiDeleteBinLine, RiAddLine, RiCloseLine, RiMapPinLine, RiRepeatLine, RiGroupLine, RiBookmarkLine } from "@remixicon/react";
+import {
+  RiAlignLeft,
+  RiBookmarkLine,
+  RiCalendarEventLine,
+  RiCalendarLine,
+  RiCloseLine,
+  RiDeleteBinLine,
+  RiMapPinLine,
+  RiRepeatLine,
+} from "@remixicon/react";
 import { format, isBefore } from "date-fns";
 
 import type { CalendarEvent, EditScope, EventColor } from ".";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { pickerNavClassNames } from "../picker-classnames";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -19,22 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   StartHour,
   EndHour,
@@ -42,7 +32,23 @@ import {
   DefaultEndHour,
 } from "./constants";
 import { useCalDevStore } from "../../_lib/caldev-store";
-import type { CalDevAttendee } from "../../_lib/caldev-types";
+import { EVENT_COLOR_HEX, type CalDevAttendee } from "../../_lib/caldev-types";
+import {
+  ChipInput,
+  DateTimeRow,
+  DayPreview,
+  EventTypePanel,
+  FieldRow,
+  FormCard,
+  GuestList,
+  IconTile,
+  PillSelect,
+  RepeatField,
+  Segmented,
+  bareInputClass,
+  type PillOption,
+  type PreviewEvent,
+} from "./event-form";
 
 interface EventDialogProps {
   event: CalendarEvent | null;
@@ -52,6 +58,11 @@ interface EventDialogProps {
   /** scope is set for occurrences of a recurring series */
   onDelete: (eventId: string, scope?: EditScope) => void;
 }
+
+const SCOPE_OPTIONS: PillOption[] = [
+  { value: "occurrence", label: "This event" },
+  { value: "series", label: "All events" },
+];
 
 export function EventDialog({
   event,
@@ -70,8 +81,6 @@ export function EventDialog({
   const [location, setLocation] = useState("");
   const [color, setColor] = useState<EventColor>("blue");
   const [error, setError] = useState<string | null>(null);
-  const [startDateOpen, setStartDateOpen] = useState(false);
-  const [endDateOpen, setEndDateOpen] = useState(false);
 
   // New CalDev fields
   const [calendarId, setCalendarId] = useState("");
@@ -281,422 +290,234 @@ export function EventDialog({
     }
   };
 
-  // Updated color options to match types.ts
-  const colorOptions: Array<{
-    value: EventColor;
-    label: string;
-    bgClass: string;
-    borderClass: string;
-  }> = [
-    {
-      value: "blue",
-      label: "Blue",
-      bgClass: "bg-blue-400 data-[state=checked]:bg-blue-400",
-      borderClass: "border-blue-400 data-[state=checked]:border-blue-400",
-    },
-    {
-      value: "violet",
-      label: "Violet",
-      bgClass: "bg-violet-400 data-[state=checked]:bg-violet-400",
-      borderClass: "border-violet-400 data-[state=checked]:border-violet-400",
-    },
-    {
-      value: "rose",
-      label: "Rose",
-      bgClass: "bg-rose-400 data-[state=checked]:bg-rose-400",
-      borderClass: "border-rose-400 data-[state=checked]:border-rose-400",
-    },
-    {
-      value: "emerald",
-      label: "Emerald",
-      bgClass: "bg-emerald-400 data-[state=checked]:bg-emerald-400",
-      borderClass: "border-emerald-400 data-[state=checked]:border-emerald-400",
-    },
-    {
-      value: "orange",
-      label: "Orange",
-      bgClass: "bg-orange-400 data-[state=checked]:bg-orange-400",
-      borderClass: "border-orange-400 data-[state=checked]:border-orange-400",
-    },
-  ];
+  // ── UI-only wiring (same state as before, new controls) ─────────────────
+
+  const handleStartDateChange = (date: Date) => {
+    setStartDate(date);
+    if (isBefore(endDate, date)) setEndDate(date);
+    setError(null);
+  };
+
+  const handleEndDateChange = (date: Date) => {
+    setEndDate(date);
+    setError(null);
+  };
+
+  // "Series" is just a repeating event: it picks the weekly preset, "Event" clears it.
+  const handleKindChange = (kind: "event" | "series") =>
+    setRecurrenceRule(kind === "series" ? recurrenceRule || "FREQ=WEEKLY" : "");
+
+  const calendarOptions = useMemo<PillOption[]>(
+    () =>
+      calendars
+        .filter((c) => !c.is_readonly)
+        .map((c) => ({ value: c.id, label: c.name, color: c.color })),
+    [calendars],
+  );
+
+  // What the right-hand day timeline shows for the event being edited
+  const previewColor =
+    calendars.find((c) => c.id === calendarId)?.color ||
+    EVENT_COLOR_HEX[color as keyof typeof EVENT_COLOR_HEX] ||
+    "#3B82F6";
+  const preview = useMemo<PreviewEvent>(() => {
+    const at = (date: Date, time: string, edge: "start" | "end") => {
+      const d = new Date(date);
+      if (allDay) {
+        if (edge === "start") d.setHours(0, 0, 0, 0);
+        else d.setHours(23, 59, 59, 999);
+      } else {
+        const [h = 0, m = 0] = time.split(":").map(Number);
+        d.setHours(h, m, 0, 0);
+      }
+      return d;
+    };
+    const start = at(startDate, startTime, "start");
+    const end = at(endDate, endTime, "end");
+    return {
+      title: title.trim() || "New event",
+      start,
+      end: end < start ? start : end,
+      allDay,
+      color: previewColor,
+    };
+  }, [title, startDate, endDate, startTime, endTime, allDay, previewColor]);
+
+  const isEditing = !!event?.id;
+
+  const typePanel = (idPrefix: string) => (
+    <EventTypePanel
+      idPrefix={idPrefix}
+      calendarOptions={calendarOptions}
+      calendarId={calendarId}
+      onCalendarChange={setCalendarId}
+      status={status}
+      onStatusChange={setEventStatus}
+      color={color}
+      onColorChange={setColor}
+    />
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{event?.id ? "Edit Event" : "Create Event"}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {event?.id
-              ? "Edit the details of this event"
-              : "Add a new event to your calendar"}
-          </DialogDescription>
+      <DialogContent
+        hideCloseButton
+        className="flex max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-5xl flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:rounded-2xl"
+      >
+        {/* ── Header ── */}
+        <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-border/60 px-5 py-4 text-left">
+          <IconTile>
+            <RiCalendarEventLine size={18} />
+          </IconTile>
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="text-base font-semibold">
+              {isEditing ? "Edit event" : "New event"}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {isEditing ? "Update the details of this event" : "Add the details for your event"}
+            </DialogDescription>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-full text-muted-foreground"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <RiCloseLine size={18} />
+          </Button>
         </DialogHeader>
-        {error && (
-          <div className="bg-destructive/15 text-destructive rounded-md px-3 py-2 text-sm">
-            {error}
-          </div>
-        )}
 
-        {/* ── 2-column Outlook-style layout ── */}
-        <div className="grid sm:grid-cols-[1fr_220px] gap-6 py-4">
-          {/* Left column — primary fields */}
-          <div className="grid gap-4">
-            <div className="*:not-first:mt-1.5">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Add a title"
-                className="text-base h-10"
-              />
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-1 *:not-first:mt-1.5">
-                <Label htmlFor="start-date">Start Date</Label>
-                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="start-date"
-                      variant={"outline"}
-                      className={cn(
-                        "group bg-background hover:bg-background border-input w-full justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
-                        !startDate && "text-muted-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "truncate text-sm",
-                          !startDate && "text-muted-foreground",
-                        )}
-                      >
-                        {startDate ? format(startDate, "PPP") : "Pick a date"}
-                      </span>
-                      <RiCalendarLine
-                        size={16}
-                        className="text-muted-foreground/80 shrink-0"
-                        aria-hidden="true"
-                      />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-2" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      classNames={pickerNavClassNames}
-                      defaultMonth={startDate}
-                      onSelect={(date) => {
-                        if (date) {
-                          setStartDate(date);
-                          if (isBefore(endDate, date)) {
-                            setEndDate(date);
-                          }
-                          setError(null);
-                          setStartDateOpen(false);
-                        }
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {!allDay && (
-                <div className="min-w-28 *:not-first:mt-1.5">
-                  <Label htmlFor="start-time">Start Time</Label>
-                  <Select value={startTime} onValueChange={setStartTime}>
-                    <SelectTrigger id="start-time">
-                      <SelectValue placeholder="Select time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-1 *:not-first:mt-1.5">
-                <Label htmlFor="end-date">End Date</Label>
-                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="end-date"
-                      variant={"outline"}
-                      className={cn(
-                        "group bg-background hover:bg-background border-input w-full justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
-                        !endDate && "text-muted-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "truncate text-sm",
-                          !endDate && "text-muted-foreground",
-                        )}
-                      >
-                        {endDate ? format(endDate, "PPP") : "Pick a date"}
-                      </span>
-                      <RiCalendarLine
-                        size={16}
-                        className="text-muted-foreground/80 shrink-0"
-                        aria-hidden="true"
-                      />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-2" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      classNames={pickerNavClassNames}
-                      defaultMonth={endDate}
-                      disabled={{ before: startDate }}
-                      onSelect={(date) => {
-                        if (date) {
-                          setEndDate(date);
-                          setError(null);
-                          setEndDateOpen(false);
-                        }
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {!allDay && (
-                <div className="min-w-28 *:not-first:mt-1.5">
-                  <Label htmlFor="end-time">End Time</Label>
-                  <Select value={endTime} onValueChange={setEndTime}>
-                    <SelectTrigger id="end-time">
-                      <SelectValue placeholder="Select time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
+        {/* ── Toolbar ── */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-border/60 px-5 py-2.5">
+          <Segmented
+            ariaLabel="Event kind"
+            value={recurrenceRule ? "series" : "event"}
+            onChange={handleKindChange}
+            options={[
+              { value: "event", label: "Event", icon: <RiCalendarLine size={14} /> },
+              { value: "series", label: "Series", icon: <RiRepeatLine size={14} /> },
+            ]}
+          />
+          {isOccurrence && (
             <div className="flex items-center gap-2">
-              <Checkbox
-                id="all-day"
-                checked={allDay}
-                onCheckedChange={(checked) => setAllDay(checked === true)}
-              />
-              <Label htmlFor="all-day" className="text-sm">All day</Label>
-            </div>
-
-            <div className="*:not-first:mt-1.5">
-              <Label htmlFor="location" className="flex items-center gap-1.5">
-                <RiMapPinLine size={14} className="text-muted-foreground" />
-                Location
-              </Label>
-              <Input
-                id="location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Add a location"
+              <span className="text-xs text-muted-foreground">Apply to</span>
+              <PillSelect
+                value={editScope}
+                onChange={(v) => setEditScope(v as EditScope)}
+                options={SCOPE_OPTIONS}
+                ariaLabel="Apply changes to"
               />
             </div>
+          )}
+        </div>
 
-            <div className="*:not-first:mt-1.5">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                placeholder="Add details"
-              />
-            </div>
-          </div>
-
-          {/* Right column — metadata */}
-          <div className="grid gap-4 content-start sm:border-l sm:pl-6 border-border/40">
-            {/* Calendar picker */}
-            {calendars.length > 0 && (
-              <div className="*:not-first:mt-1.5">
-                <Label htmlFor="calendar-select" className="text-xs text-muted-foreground uppercase tracking-wide">Calendar</Label>
-                <Select value={calendarId} onValueChange={setCalendarId}>
-                  <SelectTrigger id="calendar-select" className="h-8 text-sm">
-                    <SelectValue placeholder="Select calendar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {calendars
-                      .filter((c) => !c.is_readonly)
-                      .map((cal) => (
-                        <SelectItem key={cal.id} value={cal.id}>
-                          <span className="flex items-center gap-2">
-                            <span
-                              className="size-2 rounded-full shrink-0"
-                              style={{ backgroundColor: cal.color }}
-                            />
-                            {cal.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+        {/* ── Body: form | type + day timeline ── */}
+        <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-h-0 space-y-4 overflow-y-auto p-5">
+            {error && (
+              <div className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
               </div>
             )}
 
-            {/* Event status */}
-            <div className="*:not-first:mt-1.5">
-              <Label htmlFor="event-status" className="text-xs text-muted-foreground uppercase tracking-wide">Status</Label>
-              <Select value={status} onValueChange={(v) => setEventStatus(v as typeof status)}>
-                <SelectTrigger id="event-status" className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                  <SelectItem value="TENTATIVE">Tentative</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Add a title"
+              aria-label="Title"
+              className="h-12 rounded-xl border-border/60 bg-background px-4 text-base shadow-none"
+            />
 
-            {/* Color / etiquette */}
-            <fieldset className="space-y-2">
-              <legend className="text-xs text-muted-foreground uppercase tracking-wide">
-                Color
-              </legend>
-              <RadioGroup
-                className="flex gap-1.5"
-                defaultValue={colorOptions[0]?.value}
-                value={color}
-                onValueChange={(value: EventColor) => setColor(value)}
-              >
-                {colorOptions.map((colorOption) => (
-                  <RadioGroupItem
-                    key={colorOption.value}
-                    id={`color-${colorOption.value}`}
-                    value={colorOption.value}
-                    aria-label={colorOption.label}
-                    className={cn(
-                      "size-5 shadow-none",
-                      colorOption.bgClass,
-                      colorOption.borderClass,
-                    )}
-                  />
-                ))}
-              </RadioGroup>
-            </fieldset>
+            <DateTimeRow
+              startDate={startDate}
+              endDate={endDate}
+              startTime={startTime}
+              endTime={endTime}
+              allDay={allDay}
+              timeOptions={timeOptions}
+              onStartDateChange={handleStartDateChange}
+              onEndDateChange={handleEndDateChange}
+              onStartTimeChange={setStartTime}
+              onEndTimeChange={setEndTime}
+              onAllDayChange={setAllDay}
+            />
 
-            {/* Recurrence */}
-            <div className="*:not-first:mt-1.5">
-              <Label htmlFor="recurrence-select" className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <RiRepeatLine size={12} />
-                Repeat
-              </Label>
-              <Select value={recurrenceRule || "none"} onValueChange={(v) => setRecurrenceRule(v === "none" ? "" : v)}>
-                <SelectTrigger id="recurrence-select" className="h-8 text-sm">
-                  <SelectValue placeholder="Does not repeat" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Does not repeat</SelectItem>
-                  <SelectItem value="FREQ=DAILY">Every day</SelectItem>
-                  <SelectItem value="FREQ=WEEKLY">Every week</SelectItem>
-                  <SelectItem value="FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR">Weekdays</SelectItem>
-                  <SelectItem value="FREQ=MONTHLY">Every month</SelectItem>
-                  <SelectItem value="FREQ=YEARLY">Every year</SelectItem>
-                </SelectContent>
-              </Select>
-              {recurrenceRule && !["FREQ=DAILY", "FREQ=WEEKLY", "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", "FREQ=MONTHLY", "FREQ=YEARLY"].includes(recurrenceRule) && (
-                <div className="mt-2">
-                  <Input
-                    value={recurrenceRule}
-                    onChange={(e) => setRecurrenceRule(e.target.value)}
-                    placeholder="FREQ=WEEKLY;BYDAY=MO"
-                    className="font-mono text-xs h-8"
-                  />
-                </div>
+            <FormCard>
+              <FieldRow icon={<RiMapPinLine size={16} />}>
+                <Input
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Add a room or location"
+                  aria-label="Location"
+                  className={bareInputClass}
+                />
+              </FieldRow>
+              {recurrenceRule && (
+                <FieldRow icon={<RiRepeatLine size={16} />}>
+                  <RepeatField rule={recurrenceRule} onChange={setRecurrenceRule} />
+                </FieldRow>
               )}
-            </div>
-
-            {/* Attendees — compact */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <RiGroupLine size={12} />
-                Attendees {attendees.length > 0 && `(${attendees.length})`}
-              </Label>
-              {attendees.map((a) => (
-                <div
-                  key={a.email}
-                  className="flex items-center justify-between gap-1 text-xs rounded-md border px-2 py-1"
-                >
-                  <div className="min-w-0 truncate">{a.display_name}</div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-5 shrink-0"
-                    onClick={() => handleRemoveAttendee(a.email)}
-                  >
-                    <RiCloseLine size={12} />
-                  </Button>
-                </div>
-              ))}
-              <div className="flex gap-1">
-                <Input
-                  placeholder="Email"
-                  value={newAttendeeEmail}
-                  onChange={(e) => setNewAttendeeEmail(e.target.value)}
-                  className="h-7 text-xs"
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddAttendee())}
+              <FieldRow icon={<RiBookmarkLine size={16} />}>
+                <ChipInput
+                  values={categories}
+                  draft={newCategory}
+                  onDraftChange={setNewCategory}
+                  onAdd={handleAddCategory}
+                  onRemove={handleRemoveCategory}
+                  placeholder="Add categories"
+                  ariaLabel="Add category"
                 />
-                <Button variant="outline" size="icon" className="size-7 shrink-0" onClick={handleAddAttendee}>
-                  <RiAddLine size={12} />
-                </Button>
-              </div>
-            </div>
+              </FieldRow>
+            </FormCard>
 
-            {/* Categories — compact */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <RiBookmarkLine size={12} />
-                Categories
-              </Label>
-              <div className="flex flex-wrap gap-1">
-                {categories.map((cat) => (
-                  <Badge key={cat} variant="secondary" className="gap-1 text-[10px]">
-                    {cat}
-                    <button onClick={() => handleRemoveCategory(cat)} className="ml-0.5 hover:text-destructive">
-                      <RiCloseLine size={10} />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex gap-1">
-                <Input
-                  placeholder="Add category"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  className="h-7 text-xs"
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddCategory())}
+            <GuestList
+              guests={attendees}
+              draft={newAttendeeEmail}
+              onDraftChange={setNewAttendeeEmail}
+              onAdd={handleAddAttendee}
+              onRemove={handleRemoveAttendee}
+            />
+
+            <FormCard>
+              <FieldRow icon={<RiAlignLeft size={16} />}>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  placeholder="Add a description or agenda"
+                  aria-label="Description"
+                  className="min-h-24 resize-y border-0 bg-transparent px-0 py-2 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
-                <Button variant="outline" size="icon" className="size-7 shrink-0" onClick={handleAddCategory}>
-                  <RiAddLine size={12} />
-                </Button>
-              </div>
-            </div>
+              </FieldRow>
+            </FormCard>
+
+            {/* type panel moves under the form on small screens */}
+            <div className="md:hidden">{typePanel("mobile")}</div>
           </div>
+
+          <aside className="hidden min-h-0 flex-col gap-4 border-l border-border/60 bg-muted/20 p-4 md:flex">
+            {typePanel("side")}
+            <DayPreview
+              draft={preview}
+              excludeId={event?.seriesId || event?.id || undefined}
+              className="min-h-[260px] flex-1"
+            />
+          </aside>
         </div>
 
-        <DialogFooter className="flex-row sm:justify-between">
-          <div className="flex items-center gap-2">
-            {event?.id && (
+        {/* ── Footer ── */}
+        <DialogFooter className="flex-row items-center justify-between gap-2 border-t border-border/60 px-5 py-3 sm:justify-between sm:space-x-0">
+          <div>
+            {isEditing && (
               <Button
-                variant="outline"
-                className="text-destructive hover:text-destructive"
-                size="icon"
+                type="button"
+                variant="ghost"
+                className="gap-1.5 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive"
                 onClick={handleDelete}
                 aria-label={
                   isOccurrence && editScope === "occurrence"
@@ -705,26 +526,17 @@ export function EventDialog({
                 }
               >
                 <RiDeleteBinLine size={16} aria-hidden="true" />
+                Delete
               </Button>
             )}
-            {isOccurrence && (
-              <Select value={editScope} onValueChange={(v) => setEditScope(v as EditScope)}>
-                <SelectTrigger className="h-9 w-[150px] text-xs" aria-label="Apply changes to">
-                  <RiRepeatLine size={12} className="shrink-0 opacity-60" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="occurrence">This event</SelectItem>
-                  <SelectItem value="series">All events</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
           </div>
-          <div className="flex flex-1 justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" className="rounded-lg" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button type="button" className="rounded-lg px-5" onClick={handleSave}>
+              {isEditing ? "Save" : "Create event"}
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>
