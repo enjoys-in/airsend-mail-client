@@ -49,41 +49,29 @@ export default function Component() {
   const rawEvents = useCalDevStore((s) => s.rawEvents);
   const sessionLoading = useCalDevStore((s) => s.sessionLoading);
   const sessionError = useCalDevStore((s) => s.sessionError);
-  const initSession = useCalDevStore((s) => s.initSession);
-  const fetchCalendars = useCalDevStore((s) => s.fetchCalendars);
+  const bootstrap = useCalDevStore((s) => s.bootstrap);
   const fetchEvents = useCalDevStore((s) => s.fetchEvents);
-  const fetchSubscriptions = useCalDevStore((s) => s.fetchSubscriptions);
+  const syncEventChanges = useCalDevStore((s) => s.syncEventChanges);
+  const liveConnected = useCalDevStore((s) => s.liveConnected);
   const addEvent = useCalDevStore((s) => s.addEvent);
   const editEvent = useCalDevStore((s) => s.editEvent);
   const removeEvent = useCalDevStore((s) => s.removeEvent);
-  const startLiveSync = useCalDevStore((s) => s.startLiveSync);
-  const stopLiveSync = useCalDevStore((s) => s.stopLiveSync);
 
-  // Initialize session once on mount (store-level guard prevents duplicates)
-  const initRef = useRef(false);
+  // The app layout (useCalDevSync) already loads calendars/subscriptions and keeps
+  // the live stream open across routes. This call is only a safety net — it is
+  // idempotent, so entering this page costs no API calls once everything is loaded.
   useEffect(() => {
-    if (!initRef.current) {
-      initRef.current = true;
-      initSession();
-    }
-  }, [initSession]);
+    bootstrap();
+  }, [bootstrap]);
 
-  // Fetch calendars + subscriptions once accountId is available
-  const dataFetchedRef = useRef(false);
+  // Without a live stream (blocked/offline) catch up cheaply when the page opens.
+  const mountedRef = useRef(false);
   useEffect(() => {
-    if (accountId && !dataFetchedRef.current) {
-      dataFetchedRef.current = true;
-      fetchCalendars();
-      fetchSubscriptions();
-    }
-  }, [accountId, fetchCalendars, fetchSubscriptions]);
-
-  // Live updates (other tabs, phones, CalDAV clients, invitations)
-  useEffect(() => {
-    if (!accountId) return;
-    startLiveSync();
-    return () => stopLiveSync();
-  }, [accountId, startLiveSync, stopLiveSync]);
+    if (mountedRef.current || !accountId) return;
+    mountedRef.current = true;
+    if (!liveConnected) syncEventChanges(30_000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
 
   // Fetch events when date range changes (month ± 1 buffer)
   // Store-level range caching prevents redundant API calls

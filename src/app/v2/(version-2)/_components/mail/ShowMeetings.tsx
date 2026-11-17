@@ -1,5 +1,6 @@
 "use client"
-import React, { useEffect, useMemo } from 'react'
+import React from 'react'
+import Link from 'next/link'
 
 import {
     Accordion,
@@ -8,46 +9,42 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion"
 import { useCalDevStore } from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-store"
+import { useUpcomingEvents } from "@/app/v2/(version-2)/(home)/calender/_lib/use-upcoming-events"
+import { useCalendarContext } from "@/app/v2/(version-2)/(home)/calender/_components/event-calendar/calendar-context"
 import { RiTimeLine } from "@remixicon/react"
 
+const timeFmt = (d: Date) =>
+  d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+
+/** "Now", "in 25 min", "Today", "Tomorrow", or "Wed, Nov 18" */
+function whenLabel(start: Date, end: Date, now: Date): string {
+  if (start <= now && end >= now) return "Now"
+  const mins = Math.round((start.getTime() - now.getTime()) / 60000)
+  if (mins > 0 && mins < 60) return `in ${mins} min`
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const diffDays = Math.round((startDay - today) / 86_400_000)
+  if (diffDays === 0) return "Today"
+  if (diffDays === 1) return "Tomorrow"
+  return start.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })
+}
+
+/**
+ * Next 3 meetings in the mailbox sidebar. Data comes from the CalDev store, which the
+ * app layout keeps live (SSE) — this component makes no requests of its own.
+ */
 const ShowMeetings = () => {
-  const rawEvents = useCalDevStore((s) => s.rawEvents)
   const calendars = useCalDevStore((s) => s.calendars)
-  const fetchEvents = useCalDevStore((s) => s.fetchEvents)
-  const initSession = useCalDevStore((s) => s.initSession)
-  const accountId = useCalDevStore((s) => s.accountId)
+  const { setCurrentDate } = useCalendarContext()
+  const upcoming = useUpcomingEvents({ limit: 3 })
 
-  // Fetch today's events independently on mount if not already loaded
-  useEffect(() => {
-    const bootstrap = async () => {
-      if (!accountId) {
-        await initSession();
-      }
-      // Fetch events for today ± 1 day to catch upcoming meetings
-      const now = new Date();
-      const after = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const before = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2).toISOString();
-      await fetchEvents(after, before);
-    };
-    bootstrap();
-  }, [accountId, fetchEvents, initSession])
+  if (upcoming.length === 0) return null
 
-  const upcomingEvents = useMemo(() => {
-    const now = new Date()
-    return rawEvents
-      .filter((e) => {
-        const end = new Date(e.dtend || e.dtstart)
-        return end >= now && e.status !== "CANCELLED"
-      })
-      .sort((a, b) => new Date(a.dtstart).getTime() - new Date(b.dtstart).getTime())
-      .slice(0, 3)
-  }, [rawEvents])
-
-  if (upcomingEvents.length === 0) return null
+  const now = new Date()
 
   return (
-    <Accordion type="single" collapsible className="w-full">
-      <AccordionItem value="item-1" className="border-none">
+    <Accordion type="single" collapsible defaultValue="meetings" className="w-full">
+      <AccordionItem value="meetings" className="border-none">
         <AccordionTrigger className="hover:no-underline w-full py-1">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-medium">Upcoming meetings</h3>
@@ -55,32 +52,17 @@ const ShowMeetings = () => {
         </AccordionTrigger>
         <AccordionContent>
           <div className="flex flex-col gap-0.5">
-            {upcomingEvents.map((ev, idx) => {
-              const cal = calendars.find((c) => c.id === ev.calendar_id)
-              const start = new Date(ev.dtstart)
-              const end = ev.dtend ? new Date(ev.dtend) : null
-              const now = new Date()
-              const isToday =
-                start.getFullYear() === now.getFullYear() &&
-                start.getMonth() === now.getMonth() &&
-                start.getDate() === now.getDate()
+            {upcoming.map((ev, idx) => {
+              const cal = calendars.find((c) => c.id === ev.calendarId)
+              const when = whenLabel(ev.start, ev.end, now)
+              const isNow = when === "Now"
 
-              const timeFmt = (d: Date) =>
-                d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-              const timeLabel = ev.all_day
-                ? "All day"
-                : `${timeFmt(start)}${end ? ` – ${timeFmt(end)}` : ""}`
-              const dateLabel = isToday
-                ? "Today"
-                : start.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })
-
-              // Gap to next event
-              const nextEv = upcomingEvents[idx + 1]
+              // Gap to the next meeting
+              const next = upcoming[idx + 1]
               let gapLabel: string | null = null
-              if (nextEv && end) {
-                const gapMs = new Date(nextEv.dtstart).getTime() - end.getTime()
-                if (gapMs > 0) {
-                  const gapMin = Math.round(gapMs / 60000)
+              if (next) {
+                const gapMin = Math.round((next.start.getTime() - ev.end.getTime()) / 60000)
+                if (gapMin > 0) {
                   if (gapMin < 60) gapLabel = `${gapMin}m gap`
                   else {
                     const h = Math.floor(gapMin / 60)
@@ -92,23 +74,29 @@ const ShowMeetings = () => {
 
               return (
                 <div key={ev.id}>
-                  <div className="flex items-start gap-2 px-1 py-1.5 rounded-md hover:bg-accent/50 transition-colors">
+                  <Link
+                    href="/v2/calender"
+                    onClick={() => setCurrentDate(ev.start)}
+                    className="flex items-start gap-2 px-1 py-1.5 rounded-md hover:bg-accent/50 transition-colors"
+                  >
                     <span
                       className="mt-1.5 size-2 shrink-0 rounded-full"
                       style={{ backgroundColor: cal?.color || "#6366F1" }}
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
-                        {ev.summary || "Untitled event"}
+                        {ev.title || "Untitled event"}
                       </p>
                       <div className="flex items-center gap-1 mt-0.5">
                         <RiTimeLine size={11} className="shrink-0 text-muted-foreground/60" />
                         <span className="text-[11px] text-muted-foreground">
-                          {dateLabel} · {timeLabel}
+                          <span className={isNow ? "font-medium text-emerald-500" : undefined}>{when}</span>
+                          {" · "}
+                          {timeFmt(ev.start)} – {timeFmt(ev.end)}
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                   {gapLabel && (
                     <div className="flex items-center gap-2 px-3 py-0.5">
                       <div className="flex-1 border-t border-dashed border-muted-foreground/20" />

@@ -479,11 +479,24 @@ export async function getEventChanges(
   changed: string[];
   removed: string[];
   hasMoreChanges: boolean;
+  /** Set when the server cannot compute the delta (e.g. cannotCalculateChanges) → do a full refetch */
+  error?: string;
 }> {
   const res = await jmapCall([
     ["CalendarEvent/changes", { accountId, sinceState }, "ch0"],
   ]);
-  const resp = findResponse(res, "ch0");
+  const entry = res.methodResponses.find(([, , id]) => id === "ch0");
+  if (!entry || entry[0] === "error") {
+    return {
+      oldState: sinceState,
+      newState: sinceState,
+      changed: [],
+      removed: [],
+      hasMoreChanges: false,
+      error: (entry?.[1] as any)?.type || "noResponse",
+    };
+  }
+  const resp = entry[1];
   // API returns created/updated/destroyed per JMAP spec
   const created = (resp?.created as string[]) || [];
   const updated = (resp?.updated as string[]) || [];

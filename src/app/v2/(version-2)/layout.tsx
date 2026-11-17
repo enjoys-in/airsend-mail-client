@@ -7,6 +7,7 @@ import SocketContextProvider from "@/context/SocketContext";
 import NewMailRecived from "@/components/common/new-mail-recived";
 import DesktopLayoutV2 from "./_components/desktop-layout";
 import { CalendarProvider } from "./(home)/calender/_components/event-calendar/calendar-context";
+import { useCalDevSync } from "./(home)/calender/_lib/use-caldev-sync";
 import { MobileLayoutV2 } from "./_components/mobile-layout";
 import { fetchCurrentUser } from "@/store/slices/account";
 import { syncUserSettings } from "@/lib/api/sync-user-settings";
@@ -38,6 +39,10 @@ function MainLayout({ children }: { children: ReactNode }) {
     setMid(mid ?? null);
     setEmail(email ?? null);
   }, [mid, email]);
+
+  // Calendar data + live stream for the whole app (mailbox "Upcoming meetings",
+  // calendar page). Declared after the auth-state effect so X-Tenant-ID is set first.
+  useCalDevSync();
   return (
     <SocketContextProvider>
       <CustomWidget />
