@@ -1,6 +1,5 @@
 "use client"
-import React from 'react'
-import Link from 'next/link'
+import React, { useState } from 'react'
 
 import {
     Accordion,
@@ -10,7 +9,8 @@ import {
 } from "@/components/ui/accordion"
 import { useCalDevStore } from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-store"
 import { useUpcomingEvents } from "@/app/v2/(version-2)/(home)/calender/_lib/use-upcoming-events"
-import { useCalendarContext } from "@/app/v2/(version-2)/(home)/calender/_components/event-calendar/calendar-context"
+import { MeetingDetailDialog } from "@/app/v2/(version-2)/(home)/calender/_components/meeting-detail-dialog"
+import type { CalendarEvent } from "@/app/v2/(version-2)/(home)/calender/_components/event-calendar"
 import { RiTimeLine, RiVideoOnLine } from "@remixicon/react"
 import { findMeetingLink } from "@/lib/calendar/meeting-link"
 
@@ -36,10 +36,10 @@ function whenLabel(start: Date, end: Date, now: Date): string {
  */
 const ShowMeetings = () => {
   const calendars = useCalDevStore((s) => s.calendars)
-  const { setCurrentDate } = useCalendarContext()
   const upcoming = useUpcomingEvents({ limit: 3 })
+  const [selected, setSelected] = useState<CalendarEvent | null>(null)
 
-  if (upcoming.length === 0) return null
+  if (upcoming.length === 0 && !selected) return null
 
   const now = new Date()
 
@@ -77,10 +77,10 @@ const ShowMeetings = () => {
               return (
                 <div key={ev.id}>
                   <div className="flex items-center gap-1">
-                  <Link
-                    href="/v2/calender"
-                    onClick={() => setCurrentDate(ev.start)}
-                    className="flex min-w-0 flex-1 items-start gap-2 px-1 py-1.5 rounded-md hover:bg-accent/50 transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => setSelected(ev)}
+                    className="flex min-w-0 flex-1 items-start gap-2 px-1 py-1.5 rounded-md text-left hover:bg-accent/50 transition-colors"
                   >
                     <span
                       className="mt-1.5 size-2 shrink-0 rounded-full"
@@ -99,7 +99,7 @@ const ShowMeetings = () => {
                         </span>
                       </div>
                     </div>
-                  </Link>
+                  </button>
                   {meeting && (
                     <a
                       href={meeting.url}
@@ -131,6 +131,7 @@ const ShowMeetings = () => {
           </div>
         </AccordionContent>
       </AccordionItem>
+      <MeetingDetailDialog event={selected} onClose={() => setSelected(null)} />
     </Accordion>
   )
 }
