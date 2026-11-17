@@ -5,6 +5,7 @@
  */
 
 import { airsendDB, db } from '@/db';
+import { markCurrentListStale } from '@/db/mailbox-sync';
 import { BridgeEvent } from './constants';
 import type {
   MessageMovedPayload,
@@ -70,11 +71,17 @@ function targetFolderOf(p: AnyMessagePayload): string | undefined {
  * destination the mail is dropped locally; the next list fetch of its folder brings it back.
  * Mails not cached here, or already where the event puts them (the tab that made the change
  * gets its own event back), are skipped so the counters are not shifted twice.
+ * A mail not cached here can't be placed in the destination's cached list, so that list is marked
+ * stale and fetched once the next time it is opened.
  */
 async function moveMails(p: AnyMessagePayload, toFolder: string | undefined): Promise<void> {
+  let uncached = false;
   for (const id of messageIdsOf(p)) {
     const existing = await airsendDB.getItemByKey('mails', id);
-    if (!existing) continue;
+    if (!existing) {
+      uncached = true;
+      continue;
+    }
     const fromFolder = existing.folder ?? sourceFolderOf(p);
     if (toFolder && fromFolder.toLowerCase() === toFolder.toLowerCase()) continue;
 
@@ -88,6 +95,7 @@ async function moveMails(p: AnyMessagePayload, toFolder: string | undefined): Pr
       if (toFolder) await incrementMailboxCount(toFolder, 'unread_count');
     }
   }
+  if (uncached && toFolder) await markCurrentListStale([toFolder]);
 }
 
 /** Sets one field on every mail of the event. */
@@ -98,8 +106,9 @@ async function setOnMails(p: AnyMessagePayload, changes: Record<string, unknown>
 // ─── Message Handlers ───
 
 const handleMessageDeleted: EventHandler<AnyMessagePayload> = async (event) => {
-  // Soft or hard delete: either way it leaves the list it was in (the trash view refetches).
+  // Soft or hard delete: either way it leaves the list it was in; the trash list is fetched on next open.
   await moveMails(event.payload, undefined);
+  await markCurrentListStale([TRASH_FOLDER]);
 };
 
 const handleMessageTrashed: EventHandler<AnyMessagePayload> = async (event) => {
@@ -107,7 +116,15 @@ const handleMessageTrashed: EventHandler<AnyMessagePayload> = async (event) => {
 };
 
 const handleMessageMoved: EventHandler<AnyMessagePayload> = async (event) => {
-  await moveMails(event.payload, targetFolderOf(event.payload));
+  const target = targetFolderOf(event.payload);
+  await moveMails(event.payload, target);
+  // The server picked the destination (e.g. unarchive): any list may now hold these mails
+  if (!target) await markCurrentListStale();
+};
+
+/** Mail sent from another tab, device or IMAP client: the Sent list is fetched on its next open. */
+const handleMessageSent: EventHandler<AnyMessagePayload> = async () => {
+  await markCurrentListStale(['sent']);
 };
 
 const handleMessageSpam: EventHandler<AnyMessagePayload> = async (event) => {
@@ -240,7 +257,8 @@ const handleLabelRemoved: EventHandler<LabelPayload> = async (event) => {
 
 export const eventHandlerMap: Partial<Record<BridgeEvent, EventHandler<any>>> = {
   // MESSAGE_RECEIVED: handled by the custom @@NEW_MAIL_RECEIVED socket.
-  // MESSAGE_SENT: the sending tab already stored the mail; other tabs refetch the Sent list (ClientMailCard).
+  // MESSAGE_SENT: marks Sent stale; a tab showing Sent refetches it at once (ClientMailCard).
+  [BridgeEvent.MESSAGE_SENT]: handleMessageSent,
   [BridgeEvent.MESSAGE_DELETED]: handleMessageDeleted,
   [BridgeEvent.MESSAGE_TRASHED]: handleMessageTrashed,
   [BridgeEvent.MESSAGE_MOVED]: handleMessageMoved,

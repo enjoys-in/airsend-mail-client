@@ -9,6 +9,7 @@ import { useMailStore } from "@/store/mails";
 import { useMultiTabStore } from "@/store/settings/multiTabSystem";
 import { API } from "@/lib/api/handler";
 import { airsendDB } from "@/db";
+import { applyMailActionResult } from "@/db/mailbox-sync";
 import { CustomEventKey, useCustomEvent } from "@/hooks/use-custom-event";
 import { Security } from "@/lib/security";
 import { GetAllMailsPayload } from "@/lib/types/mail.interface";
@@ -17,6 +18,18 @@ import { useSettingsStore } from "@/store/settings";
 import { useAppSelector } from "@/store/hooks";
 
 const s = new Security();
+
+/**
+ * Applies an action's API response (body of PATCH /update-mail-event) to IndexedDB and the on-screen
+ * list: the touched messages (the whole thread when the mail left the folder) and the folder counts.
+ */
+async function applyActionResult(response: any, mailId: string, currentFolder: string, removesMail: boolean) {
+    const ids = await applyMailActionResult({ result: response?.result, fallbackIds: [mailId], currentFolder, removesMail });
+    if (!removesMail) return;
+    const gone = new Set(ids);
+    const { all_emails, setAllEmails } = useMailStore.getState();
+    setAllEmails(all_emails?.filter((m) => !gone.has(m.message_id)) || []);
+}
 
 /** Safely decrypt — returns raw value when decryption fails or input is not encrypted */
 export function safeDecrypt(value: string | undefined | null): string {
@@ -116,7 +129,6 @@ export function useMailActions() {
     const setAllEmails = useMailStore((s) => s.setAllEmails);
     const setSelectedMail = useMailStore((s) => s.setSelectedMail);
     const createTabWithData = useMultiTabStore((s) => s.createTabWithData);
-    const { emit: emitSyncCounts } = useCustomEvent(CustomEventKey.SyncMailCounts);
     const { emit: emitMailEvent } = useCustomEvent(CustomEventKey.MailEvents);
     const settings = useSettingsStore((s) => s.settings);
     const setSettings = useSettingsStore((s) => s.setSettings);
@@ -186,7 +198,7 @@ export function useMailActions() {
         if (!selectedMail || selectedMail.is_read) return;
         try {
             const currentFolder = folder || (params?.folder as string);
-            await API.handleMailEvents(
+            const { data } = await API.handleMailEvents(
                 { action: "mark_as_read", message_id: [selectedMail.message_id] },
                 currentFolder
             );
@@ -198,11 +210,11 @@ export function useMailActions() {
             setSelectedMail({ ...selectedMail, is_read: true } as any);
             // Update IDB
             await airsendDB.updateItem("mails", selectedMail.message_id, { is_read: true });
-            emitSyncCounts(currentFolder);
+            await applyActionResult(data, selectedMail.message_id, currentFolder, false);
         } catch {
             // Silently fail — non-critical
         }
-    }, [selectedMail, folder, params?.folder, all_emails, setAllEmails, setSelectedMail, emitSyncCounts]);
+    }, [selectedMail, folder, params?.folder, all_emails, setAllEmails, setSelectedMail]);
 
     // ── Delete ───────────────────────────────────────────────────────────
 
@@ -218,17 +230,15 @@ export function useMailActions() {
                 toast.error(data?.message || "Delete failed");
                 return;
             }
-            const updated = all_emails?.filter((m) => m.message_id !== selectedMail.message_id) || [];
-            setAllEmails(updated);
-            await airsendDB.bulkDeleteItems("mails", [selectedMail.message_id]);
-            emitSyncCounts(currentFolder);
+            // The whole thread leaves the folder (the server applies delete to every message of it)
+            await applyActionResult(data, selectedMail.message_id, currentFolder, true);
             setSelectedMail(null as any);
             toast.success("Mail deleted");
             router.push(`/v2/u/mail/${currentFolder}`);
         } catch (err: any) {
             toast.error(err?.message || "Failed to delete");
         }
-    }, [selectedMail, folder, params?.folder, all_emails, setAllEmails, emitSyncCounts, setSelectedMail, router]);
+    }, [selectedMail, folder, params?.folder, setSelectedMail, router]);
 
     // ── Archive ──────────────────────────────────────────────────────────
 
@@ -244,17 +254,14 @@ export function useMailActions() {
                 toast.error(data?.message || "Archive failed");
                 return;
             }
-            const updated = all_emails?.filter((m) => m.message_id !== selectedMail.message_id) || [];
-            setAllEmails(updated);
-            await airsendDB.bulkDeleteItems("mails", [selectedMail.message_id]);
-            emitSyncCounts(currentFolder);
+            await applyActionResult(data, selectedMail.message_id, currentFolder, true);
             setSelectedMail(null as any);
             toast.success("Archived");
             router.push(`/v2/u/mail/${currentFolder}`);
         } catch (err: any) {
             toast.error(err?.message || "Failed to archive");
         }
-    }, [selectedMail, folder, params?.folder, all_emails, setAllEmails, emitSyncCounts, setSelectedMail, router]);
+    }, [selectedMail, folder, params?.folder, setSelectedMail, router]);
 
     // ── Mark as unread ───────────────────────────────────────────────────
 
@@ -276,13 +283,13 @@ export function useMailActions() {
             ) || [];
             setAllEmails(updated);
             await airsendDB.updateItem("mails", selectedMail.message_id, { is_read: false });
-            emitSyncCounts(currentFolder);
+            await applyActionResult(data, selectedMail.message_id, currentFolder, false);
             toast.success("Marked as unread");
             router.push(`/v2/u/mail/${currentFolder}`);
         } catch (err: any) {
             toast.error(err?.message || "Failed");
         }
-    }, [selectedMail, folder, params?.folder, all_emails, setAllEmails, emitSyncCounts, router]);
+    }, [selectedMail, folder, params?.folder, all_emails, setAllEmails, router]);
 
     // ── Mark as spam ─────────────────────────────────────────────────────
 
@@ -298,18 +305,14 @@ export function useMailActions() {
                 toast.error(data?.message || "Failed");
                 return;
             }
-            const updated = all_emails?.filter((m) => m.message_id !== selectedMail.message_id) || [];
-            setAllEmails(updated);
-            await airsendDB.bulkDeleteItems("mails", [selectedMail.message_id]);
-            emitSyncCounts(currentFolder);
-            emitSyncCounts("Spam");
+            await applyActionResult(data, selectedMail.message_id, currentFolder, true);
             setSelectedMail(null as any);
             toast.success("Reported as spam");
             router.push(`/v2/u/mail/${currentFolder}`);
         } catch (err: any) {
             toast.error(err?.message || "Failed");
         }
-    }, [selectedMail, folder, params?.folder, all_emails, setAllEmails, emitSyncCounts, setSelectedMail, router]);
+    }, [selectedMail, folder, params?.folder, setSelectedMail, router]);
 
     // ── Move to folder ───────────────────────────────────────────────────
 
@@ -326,12 +329,8 @@ export function useMailActions() {
                     toast.error(data?.message || "Move failed");
                     return;
                 }
-                const updated = all_emails?.filter((m) => m.message_id !== selectedMail.message_id) || [];
-                setAllEmails(updated);
-                await airsendDB.bulkDeleteItems("mails", [selectedMail.message_id]);
-                // Sync counts for both source and destination folders
-                emitSyncCounts(currentFolder);
-                emitSyncCounts(targetFolder);
+                // The response has the counts of both the source and the destination folder
+                await applyActionResult(data, selectedMail.message_id, currentFolder, true);
                 setSelectedMail(null as any);
                 toast.success(`Moved to ${targetFolder}`);
                 router.push(`/v2/u/mail/${currentFolder}`);
@@ -339,7 +338,7 @@ export function useMailActions() {
                 toast.error(err?.message || "Failed to move");
             }
         },
-        [selectedMail, folder, params?.folder, all_emails, setAllEmails, emitSyncCounts, setSelectedMail, router]
+        [selectedMail, folder, params?.folder, setSelectedMail, router]
     );
 
     // ── Star / unstar ────────────────────────────────────────────────────

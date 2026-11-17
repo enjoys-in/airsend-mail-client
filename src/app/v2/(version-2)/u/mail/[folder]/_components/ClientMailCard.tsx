@@ -1,5 +1,5 @@
 "use client"
-import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -14,9 +14,19 @@ import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event'
 import { useAppSelector } from '@/store/hooks'
 import { sentenceCase } from 'change-case'
 import { GetAllMailsPayload } from '@/lib/types/mail.interface'
+import { applyFolderCounts, markListSynced, needsListFetch } from '@/db/mailbox-sync'
 
 /** Server default page size of GET /api/v1/get-mails (airsend-api MailDataController). */
 const API_PAGE_LIMIT = 50
+
+/** Whole-folder totals sent with every page; pages are counted in threads (one row per thread). */
+type ListMeta = { page: number; limit: number; total_messages: number; unread: number; total_pages: number; has_more: boolean }
+
+/** GET /get-mails result is { mails, meta }; an older server returned the bare array. */
+function readList(result: any): { mails: any[]; meta: ListMeta | null } {
+    if (Array.isArray(result)) return { mails: result, meta: null }
+    return { mails: result?.mails ?? [], meta: result?.meta ?? null }
+}
 
 /**
  * Thread key — identical to the server's `COALESCE(thread_id, message_id)`.
@@ -85,7 +95,7 @@ const ClientMailCard = () => {
             if (!data.success) {
                 throw new Error("Error fetching emails")
             }
-            const results = data.result ?? []
+            const { mails: results, meta } = readList(data.result)
             // Normalize folder field to match URL param (case-insensitive Dexie fix)
             const normalized = results.map((m: any) => ({ ...m, folder: folder }))
             const freshIds = new Set(normalized.map((m: any) => m.message_id))
@@ -95,7 +105,7 @@ const ClientMailCard = () => {
             // otherwise older cached mails / thread siblings would be wiped.
             const freshThreads = new Set(normalized.map(threadKey))
             const mailTime = (m: any) => new Date(m.timestamp || m.created_at || 0).getTime()
-            const isFullFolder = normalized.length < API_PAGE_LIMIT
+            const isFullFolder = meta ? !meta.has_more : normalized.length < API_PAGE_LIMIT
             const oldestFresh = normalized.length > 0
                 ? Math.min(...normalized.map(mailTime))
                 : -Infinity
@@ -114,7 +124,10 @@ const ClientMailCard = () => {
                 if (staleKeys.length > 0) await db.mails.bulkDelete(staleKeys as any)
                 if (normalized.length > 0) await db.mails.bulkPut(normalized)
             })
-            // Fewer than a full page of threads → there is no page 2
+            // The sidebar counts come with the list: no separate count request
+            if (meta) await applyFolderCounts({ [folder]: { total_count: meta.total_messages, unread_count: meta.unread } })
+            await markListSynced(email, folder)
+            // The server says whether there is a page 2
             setExhausted((prev) => ({ ...prev, [key]: isFullFolder }))
         } catch (error) {
             // handle error
@@ -153,12 +166,13 @@ const ClientMailCard = () => {
                 `?is_refresh=1&folder=${folder}&page=${page}&limit=${API_PAGE_LIMIT}`
             )
             if (!data.success) throw new Error("Error fetching emails")
-            const results: any[] = data.result ?? []
+            const { mails: results, meta } = readList(data.result)
             const normalized = results.map((m) => ({ ...m, folder }))
             const newThreads = normalized.filter((m) => !shownThreadKeys.has(threadKey(m))).length
             if (normalized.length > 0) await db.mails.bulkPut(normalized as any)
             // Last page reached, or nothing new came back (avoids re-requesting the same page)
-            if (results.length < API_PAGE_LIMIT || newThreads === 0) {
+            const lastPage = meta ? !meta.has_more : results.length < API_PAGE_LIMIT
+            if (lastPage || newThreads === 0) {
                 setExhausted((prev) => ({ ...prev, [key]: true }))
             }
         } catch (error) {
@@ -201,17 +215,28 @@ const ClientMailCard = () => {
         return next
     }, [live, isReady])
 
-    // Mirror into Zustand for other consumers (SpotToolbar select-all, actions)
-    // and sync the folder from the API once per view: cached mails show at once, and
-    // whatever changed elsewhere (other devices, IMAP clients) is reconciled into Dexie.
+    // Folders whose "needs fetch" flag was already checked by this view
+    const checkedKeysRef = useRef<Set<string>>(new Set())
+    const [, rerender] = useReducer((n: number) => n + 1, 0)
+
+    // Mirror into Zustand for other consumers (SpotToolbar select-all, actions). Cached
+    // mails show at once; the API is called only when the cached list can't be trusted
+    // (never fetched, marked stale, or too old: see db/mailbox-sync). New mail, moves and
+    // read state are written to Dexie by the socket handlers, not refetched.
     useEffect(() => {
-        if (!isReady || !all_emails || !viewKey) return
+        if (!isReady || !all_emails || !viewKey || !email) return
         setAllEmails(all_emails)
-        if (!fetchedKeysRef.current.has(viewKey)) {
-            fetchedKeysRef.current.add(viewKey)
-            storeInDB(1)
-        }
-    }, [isReady, all_emails, viewKey, setAllEmails, storeInDB])
+        if (checkedKeysRef.current.has(viewKey)) return
+        checkedKeysRef.current.add(viewKey)
+        needsListFetch(email, folder).then((needed) => {
+            if (needed) {
+                storeInDB(1)
+            } else {
+                fetchedKeysRef.current.add(viewKey)
+                rerender()
+            }
+        })
+    }, [isReady, all_emails, viewKey, email, folder, setAllEmails, storeInDB])
 
     // Mail sent from another tab/device: refresh the Sent list when it is on screen
     useEffect(() => listenMailEvents((event: any) => {

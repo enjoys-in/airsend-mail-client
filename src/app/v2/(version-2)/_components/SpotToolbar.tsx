@@ -10,7 +10,11 @@ import { ApiResponse } from "@/lib/types"
 import { CustomEventKey, useCustomEvent } from "@/hooks/use-custom-event"
 import { MailEventData } from "@/lib/types/update-mail-events.interface"
 import { airsendDB } from "@/db"
+import { applyMailActionResult, MailEventResult } from "@/db/mailbox-sync"
 import { useParams } from "next/navigation"
+
+/** Actions that take mail out of the folder on screen (the server applies them to whole threads). */
+const REMOVING_ACTIONS = new Set<string>(["delete", "delete_all", "move", "move_all", "archive", "spam"])
 
 export function SpotToolbar() {
   const params = useParams()
@@ -20,7 +24,6 @@ export function SpotToolbar() {
   const selected_mailbox = useMailStore((s) => s.selected_mailbox)
   const setAllEmails = useMailStore((s) => s.setAllEmails)
   const { listen } = useCustomEvent(CustomEventKey.MailEvents)
-  const { emit } = useCustomEvent(CustomEventKey.SyncMailCounts)
   const handleImapEvents = useCallback(
     async (data: MailEventData) => {
       // The EventBridge re-broadcasts server SyncEvents ({ type, eventId, payload })
@@ -29,25 +32,27 @@ export function SpotToolbar() {
       if (!data || typeof (data as any).action !== "string") return
 
       try {
-        let response = await API.handleMailEvents(data, selected_mailbox || params.folder as string)
+        const currentFolder = selected_mailbox || params.folder as string
+        let response = await API.handleMailEvents(data, currentFolder)
         if (response) {
-          const res = response.data as ApiResponse<any>
+          const res = response.data as ApiResponse<MailEventResult | null>
           if (!res.success) {
             return toast.error(res.message)
           }
-          if (data.action === "delete" || data.action === "move" || data.action === "archive") {
-
-            // Use data.message_id (the actual IDs being acted on) instead of
-            // checkedItems which can be stale/empty for single-item actions
-            const idsToRemove = data.message_id || []
+          // The response carries every message touched (whole threads for moves/deletes) and the
+          // counts of each folder involved, so nothing is fetched again here.
+          const removesMail = REMOVING_ACTIONS.has(data.action)
+          const affected = await applyMailActionResult({
+            result: res.result,
+            fallbackIds: data.message_id || [],
+            currentFolder,
+            removesMail,
+          })
+          if (removesMail) {
+            const gone = new Set(affected)
             const currentEmails = useMailStore.getState().all_emails
-            const updatedEmails = currentEmails?.filter((item) => !idsToRemove.includes(item.message_id))
-
-            emit(selected_mailbox || params.folder as string)
-            setAllEmails(updatedEmails || [])
-            await airsendDB.bulkDeleteItems("mails", idsToRemove as any)
+            setAllEmails(currentEmails?.filter((item) => !gone.has(item.message_id)) || [])
             setCheckedItems([])
-
           }
           // Flag-style actions (hover star/flag, toolbar read/unread): reflect the
           // change locally — previously the API was called but the row never updated.
@@ -71,7 +76,6 @@ export function SpotToolbar() {
             await Promise.all(
               data.message_id.map((id) => airsendDB.updateItem("mails", id, changes as any).catch(() => { }))
             )
-            if ("is_read" in changes) emit(selected_mailbox || params.folder as string)
           }
           if (data.action === "move_all" || data.action === "delete_all") {
             setCheckedItems([])
@@ -83,7 +87,7 @@ export function SpotToolbar() {
         return toast.error(error.message)
       }
     },
-    [selected_mailbox, params.folder, emit, setAllEmails, setCheckedItems]
+    [selected_mailbox, params.folder, setAllEmails, setCheckedItems]
   )
   const handleSelectAll = useCallback(() => {
     const message_id = all_emails?.map((item) => item.message_id)

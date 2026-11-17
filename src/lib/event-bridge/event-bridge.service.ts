@@ -15,6 +15,7 @@
 import type { Socket } from 'socket.io-client';
 import { decode } from '@msgpack/msgpack';
 import { db } from '@/db';
+import { markCurrentListStale } from '@/db/mailbox-sync';
 import { BridgeEvent, SyncProtocol, SyncStatus, ALL_BRIDGE_EVENTS, SYNC_CURSOR_KEY, SYNC_TIMESTAMP_KEY } from './constants';
 import { syncStore } from './sync-state';
 import { eventHandlerMap } from './event-handlers';
@@ -179,7 +180,11 @@ class EventBridgeService implements IEventBridgeService {
 
     syncStore.getState().setIdle();
 
-    // Notify UI that sync is complete
+    // Mail that arrived while disconnected is not in IndexedDB (new mail comes by its own socket
+    // event, not the replay), so every cached list is stale: each is fetched once on its next open.
+    await markCurrentListStale();
+
+    // Notify UI that sync is complete (the folder on screen refetches now)
     eventBus.emit(CustomEventKey.SyncMail);
   };
 

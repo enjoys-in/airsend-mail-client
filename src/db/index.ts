@@ -258,6 +258,11 @@ class AirsendDB {
     this.mailAccount = (email ?? "").toLowerCase();
   }
 
+  /** The account on screen (lowercase), or "" before one is set. */
+  getMailAccount() {
+    return this.mailAccount;
+  }
+
   /** True for the current account's mails and for records with no receipient (local drafts). */
   ownsMail(m: { receipient?: string | null }) {
     return !this.mailAccount || !m.receipient || m.receipient.toLowerCase() === this.mailAccount;
