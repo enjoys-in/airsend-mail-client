@@ -11,7 +11,7 @@ import {
   RiMapPinLine,
   RiRepeatLine,
 } from "@remixicon/react";
-import { format, isBefore } from "date-fns";
+import { format, isBefore, startOfDay } from "date-fns";
 
 import type { CalendarEvent, EditScope, EventColor } from ".";
 import { Button } from "@/components/ui/button";
@@ -298,6 +298,20 @@ export function EventDialog({
     setError(null);
   };
 
+  // Drag / resize of the event in the day timeline -> same fields as the pickers
+  const handleDraftChange = (start: Date, end: Date) => {
+    const day = startOfDay(start);
+    const hhmm = (d: Date) => {
+      const m = Math.round((d.getTime() - day.getTime()) / 60000);
+      return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+    };
+    setStartDate(day);
+    setEndDate(day);
+    setStartTime(hhmm(start));
+    setEndTime(hhmm(end));
+    setError(null);
+  };
+
   const handleEndDateChange = (date: Date) => {
     setEndDate(date);
     setError(null);
@@ -504,6 +518,7 @@ export function EventDialog({
             {typePanel("side")}
             <DayPreview
               draft={preview}
+              onDraftChange={handleDraftChange}
               excludeId={event?.seriesId || event?.id || undefined}
               className="min-h-[260px] flex-1"
             />

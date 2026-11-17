@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addDays, format, isSameDay, isToday, startOfDay } from "date-fns";
+import { addDays, addMinutes, format, isSameDay, isToday, startOfDay } from "date-fns";
 import { RiArrowLeftSLine, RiArrowRightSLine } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import { useCalDevStore } from "../../../_lib/caldev-store";
@@ -39,10 +39,13 @@ function withAlpha(hex: string, alpha: number): string {
  */
 export function DayPreview({
   draft,
+  onDraftChange,
   excludeId,
   className,
 }: {
   draft: PreviewEvent;
+  /** when given, the event can be dragged (move) or resized (top/bottom edge), snapped to 15 min */
+  onDraftChange?: (start: Date, end: Date) => void;
   /** series/event id being edited — hidden so it isn't shown twice */
   excludeId?: string;
   className?: string;
@@ -77,11 +80,54 @@ export function DayPreview({
   // Scroll so the event (or the morning) is in view
   const scrollRef = useRef<HTMLDivElement>(null);
   const focusHour = isSameDay(day, draft.start) && !draft.allDay ? draft.start.getHours() : 8;
+  // Hour we just produced by dragging: do not scroll the timeline under the cursor
+  const emittedHour = useRef<number | null>(null);
   useEffect(() => {
+    if (emittedHour.current === focusHour) return;
     scrollRef.current?.scrollTo({ top: Math.max(0, (focusHour - 1.5) * HOUR_PX) });
   }, [focusHour, day]);
 
   const dayStart = day.getTime();
+
+  // Drag / resize of the draft
+  const drag = useRef<{ mode: "move" | "top" | "bottom"; y: number; s: number; e: number } | null>(null);
+  const last = useRef<{ s: number; e: number } | null>(null);
+  const minutesOf = (d: Date) => Math.round((d.getTime() - dayStart) / 60000);
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+
+  const beginDrag = (mode: "move" | "top" | "bottom") => (ev: React.PointerEvent<HTMLElement>) => {
+    if (ev.button !== 0) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    ev.currentTarget.setPointerCapture(ev.pointerId);
+    const s = minutesOf(draft.start);
+    const e = minutesOf(draft.end);
+    drag.current = { mode, y: ev.clientY, s, e };
+    last.current = { s, e };
+  };
+  const moveDrag = (ev: React.PointerEvent<HTMLElement>) => {
+    const d = drag.current;
+    if (!d || !onDraftChange) return;
+    const delta = Math.round((((ev.clientY - d.y) / HOUR_PX) * 60) / 15) * 15;
+    let s = d.s;
+    let e = d.e;
+    if (d.mode === "move") {
+      s = clamp(d.s + delta, 0, 1440 - (d.e - d.s));
+      e = s + (d.e - d.s);
+    } else if (d.mode === "top") {
+      s = clamp(d.s + delta, 0, d.e - 15);
+    } else {
+      e = clamp(d.e + delta, d.s + 15, 1440);
+    }
+    if (last.current && last.current.s === s && last.current.e === e) return;
+    last.current = { s, e };
+    emittedHour.current = Math.floor(s / 60);
+    onDraftChange(addMinutes(day, s), addMinutes(day, e));
+  };
+  const endDrag = () => {
+    drag.current = null;
+    last.current = null;
+  };
   const place = (i: Item) => {
     const s = Math.max(i.start.getTime(), dayStart);
     const e = Math.min(i.end.getTime(), dayStart + 24 * HOUR_MS);
@@ -157,31 +203,69 @@ export function DayPreview({
           ))}
 
           <div className="absolute inset-y-0 left-12 right-2">
-            {timedItems.map((i) => (
-              <div
-                key={i.key}
-                className={cn(
-                  "absolute overflow-hidden rounded-md border-l-[3px] px-2 py-1 text-xs leading-tight",
-                  i.isDraft
-                    ? "left-5 right-0 z-10 font-medium text-foreground shadow-sm"
-                    : "left-0 right-0 text-muted-foreground",
-                )}
-                style={{
-                  ...place(i),
-                  borderColor: i.color,
-                  backgroundColor: withAlpha(i.color, i.isDraft ? 0.25 : 0.12),
-                }}
-              >
-                <p className="truncate">{i.title || "(no title)"}</p>
-                <p className="truncate text-[10px] opacity-75">
-                  {format(i.start, "h:mm a")} – {format(i.end, "h:mm a")}
-                </p>
-              </div>
-            ))}
+            {timedItems.map((i) => {
+              // single-day timed draft only; multi-day events are edited with the pickers
+              const editable =
+                !!i.isDraft &&
+                !!onDraftChange &&
+                i.start.getTime() >= dayStart &&
+                i.end.getTime() <= dayStart + 24 * HOUR_MS;
+              return (
+                <div
+                  key={i.key}
+                  {...(editable
+                    ? {
+                        onPointerDown: beginDrag("move"),
+                        onPointerMove: moveDrag,
+                        onPointerUp: endDrag,
+                        onPointerCancel: endDrag,
+                        title: "Drag to move, drag the top or bottom edge to resize",
+                      }
+                    : {})}
+                  className={cn(
+                    "absolute overflow-hidden rounded-md border-l-[3px] px-2 py-1 text-xs leading-tight select-none",
+                    i.isDraft
+                      ? "left-5 right-0 z-10 font-medium text-foreground shadow-sm"
+                      : "left-0 right-0 text-muted-foreground",
+                    editable && "cursor-grab touch-none active:cursor-grabbing active:shadow-lg",
+                  )}
+                  style={{
+                    ...place(i),
+                    borderColor: i.color,
+                    backgroundColor: withAlpha(i.color, i.isDraft ? 0.25 : 0.12),
+                  }}
+                >
+                  {editable && (
+                    <>
+                      <span
+                        aria-hidden
+                        onPointerDown={beginDrag("top")}
+                        onPointerMove={moveDrag}
+                        onPointerUp={endDrag}
+                        onPointerCancel={endDrag}
+                        className="absolute inset-x-0 top-0 h-2 cursor-ns-resize touch-none"
+                      />
+                      <span
+                        aria-hidden
+                        onPointerDown={beginDrag("bottom")}
+                        onPointerMove={moveDrag}
+                        onPointerUp={endDrag}
+                        onPointerCancel={endDrag}
+                        className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize touch-none"
+                      />
+                    </>
+                  )}
+                  <p className="truncate">{i.title || "(no title)"}</p>
+                  <p className="truncate text-[10px] opacity-75">
+                    {format(i.start, "h:mm a")} – {format(i.end, "h:mm a")}
+                  </p>
+                </div>
+              );
+            })}
             {nowTop !== null && (
               <div className="pointer-events-none absolute inset-x-0 z-20" style={{ top: nowTop }}>
-                <div className="h-px bg-red-500" />
-                <div className="absolute -left-1 -top-[3px] size-[7px] rounded-full bg-red-500" />
+                <div className="h-0.5 bg-red-500" />
+                <div className="absolute -left-1.5 -top-[5px] size-[10px] rounded-full bg-red-500 ring-2 ring-background" />
               </div>
             )}
           </div>
