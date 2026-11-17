@@ -315,12 +315,15 @@ export function WeekView({
               key={hour.toString()}
               className="border-border/40 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
             >
-              {/* first label (12 AM) would sit under the sticky header */}
-              {index > 0 && (
-                <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-full items-center justify-end pe-2 text-[10px] tabular-nums sm:pe-3 sm:text-[11px]">
-                  {format(hour, "h a")}
-                </span>
-              )}
+              {/* 12 AM sits on the top edge: keep it inside the row so the header can't cover it */}
+              <span
+                className={cn(
+                  "bg-background text-muted-foreground/70 absolute left-0 flex h-6 w-full items-center justify-end pe-2 text-[10px] tabular-nums sm:pe-3 sm:text-[11px]",
+                  index === 0 ? "top-0" : "-top-3",
+                )}
+              >
+                {format(hour, "h a")}
+              </span>
             </div>
           ))}
         </div>
