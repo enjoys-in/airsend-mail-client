@@ -78,7 +78,10 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
     const params = useParams()
     const setSelectedMail = useMailStore((state) => state.setSelectedMail)
     const [hovered, setHovered] = React.useState(false)
-    const checkedItems = useMailStore((state) => state.checkedItems)
+    // Subscribe to booleans only — subscribing to the whole `checkedItems` array
+    // re-rendered EVERY row whenever any single row was checked/unchecked.
+    const isChecked = useMailStore((state) => state.checkedItems.includes(item.message_id))
+    const anyChecked = useMailStore((state) => state.checkedItems.length > 0)
     const setCheckedItems = useMailStore((state) => state.setCheckedItems)
     const { emit } = useCustomEvent(CustomEventKey.MailEvents)
     const showFavicon = useSettingsStore((s) => s.settings?.email_privacy?.show_sender_favicon ?? false)
@@ -114,17 +117,15 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
         return []
     }, [item.hasAttachment])
 
-    const isChecked = checkedItems.includes(item.message_id)
-    const anyChecked = checkedItems.length > 0
-
     const handleCheckChange = useCallback(
         (id: string, checked: boolean) => {
+            const current = useMailStore.getState().checkedItems
             setCheckedItems(checked
-                ? [...checkedItems, id]
-                : checkedItems.filter((x) => x !== id)
+                ? (current.includes(id) ? current : [...current, id])
+                : current.filter((x) => x !== id)
             )
         },
-        [checkedItems, setCheckedItems]
+        [setCheckedItems]
     )
 
     const handleClick = useCallback(async () => {

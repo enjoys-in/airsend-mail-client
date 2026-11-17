@@ -62,7 +62,14 @@ const ClientDisplay = ({
     const { setRenderStyle, renderStyle, setRenderMode, renderMode } =
         useMailRenderSettings();
 
-    const { selectedMail, setSelectedMail, setLoading } = useMailStore();
+    // Granular selectors — destructuring the whole store re-rendered the header
+    // on every unrelated change (all_emails, checkedItems, loading, ...).
+    const storedMail = useMailStore((s) => s.selectedMail);
+    const setSelectedMail = useMailStore((s) => s.setSelectedMail);
+    // Ignore a selectedMail left over from a different message (browser back /
+    // forward, direct URL) — it showed the wrong mail's header.
+    const selectedMail =
+        storedMail && storedMail.message_id === message_id ? storedMail : null;
 
     const {
         handleReply,
@@ -105,14 +112,19 @@ const ClientDisplay = ({
     );
 
     useEffect(() => {
-        if (!selectedMail) {
-            db.mails
-                .where("message_id")
-                .equals(message_id)
-                .first()
-                .then((item) => setSelectedMail(item as any));
-        }
-    }, [selectedMail]);
+        if (selectedMail) return;
+        let cancelled = false;
+        db.mails
+            .where("message_id")
+            .equals(message_id)
+            .first()
+            .then((item) => {
+                if (!cancelled && item) setSelectedMail(item as any);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedMail, message_id, setSelectedMail]);
 
     // Mark as read when user views the mail
     useEffect(() => {

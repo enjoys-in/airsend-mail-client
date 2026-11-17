@@ -44,7 +44,11 @@ const NewMailRecived = () => {
             const currentFolder = useMailStore.getState().selected_mailbox
             if (currentFolder && obj.folder?.toLowerCase() === currentFolder.toLowerCase()) {
                 const currentEmails = useMailStore.getState().all_emails
-                setAllEmails([obj as any, ...(currentEmails || [])])
+                // Dedupe: the Dexie live query may already have added this mail
+                setAllEmails([
+                    obj as any,
+                    ...(currentEmails || []).filter((m) => m.message_id !== obj.message_id),
+                ])
             }
 
             // Manually increment mailbox counts (+1 total, +1 unread) in Zustand + Dexie

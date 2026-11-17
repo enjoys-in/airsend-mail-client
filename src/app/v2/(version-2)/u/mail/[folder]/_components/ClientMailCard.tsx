@@ -1,7 +1,8 @@
 "use client"
 import React, { Suspense, useCallback, useEffect, useRef } from 'react'
 
-import { airsendDB, db } from '@/db'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '@/db'
 import { useParams, useSearchParams } from 'next/navigation'
 import { useMailStore } from '@/store/mails'
 
@@ -11,28 +12,53 @@ import Loading from '../loading'
 import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event'
 import { useAppSelector } from '@/store/hooks'
 import { sentenceCase } from 'change-case'
+import { GetAllMailsPayload } from '@/lib/types/mail.interface'
 
+/** Structural compare of two mail records (nested values compared by JSON). */
+function isSameMail(a: any, b: any): boolean {
+    if (a === b) return true
+    if (!a || !b) return false
+    const ka = Object.keys(a)
+    if (ka.length !== Object.keys(b).length) return false
+    for (const k of ka) {
+        const va = a[k], vb = b[k]
+        if (va === vb) continue
+        if (va && vb && typeof va === 'object' && typeof vb === 'object') {
+            if (JSON.stringify(va) !== JSON.stringify(vb)) return false
+            continue
+        }
+        return false
+    }
+    return true
+}
 
 const ClientMailCard = () => {
     const { folder } = useParams() as { folder: string }
     const searchParams = useSearchParams()
-    const all_emails = useMailStore((state) => state.all_emails)
     const setAllEmails = useMailStore((state) => state.setAllEmails)
     const loading = useMailStore((state) => state.loading)
     const setLoading = useMailStore((state) => state.setLoading)
     const { listen } = useCustomEvent(CustomEventKey.SyncMail)
     const { emit } = useCustomEvent(CustomEventKey.MailEvents)
-    const currAccount = useAppSelector(state => state.accounts.currAccount)
+    // Select the primitive only — selecting the whole account object
+    // re-rendered the list whenever any account field changed.
+    const email = useAppSelector(state => state.accounts.currAccount?.email)
+
+    const viewKey = email ? `${email.toLowerCase()}::${folder.toLowerCase()}` : null
 
     // Guard against concurrent / duplicate API calls
     const fetchingRef = useRef(false)
-    // Track folders that returned empty from API (legitimately empty)
-    const emptyFoldersRef = useRef<Set<string>>(new Set())
+    // Folders already fetched from the API (so an empty folder isn't re-fetched in a loop)
+    const fetchedKeysRef = useRef<Set<string>>(new Set())
 
+    /**
+     * Fetch the folder from the API and write it to Dexie.
+     * The UI is driven by the live query below, so no manual Zustand updates here.
+     */
     const storeInDB = useCallback(async (is_refresh: number = 0) => {
-        // Prevent concurrent duplicate calls
-        if (fetchingRef.current) return
+        if (!email || fetchingRef.current) return
         fetchingRef.current = true
+        const key = `${email.toLowerCase()}::${folder.toLowerCase()}`
         try {
             setLoading(true)
             const { data } = await API.getAllMailData(`?is_refresh=${is_refresh}&folder=${folder}`)
@@ -40,62 +66,78 @@ const ClientMailCard = () => {
                 throw new Error("Error fetching emails")
             }
             const results = data.result ?? []
-            if (results.length > 0) {
-                // Normalize folder field to match URL param (case-insensitive Dexie fix)
-                const normalized = results.map((m: any) => ({ ...m, folder: folder }))
-                await airsendDB.bulkPutItems("mails", normalized as any)
-                emptyFoldersRef.current.delete(folder)
-                setAllEmails(normalized)
-            } else {
-                // Mark folder as legitimately empty so we don't re-fetch
-                emptyFoldersRef.current.add(folder)
-                setAllEmails(results)
-            }
+            // Normalize folder field to match URL param (case-insensitive Dexie fix)
+            const normalized = results.map((m: any) => ({ ...m, folder: folder }))
+            const freshIds = new Set(normalized.map((m: any) => m.message_id))
+
+            await db.transaction('rw', db.mails, async () => {
+                // Remove cached mails of this folder that no longer exist on the server
+                const cached = await db.mails
+                    .where('receipient').equalsIgnoreCase(email)
+                    .filter((m) => (m.folder ?? '').toLowerCase() === folder.toLowerCase())
+                    .toArray()
+                const staleIds = cached
+                    .map((m) => m.message_id as string)
+                    .filter((id) => !freshIds.has(id))
+                if (staleIds.length > 0) await db.mails.bulkDelete(staleIds)
+                if (normalized.length > 0) await db.mails.bulkPut(normalized)
+            })
         } catch (error) {
             // handle error
         } finally {
+            // Mark as fetched even on failure so we show the empty state
+            // instead of an endless skeleton / retry loop.
+            fetchedKeysRef.current.add(key)
             setLoading(false)
             fetchingRef.current = false
         }
-    }, [folder, setAllEmails, setLoading])
+    }, [email, folder, setLoading])
 
-    const loadMailFromDB = useCallback(async () => {
-        if (!currAccount?.email) return
-
-        // If Zustand already has emails for this folder, skip reload
-        const currentEmails = useMailStore.getState().all_emails
-        if (currentEmails && currentEmails.length > 0
-            && currentEmails[0]?.folder?.toLowerCase() === folder.toLowerCase()) {
-            return
-        }
-
-        db.mails
-            .where("[folder+receipient]")
-            .equals([folder, currAccount.email])
+    /**
+     * Dexie is the source of truth: any write to `mails` (socket events, new
+     * mail, star/read/delete actions, API sync) re-renders the list automatically.
+     * Case-insensitive folder match so socket writes ("INBOX") show in "/inbox".
+     */
+    const live = useLiveQuery(async () => {
+        if (!email) return null
+        const mails = await db.mails
+            .where('receipient').equalsIgnoreCase(email)
+            .filter((m) => (m.folder ?? '').toLowerCase() === folder.toLowerCase())
             .toArray()
-            .then(items => {
-                if (items.length === 0) {
-                    // Don't re-fetch if this folder was already confirmed empty
-                    if (emptyFoldersRef.current.has(folder)) {
-                        setAllEmails([])
-                        return
-                    }
-                    return storeInDB(1)
-                }
-                setAllEmails(items as any)
-            });
-    }, [folder, currAccount?.email, storeInDB, setAllEmails])
+        return { key: `${email.toLowerCase()}::${folder.toLowerCase()}`, mails: mails as GetAllMailsPayload[] }
+    }, [email, folder])
 
+    // Only trust the live result when it belongs to the folder/account on screen
+    // (avoids flashing the previous folder's mails after switching).
+    const isReady = !!live && live.key === viewKey
+
+    // Keep object identity for unchanged mails so memoized <MailCard>s don't
+    // all re-render when a single record changes.
+    const prevMailsRef = useRef<Map<string, GetAllMailsPayload>>(new Map())
+    const all_emails = React.useMemo(() => {
+        if (!isReady) return null
+        const prev = prevMailsRef.current
+        const next = live!.mails.map((m) => {
+            const p = prev.get(m.message_id)
+            return p && isSameMail(p, m) ? p : m
+        })
+        prevMailsRef.current = new Map(next.map((m) => [m.message_id, m]))
+        return next
+    }, [live, isReady])
+
+    // Mirror into Zustand for other consumers (SpotToolbar select-all, actions)
+    // and fetch from the API once if this folder has no cached mails yet.
     useEffect(() => {
-        if (currAccount?.email) {
-            loadMailFromDB()
+        if (!isReady || !all_emails || !viewKey) return
+        setAllEmails(all_emails)
+        if (all_emails.length === 0 && !fetchedKeysRef.current.has(viewKey)) {
+            storeInDB(1)
         }
-    }, [currAccount?.email, folder, loadMailFromDB])
+    }, [isReady, all_emails, viewKey, setAllEmails, storeInDB])
 
     useEffect(() => {
         const unsubscribe = listen(() => {
-            // Manual sync: clear empty-folder cache so it always re-fetches
-            emptyFoldersRef.current.delete(folder)
+            // Manual sync: always re-fetch
             storeInDB(1)
         })
         const messageId = searchParams.get('message_id')
@@ -142,7 +184,11 @@ const ClientMailCard = () => {
         })
     }, [all_emails])
 
-    if (loading) return <Loading />
+    // Only show the skeleton when there is nothing to show yet. A background
+    // sync (socket replay / sync button) no longer swaps the whole list for a
+    // skeleton and back, which caused the list to flicker and remount.
+    const awaitingFirstFetch = sortedEmails.length === 0 && !!viewKey && !fetchedKeysRef.current.has(viewKey)
+    if (!isReady || (sortedEmails.length === 0 && (loading || awaitingFirstFetch))) return <Loading />
 
     return <Suspense fallback={<Loading />}>
         {sortedEmails.length > 0 ? (

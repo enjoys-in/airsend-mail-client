@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, createContext, useContext } from "react";
 import { useCalendarContext } from "./event-calendar/calendar-context";
 import { useCalDevStore } from "../_lib/caldev-store";
 import { hexToEventColor, type CalDevEvent } from "../_lib/caldev-types";
 import { Calendar } from "@/components/ui/calendar";
-import type { DayContentProps } from "react-day-picker";
+import type { DayButtonProps } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import {
   RiCheckLine,
@@ -74,6 +74,50 @@ interface SidebarCalendarProps {
   className?: string;
 }
 
+// Stable reference so DayPicker doesn't see new components each render
+const CALENDAR_COMPONENTS = { DayButton: DayButtonWithDots };
+
+// "YYYY-MM-DD" → calendar colors with events on that day
+const EventDotsContext = createContext<Map<string, string[]>>(new Map());
+
+/**
+ * Day cell with event dots. react-day-picker v9+ removed `components.DayContent`
+ * (it was silently ignored, so dots never rendered) — `DayButton` replaces it.
+ * Defined at module level and fed via context so its identity is stable;
+ * a component recreated per render would remount every day cell.
+ */
+function DayButtonWithDots({ day, modifiers, children, ...buttonProps }: DayButtonProps) {
+  const dots = useContext(EventDotsContext);
+  const ref = useRef<HTMLButtonElement>(null);
+  // Keep react-day-picker's keyboard focus behaviour
+  useEffect(() => {
+    if (modifiers.focused) ref.current?.focus();
+  }, [modifiers.focused]);
+
+  const d = day.date;
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const colors = dots.get(key);
+
+  return (
+    <button ref={ref} {...buttonProps}>
+      <div className="relative flex flex-col items-center">
+        <span>{children}</span>
+        {colors && colors.length > 0 && (
+          <span className="flex gap-[2px] absolute -bottom-0.5">
+            {colors.slice(0, 3).map((c, i) => (
+              <span
+                key={i}
+                className="size-1 rounded-full"
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
+
 export default function SidebarCalendar({ className }: SidebarCalendarProps) {
   const { currentDate, setCurrentDate, isColorVisible, toggleColorVisibility } =
     useCalendarContext();
@@ -109,6 +153,18 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
   useEffect(() => {
     setCalendarMonth(currentDate);
   }, [currentDate]);
+
+  // Make sure events (dots) are loaded for the month browsed in the mini
+  // calendar — paging it never fetched, so other months showed no dots.
+  // The store's range cache skips the request when already covered.
+  const accountId = useCalDevStore((s) => s.accountId);
+  const fetchEvents = useCalDevStore((s) => s.fetchEvents);
+  useEffect(() => {
+    if (!accountId) return;
+    const y = calendarMonth.getFullYear();
+    const m = calendarMonth.getMonth();
+    fetchEvents(new Date(y, m, -6).toISOString(), new Date(y, m + 1, 7).toISOString());
+  }, [accountId, calendarMonth, fetchEvents]);
 
   // ── Compute event-dot dates for the visible month ──
   const eventDotDates = useMemo(() => {
@@ -172,31 +228,6 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
   }, [rawEvents]);
 
   // ── Custom DayContent with event dots ──
-  const DayContentWithDots = useCallback(
-    (props: DayContentProps) => {
-      const d = props.date;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const colors = eventDotDates.get(key);
-      return (
-        <div className="relative flex flex-col items-center">
-          <span>{d.getDate()}</span>
-          {colors && colors.length > 0 && (
-            <span className="flex gap-[2px] absolute -bottom-0.5">
-              {colors.slice(0, 3).map((c, i) => (
-                <span
-                  key={i}
-                  className="size-1 rounded-full"
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </span>
-          )}
-        </div>
-      );
-    },
-    [eventDotDates],
-  );
-
   const handleSelect = (date: Date | undefined) => {
     if (date) setCurrentDate(date);
   };
@@ -312,21 +343,21 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
         <SidebarHeader className="gap-3.5 border-b p-4">
           <div className={cn("w-full flex justify-center", className)}>
-            <Calendar
-              mode="single"
-              selected={currentDate}
-              onSelect={handleSelect}
-              month={calendarMonth}
-              showOutsideDays
-              onMonthChange={setCalendarMonth}
-              components={{
-                DayContent: DayContentWithDots,
-              }}
-              classNames={{
-                selected:
-                  "!bg-primary !text-primary-foreground hover:!bg-primary hover:!text-primary-foreground focus:!bg-primary focus:!text-primary-foreground",
-              }}
-            />
+            <EventDotsContext.Provider value={eventDotDates}>
+              <Calendar
+                mode="single"
+                selected={currentDate}
+                onSelect={handleSelect}
+                month={calendarMonth}
+                showOutsideDays
+                onMonthChange={setCalendarMonth}
+                components={CALENDAR_COMPONENTS}
+                classNames={{
+                  selected:
+                    "!bg-primary !text-primary-foreground hover:!bg-primary hover:!text-primary-foreground focus:!bg-primary focus:!text-primary-foreground",
+                }}
+              />
+            </EventDotsContext.Provider>
           </div>
         </SidebarHeader>
 

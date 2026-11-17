@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { isSyncingFromBackend } from '@/lib/api/sync-guard';
 
 const IdbSyncHookApi = () => {
-    const { setSettings } = useSettingsStore()
+    // Selector only — destructuring the whole settings store re-rendered on every settings change
+    const setSettings = useSettingsStore((s) => s.setSettings)
     React.useEffect(() => {
         const handler = async (changes: any) => {
             // Skip if we're syncing FROM backend TO IDB (prevents loop)
@@ -23,7 +24,8 @@ const IdbSyncHookApi = () => {
                     const { updatedAt, ...modifications } = dot.object((e as any).mods) as any;
 
                     if (Object.keys(modifications).length === 0) {
-                        return toast.info("Nothing to Update")
+                        toast.info("Nothing to Update")
+                        continue // `return` here dropped the rest of the batch
                     }
 
                     // Extract only the changed settings fields (delta)
@@ -31,7 +33,7 @@ const IdbSyncHookApi = () => {
                     const { usage, mailbox_size, quota_in_percent, ...settingsDelta } = delta
 
                     if (Object.keys(settingsDelta).length === 0) {
-                        return
+                        continue
                     }
 
                     /* Backend-first: push only changed fields to API, rollback on failure */

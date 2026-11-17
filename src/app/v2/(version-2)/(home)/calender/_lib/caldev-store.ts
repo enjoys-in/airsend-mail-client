@@ -125,6 +125,9 @@ const initialState = {
   lastFetchRange: null as { after: string; before: string } | null,
 };
 
+/** Range requested while a fetch was in flight (replayed afterwards). */
+let pendingFetch: { after: string; before: string; force: boolean } | null = null;
+
 export const useCalDevStore = create<CalDevState>()((set, get) => ({
   ...initialState,
 
@@ -234,7 +237,15 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   // -----------------------------------------------------------------------
   fetchEvents: async (after, before, force = false) => {
     const { accountId, eventsLoading, lastFetchRange } = get();
-    if (!accountId || eventsLoading) return;
+    if (!accountId) return;
+
+    // A fetch is already running — remember the latest request and run it
+    // when the current one finishes (it used to be silently dropped, so
+    // quickly paging months left the new month empty).
+    if (eventsLoading) {
+      pendingFetch = { after, before, force: force || !!pendingFetch?.force };
+      return;
+    }
 
     // Skip if requested range is within the already-fetched range
     if (
@@ -246,30 +257,38 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
       return;
     }
 
+    // Always fetch the MERGED range. Previously rawEvents was replaced with
+    // only the new range while lastFetchRange claimed the merged one, so
+    // navigating forward and back showed earlier months as empty.
+    const mergedRange = lastFetchRange
+      ? {
+          after: after < lastFetchRange.after ? after : lastFetchRange.after,
+          before: before > lastFetchRange.before ? before : lastFetchRange.before,
+        }
+      : { after, before };
+
     set({ eventsLoading: true });
     try {
-      const events = await api.queryAndFetchEvents(accountId, {
-        after,
-        before,
-      });
+      const events = await api.queryAndFetchEvents(accountId, mergedRange);
 
-      // Replace all events with the fresh fetch
-      // (queryAndFetchEvents now returns ALL events, client-filtered)
-      const mergedRange = lastFetchRange
-        ? {
-            after: after < lastFetchRange.after ? after : lastFetchRange.after,
-            before: before > lastFetchRange.before ? before : lastFetchRange.before,
-          }
-        : { after, before };
+      // Keep optimistic (not yet confirmed) events created during the fetch
+      const pendingTemp = get().rawEvents.filter((e) => e.id?.startsWith("temp-"));
 
       set({
-        rawEvents: events,
+        rawEvents: pendingTemp.length ? [...events, ...pendingTemp] : events,
         eventsLoading: false,
         lastFetchRange: mergedRange,
       });
     } catch {
       set({ eventsLoading: false });
       toast.error("Failed to load events");
+    }
+
+    // Run the request that arrived while we were busy (if any)
+    if (pendingFetch) {
+      const next = pendingFetch;
+      pendingFetch = null;
+      get().fetchEvents(next.after, next.before, next.force);
     }
   },
 
@@ -291,7 +310,10 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
         // Replace temp event with real server event
         const fullEvent = buildFullEvent(payload, created);
         set((s) => ({
-          rawEvents: s.rawEvents.map((e) => (e.id === tempId ? fullEvent : e)),
+          rawEvents: s.rawEvents
+            // a concurrent fetch may already contain the created event
+            .filter((e) => e.id !== fullEvent.id)
+            .map((e) => (e.id === tempId ? fullEvent : e)),
         }));
         return fullEvent;
       }
@@ -465,5 +487,8 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
   // -----------------------------------------------------------------------
   // Reset
   // -----------------------------------------------------------------------
-  reset: () => set(initialState),
+  reset: () => {
+    pendingFetch = null;
+    set(initialState);
+  },
 }));

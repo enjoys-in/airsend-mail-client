@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import { useCalDevStore } from "../../_lib/caldev-store";
@@ -50,19 +51,39 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
   const [visibleColors, setVisibleColors] = useState<string[]>([
     "blue", "orange", "violet", "emerald", "rose",
   ]);
-  const [colorsInitialized, setColorsInitialized] = useState(false);
+  // Calendar ids whose colors have already been applied
+  const seenCalendarIdsRef = useRef<Set<string> | null>(null);
 
-  // Sync visible colors from CalDev calendars — only on FIRST load
-  // so manual user toggles are preserved after that.
+  // Sync visible colors from CalDev calendars. The full list is applied on
+  // FIRST load only (so manual toggles are preserved); calendars added later
+  // (new calendar / subscription) get their color made visible — previously
+  // their events stayed hidden until the user toggled the color manually.
   useEffect(() => {
-    if (calendars.length > 0 && !colorsInitialized) {
+    if (calendars.length === 0) return;
+
+    if (!seenCalendarIdsRef.current) {
+      seenCalendarIdsRef.current = new Set(calendars.map((c) => c.id));
       const colors = calendars
         .filter((c) => c.is_visible)
         .map((c) => hexToEventColor(c.color));
       setVisibleColors([...new Set(colors)]);
-      setColorsInitialized(true);
+      return;
     }
-  }, [calendars, colorsInitialized]);
+
+    const seen = seenCalendarIdsRef.current;
+    const added = calendars.filter((c) => !seen.has(c.id));
+    if (added.length === 0) return;
+    added.forEach((c) => seen.add(c.id));
+
+    const newColors = added
+      .filter((c) => c.is_visible !== false)
+      .map((c) => hexToEventColor(c.color));
+    if (newColors.length === 0) return;
+    setVisibleColors((prev) => {
+      const missing = newColors.filter((c) => !prev.includes(c));
+      return missing.length ? [...prev, ...new Set(missing)] : prev;
+    });
+  }, [calendars]);
 
   // Stable toggle callback
   const toggleColorVisibility = useCallback((color: string) => {

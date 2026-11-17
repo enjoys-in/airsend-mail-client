@@ -35,7 +35,13 @@ export const MailDisplay = ({
 }) => {
   const router = useRouter();
   const currAccount = useAppSelector((state) => state.accounts.currAccount);
-  const { selectedMail, setSelectedMail, setLoading } = useMailStore();
+  // Granular selectors instead of subscribing to the whole mail store
+  const storedMail = useMailStore((s) => s.selectedMail);
+  const setSelectedMail = useMailStore((s) => s.setSelectedMail);
+  const setLoading = useMailStore((s) => s.setLoading);
+  // Ignore a selectedMail that belongs to a different message
+  const selectedMail =
+    storedMail && storedMail.message_id === message_id ? storedMail : null;
   const createTabWithData = useMultiTabStore((s) => s.createTabWithData);
 
   const fetchMailBodyFromCache = async () => {
@@ -60,8 +66,12 @@ export const MailDisplay = ({
       if (!data.success) {
         throw new Error(data.message);
       }
+    } catch (error) {
+    } finally {
+      // Always clear — a failed fetch left `loading` stuck at true, so the
+      // mail list showed a skeleton forever after navigating back.
       setLoading(false);
-    } catch (error) {}
+    }
   };
 
   /** Pop-out handler: opens the inline reply as a compose popup tab */
@@ -104,7 +114,7 @@ export const MailDisplay = ({
     <Fragment>
       <Separator />
       <ScrollArea className="flex-1 flex flex-col overflow-auto border-t border-gray-300 dark:border-gray-800">
-        {selectedMail && children}
+        {storedMail && children}
       </ScrollArea>
 
       {/* Gmail-style inline reply / forward box — fixed at bottom, outside scroll */}

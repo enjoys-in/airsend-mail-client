@@ -23,6 +23,10 @@ export function SpotToolbar() {
   const { emit } = useCustomEvent(CustomEventKey.SyncMailCounts)
   const handleImapEvents = useCallback(
     async (data: MailEventData) => {
+      // The EventBridge re-broadcasts server SyncEvents ({ type, eventId, payload })
+      // on this same window event. Those are NOT user actions — sending them back
+      // to the API caused a request echo loop for every incoming socket event.
+      if (!data || typeof (data as any).action !== "string") return
 
       try {
         let response = await API.handleMailEvents(data, selected_mailbox || params.folder as string)
@@ -44,6 +48,30 @@ export function SpotToolbar() {
             await airsendDB.bulkDeleteItems("mails", idsToRemove as any)
             setCheckedItems([])
 
+          }
+          // Flag-style actions (hover star/flag, toolbar read/unread): reflect the
+          // change locally — previously the API was called but the row never updated.
+          const flagUpdate: Record<string, Record<string, boolean>> = {
+            star: { is_starred: true },
+            unstar: { is_starred: false },
+            importance: { is_important: true },
+            unimportance: { is_important: false },
+            mark_as_read: { is_read: true },
+            read: { is_read: true },
+            mark_as_unread: { is_read: false },
+            unread: { is_read: false },
+          }
+          const changes = flagUpdate[data.action]
+          if (changes && data.message_id?.length) {
+            const ids = new Set(data.message_id)
+            const currentEmails = useMailStore.getState().all_emails
+            if (currentEmails) {
+              setAllEmails(currentEmails.map((m) => (ids.has(m.message_id) ? { ...m, ...changes } : m)))
+            }
+            await Promise.all(
+              data.message_id.map((id) => airsendDB.updateItem("mails", id, changes as any).catch(() => { }))
+            )
+            if ("is_read" in changes) emit(selected_mailbox || params.folder as string)
           }
           if (data.action === "move_all" || data.action === "delete_all") {
             setCheckedItems([])

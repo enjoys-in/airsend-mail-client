@@ -11,14 +11,16 @@ import FileAttachment from '../../../_components/file-attachment'
 import { Separator } from '@/components/ui/separator'
 const s = new Security()
 const DecodingComponent = ({ message_id, data }: { message_id: string, data: EncodedMessageResponse }) => {
-    const { setEncryptedData } = useKeyStore()
-    const { rawData, setRawData } = useMailStore()
+    // Selectors only — subscribing to the whole store re-rendered the mail
+    // iframe on every unrelated mail-store update (list sync, checkboxes, ...).
+    const setEncryptedData = useKeyStore((s) => s.setEncryptedData)
+    const setRawData = useMailStore((s) => s.setRawData)
     const [html, setHtml] = React.useState("");
     const [attachments, setAttachments] = React.useState<any[]>([]);
 
     const handleDecryptiion = async (data: EncodedMessageResponse) => {
         try {
-
+            const rawData = useMailStore.getState().rawData
 
             if (rawData[message_id]) {
                 const email = await PostalMime.parse(rawData[message_id]);
@@ -38,7 +40,7 @@ const DecodingComponent = ({ message_id, data }: { message_id: string, data: Enc
             })
             const email = await PostalMime.parse(decrypted);
             setAttachments(email.attachments)
-            setRawData({ ...rawData, [message_id]: decrypted })
+            setRawData({ ...useMailStore.getState().rawData, [message_id]: decrypted })
 
             return setHtml(email.html! || "No HTML content")
         } catch (e) {

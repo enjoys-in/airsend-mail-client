@@ -13,9 +13,18 @@ import { syncUserSettings } from "@/lib/api/sync-user-settings";
 import { setMid, setEmail } from "@/lib/api/auth-state";
 import SentMailToast from "@/components/common/sent-mail";
 import CustomWidget from "@/components/common/custom-widget";
+import { useIsMobile } from "@/hooks/use-mobile";
 
+// NOTE: this must be a layout (not a template). A template remounts on every
+// navigation, which disconnected the socket, re-fetched the user/settings and
+// remounted the whole sidebar on each click.
 function MainLayout({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
+  // Mount page content in only ONE of the two layouts. Rendering `children`
+  // in both (and hiding one with CSS) mounted every page twice: double API
+  // calls, double Dexie queries and duplicate window event listeners.
+  // Defaults to desktop before mount (same as the md breakpoint).
+  const isMobile = useIsMobile()
   const mid = useAppSelector((s) => s.accounts?.currAccount?.mid);
   const email = useAppSelector((s) => s.accounts?.currAccount?.email);
 
@@ -35,10 +44,10 @@ function MainLayout({ children }: { children: ReactNode }) {
       <CalendarProvider>
         <Suspense fallback={<Spinner />}>
           <div suppressHydrationWarning className="flex md:hidden flex-1 min-w-0 bg-[#111315]">
-            <MobileLayoutV2>{children}</MobileLayoutV2>
+            <MobileLayoutV2>{isMobile ? children : null}</MobileLayoutV2>
           </div>
           <div suppressHydrationWarning className="hidden md:flex flex-1 min-w-0 bg-[#111315]">
-            <DesktopLayoutV2>{children}</DesktopLayoutV2>
+            <DesktopLayoutV2>{isMobile ? null : children}</DesktopLayoutV2>
           </div>
           <NewMailRecived />
           <SentMailToast />

@@ -3,7 +3,8 @@
 import { cn } from "@/lib/utils";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 
 import Badge from "@/components/common/badges";
 import { RefreshCcw } from "lucide-react";
@@ -44,19 +45,22 @@ export function ListFolders() {
                 read_count: data?.result?.read_count,
             };
 
-            // Update Dexie cache
+            // Update Dexie cache. Case-insensitive: callers pass the URL folder
+            // ("inbox") while mailbox paths are stored as "INBOX", so the old
+            // exact match never updated the counts.
             await db.mailboxes
                 .where("path")
-                .equals(current_mailbox)
+                .equalsIgnoreCase(current_mailbox)
                 .modify(counts);
 
             // Read latest all_mailbox from store to avoid stale closure
             const latestMailbox = useMailStore.getState().all_mailbox;
+            const target = current_mailbox.toLowerCase();
 
             // Update Zustand state so UI reflects the change
             setAllMailbox(
                 latestMailbox.map((m) =>
-                    m.path === current_mailbox ? { ...m, ...counts } : m
+                    m.path?.toLowerCase() === target ? { ...m, ...counts } : m
                 ) as any
             );
         } catch (error) {
@@ -85,32 +89,46 @@ export function ListFolders() {
             await airsendDB.bulkPutItems("mailboxes", data.result as any);
         } catch (error) { }
     };
+    // Live view of the mailboxes table: counts written by the EventBridge
+    // (socket read/unread/move/delete events) now reach the sidebar. Before,
+    // Dexie was read once on mount and those writes were never shown.
+    const cachedMailboxes = useLiveQuery(() => db.mailboxes.toArray(), []);
+    const initialSyncRef = useRef(false);
+    const collectionsLoadedRef = useRef(false);
+
     useEffect(() => {
-        airsendDB.getAllItems("mailboxes").then((data) => {
-            if (data.length === 0) {
-                syncMailboxAndLables();
-            }
+        if (!cachedMailboxes) return;
+        if (cachedMailboxes.length === 0 && !initialSyncRef.current) {
+            initialSyncRef.current = true;
+            syncMailboxAndLables();
+        }
 
-            setAllMailbox(
-                data?.filter(
-                    (item: any) => item.type === MailLablesType.MAILBOX
-                ) as any[]
-            );
-            setAllLabels(
-                data?.filter((item: any) => item.type === MailLablesType.LABEL) as any[]
-            );
-            setAllFolders(
-                data?.filter(
-                    (item: any) => item.type === MailLablesType.FOLDER
-                ) as any[]
-            );
-        });
+        setAllMailbox(
+            cachedMailboxes.filter(
+                (item: any) => item.type === MailLablesType.MAILBOX
+            ) as any[]
+        );
+        // Labels/folders: load from cache once only, so locally created
+        // (unsaved) folders/labels aren't wiped by later count updates.
+        if (collectionsLoadedRef.current) return;
+        collectionsLoadedRef.current = true;
+        setAllLabels(
+            cachedMailboxes.filter((item: any) => item.type === MailLablesType.LABEL) as any[]
+        );
+        setAllFolders(
+            cachedMailboxes.filter(
+                (item: any) => item.type === MailLablesType.FOLDER
+            ) as any[]
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cachedMailboxes]);
 
+    useEffect(() => {
         const unsubscribe = listen(fetchMailboxData);
         return () => {
             unsubscribe();
         };
-    }, []);
+    }, [listen, fetchMailboxData]);
 
     return (
         <Suspense fallback={<SkeletonMenuItem />}>
