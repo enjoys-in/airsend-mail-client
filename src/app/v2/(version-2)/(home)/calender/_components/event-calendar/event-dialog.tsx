@@ -245,6 +245,30 @@ export function EventDialog({
   };
 
   const handleSave = () => {
+    // A guest typed under "Invite people by email" but not added with Add / Enter is still a guest:
+    // without this the event saved with no guests and no invitation email was ever queued.
+    const typed = newAttendeeEmail.trim();
+    let guests = attendees;
+    if (typed) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(typed)) {
+        setError(`"${typed}" is not a valid guest email. Fix it or clear the field.`);
+        return;
+      }
+      if (!attendees.some((a) => a.email.toLowerCase() === typed.toLowerCase())) {
+        guests = [
+          ...attendees,
+          {
+            email: typed,
+            display_name: newAttendeeName.trim() || typed,
+            role: "REQ-PARTICIPANT",
+            status: "NEEDS-ACTION",
+            rsvp: true,
+            type: "INDIVIDUAL",
+          },
+        ];
+      }
+    }
+
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -295,7 +319,7 @@ export function EventDialog({
       color,
       // CalDev metadata
       calendarId: calendarId || undefined,
-      attendees: attendees.length > 0 ? attendees : undefined,
+      attendees: guests.length > 0 ? guests : undefined,
       categories: categories.length > 0 ? categories : undefined,
       recurrenceRule: recurrenceRule || undefined,
       status: status,

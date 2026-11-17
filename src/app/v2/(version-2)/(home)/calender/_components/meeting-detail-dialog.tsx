@@ -64,9 +64,12 @@ function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactN
 export function MeetingDetailDialog({
   event,
   onClose,
+  hideOpenInCalendar = false,
 }: {
   event: CalendarEvent | null;
   onClose: () => void;
+  /** already on the calendar page: no need for the "Open in calendar" link */
+  hideOpenInCalendar?: boolean;
 }) {
   const { setCurrentDate } = useCalendarContext();
   const calendars = useCalDevStore((s) => s.calendars);
@@ -198,19 +201,21 @@ export function MeetingDetailDialog({
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Close
           </Button>
-          <Button asChild variant="outline" size="sm" className="gap-1.5">
-            <Link
-              href="/v2/calender"
-              onClick={() => {
-                setCurrentDate(event.start);
-                onClose();
-              }}
-            >
-              <RiCalendarEventLine size={14} />
-              Open in calendar
-              <RiExternalLinkLine size={12} className="text-muted-foreground" />
-            </Link>
-          </Button>
+          {!hideOpenInCalendar && (
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link
+                href="/v2/calender"
+                onClick={() => {
+                  setCurrentDate(event.start);
+                  onClose();
+                }}
+              >
+                <RiCalendarEventLine size={14} />
+                Open in calendar
+                <RiExternalLinkLine size={12} className="text-muted-foreground" />
+              </Link>
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

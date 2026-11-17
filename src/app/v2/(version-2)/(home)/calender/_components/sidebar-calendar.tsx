@@ -20,7 +20,6 @@ import {
   RiUploadLine,
   RiCalendarEventLine,
   RiTimeLine,
-  RiMapPinLine,
 } from "@remixicon/react";
 import {
   Sidebar,
@@ -65,6 +64,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import SubscriptionsPanel from "./subscriptions-panel";
+import { MeetingDetailDialog } from "./meeting-detail-dialog";
+import type { CalendarEvent } from "./event-calendar";
 
 // Default color palette for creating calendars
 const CALENDAR_COLORS = [
@@ -146,8 +147,8 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importTargetCalId, setImportTargetCalId] = useState<string>("");
 
-  // Expanded upcoming event (for agenda)
-  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  // Upcoming event whose details dialog is open
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   // Update the calendar month whenever currentDate changes
   useEffect(() => {
@@ -509,7 +510,6 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
                         start.getMonth() === now.getMonth() &&
                         start.getDate() === now.getDate();
                     })();
-                    const isExpanded = expandedEventId === ev.id;
 
                     const timeFmt = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                     const timeLabel = ev.allDay
@@ -541,13 +541,10 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
                       <div key={ev.id}>
                         <button
                           onClick={() => {
-                            setExpandedEventId(isExpanded ? null : ev.id);
+                            setSelectedEvent(ev);
                             setCurrentDate(start);
                           }}
-                          className={cn(
-                            "w-full text-left rounded-lg border border-transparent p-2 transition-all hover:bg-sidebar-accent/60",
-                            isExpanded && "bg-sidebar-accent/40 border-border",
-                          )}
+                          className="w-full text-left rounded-lg border border-transparent p-2 transition-all hover:bg-sidebar-accent/60"
                         >
                           <div className="flex items-start gap-2">
                             <span
@@ -566,34 +563,6 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
                               </div>
                             </div>
                           </div>
-
-                          {/* Expanded agenda */}
-                          {isExpanded && (
-                            <div className="mt-2 ml-4 space-y-1.5 text-xs text-muted-foreground">
-                              {ev.location && (
-                                <div className="flex items-center gap-1.5">
-                                  <RiMapPinLine size={12} className="shrink-0" />
-                                  <span className="truncate">{ev.location}</span>
-                                </div>
-                              )}
-                              {ev.description ? (
-                                <p className="whitespace-pre-wrap line-clamp-4 leading-relaxed">
-                                  {ev.description}
-                                </p>
-                              ) : (
-                                <p className="italic text-muted-foreground/50">No description</p>
-                              )}
-                              {cal && (
-                                <div className="flex items-center gap-1.5 pt-0.5">
-                                  <span
-                                    className="size-1.5 rounded-full"
-                                    style={{ backgroundColor: cal.color }}
-                                  />
-                                  <span className="text-[11px]">{cal.name}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
                         </button>
 
                         {/* Gap indicator between events */}
@@ -615,6 +584,12 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
 
 
       </Sidebar>
+
+      <MeetingDetailDialog
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        hideOpenInCalendar
+      />
 
       {/* Create / Edit Calendar Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
