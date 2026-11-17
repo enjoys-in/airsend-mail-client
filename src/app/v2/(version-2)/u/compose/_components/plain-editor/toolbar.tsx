@@ -188,50 +188,50 @@ export const PlainTextEditorToolbar: React.FC<ToolbarProps> = () => {
     }, []);
 
     return (
-        <div className="flex items-center gap-1  border-b border-border overflow-x-auto">
-            <Button
-                variant={document.queryCommandState("bold") ? "secondary" : "ghost"}
-                size="sm"
+        <div className="flex items-center gap-0.5 border-b border-border bg-muted/40 px-2 py-1.5 overflow-x-auto">
+            <ToolbarButton
+                label="Bold"
+                active={document.queryCommandState("bold")}
                 onClick={() => formatText("bold")}
             >
                 <Bold className="w-4 h-4" />
-            </Button>
-
-            <Button
-                variant={document.queryCommandState("italic") ? "secondary" : "ghost"}
-                size="sm"
+            </ToolbarButton>
+            <ToolbarButton
+                label="Italic"
+                active={document.queryCommandState("italic")}
                 onClick={() => formatText("italic")}
             >
                 <Italic className="w-4 h-4" />
-            </Button>
-
-            <Button
-                variant={
-                    document.queryCommandState("underline") ? "secondary" : "ghost"
-                }
-                size="sm"
+            </ToolbarButton>
+            <ToolbarButton
+                label="Underline"
+                active={document.queryCommandState("underline")}
                 onClick={() => formatText("underline")}
             >
                 <Underline className="w-4 h-4" />
-            </Button>
-
-            <Button
-                variant={
-                    document.queryCommandState("strikeThrough") ? "secondary" : "ghost"
-                }
-                size="sm"
+            </ToolbarButton>
+            <ToolbarButton
+                label="Strikethrough"
+                active={document.queryCommandState("strikeThrough")}
                 onClick={() => formatText("strikeThrough")}
             >
                 <Strikethrough className="w-4 h-4" />
-            </Button>
+            </ToolbarButton>
 
-            <Separator orientation="vertical" className="mx-2 h-6" />
+            <Separator orientation="vertical" className="mx-1.5 h-5" />
 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        title="Lists"
+                        aria-label="Lists"
+                        className="h-8 gap-0.5 rounded-md px-2"
+                    >
                         <List className="w-4 h-4" />
-                        <ChevronDown className="w-3 h-3 ml-1" />
+                        <ChevronDown className="w-3 h-3 text-muted-foreground" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="max-h-60 overflow-y-auto">
@@ -261,45 +261,44 @@ export const PlainTextEditorToolbar: React.FC<ToolbarProps> = () => {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button
-                variant={alignment === "left" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => handleAlignment("left")}
-            >
-                <AlignLeft className="w-4 h-4" />
-            </Button>
-            <Button
-                variant={alignment === "center" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => handleAlignment("center")}
-            >
-                <AlignCenter className="w-4 h-4" />
-            </Button>
-            <Button
-                variant={alignment === "right" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => handleAlignment("right")}
-            >
-                <AlignRight className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center rounded-md">
+                <ToolbarButton
+                    label="Align left"
+                    active={alignment === "left"}
+                    onClick={() => handleAlignment("left")}
+                >
+                    <AlignLeft className="w-4 h-4" />
+                </ToolbarButton>
+                <ToolbarButton
+                    label="Align center"
+                    active={alignment === "center"}
+                    onClick={() => handleAlignment("center")}
+                >
+                    <AlignCenter className="w-4 h-4" />
+                </ToolbarButton>
+                <ToolbarButton
+                    label="Align right"
+                    active={alignment === "right"}
+                    onClick={() => handleAlignment("right")}
+                >
+                    <AlignRight className="w-4 h-4" />
+                </ToolbarButton>
+            </div>
 
-            <Separator orientation="vertical" className="mx-2 h-6" />
+            <Separator orientation="vertical" className="mx-1.5 h-5" />
 
-            <Button
-                variant="ghost"
-                size="sm"
+            <ToolbarButton
+                label="Insert image"
                 onClick={() => imageInputRef.current?.click()}
             >
                 <ImageIcon className="w-4 h-4" />
-            </Button>
-
-            <Button
-                variant="ghost"
-                size="sm"
+            </ToolbarButton>
+            <ToolbarButton
+                label="Attach files"
                 onClick={() => fileInputRef.current?.click()}
             >
                 <Paperclip className="w-4 h-4" />
-            </Button>
+            </ToolbarButton>
 
             {/* Hidden inputs */}
             <input
@@ -322,15 +321,15 @@ export const PlainTextEditorToolbar: React.FC<ToolbarProps> = () => {
             />
 
             {attachments.length > 0 && (
-                <div className="ml-4 flex items-center gap-2 max-w-xs overflow-x-auto">
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                <div className="ml-2 flex items-center gap-2 max-w-xs overflow-x-auto rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 dark:border-orange-500/30 dark:bg-orange-500/10">
+                    <span className="text-xs font-medium text-orange-700 dark:text-orange-200 whitespace-nowrap">
                         {attachments.length} file{attachments.length > 1 ? "s" : ""}
                     </span>
                     {attachments.slice(0, 3).map((attachment) => (
                         <div key={attachment.id} className="flex items-center gap-1">
                             {getFileIcon(attachment.file.name)}
                             {attachment.progress < 100 && (
-                                <div className="w-6 h-2 bg-orange-200 rounded-full overflow-hidden">
+                                <div className="w-6 h-1.5 bg-orange-200 rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-orange-500"
                                         style={{ width: `${attachment.progress}%` }}
@@ -347,13 +346,19 @@ export const PlainTextEditorToolbar: React.FC<ToolbarProps> = () => {
                 </div>
             )}
 
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-0.5 pl-2">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                            <Type className="w-4 h-4 mr-1" />
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            title="Font"
+                            className="h-8 gap-1.5 rounded-md px-2 text-xs font-medium"
+                        >
+                            <Type className="w-4 h-4 text-muted-foreground" />
                             {selectedFont}
-                            <ChevronDown className="w-3 h-3 ml-1" />
+                            <ChevronDown className="w-3 h-3 text-muted-foreground" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
@@ -372,20 +377,28 @@ export const PlainTextEditorToolbar: React.FC<ToolbarProps> = () => {
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            title="Text & background color"
+                            aria-label="Text and background color"
+                            className="h-8 gap-0.5 rounded-md px-2"
+                        >
                             <Palette className="w-4 h-4" />
-                            <ChevronDown className="w-3 h-3 ml-1" />
+                            <ChevronDown className="w-3 h-3 text-muted-foreground" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-80">
+                    <DropdownMenuContent align="end" className="w-80">
                         <div className="p-3 space-y-4">
                             <div>
-                                <h4 className="text-sm font-medium mb-2">Text Color</h4>
-                                <div className="grid grid-cols-8 gap-1 mb-2">
+                                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Text Color</h4>
+                                <div className="grid grid-cols-8 gap-1.5 mb-2">
                                     {textColors.map((color, i) => (
                                         <button
                                             key={`text-${color}-${i}`}
-                                            className="w-6 h-6 rounded border hover:scale-110 transition-transform"
+                                            type="button"
+                                            className="w-6 h-6 rounded-md border hover:scale-110 transition-transform"
                                             style={{ backgroundColor: color }}
                                             onClick={() => formatText("foreColor", color)}
                                             title={`Text color: ${color}`}
@@ -404,12 +417,13 @@ export const PlainTextEditorToolbar: React.FC<ToolbarProps> = () => {
                             </div>
 
                             <div>
-                                <h4 className="text-sm font-medium mb-2">Background Color</h4>
-                                <div className="grid grid-cols-8 gap-1 mb-2">
+                                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Background Color</h4>
+                                <div className="grid grid-cols-8 gap-1.5 mb-2">
                                     {backgroundColors.map((color, i) => (
                                         <button
                                             key={`bg-${color}-${i}`}
-                                            className="w-6 h-6 rounded border hover:scale-110 transition-transform"
+                                            type="button"
+                                            className="w-6 h-6 rounded-md border hover:scale-110 transition-transform"
                                             style={{ backgroundColor: color }}
                                             onClick={() => formatText("hiliteColor", color)}
                                             title={`Background color: ${color}`}
@@ -429,3 +443,24 @@ export const PlainTextEditorToolbar: React.FC<ToolbarProps> = () => {
         </div>
     );
 };
+
+/** Small icon button used across the toolbar — keeps size/active styling in one place */
+const ToolbarButton: React.FC<{
+    label: string;
+    active?: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
+}> = ({ label, active, onClick, children }) => (
+    <Button
+        type="button"
+        variant={active ? "secondary" : "ghost"}
+        size="sm"
+        title={label}
+        aria-label={label}
+        aria-pressed={active}
+        onClick={onClick}
+        className="h-8 w-8 rounded-md p-0"
+    >
+        {children}
+    </Button>
+);

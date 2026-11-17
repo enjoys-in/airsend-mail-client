@@ -521,7 +521,7 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
       }}
     >
       <div
-        className={`w-full border border-dashed rounded-lg overflow-hidden bg-transparent relative flex flex-col flex-1 min-h-0 transition-opacity ${isDragOver ? "opacity-50" : "opacity-100"
+        className={`w-full rounded-xl bg-transparent relative flex flex-col flex-1 min-h-0 transition-all ${isDragOver ? "opacity-60 ring-2 ring-violet-500 ring-offset-2 ring-offset-background" : "opacity-100"
           }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -540,13 +540,13 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
           </div>
         )}
         {headerElement && headerElement}
-        <div className="w-full border rounded-lg overflow-hidden bg-transparent relative flex flex-col flex-1 min-h-0">
+        <div className="w-full border border-border rounded-xl overflow-hidden bg-card/40 shadow-sm relative flex flex-col flex-1 min-h-0 transition-shadow focus-within:shadow-md focus-within:border-violet-400/60">
           {toolbarPoistion === "top" && (children || <PlainTextEditorToolbar />)}
 
           <div
             ref={editorRef}
             contentEditable
-            className="w-full p-4 text-sm leading-relaxed break-words whitespace-pre-wrap prose prose-sm max-w-none focus:outline-none font-normal flex-1 min-h-0"
+            className="w-full px-5 py-4 text-sm leading-relaxed break-words whitespace-pre-wrap prose prose-sm max-w-none focus:outline-none font-normal flex-1 min-h-0"
             style={{
               fontFamily,
               minHeight: height,

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pen, Eye, Clock, ChevronDown } from "lucide-react";
+import { Pen, Eye, Clock, ChevronDown, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { airsendDB } from "@/db";
 import { useAppSelector } from "@/store/hooks";
@@ -169,7 +169,7 @@ const ComposeFooter: React.FC<{ data: EmailData; onDiscardDraft?: () => Promise<
   }, [currAccount?.email]);
 
   return (
-    <div className="sticky bottom-0 z-10 w-full border-t border-border bg-background px-3 py-1.5 flex items-center justify-between shrink-0">
+    <div className="sticky bottom-0 z-10 mt-2 w-full rounded-xl border border-border bg-card/60 px-3 py-2 flex items-center justify-between gap-2 shrink-0 shadow-sm backdrop-blur">
       <div className="w-full">
         <AiPromptButton />
       </div>
@@ -227,30 +227,34 @@ const ComposeFooter: React.FC<{ data: EmailData; onDiscardDraft?: () => Promise<
 
       {/* RIGHT: Send Button with dropdown */}
       <DropdownMenu>
-        <div className="inline-flex items-center rounded-none overflow-hidden border border-gray-300 dark:border-neutral-700">
-          <div className="w-8 h-full bg-gray-800 dark:bg-neutral-700" />
-          <div className="flex -space-x-px">
+        <div className="inline-flex shrink-0 items-center overflow-hidden rounded-lg shadow-sm">
+          <Button
+            type="button"
+            variant={"ghost"}
+            onClick={handleSend}
+            disabled={sending}
+            className="inline-flex items-center justify-center gap-2 rounded-none text-sm font-medium h-9 px-4 bg-blue-600 text-white hover:bg-blue-700 hover:text-white active:bg-blue-800 disabled:opacity-60"
+          >
+            {sending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Send size={14} />
+            )}
+            {sending ? "Sending..." : "Send Now"}
+          </Button>
+          <DropdownMenuTrigger asChild>
             <Button
               type="button"
               variant={"ghost"}
-              onClick={handleSend}
-              disabled={sending}
-              className="inline-flex items-center justify-center gap-2 rounded-none text-sm font-medium h-9 px-4 bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50"
+              aria-label="More send options"
+              className="inline-flex items-center justify-center rounded-none h-9 px-2.5 border-l border-white/25 bg-blue-600 text-white hover:bg-blue-700 hover:text-white active:bg-blue-800"
             >
-              {sending ? "Sending..." : "Send Now"}
+              <ChevronDown size={14} />
             </Button>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={"ghost"}
-                className="inline-flex items-center justify-center gap-2 rounded-none text-sm font-medium h-9 px-3 bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
-              >
-                <ChevronDown size={14} />
-              </Button>
-            </DropdownMenuTrigger>
-          </div>
+          </DropdownMenuTrigger>
         </div>
 
-        <DropdownMenuContent className="w-48">
+        <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem className="flex items-center gap-2">
             <Eye size={16} />
             Preview Email
