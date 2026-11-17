@@ -14,6 +14,9 @@ import { useAppSelector } from '@/store/hooks'
 import { sentenceCase } from 'change-case'
 import { GetAllMailsPayload } from '@/lib/types/mail.interface'
 
+/** Server default page size of GET /api/v1/get-mails (airsend-api MailDataController). */
+const API_PAGE_LIMIT = 50
+
 /** Structural compare of two mail records (nested values compared by JSON). */
 function isSameMail(a: any, b: any): boolean {
     if (a === b) return true
@@ -69,6 +72,17 @@ const ClientMailCard = () => {
             // Normalize folder field to match URL param (case-insensitive Dexie fix)
             const normalized = results.map((m: any) => ({ ...m, folder: folder }))
             const freshIds = new Set(normalized.map((m: any) => m.message_id))
+            // /get-mails returns page 1 only: newest API_PAGE_LIMIT threads, ONE row
+            // per thread (latest message). So we may only prune cached mails that
+            // fall inside the returned window and aren't part of a returned thread —
+            // otherwise older cached mails / thread siblings would be wiped.
+            const threadKey = (m: any) => (m.thread_id || m.message_id) as string
+            const freshThreads = new Set(normalized.map(threadKey))
+            const mailTime = (m: any) => new Date(m.timestamp || m.created_at || 0).getTime()
+            const isFullFolder = normalized.length < API_PAGE_LIMIT
+            const oldestFresh = normalized.length > 0
+                ? Math.min(...normalized.map(mailTime))
+                : -Infinity
 
             await db.transaction('rw', db.mails, async () => {
                 // Remove cached mails of this folder that no longer exist on the server
@@ -77,8 +91,10 @@ const ClientMailCard = () => {
                     .filter((m) => (m.folder ?? '').toLowerCase() === folder.toLowerCase())
                     .toArray()
                 const staleIds = cached
+                    .filter((m) => !freshIds.has(m.message_id as string))
+                    .filter((m) => !freshThreads.has(threadKey(m)))
+                    .filter((m) => isFullFolder || mailTime(m) >= oldestFresh)
                     .map((m) => m.message_id as string)
-                    .filter((id) => !freshIds.has(id))
                 if (staleIds.length > 0) await db.mails.bulkDelete(staleIds)
                 if (normalized.length > 0) await db.mails.bulkPut(normalized)
             })
