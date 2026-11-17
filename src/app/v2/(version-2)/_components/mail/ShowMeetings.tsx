@@ -11,7 +11,8 @@ import {
 import { useCalDevStore } from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-store"
 import { useUpcomingEvents } from "@/app/v2/(version-2)/(home)/calender/_lib/use-upcoming-events"
 import { useCalendarContext } from "@/app/v2/(version-2)/(home)/calender/_components/event-calendar/calendar-context"
-import { RiTimeLine } from "@remixicon/react"
+import { RiTimeLine, RiVideoOnLine } from "@remixicon/react"
+import { findMeetingLink } from "@/lib/calendar/meeting-link"
 
 const timeFmt = (d: Date) =>
   d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -56,6 +57,7 @@ const ShowMeetings = () => {
               const cal = calendars.find((c) => c.id === ev.calendarId)
               const when = whenLabel(ev.start, ev.end, now)
               const isNow = when === "Now"
+              const meeting = findMeetingLink(ev.location, ev.description)
 
               // Gap to the next meeting
               const next = upcoming[idx + 1]
@@ -74,10 +76,11 @@ const ShowMeetings = () => {
 
               return (
                 <div key={ev.id}>
+                  <div className="flex items-center gap-1">
                   <Link
                     href="/v2/calender"
                     onClick={() => setCurrentDate(ev.start)}
-                    className="flex items-start gap-2 px-1 py-1.5 rounded-md hover:bg-accent/50 transition-colors"
+                    className="flex min-w-0 flex-1 items-start gap-2 px-1 py-1.5 rounded-md hover:bg-accent/50 transition-colors"
                   >
                     <span
                       className="mt-1.5 size-2 shrink-0 rounded-full"
@@ -97,6 +100,24 @@ const ShowMeetings = () => {
                       </div>
                     </div>
                   </Link>
+                  {meeting && (
+                    <a
+                      href={meeting.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Join ${meeting.label}`}
+                      aria-label={`Join ${meeting.label}`}
+                      className={
+                        "flex size-7 shrink-0 items-center justify-center rounded-md transition-colors " +
+                        (isNow
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground")
+                      }
+                    >
+                      <RiVideoOnLine size={15} />
+                    </a>
+                  )}
+                  </div>
                   {gapLabel && (
                     <div className="flex items-center gap-2 px-3 py-0.5">
                       <div className="flex-1 border-t border-dashed border-muted-foreground/20" />

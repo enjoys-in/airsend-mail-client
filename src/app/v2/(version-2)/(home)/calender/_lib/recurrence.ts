@@ -80,6 +80,16 @@ function fromWall(w: Wall, zone?: string): number {
   return t;
 }
 
+/** Instant for a wall-clock time in an IANA zone; null when the zone is unknown to Intl. */
+export function zonedWallTime(
+  w: { y: number; m: number; d: number; h: number; mi: number; s: number },
+  zone: string,
+): Date | null {
+  if (isUTCZone(zone)) return new Date(wallToUTCms(w));
+  if (!getFormatter(zone)) return null;
+  return new Date(fromWall(w, zone));
+}
+
 /** The viewer's IANA zone (UI_GUIDE §5: send it on every timed event). */
 export function userTimeZone(): string {
   try {

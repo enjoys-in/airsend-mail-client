@@ -9,6 +9,8 @@ import { Security } from '@/lib/security';
 import { DecryptEncryptedMail } from '@/lib/pgp-service';
 import FileAttachment from '../../../_components/file-attachment'
 import { Separator } from '@/components/ui/separator'
+import { findCalendarPart } from '@/lib/calendar/ics-invite'
+import InviteCard from './invite-card'
 const s = new Security()
 const DecodingComponent = ({ message_id, data }: { message_id: string, data: EncodedMessageResponse }) => {
     // Selectors only — subscribing to the whole store re-rendered the mail
@@ -17,6 +19,8 @@ const DecodingComponent = ({ message_id, data }: { message_id: string, data: Enc
     const setRawData = useMailStore((s) => s.setRawData)
     const [html, setHtml] = React.useState("");
     const [attachments, setAttachments] = React.useState<any[]>([]);
+    // Calendar invitation (text/calendar part or .ics attachment), shown as a card
+    const inviteIcs = React.useMemo(() => findCalendarPart(attachments), [attachments]);
 
     const handleDecryptiion = async (data: EncodedMessageResponse) => {
         try {
@@ -55,6 +59,7 @@ const DecodingComponent = ({ message_id, data }: { message_id: string, data: Enc
     return (
         <div>
 
+            {inviteIcs && <InviteCard ics={inviteIcs} />}
             <MailIframe html={html} />
             {
                 attachments.length > 0 &&

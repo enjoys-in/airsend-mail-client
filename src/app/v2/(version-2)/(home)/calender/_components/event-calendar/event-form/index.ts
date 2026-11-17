@@ -5,5 +5,6 @@ export { DayPreview, type PreviewEvent } from "./day-preview";
 export { EventTypePanel, type EventStatus } from "./event-type-panel";
 export { GuestList } from "./guest-list";
 export { LabeledPillSelect, PillSelect, type PillOption } from "./pill-select";
+export { MeetingLinkField } from "./meeting-link-field";
 export { FieldRow, FormCard, IconTile, Segmented, bareInputClass, pillClass } from "./primitives";
 export { RepeatField, REPEAT_PRESETS } from "./repeat-field";

@@ -10,6 +10,7 @@ import {
   RiDeleteBinLine,
   RiMapPinLine,
   RiRepeatLine,
+  RiVideoOnLine,
 } from "@remixicon/react";
 import { format, isBefore, startOfDay } from "date-fns";
 
@@ -32,6 +33,7 @@ import {
   DefaultEndHour,
 } from "./constants";
 import { useCalDevStore } from "../../_lib/caldev-store";
+import { joinLocation, splitLocation } from "@/lib/calendar/meeting-link";
 import { EVENT_COLOR_HEX, type CalDevAttendee } from "../../_lib/caldev-types";
 import {
   ChipInput,
@@ -42,6 +44,7 @@ import {
   FormCard,
   GuestList,
   IconTile,
+  MeetingLinkField,
   PillSelect,
   RepeatField,
   Segmented,
@@ -79,6 +82,7 @@ export function EventDialog({
   const [endTime, setEndTime] = useState(`${DefaultEndHour}:00`);
   const [allDay, setAllDay] = useState(false);
   const [location, setLocation] = useState("");
+  const [meetingLink, setMeetingLink] = useState("");
   const [color, setColor] = useState<EventColor>("blue");
   const [error, setError] = useState<string | null>(null);
 
@@ -111,7 +115,10 @@ export function EventDialog({
       setStartTime(formatTimeForInput(start));
       setEndTime(formatTimeForInput(end));
       setAllDay(event.allDay || false);
-      setLocation(event.location || "");
+      // a meeting link is stored inside location: "Room 42 · https://…"
+      const loc = splitLocation(event.location);
+      setLocation(loc.place);
+      setMeetingLink(loc.link);
       setColor((event.color as EventColor) || "sky");
       setError(null);
 
@@ -150,6 +157,7 @@ export function EventDialog({
     setEndTime(`${DefaultEndHour}:00`);
     setAllDay(false);
     setLocation("");
+    setMeetingLink("");
     setColor("blue");
     setError(null);
     setCalendarId(calendars.find((c) => c.is_default)?.id || calendars[0]?.id || "");
@@ -267,7 +275,7 @@ export function EventDialog({
       start,
       end,
       allDay,
-      location,
+      location: joinLocation(location, meetingLink),
       color,
       // CalDev metadata
       calendarId: calendarId || undefined,
@@ -391,6 +399,15 @@ export function EventDialog({
               {isEditing ? "Update the details of this event" : "Add the details for your event"}
             </DialogDescription>
           </div>
+          <Segmented
+            ariaLabel="Event kind"
+            value={recurrenceRule ? "series" : "event"}
+            onChange={handleKindChange}
+            options={[
+              { value: "event", label: "Event", icon: <RiCalendarLine size={14} /> },
+              { value: "series", label: "Series", icon: <RiRepeatLine size={14} /> },
+            ]}
+          />
           <Button
             type="button"
             variant="ghost"
@@ -403,18 +420,9 @@ export function EventDialog({
           </Button>
         </DialogHeader>
 
-        {/* ── Toolbar ── */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-border/60 px-5 py-2.5">
-          <Segmented
-            ariaLabel="Event kind"
-            value={recurrenceRule ? "series" : "event"}
-            onChange={handleKindChange}
-            options={[
-              { value: "event", label: "Event", icon: <RiCalendarLine size={14} /> },
-              { value: "series", label: "Series", icon: <RiRepeatLine size={14} /> },
-            ]}
-          />
-          {isOccurrence && (
+        {/* ── Scope (recurring occurrences only) ── */}
+        {isOccurrence && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-border/60 px-5 py-2.5">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Apply to</span>
               <PillSelect
@@ -424,8 +432,8 @@ export function EventDialog({
                 ariaLabel="Apply changes to"
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* ── Body: form | type + day timeline ── */}
         <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_320px]">
@@ -470,9 +478,12 @@ export function EventDialog({
                   className={bareInputClass}
                 />
               </FieldRow>
+              <FieldRow icon={<RiVideoOnLine size={16} />}>
+                <MeetingLinkField value={meetingLink} onChange={setMeetingLink} />
+              </FieldRow>
               {recurrenceRule && (
                 <FieldRow icon={<RiRepeatLine size={16} />}>
-                  <RepeatField rule={recurrenceRule} onChange={setRecurrenceRule} />
+                  <RepeatField rule={recurrenceRule} onChange={setRecurrenceRule} startDate={startDate} />
                 </FieldRow>
               )}
               <FieldRow icon={<RiBookmarkLine size={16} />}>
