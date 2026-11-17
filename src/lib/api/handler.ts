@@ -27,23 +27,8 @@ export class API {
             }
         })
     }
-    static getTempMails(url: string) {
-        return axios.get(__config.APP.BASE_URL + '/api/v1/temp-mails' + url, {
-            headers: {
-                'X-App-Version': '1.0.0',
-                'X-App-Name': 'Airsend',
-                'x-api-key': __config.APP.API_KEY,
-            }
-        })
-    }
-    static handleRegister(data: any) {
-        return axios.post(__config.APP.BASE_URL + '/api/v1/auth/register', data, {
-            headers: {
-                'X-App-Version': '1.0.0',
-                'X-App-Name': 'Airsend',
-                'x-api-key': __config.APP.API_KEY,
-            }
-        })
+    static getWebPushKey() {
+        return instance.get<ApiResponse<{ publicKey: string | null }>>("/api/v1/webpush/public-key")
     }
     static subcribeWebPush(data: any) {
         return instance.post("/api/v1/subscribe", data)
@@ -140,9 +125,6 @@ export class API {
     }) {
         return instance.put(adminRoutes(`/reset-password/${userid}`),data)
     }
-    static downloadAttachment(messageId: string, index: number) {
-        return instance.get(adminRoutes(`/download-attachment/${messageId}?index=${index}`))
-    }
     static handleCreateAPIKey(data: any) {
         return instance.post(adminRoutes(`/api-key`), data)
     }
@@ -206,20 +188,6 @@ export class API {
     }
     static uploadDelete(data: { id: string, index: string }) {
         return instance.get(`/api/v1/attachment/delete?id=${data.id}&index=${data.index}`)
-    }
-    static uploadCancel(data: any) {
-        return instance.post(`/api/v1/attachment/cancel`, data, {
-            headers: {
-                "Content-Type": "multipart/form-data"
-            }
-        })
-    }
-    static downloadFiles(data: any) {
-        return instance.post(`/api/v1/attachment/download`, data, {
-            headers: {
-                "Content-Type": "multipart/form-data"
-            }
-        })
     }
 
     // ORGANIZATIONS

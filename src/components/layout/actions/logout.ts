@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 export async function handleServerlogout() {
     const mycookie = await cookies()
     try {
-        const { data } = await serverAxios.post("/auth/logout");
+        const { data } = await serverAxios.post("/api/v1/auth/logout");
 
         if (data.status === 401 || data.success) {
             mycookie.delete("shield_user")

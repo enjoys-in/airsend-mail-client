@@ -3,7 +3,7 @@ import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react
 import { Loader2 } from 'lucide-react'
 
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db'
+import { db, mailKeyOf } from '@/db'
 import { useParams, useSearchParams } from 'next/navigation'
 import { useMailStore } from '@/store/mails'
 
@@ -50,15 +50,16 @@ const ClientMailCard = () => {
     const loading = useMailStore((state) => state.loading)
     const setLoading = useMailStore((state) => state.setLoading)
     const { listen } = useCustomEvent(CustomEventKey.SyncMail)
-    const { emit } = useCustomEvent(CustomEventKey.MailEvents)
+    const { emit, listen: listenMailEvents } = useCustomEvent(CustomEventKey.MailEvents)
     // Select the primitive only — selecting the whole account object
     // re-rendered the list whenever any account field changed.
     const email = useAppSelector(state => state.accounts.currAccount?.email)
 
     const viewKey = email ? `${email.toLowerCase()}::${folder.toLowerCase()}` : null
 
-    // Guard against concurrent / duplicate API calls
+    // Guard against concurrent / duplicate API calls; a call made meanwhile runs once the current one ends
     const fetchingRef = useRef(false)
+    const refetchPendingRef = useRef(false)
     // Folders already fetched from the API (so an empty folder isn't re-fetched in a loop)
     const fetchedKeysRef = useRef<Set<string>>(new Set())
     // Folders whose last page has been reached (no more threads on the server)
@@ -71,7 +72,11 @@ const ClientMailCard = () => {
      * The UI is driven by the live query below, so no manual Zustand updates here.
      */
     const storeInDB = useCallback(async (is_refresh: number = 0) => {
-        if (!email || fetchingRef.current) return
+        if (!email) return
+        if (fetchingRef.current) {
+            refetchPendingRef.current = true
+            return
+        }
         fetchingRef.current = true
         const key = `${email.toLowerCase()}::${folder.toLowerCase()}`
         try {
@@ -101,12 +106,12 @@ const ClientMailCard = () => {
                     .where('receipient').equalsIgnoreCase(email)
                     .filter((m) => (m.folder ?? '').toLowerCase() === folder.toLowerCase())
                     .toArray()
-                const staleIds = cached
+                const staleKeys = cached
                     .filter((m) => !freshIds.has(m.message_id as string))
                     .filter((m) => !freshThreads.has(threadKey(m)))
                     .filter((m) => isFullFolder || mailTime(m) >= oldestFresh)
-                    .map((m) => m.message_id as string)
-                if (staleIds.length > 0) await db.mails.bulkDelete(staleIds)
+                    .map(mailKeyOf)
+                if (staleKeys.length > 0) await db.mails.bulkDelete(staleKeys as any)
                 if (normalized.length > 0) await db.mails.bulkPut(normalized)
             })
             // Fewer than a full page of threads → there is no page 2
@@ -119,8 +124,15 @@ const ClientMailCard = () => {
             fetchedKeysRef.current.add(key)
             setLoading(false)
             fetchingRef.current = false
+            if (refetchPendingRef.current) {
+                refetchPendingRef.current = false
+                storeInDBRef.current(1)
+            }
         }
     }, [email, folder, setLoading])
+    // Latest storeInDB (current folder), for the queued re-run above
+    const storeInDBRef = useRef(storeInDB)
+    storeInDBRef.current = storeInDB
 
     /**
      * Load the next page of THREADS. The page number comes from how many
@@ -190,14 +202,21 @@ const ClientMailCard = () => {
     }, [live, isReady])
 
     // Mirror into Zustand for other consumers (SpotToolbar select-all, actions)
-    // and fetch from the API once if this folder has no cached mails yet.
+    // and sync the folder from the API once per view: cached mails show at once, and
+    // whatever changed elsewhere (other devices, IMAP clients) is reconciled into Dexie.
     useEffect(() => {
         if (!isReady || !all_emails || !viewKey) return
         setAllEmails(all_emails)
-        if (all_emails.length === 0 && !fetchedKeysRef.current.has(viewKey)) {
+        if (!fetchedKeysRef.current.has(viewKey)) {
+            fetchedKeysRef.current.add(viewKey)
             storeInDB(1)
         }
     }, [isReady, all_emails, viewKey, setAllEmails, storeInDB])
+
+    // Mail sent from another tab/device: refresh the Sent list when it is on screen
+    useEffect(() => listenMailEvents((event: any) => {
+        if (event?.type === 'message.sent' && folder.toLowerCase() === 'sent') storeInDB(1)
+    }), [listenMailEvents, storeInDB, folder])
 
     useEffect(() => {
         const unsubscribe = listen(() => {
