@@ -82,7 +82,8 @@ export function EventCalendar({
       // Small delay to let the DOM render the time grid
       requestAnimationFrame(() => {
         if (scrollRef.current) {
-          scrollRef.current.scrollTop = ScrollToHour * WeekCellsHeight;
+          // leave room so the hour label isn't hidden under the sticky day header
+          scrollRef.current.scrollTop = Math.max(0, ScrollToHour * WeekCellsHeight - 16);
         }
       });
     }

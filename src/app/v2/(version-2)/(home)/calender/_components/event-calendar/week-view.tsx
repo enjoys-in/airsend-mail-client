@@ -30,6 +30,10 @@ import {
 import { StartHour, EndHour } from "./constants";
 import { cn } from "@/lib/utils";
 
+/** Fixed-width time gutter + 7 equal day columns (the gutter used to be as wide as a day). */
+const WEEK_GRID =
+  "grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] sm:grid-cols-[4.5rem_repeat(7,minmax(0,1fr))]";
+
 interface WeekViewProps {
   currentDate: Date;
   events: CalendarEvent[];
@@ -219,27 +223,29 @@ export function WeekView({
 
   return (
     <div data-slot="week-view" className="flex h-full flex-col">
-      <div className="bg-background/80 border-border/40 sticky top-0 z-30 grid grid-cols-8 border-y backdrop-blur-xl uppercase">
-        <div className="text-muted-foreground/70 py-2 text-center text-xs">
+      <div className={cn(WEEK_GRID, "bg-background/80 border-border/40 sticky top-0 z-30 border-b backdrop-blur-xl")}>
+        <div className="text-muted-foreground/60 border-border/40 flex items-end justify-end border-r pe-2 pb-2 text-[10px] sm:pe-3">
           <span className="max-[479px]:sr-only">{format(new Date(), "O")}</span>
         </div>
         {days.map((day) => (
           <div
             key={day.toString()}
-            className="data-today:text-foreground text-muted-foreground/70 py-2 text-center text-xs data-today:font-medium"
+            className="group flex flex-col items-center gap-0.5 py-1.5"
             data-today={isToday(day) || undefined}
           >
-            <span className="sm:hidden" aria-hidden="true">
-              {format(day, "E")[0]} {format(day, "d")}
+            <span className="text-muted-foreground/70 group-data-today:text-primary text-[10px] font-medium uppercase tracking-wide sm:text-[11px]">
+              {format(day, "EEE")}
             </span>
-            <span className="max-sm:hidden">{format(day, "EEE dd")}</span>
+            <span className="text-foreground/90 group-data-today:bg-primary group-data-today:text-primary-foreground flex size-7 items-center justify-center rounded-full text-sm font-medium tabular-nums">
+              {format(day, "d")}
+            </span>
           </div>
         ))}
       </div>
 
       {showAllDaySection && (
         <div className="border-border/40 bg-muted/50 border-b">
-          <div className="grid grid-cols-8">
+          <div className={WEEK_GRID}>
             <div className="border-border/40 relative border-r">
               <span className="text-muted-foreground/70 absolute bottom-0 left-0 h-6 w-16 max-w-full pe-2 text-right text-[10px] sm:pe-4 sm:text-xs">
                 All day
@@ -302,16 +308,19 @@ export function WeekView({
         </div>
       )}
 
-      <div className="grid flex-1 grid-cols-8">
+      <div className={cn(WEEK_GRID, "flex-1")}>
         <div className="border-border/40 border-r grid auto-cols-fr">
-          {hours.map((hour) => (
+          {hours.map((hour, index) => (
             <div
               key={hour.toString()}
               className="border-border/40 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
             >
-              <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-16 max-w-full items-center justify-end pe-2 text-[10px] sm:pe-4 sm:text-xs">
-                {format(hour, "h a")}
-              </span>
+              {/* first label (12 AM) would sit under the sticky header */}
+              {index > 0 && (
+                <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-full items-center justify-end pe-2 text-[10px] tabular-nums sm:pe-3 sm:text-[11px]">
+                  {format(hour, "h a")}
+                </span>
+              )}
             </div>
           ))}
         </div>

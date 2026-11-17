@@ -6,6 +6,7 @@ import { useCalDevStore } from "../_lib/caldev-store";
 import { hexToEventColor } from "../_lib/caldev-types";
 import { expandEvents } from "../_lib/recurrence";
 import { Calendar } from "@/components/ui/calendar";
+import { sidebarPickerClassNames } from "./picker-classnames";
 import type { DayButtonProps } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import {
@@ -101,20 +102,18 @@ function DayButtonWithDots({ day, modifiers, children, ...buttonProps }: DayButt
 
   return (
     <button ref={ref} {...buttonProps}>
-      <div className="relative flex flex-col items-center">
-        <span>{children}</span>
-        {colors && colors.length > 0 && (
-          <span className="flex gap-[2px] absolute -bottom-0.5">
-            {colors.slice(0, 3).map((c, i) => (
-              <span
-                key={i}
-                className="size-1 rounded-full"
-                style={{ backgroundColor: c }}
-              />
-            ))}
-          </span>
-        )}
-      </div>
+      <span className="leading-none">{children}</span>
+      {colors && colors.length > 0 && (
+        <span className="pointer-events-none absolute bottom-[3px] left-1/2 flex -translate-x-1/2 gap-[2px]">
+          {colors.slice(0, 3).map((c, i) => (
+            <span
+              key={i}
+              className="size-1 rounded-full ring-1 ring-sidebar/40"
+              style={{ backgroundColor: c }}
+            />
+          ))}
+        </span>
+      )}
     </button>
   );
 }
@@ -345,7 +344,7 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
   return (
     <>
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3.5 border-b p-4">
+        <SidebarHeader className="gap-3.5 border-b px-3 py-4">
           <div className={cn("w-full flex justify-center", className)}>
             <EventDotsContext.Provider value={eventDotDates}>
               <Calendar
@@ -356,10 +355,8 @@ export default function SidebarCalendar({ className }: SidebarCalendarProps) {
                 showOutsideDays
                 onMonthChange={setCalendarMonth}
                 components={CALENDAR_COMPONENTS}
-                classNames={{
-                  selected:
-                    "!bg-primary !text-primary-foreground hover:!bg-primary hover:!text-primary-foreground focus:!bg-primary focus:!text-primary-foreground",
-                }}
+                className="w-full p-0"
+                classNames={sidebarPickerClassNames}
               />
             </EventDotsContext.Provider>
           </div>

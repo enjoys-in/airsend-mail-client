@@ -226,14 +226,16 @@ export function DayView({
 
       <div className="border-border/40 grid flex-1 grid-cols-[3rem_1fr] border-t sm:grid-cols-[4rem_1fr]">
         <div>
-          {hours.map((hour) => (
+          {hours.map((hour, index) => (
             <div
               key={hour.toString()}
               className="border-border/40 relative h-[var(--week-cells-height)] border-b last:border-b-0"
             >
-              <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-16 max-w-full items-center justify-end pe-2 text-[10px] sm:pe-4 sm:text-xs">
-                {format(hour, "h a")}
-              </span>
+              {index > 0 && (
+                <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-full items-center justify-end pe-2 text-[10px] tabular-nums sm:pe-3 sm:text-[11px]">
+                  {format(hour, "h a")}
+                </span>
+              )}
             </div>
           ))}
         </div>

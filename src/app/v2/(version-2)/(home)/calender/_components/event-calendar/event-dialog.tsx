@@ -8,6 +8,7 @@ import type { CalendarEvent, EditScope, EventColor } from ".";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { pickerNavClassNames } from "../picker-classnames";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -383,6 +384,7 @@ export function EventDialog({
                     <Calendar
                       mode="single"
                       selected={startDate}
+                      classNames={pickerNavClassNames}
                       defaultMonth={startDate}
                       onSelect={(date) => {
                         if (date) {
@@ -450,6 +452,7 @@ export function EventDialog({
                     <Calendar
                       mode="single"
                       selected={endDate}
+                      classNames={pickerNavClassNames}
                       defaultMonth={endDate}
                       disabled={{ before: startDate }}
                       onSelect={(date) => {
