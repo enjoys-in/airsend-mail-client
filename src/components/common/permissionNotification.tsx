@@ -7,12 +7,33 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
  
 import { useAppSelector } from '@/store/hooks'
-const publicKey = 'BJw086bmrTdcixl4bO_ep7kPMevfXiot27XyBoccCaeOH_eQZL_X3ml8TvFSKlfgsI6joi43-m3efwL4D8YXX0'
 function urlBase64ToUint8Array(base64String: string) {
     const padding = "=".repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
     const rawData = atob(base64);
     return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
+}
+
+const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i])
+
+/**
+ * Subscribes this browser to new-mail pushes with the server's current VAPID key (fetched from
+ * the API, so keys can be rotated server-side). An old subscription made with another key is replaced.
+ */
+async function subscribeToPush(registration: ServiceWorkerRegistration) {
+    const { data } = await API.getWebPushKey()
+    const publicKey: string | null = data?.result?.publicKey ?? null
+    if (!publicKey) return // web push is not configured on the server
+    const serverKey = urlBase64ToUint8Array(publicKey)
+
+    let subscription = await registration.pushManager.getSubscription()
+    const currentKey = subscription?.options.applicationServerKey
+    if (subscription && !(currentKey && sameBytes(new Uint8Array(currentKey), serverKey))) {
+        await subscription.unsubscribe()
+        subscription = null
+    }
+    subscription ??= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: serverKey })
+    await API.subcribeWebPush(subscription.toJSON())
 }
 export default function NotificationRequest() {
     const [isVisible, setIsVisible] = React.useState(false);
@@ -27,22 +48,7 @@ export default function NotificationRequest() {
             if ("serviceWorker" in navigator) {
                 navigator.serviceWorker
                     .register("/service-worker.js")
-                    .then(async (registration) => {
-                        const subscription = await registration.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: urlBase64ToUint8Array(publicKey)
-                        })
-                        const { data } = await API.subcribeWebPush({
-                            method: "POST",
-                            body: JSON.stringify(subscription),
-                            headers: { "Content-Type": "application/json" }
-                        });
-                        if (data.success) {
-
-                            console.log("Aisa Kya Dekh rahe PaaiJaan, i'm just a console message baby,")
-                        }
-                    }
-                    )
+                    .then(subscribeToPush)
                     .catch((err) => console.error("Omffo Ji, Aj me sed hu or cry bhi aa rha", err));
 
 

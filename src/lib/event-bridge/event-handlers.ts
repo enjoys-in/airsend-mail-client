@@ -7,12 +7,7 @@
 import { airsendDB, db } from '@/db';
 import { BridgeEvent } from './constants';
 import type {
-  SyncEvent,
-  MessageReceivedPayload,
-  MessageFlagPayload,
   MessageMovedPayload,
-  MessageDeletedPayload,
-  MessageStarredPayload,
   FolderCreatedPayload,
   FolderRenamedPayload,
   FolderEmptiedPayload,
@@ -24,10 +19,11 @@ import type {
 // ─── Mailbox Count Helpers ───
 
 async function incrementMailboxCount(folderPath: string, field: 'unread_count' | 'total_count', delta: number = 1): Promise<void> {
+  if (!folderPath) return;
   try {
     await db.mailboxes
       .where('path')
-      .equals(folderPath)
+      .equalsIgnoreCase(folderPath)
       .modify((mailbox: any) => {
         mailbox[field] = Math.max(0, (mailbox[field] ?? 0) + delta);
         if (field === 'unread_count') {
@@ -41,125 +37,119 @@ async function decrementMailboxCount(folderPath: string, field: 'unread_count' |
   await incrementMailboxCount(folderPath, field, -delta);
 }
 
+// ─── Payload helpers ───
+// Web actions arrive from the API as { messageIds: [...], folder, targetFolder, action };
+// IMAP / restore events as { messageId, fromFolder, toFolder }. Both are accepted.
+
+/** Folder the web client lists trashed mail under (`/u/mail/deleted`). */
+const TRASH_FOLDER = 'deleted';
+
+type AnyMessagePayload = Partial<MessageMovedPayload> & {
+  messageIds?: string[];
+  folder?: string;
+  targetFolder?: string;
+  action?: string;
+};
+
+function messageIdsOf(p: AnyMessagePayload): string[] {
+  const ids = Array.isArray(p?.messageIds) ? p.messageIds : p?.messageId ? [p.messageId] : [];
+  return ids.filter(Boolean);
+}
+
+const sourceFolderOf = (p: AnyMessagePayload) => p?.fromFolder ?? p?.folder ?? '';
+
+/** Destination of a move; undefined when the server decides it (e.g. unarchive). */
+function targetFolderOf(p: AnyMessagePayload): string | undefined {
+  if (p?.toFolder || p?.targetFolder) return p.toFolder ?? p.targetFolder;
+  if (p?.action === 'archive') return 'archive';
+  return undefined;
+}
+
+/**
+ * Moves the mails to `toFolder` in Dexie and shifts the mailbox counts. Without a known
+ * destination the mail is dropped locally; the next list fetch of its folder brings it back.
+ * Mails not cached here, or already where the event puts them (the tab that made the change
+ * gets its own event back), are skipped so the counters are not shifted twice.
+ */
+async function moveMails(p: AnyMessagePayload, toFolder: string | undefined): Promise<void> {
+  for (const id of messageIdsOf(p)) {
+    const existing = await airsendDB.getItemByKey('mails', id);
+    if (!existing) continue;
+    const fromFolder = existing.folder ?? sourceFolderOf(p);
+    if (toFolder && fromFolder.toLowerCase() === toFolder.toLowerCase()) continue;
+
+    if (toFolder) await airsendDB.updateItem('mails', id, { folder: toFolder });
+    else await airsendDB.deleteItem('mails', id);
+
+    await decrementMailboxCount(fromFolder, 'total_count');
+    if (toFolder) await incrementMailboxCount(toFolder, 'total_count');
+    if (!existing.is_read) {
+      await decrementMailboxCount(fromFolder, 'unread_count');
+      if (toFolder) await incrementMailboxCount(toFolder, 'unread_count');
+    }
+  }
+}
+
+/** Sets one field on every mail of the event. */
+async function setOnMails(p: AnyMessagePayload, changes: Record<string, unknown>): Promise<void> {
+  for (const id of messageIdsOf(p)) await airsendDB.updateItem('mails', id, changes as any);
+}
+
 // ─── Message Handlers ───
 
-const handleMessageReceived: EventHandler<MessageReceivedPayload> = async (event) => {
-  const { payload } = event;
-  await airsendDB.putItem('mails', {
-    message_id: payload.messageId,
-    from_email: payload.from.address,
-    subject: payload.subject,
-    folder: payload.folder,
-    uid: String(payload.uid),
-    is_read: payload.isRead,
-    is_starred: false,
-    is_important: false,
-    has_attachments: payload.hasAttachments,
-    flags: payload.flags,
-    created_at: payload.date,
-    receipient: payload.to[0]?.address ?? '',
-    receipients: payload.to.map((t) => t.address),
-    plain_text: payload.snippet,
-  });
-  // Update counts
-  await incrementMailboxCount(payload.folder, 'total_count');
-  if (!payload.isRead) {
-    await incrementMailboxCount(payload.folder, 'unread_count');
-  }
+const handleMessageDeleted: EventHandler<AnyMessagePayload> = async (event) => {
+  // Soft or hard delete: either way it leaves the list it was in (the trash view refetches).
+  await moveMails(event.payload, undefined);
 };
 
-const handleMessageDeleted: EventHandler<MessageDeletedPayload> = async (event) => {
-  const { payload } = event;
-  // Check if unread before deleting (for count adjustment)
-  const existing = await airsendDB.getItemByKey('mails', payload.messageId);
-  await airsendDB.deleteItem('mails', payload.messageId);
-  // Update counts
-  await decrementMailboxCount(payload.folder, 'total_count');
-  if (existing && !existing.is_read) {
-    await decrementMailboxCount(payload.folder, 'unread_count');
-  }
+const handleMessageTrashed: EventHandler<AnyMessagePayload> = async (event) => {
+  await moveMails(event.payload, TRASH_FOLDER);
 };
 
-const handleMessageTrashed: EventHandler<MessageMovedPayload> = async (event) => {
-  const { payload } = event;
-  const existing = await airsendDB.getItemByKey('mails', payload.messageId);
-  await airsendDB.updateItem('mails', payload.messageId, { folder: 'Trash' });
-  // Decrement source, increment Trash
-  await decrementMailboxCount(payload.fromFolder, 'total_count');
-  await incrementMailboxCount('Trash', 'total_count');
-  if (existing && !existing.is_read) {
-    await decrementMailboxCount(payload.fromFolder, 'unread_count');
-    await incrementMailboxCount('Trash', 'unread_count');
-  }
+const handleMessageMoved: EventHandler<AnyMessagePayload> = async (event) => {
+  await moveMails(event.payload, targetFolderOf(event.payload));
 };
 
-const handleMessageMoved: EventHandler<MessageMovedPayload> = async (event) => {
-  const { payload } = event;
-  const existing = await airsendDB.getItemByKey('mails', payload.messageId);
-  await airsendDB.updateItem('mails', payload.messageId, { folder: payload.toFolder });
-  // Decrement source, increment destination
-  await decrementMailboxCount(payload.fromFolder, 'total_count');
-  await incrementMailboxCount(payload.toFolder, 'total_count');
-  if (existing && !existing.is_read) {
-    await decrementMailboxCount(payload.fromFolder, 'unread_count');
-    await incrementMailboxCount(payload.toFolder, 'unread_count');
-  }
+const handleMessageSpam: EventHandler<AnyMessagePayload> = async (event) => {
+  // "block" also maps to message.spam but leaves the mail where it is.
+  if (event.payload?.action === 'block') return;
+  await moveMails(event.payload, 'spam');
 };
 
-const handleMessageSpam: EventHandler<MessageMovedPayload> = async (event) => {
-  const { payload } = event;
-  const existing = await airsendDB.getItemByKey('mails', payload.messageId);
-  await airsendDB.updateItem('mails', payload.messageId, { folder: 'Spam' });
-  await decrementMailboxCount(payload.fromFolder, 'total_count');
-  await incrementMailboxCount('Spam', 'total_count');
-  if (existing && !existing.is_read) {
-    await decrementMailboxCount(payload.fromFolder, 'unread_count');
-    await incrementMailboxCount('Spam', 'unread_count');
-  }
-};
-
-const handleMessageNotSpam: EventHandler<MessageMovedPayload> = async (event) => {
-  const { payload } = event;
-  const existing = await airsendDB.getItemByKey('mails', payload.messageId);
-  await airsendDB.updateItem('mails', payload.messageId, { folder: payload.toFolder });
-  await decrementMailboxCount('Spam', 'total_count');
-  await incrementMailboxCount(payload.toFolder, 'total_count');
-  if (existing && !existing.is_read) {
-    await decrementMailboxCount('Spam', 'unread_count');
-    await incrementMailboxCount(payload.toFolder, 'unread_count');
-  }
+const handleMessageNotSpam: EventHandler<AnyMessagePayload> = async (event) => {
+  if (event.payload?.action === 'unblock') return;
+  await moveMails(event.payload, targetFolderOf(event.payload) ?? 'inbox');
 };
 
 // ─── Flag Handlers ───
 
-const handleFlagsRead: EventHandler<MessageFlagPayload> = async (event) => {
-  await airsendDB.updateItem('mails', event.payload.messageId, { is_read: true });
-  await decrementMailboxCount(event.payload.folder, 'unread_count');
+/** Read/unread: only mails whose state really changes move the unread counter. */
+const readState = (isRead: boolean): EventHandler<AnyMessagePayload> => async (event) => {
+  for (const id of messageIdsOf(event.payload)) {
+    const existing = await airsendDB.getItemByKey('mails', id);
+    await airsendDB.updateItem('mails', id, { is_read: isRead });
+    if (existing && !!existing.is_read !== isRead) {
+      await incrementMailboxCount(existing.folder ?? sourceFolderOf(event.payload), 'unread_count', isRead ? -1 : 1);
+    }
+  }
 };
 
-const handleFlagsUnread: EventHandler<MessageFlagPayload> = async (event) => {
-  await airsendDB.updateItem('mails', event.payload.messageId, { is_read: false });
-  await incrementMailboxCount(event.payload.folder, 'unread_count');
-};
+const handleFlagsRead = readState(true);
+const handleFlagsUnread = readState(false);
 
-const handleFlagsStarred: EventHandler<MessageStarredPayload> = async (event) => {
-  await airsendDB.updateItem('mails', event.payload.messageId, { is_starred: true });
-};
+const handleFlagsStarred: EventHandler<AnyMessagePayload> = (event) => setOnMails(event.payload, { is_starred: true });
+const handleFlagsUnstarred: EventHandler<AnyMessagePayload> = (event) => setOnMails(event.payload, { is_starred: false });
+const handleFlagsAnswered: EventHandler<AnyMessagePayload> = (event) => setOnMails(event.payload, { is_replied: true });
+const handleFlagsForwarded: EventHandler<AnyMessagePayload> = (event) => setOnMails(event.payload, { is_forwarded: true });
 
-const handleFlagsUnstarred: EventHandler<MessageStarredPayload> = async (event) => {
-  await airsendDB.updateItem('mails', event.payload.messageId, { is_starred: false });
-};
-
-const handleFlagsAnswered: EventHandler<MessageFlagPayload> = async (event) => {
-  await airsendDB.updateItem('mails', event.payload.messageId, { is_replied: true });
-};
-
-const handleFlagsForwarded: EventHandler<MessageFlagPayload> = async (event) => {
-  await airsendDB.updateItem('mails', event.payload.messageId, { is_forwarded: true });
-};
-
-const handleFlagsImportant: EventHandler<MessageFlagPayload> = async (event) => {
-  await airsendDB.updateItem('mails', event.payload.messageId, { is_important: true });
+/** pin/unpin/importance/unimportance all arrive as message.flags.important; the action tells them apart. */
+const handleFlagsImportant: EventHandler<AnyMessagePayload> = (event) => {
+  const changes: Record<string, Record<string, boolean>> = {
+    pin: { is_pinned: true },
+    unpin: { is_pinned: false },
+    unimportance: { is_important: false },
+  };
+  return setOnMails(event.payload, changes[event.payload?.action ?? ''] ?? { is_important: true });
 };
 
 // ─── Draft Handlers ───
@@ -215,14 +205,12 @@ const handleFolderRenamed: EventHandler<FolderRenamedPayload> = async (event) =>
 
 const handleFolderEmptied: EventHandler<FolderEmptiedPayload> = async (event) => {
   const { payload } = event;
-  // Delete all mails in that folder
-  const mails = await airsendDB.query('mails', {
-    where: { field: 'folder_path' as any, operator: 'equals', value: payload.folderName },
-  });
-  if (Array.isArray(mails) && mails.length > 0) {
-    const ids = mails.map((m: any) => m.message_id);
-    await airsendDB.bulkDeleteItems('mails', ids);
-  }
+  // Delete all mails in that folder (mail records carry `folder`; case differs between sources)
+  const folder = (payload.folderName ?? '').toLowerCase();
+  await db.mails.filter((m) => (m.folder ?? '').toLowerCase() === folder && airsendDB.ownsMail(m)).delete();
+  await db.mailboxes.where('path').equalsIgnoreCase(payload.folderName ?? '')
+    .modify((mailbox: any) => { mailbox.total_count = 0; mailbox.unread_count = 0; mailbox.read_count = 0; })
+    .catch(() => { });
 };
 
 // ─── Label Handlers ───
@@ -251,8 +239,8 @@ const handleLabelRemoved: EventHandler<LabelPayload> = async (event) => {
 // ─── Handler Registry ───
 
 export const eventHandlerMap: Partial<Record<BridgeEvent, EventHandler<any>>> = {
-  // [BridgeEvent.MESSAGE_RECEIVED]: handleMessageReceived, // handled by custom @@NEW_MAIL_RECEIVED socket
-  [BridgeEvent.MESSAGE_SENT]: handleMessageReceived, // same shape as received
+  // MESSAGE_RECEIVED: handled by the custom @@NEW_MAIL_RECEIVED socket.
+  // MESSAGE_SENT: the sending tab already stored the mail; other tabs refetch the Sent list (ClientMailCard).
   [BridgeEvent.MESSAGE_DELETED]: handleMessageDeleted,
   [BridgeEvent.MESSAGE_TRASHED]: handleMessageTrashed,
   [BridgeEvent.MESSAGE_MOVED]: handleMessageMoved,

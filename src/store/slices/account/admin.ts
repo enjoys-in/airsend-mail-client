@@ -19,7 +19,7 @@ export const fetchAdminFromServer = createAsyncThunk<IAdmin>(
         }
       });
       if (!data.success) {
-        await axios.get(`${__config.APP.BASE_URL}/api/v1/admin/logout`, {
+        await axios.get(`${__config.APP.BASE_URL}/api/v1/auth/admin/logout`, {
           withCredentials: true,
           headers: {
             "Content-Type": "application/json",

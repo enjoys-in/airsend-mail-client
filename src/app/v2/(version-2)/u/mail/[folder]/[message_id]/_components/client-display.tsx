@@ -44,7 +44,7 @@ import {
 
 import { MailDisplaySkeleton, MailHeaderSkeleton } from "./mail-skeleton";
 import { useMailStore } from "@/store/mails";
-import { db } from "@/db";
+import { airsendDB } from "@/db";
 
 import { MailDropdown, type MailDropdownActions } from "./menu-dropdown";
 import { useMailRenderSettings } from "@/store/mails/mail-render-settings";
@@ -114,10 +114,8 @@ const ClientDisplay = ({
     useEffect(() => {
         if (selectedMail) return;
         let cancelled = false;
-        db.mails
-            .where("message_id")
-            .equals(message_id)
-            .first()
+        // This account's copy (another signed-in account may hold the same message)
+        airsendDB.getItemByKey("mails", message_id)
             .then((item) => {
                 if (!cancelled && item) setSelectedMail(item as any);
             });

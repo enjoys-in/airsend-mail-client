@@ -209,8 +209,10 @@ type TableKeys = keyof Tables;
 type TableSchema = {
   [tableName in TableKeys]: string;
 };
+// mails are keyed per mailbox, [receipient+message_id], like the server's unique (email, message_id):
+// the same message delivered to two of the user's accounts is two records.
 const tables: TableSchema = {
-  mails: "message_id,receipient,folder_path,uid,[message_id+folder],[message_id+folder+receipient],[folder+receipient]",
+  mails: "[receipient+message_id],message_id,receipient,folder_path,uid,[message_id+folder],[message_id+folder+receipient],[folder+receipient]",
   mailboxes: "++id, path,type,[path+type]",
   settings: "email",
   files: "email,[email+tabId]",
@@ -219,10 +221,18 @@ const tables: TableSchema = {
 
 const db = new Dexie("airsend") as Dexie & Tables;
 db.version(2.3)
-  .stores(tables)
+  .stores({ ...tables, mails: "message_id,receipient,folder_path,uid,[message_id+folder],[message_id+folder+receipient],[folder+receipient]" })
   .upgrade((tx) => {
     // Migration: added sync_meta table
   });
+// A primary key cannot change in place: drop the mails cache, then recreate it with the new key.
+// The mail lists refill it from the API when each folder is opened.
+db.version(2.4).stores({ mails: null });
+db.version(2.5).stores(tables);
+
+/** Primary key of a mail record: records with no receipient (optimistic drafts) are stored under "". */
+export const mailKeyOf = (m: { receipient?: string | null; message_id?: string }) =>
+  [m.receipient ?? "", m.message_id ?? ""] as [string, string];
 class AirsendDB {
   constructor() {
     !db.isOpen() && db.open();
@@ -234,11 +244,36 @@ class AirsendDB {
    * @returns The primary key field name for the specified table.
    */
   private getPrimaryKeyForTable(tableName: keyof TableSchema): string {
+    if (tableName === "mails") return "message_id"; // callers address mails by message_id (see mailKeys)
     const schema = tables[tableName];
     const keys = schema.split(",").map((key) => key.trim());
     const validKeys = keys.filter((key) => !key.startsWith("++"));
     return validKeys[0];
   }
+  // ─── mails: addressed by message_id, stored per mailbox ───
+  private mailAccount = "";
+
+  /** The account on screen: message_id lookups resolve to its copy of a mail. */
+  setMailAccount(email?: string | null) {
+    this.mailAccount = (email ?? "").toLowerCase();
+  }
+
+  /** True for the current account's mails and for records with no receipient (local drafts). */
+  ownsMail(m: { receipient?: string | null }) {
+    return !this.mailAccount || !m.receipient || m.receipient.toLowerCase() === this.mailAccount;
+  }
+
+  /** Primary keys of the current account's copies of these messages (its own copy first). */
+  private async mailKeys(messageIds: string[]): Promise<[string, string][]> {
+    const ids = messageIds.filter(Boolean);
+    if (ids.length === 0) return [];
+    const rows = await db.mails.where("message_id").anyOf(ids).toArray();
+    return rows
+      .filter((m) => this.ownsMail(m))
+      .sort((a, b) => Number(!a.receipient) - Number(!b.receipient))
+      .map(mailKeyOf);
+  }
+
   async has<T extends keyof Tables, Key extends PrimaryKeyType<T>>(
     table: T,
     key: Key
@@ -364,6 +399,10 @@ class AirsendDB {
     table: K,
     item: Partial<TableValue<Tables[K]>>
   ) {
+    if (table === "mails") {
+      const mail = item as { receipient?: string | null };
+      return db.mails.put({ ...mail, receipient: mail.receipient ?? "" } as any);
+    }
     return this.getTable(table).put(item);
   }
   /**
@@ -393,6 +432,10 @@ class AirsendDB {
     table: K,
     value: string
   ): Promise<TableValue<Tables[K]> | undefined> {
+    if (table === "mails") {
+      const [key] = await this.mailKeys([value]);
+      return key ? (db.mails.get(key as any) as any) : undefined;
+    }
     return this.getTable(table).get(value);
   }
 
@@ -577,6 +620,11 @@ class AirsendDB {
     field_value: string,
     updated: TableValue<Tables[K]>
   ) {
+    if (table === "mails") {
+      let count = 0;
+      for (const key of await this.mailKeys([field_value])) count += await db.mails.update(key as any, updated as any);
+      return count;
+    }
     return this.getTable(table).update(field_value, updated);
   }
 
@@ -591,6 +639,7 @@ class AirsendDB {
    * @returns A promise that resolves once the item has been deleted.
    */
   async deleteItem<K extends keyof Tables>(table: K, field_value: any) {
+    if (table === "mails") return this.bulkDeleteItems(table, [field_value]);
     return this.getTable(table).delete(field_value);
   }
 
@@ -603,6 +652,7 @@ class AirsendDB {
    * @returns A promise that resolves once the items have been deleted.
    */
   async bulkDeleteItems<K extends keyof Tables>(table: K, keys: any[]) {
+    if (table === "mails") return db.mails.bulkDelete((await this.mailKeys(keys)) as any);
     return this.getTable(table).bulkDelete(keys);
   }
 
@@ -798,9 +848,13 @@ class AirsendDB {
     updates: Updates // Path is dynamically typed based on the table's entity structure
   ): Promise<{ success: boolean; created: boolean; updatedPaths: (keyof Updates)[], updates: Updates, oldValues: Partial<Updates> }> {
     const table = this.getTable(tableName) as Table<any, any>;
+    const isMail = tableName === "mails";
+    const [oldMailKey] = isMail ? await this.mailKeys([primaryKeyValue as string]) : [];
 
     // Try to get existing record
-    let record = await table.get(primaryKeyValue);
+    let record = isMail
+      ? (oldMailKey ? await db.mails.get(oldMailKey as any) : undefined)
+      : await table.get(primaryKeyValue);
     const created = !record;
 
     if (!record) {
@@ -830,6 +884,11 @@ class AirsendDB {
 
     }
 
+    if (isMail) {
+      record.receipient = record.receipient ?? "";
+      // The update gave a local record its account: drop it under the old key
+      if (oldMailKey && oldMailKey[0] !== record.receipient) await db.mails.delete(oldMailKey as any);
+    }
     await table.put({ ...record, updatedAt: Date.now?.() });
 
     return { success: true, created, updatedPaths, updates, oldValues };

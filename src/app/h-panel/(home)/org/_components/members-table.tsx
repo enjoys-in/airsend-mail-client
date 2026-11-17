@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import type { IMember } from "../_lib/types"
+import { API } from "@/lib/api/handler"
 
 interface MembersTableProps {
   data: IMember[]
@@ -42,8 +43,10 @@ export function MembersTable({ data }: MembersTableProps) {
   const [actionMember, setActionMember] = React.useState<IMember | null>(null)
   const [actionType, setActionType] = React.useState<"kick" | "ban" | null>(null)
 
-  const updateMemberRole = (memberId: string, newRole: string) => {
+  const updateMemberRole = async (memberId: string, newRole: string) => {
     const roleLabel = availableRoles.find((r) => r.value === newRole)?.label ?? newRole
+    const { data } = await API.updateMember(memberId, { role: newRole }).catch(() => ({ data: null as any }))
+    if (!data?.success) return
     setMembers((prev) => prev.map((member) => (member.id === memberId ? { ...member, role: roleLabel } : member)))
   }
 
@@ -52,15 +55,19 @@ export function MembersTable({ data }: MembersTableProps) {
     setActionType(action)
   }
 
-  const confirmAction = () => {
+  // Kick deactivates the mailbox, ban marks it banned (both stop it sending); the server is updated first.
+  const confirmAction = async () => {
     if (!actionMember || !actionType) return
+    const member = actionMember
+    const request = actionType === "kick"
+      ? API.removeMember(member.id)
+      : API.updateMember(member.id, { status: "banned" })
+    const { data } = await request.catch(() => ({ data: null as any }))
 
-    if (actionType === "kick") {
-      setMembers((prev) => prev.filter((member) => member.id !== actionMember.id))
-    } else if (actionType === "ban") {
-      setMembers((prev) =>
-        prev.map((member) => (member.id === actionMember.id ? { ...member, status: "banned" as const } : member)),
-      )
+    if (data?.success && actionType === "kick") {
+      setMembers((prev) => prev.filter((m) => m.id !== member.id))
+    } else if (data?.success) {
+      setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, status: "banned" as const } : m)))
     }
 
     setActionMember(null)
