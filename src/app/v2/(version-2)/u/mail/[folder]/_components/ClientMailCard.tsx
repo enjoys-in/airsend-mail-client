@@ -1,5 +1,6 @@
 "use client"
-import React, { Suspense, useCallback, useEffect, useRef } from 'react'
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
@@ -16,6 +17,13 @@ import { GetAllMailsPayload } from '@/lib/types/mail.interface'
 
 /** Server default page size of GET /api/v1/get-mails (airsend-api MailDataController). */
 const API_PAGE_LIMIT = 50
+
+/**
+ * Thread key — identical to the server's `COALESCE(thread_id, message_id)`.
+ * /get-mails pages by THREADS (one row per thread = its latest message), so
+ * grouping, de-duping and page math all use this key.
+ */
+const threadKey = (m: any) => (m?.thread_id || m?.message_id) as string
 
 /** Structural compare of two mail records (nested values compared by JSON). */
 function isSameMail(a: any, b: any): boolean {
@@ -53,6 +61,10 @@ const ClientMailCard = () => {
     const fetchingRef = useRef(false)
     // Folders already fetched from the API (so an empty folder isn't re-fetched in a loop)
     const fetchedKeysRef = useRef<Set<string>>(new Set())
+    // Folders whose last page has been reached (no more threads on the server)
+    const [exhausted, setExhausted] = useState<Record<string, boolean>>({})
+    const [loadingMore, setLoadingMore] = useState(false)
+    const loadingMoreRef = useRef(false)
 
     /**
      * Fetch the folder from the API and write it to Dexie.
@@ -64,7 +76,7 @@ const ClientMailCard = () => {
         const key = `${email.toLowerCase()}::${folder.toLowerCase()}`
         try {
             setLoading(true)
-            const { data } = await API.getAllMailData(`?is_refresh=${is_refresh}&folder=${folder}`)
+            const { data } = await API.getAllMailData(`?is_refresh=${is_refresh}&folder=${folder}&page=1&limit=${API_PAGE_LIMIT}`)
             if (!data.success) {
                 throw new Error("Error fetching emails")
             }
@@ -76,7 +88,6 @@ const ClientMailCard = () => {
             // per thread (latest message). So we may only prune cached mails that
             // fall inside the returned window and aren't part of a returned thread —
             // otherwise older cached mails / thread siblings would be wiped.
-            const threadKey = (m: any) => (m.thread_id || m.message_id) as string
             const freshThreads = new Set(normalized.map(threadKey))
             const mailTime = (m: any) => new Date(m.timestamp || m.created_at || 0).getTime()
             const isFullFolder = normalized.length < API_PAGE_LIMIT
@@ -98,6 +109,8 @@ const ClientMailCard = () => {
                 if (staleIds.length > 0) await db.mails.bulkDelete(staleIds)
                 if (normalized.length > 0) await db.mails.bulkPut(normalized)
             })
+            // Fewer than a full page of threads → there is no page 2
+            setExhausted((prev) => ({ ...prev, [key]: isFullFolder }))
         } catch (error) {
             // handle error
         } finally {
@@ -108,6 +121,41 @@ const ClientMailCard = () => {
             fetchingRef.current = false
         }
     }, [email, folder, setLoading])
+
+    /**
+     * Load the next page of THREADS. The page number comes from how many
+     * threads are on screen (50 threads → page 2, 100 → page 3, ...), so it
+     * also works for a list restored from the Dexie cache. Results go to Dexie
+     * only; the live query renders them, and grouping by thread key collapses
+     * any thread that shows up on two pages (offsets shift as new mail arrives).
+     */
+    const loadMore = useCallback(async (shownThreadKeys: Set<string>) => {
+        if (!email || !viewKey || loadingMoreRef.current || fetchingRef.current) return
+        const page = Math.floor(shownThreadKeys.size / API_PAGE_LIMIT) + 1
+        if (page < 2) return
+        const key = viewKey
+        loadingMoreRef.current = true
+        setLoadingMore(true)
+        try {
+            const { data } = await API.getAllMailData(
+                `?is_refresh=1&folder=${folder}&page=${page}&limit=${API_PAGE_LIMIT}`
+            )
+            if (!data.success) throw new Error("Error fetching emails")
+            const results: any[] = data.result ?? []
+            const normalized = results.map((m) => ({ ...m, folder }))
+            const newThreads = normalized.filter((m) => !shownThreadKeys.has(threadKey(m))).length
+            if (normalized.length > 0) await db.mails.bulkPut(normalized as any)
+            // Last page reached, or nothing new came back (avoids re-requesting the same page)
+            if (results.length < API_PAGE_LIMIT || newThreads === 0) {
+                setExhausted((prev) => ({ ...prev, [key]: true }))
+            }
+        } catch (error) {
+            // Not marked exhausted: scrolling to the bottom again retries
+        } finally {
+            loadingMoreRef.current = false
+            setLoadingMore(false)
+        }
+    }, [email, viewKey, folder])
 
     /**
      * Dexie is the source of truth: any write to `mails` (socket events, new
@@ -163,42 +211,46 @@ const ClientMailCard = () => {
         return unsubscribe
     }, [listen, storeInDB, searchParams, emit, folder])
 
-    // Group by thread_id, sort threads by newest message, show latest per thread
+    // Group by thread key (same as the server), keep the latest message of each
+    // thread, sort threads newest first. Mails without thread_id are their own thread.
     const sortedEmails = React.useMemo(() => {
         if (!all_emails || all_emails.length === 0) return []
+        const time = (m: GetAllMailsPayload) => new Date(m.timestamp || m.created_at || 0).getTime()
 
-        // Group mails by thread_id (mails without thread_id are standalone)
-        const threadMap = new Map<string, typeof all_emails>()
-        const standalone: typeof all_emails = []
-
+        const latestByThread = new Map<string, GetAllMailsPayload>()
         for (const mail of all_emails) {
-            if (mail.thread_id) {
-                const existing = threadMap.get(mail.thread_id) || []
-                existing.push(mail)
-                threadMap.set(mail.thread_id, existing)
-            } else {
-                standalone.push(mail)
-            }
+            const key = threadKey(mail)
+            const current = latestByThread.get(key)
+            if (!current || time(mail) > time(current)) latestByThread.set(key, mail)
         }
-
-        // For each thread, pick the latest message as the representative
-        const representatives: typeof all_emails = []
-        for (const [, threadMails] of threadMap) {
-            const sorted = threadMails.sort((a, b) => {
-                const dateA = new Date(a.timestamp || a.created_at || 0).getTime()
-                const dateB = new Date(b.timestamp || b.created_at || 0).getTime()
-                return dateB - dateA
-            })
-            representatives.push(sorted[0])
-        }
-
-        // Combine standalone + thread representatives, sort newest first
-        return [...representatives, ...standalone].sort((a, b) => {
-            const dateA = new Date(a.timestamp || a.created_at || 0).getTime()
-            const dateB = new Date(b.timestamp || b.created_at || 0).getTime()
-            return dateB - dateA
-        })
+        return [...latestByThread.values()].sort((a, b) => time(b) - time(a))
     }, [all_emails])
+
+    // ── Load more (infinite scroll by thread pages) ──
+    const shownThreadKeys = React.useMemo(
+        () => new Set(sortedEmails.map(threadKey)),
+        [sortedEmails]
+    )
+    // A full page on screen and the server hasn't said "last page" yet
+    const hasMore = !!viewKey && !exhausted[viewKey] && sortedEmails.length >= API_PAGE_LIMIT
+    const sentinelRef = useRef<HTMLDivElement>(null)
+    const loadMoreRef = useRef<() => void>(() => { })
+    useEffect(() => {
+        loadMoreRef.current = () => loadMore(shownThreadKeys)
+    }, [loadMore, shownThreadKeys])
+
+    useEffect(() => {
+        const el = sentinelRef.current
+        if (!hasMore || !el) return
+        // Re-created when the list grows, so a still-visible sentinel
+        // (short page / tall screen) triggers the next page too.
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0]?.isIntersecting) loadMoreRef.current()
+        })
+        observer.observe(el)
+        return () => observer.disconnect()
+        // (not keyed on loadingMore: a failing request would retry in a tight loop)
+    }, [hasMore, isReady, sortedEmails.length])
 
     // Only show the skeleton when there is nothing to show yet. A background
     // sync (socket replay / sync button) no longer swaps the whole list for a
@@ -212,6 +264,19 @@ const ClientMailCard = () => {
                 {sortedEmails.map((item) => (
                     <MailCard key={item.message_id} item={item} />
                 ))}
+                {hasMore && (
+                    <div
+                        ref={sentinelRef}
+                        className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground"
+                    >
+                        {loadingMore && (
+                            <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                Loading more…
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
         ) : (
             <div className="flex flex-col items-center justify-center h-full py-24 bg-background">
