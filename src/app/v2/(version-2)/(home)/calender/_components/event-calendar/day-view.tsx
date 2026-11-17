@@ -183,7 +183,7 @@ export function DayView({
   };
 
   const showAllDaySection = allDayEvents.length > 0;
-  const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(
+  const { currentTimePosition, currentTimeVisible, currentTime } = useCurrentTimeIndicator(
     currentDate,
     "day",
   );
@@ -225,7 +225,7 @@ export function DayView({
       )}
 
       <div className="border-border/40 grid flex-1 grid-cols-[3rem_1fr] border-t sm:grid-cols-[4rem_1fr]">
-        <div>
+        <div className="relative">
           {hours.map((hour, index) => (
             <div
               key={hour.toString()}
@@ -242,6 +242,17 @@ export function DayView({
               </span>
             </div>
           ))}
+          {/* Current time label in the gutter */}
+          {currentTimeVisible && currentTime && (
+            <div
+              className="pointer-events-none absolute right-1 z-30 -translate-y-1/2"
+              style={{ top: `${currentTimePosition}%` }}
+            >
+              <span className="rounded bg-red-500 px-1 py-0.5 text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm">
+                {format(currentTime, "h:mm a")}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="relative">
@@ -277,8 +288,8 @@ export function DayView({
               style={{ top: `${currentTimePosition}%` }}
             >
               <div className="relative flex items-center">
-                <div className="bg-red-500 absolute -left-1 h-2 w-2 rounded-full"></div>
-                <div className="bg-red-500 h-[2px] w-full"></div>
+                <div className="absolute -left-1.5 h-3 w-3 rounded-full bg-red-500 ring-2 ring-background"></div>
+                <div className="h-[2px] w-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]"></div>
               </div>
             </div>
           )}

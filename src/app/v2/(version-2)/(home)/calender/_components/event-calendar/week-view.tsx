@@ -216,7 +216,7 @@ export function WeekView({
   };
 
   const showAllDaySection = allDayEvents.length > 0;
-  const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(
+  const { currentTimePosition, currentTimeVisible, currentTime } = useCurrentTimeIndicator(
     currentDate,
     "week",
   );
@@ -233,10 +233,10 @@ export function WeekView({
             className="group flex flex-col items-center gap-0.5 py-1.5"
             data-today={isToday(day) || undefined}
           >
-            <span className="text-muted-foreground/70 group-data-today:text-primary text-[10px] font-medium uppercase tracking-wide sm:text-[11px]">
+            <span className="text-muted-foreground/70 group-data-[today]:text-primary text-[10px] font-medium uppercase tracking-wide sm:text-[11px]">
               {format(day, "EEE")}
             </span>
-            <span className="text-foreground/90 group-data-today:bg-primary group-data-today:text-primary-foreground flex size-7 items-center justify-center rounded-full text-sm font-medium tabular-nums">
+            <span className="text-foreground/90 group-data-[today]:bg-primary group-data-[today]:text-primary-foreground flex size-7 items-center justify-center rounded-full text-sm font-medium tabular-nums">
               {format(day, "d")}
             </span>
           </div>
@@ -309,7 +309,7 @@ export function WeekView({
       )}
 
       <div className={cn(WEEK_GRID, "flex-1")}>
-        <div className="border-border/40 border-r grid auto-cols-fr">
+        <div className="border-border/40 relative border-r grid auto-cols-fr">
           {hours.map((hour, index) => (
             <div
               key={hour.toString()}
@@ -326,6 +326,17 @@ export function WeekView({
               </span>
             </div>
           ))}
+          {/* Current time label in the gutter */}
+          {currentTimeVisible && currentTime && (
+            <div
+              className="pointer-events-none absolute right-1 z-30 -translate-y-1/2"
+              style={{ top: `${currentTimePosition}%` }}
+            >
+              <span className="rounded bg-red-500 px-1 py-0.5 text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm">
+                {format(currentTime, "h:mm a")}
+              </span>
+            </div>
+          )}
         </div>
 
         {days.map((day, dayIndex) => (
@@ -360,16 +371,20 @@ export function WeekView({
               </div>
             ))}
 
-            {/* Current time indicator - only show for today's column */}
-            {currentTimeVisible && isToday(day) && (
+            {/* Current time indicator - dotted across the whole week, solid on today */}
+            {currentTimeVisible && (
               <div
                 className="pointer-events-none absolute right-0 left-0 z-20"
                 style={{ top: `${currentTimePosition}%` }}
               >
-                <div className="relative flex items-center">
-                  <div className="bg-red-500 absolute -left-1 h-2 w-2 rounded-full"></div>
-                  <div className="bg-red-500 h-[2px] w-full"></div>
-                </div>
+                {isToday(day) ? (
+                  <div className="relative flex items-center">
+                    <div className="absolute -left-1.5 h-3 w-3 rounded-full bg-red-500 ring-2 ring-background"></div>
+                    <div className="h-[2px] w-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]"></div>
+                  </div>
+                ) : (
+                  <div className="w-full border-t-2 border-dotted border-red-500/50"></div>
+                )}
               </div>
             )}
             {hours.map((hour) => {

@@ -8,7 +8,9 @@ import {
   addWeeks,
   endOfWeek,
   format,
+  isSameDay,
   isSameMonth,
+  isWithinInterval,
   startOfWeek,
   subMonths,
   subWeeks,
@@ -82,8 +84,20 @@ export function EventCalendar({
       // Small delay to let the DOM render the time grid
       requestAnimationFrame(() => {
         if (scrollRef.current) {
+          // If today is on screen, bring the current time into view; otherwise business hours.
+          const now = new Date();
+          const todayInView =
+            view === "day"
+              ? isSameDay(now, currentDate)
+              : isWithinInterval(now, {
+                  start: startOfWeek(currentDate),
+                  end: endOfWeek(currentDate),
+                });
+          const targetHour = todayInView
+            ? Math.max(0, now.getHours() + now.getMinutes() / 60 - 3)
+            : ScrollToHour;
           // leave room so the hour label isn't hidden under the sticky day header
-          scrollRef.current.scrollTop = Math.max(0, ScrollToHour * WeekCellsHeight - 16);
+          scrollRef.current.scrollTop = Math.max(0, targetHour * WeekCellsHeight - 16);
         }
       });
     }
