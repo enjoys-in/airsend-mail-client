@@ -33,6 +33,10 @@ import {
   DefaultEndHour,
 } from "./constants";
 import { useCalDevStore } from "../../_lib/caldev-store";
+import { sendRSVP } from "../../_lib/caldev-api";
+import { useAppSelector } from "@/store/hooks";
+import { toast } from "sonner";
+import { RsvpButtons, type RsvpReply } from "@/components/common/rsvp-buttons";
 import { joinLocation, splitLocation } from "@/lib/calendar/meeting-link";
 import { EVENT_COLOR_HEX, type CalDevAttendee } from "../../_lib/caldev-types";
 import {
@@ -101,6 +105,12 @@ export function EventDialog({
 
   // CalDev store – calendars list
   const calendars = useCalDevStore((s) => s.calendars);
+  const myEmail = useAppSelector((s) => s.accounts.currAccount?.email);
+
+  // Invitation identity — set when this event came from someone else (the user is a guest)
+  const [organizer, setOrganizer] = useState("");
+  const [eventUid, setEventUid] = useState("");
+  const [rsvpPending, setRsvpPending] = useState<RsvpReply | null>(null);
 
   useEffect(() => {
     if (event) {
@@ -134,6 +144,8 @@ export function EventDialog({
         setCategories(rawEvent.categories || []);
         setRecurrenceRule(rawEvent.recurrence_rule || "");
         setEventStatus(rawEvent.status || "CONFIRMED");
+        setOrganizer((rawEvent.organizer || "").replace(/^mailto:/i, ""));
+        setEventUid(rawEvent.uid || "");
       } else {
         // New event defaults
         const defaultCal = calendars.find((c) => c.is_default) || calendars[0];
@@ -142,6 +154,8 @@ export function EventDialog({
         setCategories([]);
         setRecurrenceRule("");
         setEventStatus("CONFIRMED");
+        setOrganizer("");
+        setEventUid("");
       }
     } else {
       resetForm();
@@ -149,6 +163,8 @@ export function EventDialog({
   }, [event, calendars]);
 
   const resetForm = () => {
+    setOrganizer("");
+    setEventUid("");
     setTitle("");
     setDescription("");
     setStartDate(new Date());
@@ -367,6 +383,31 @@ export function EventDialog({
 
   const isEditing = !!event?.id;
 
+  // ── RSVP: the user is a guest of someone else's event ──
+  const sameEmail = (a?: string | null, b?: string | null) =>
+    !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+  const myGuest = attendees.find((a) => sameEmail(a.email, myEmail));
+  const isGuest = isEditing && !!organizer && !sameEmail(organizer, myEmail) && !!myGuest;
+
+  const handleRsvp = async (reply: RsvpReply) => {
+    if (!eventUid || rsvpPending) return;
+    setRsvpPending(reply);
+    try {
+      // CalDev updates the user's answer and sends a REPLY to the organizer
+      await sendRSVP({ event_uid: eventUid, response: reply });
+      setAttendees((prev) =>
+        prev.map((a) => (sameEmail(a.email, myEmail) ? { ...a, status: reply } : a)),
+      );
+      toast.success(reply === "DECLINED" ? "Declined. The organizer has been told" : "Reply sent to the organizer");
+      Promise.resolve(useCalDevStore.getState().syncEventChanges()).catch(() => {});
+    } catch (e) {
+      const data = (e as { response?: { data?: { message?: string; error?: { details?: string } } } })?.response?.data;
+      toast.error(data?.error?.details || data?.message || "Could not send your reply");
+    } finally {
+      setRsvpPending(null);
+    }
+  };
+
   const typePanel = (idPrefix: string) => (
     <EventTypePanel
       idPrefix={idPrefix}
@@ -505,6 +546,18 @@ export function EventDialog({
               onDraftChange={setNewAttendeeEmail}
               onAdd={handleAddAttendee}
               onRemove={handleRemoveAttendee}
+              readOnly={isGuest}
+              organizer={organizer || undefined}
+              myEmail={myEmail}
+              headerSlot={
+                isGuest && eventUid ? (
+                  <RsvpButtons
+                    value={myGuest?.status}
+                    pending={rsvpPending}
+                    onReply={handleRsvp}
+                  />
+                ) : undefined
+              }
             />
 
             <FormCard>

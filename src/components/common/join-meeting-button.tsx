@@ -10,6 +10,11 @@ const PROVIDER_STYLE: Record<MeetingProviderId, string> = {
   zoom: "bg-blue-600 hover:bg-blue-700",
   webex: "bg-teal-600 hover:bg-teal-700",
   jitsi: "bg-sky-600 hover:bg-sky-700",
+  skype: "bg-sky-500 hover:bg-sky-600",
+  goto: "bg-orange-600 hover:bg-orange-700",
+  whereby: "bg-violet-600 hover:bg-violet-700",
+  chime: "bg-cyan-700 hover:bg-cyan-800",
+  bluejeans: "bg-blue-700 hover:bg-blue-800",
   other: "bg-primary hover:bg-primary/90",
 };
 

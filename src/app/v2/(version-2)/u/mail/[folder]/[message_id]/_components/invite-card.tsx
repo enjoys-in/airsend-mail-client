@@ -6,14 +6,11 @@ import {
   CalendarCheck,
   CalendarPlus,
   CalendarX,
-  Check,
   Download,
-  HelpCircle,
   Loader2,
   MapPin,
   Repeat,
   Users,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -26,14 +23,10 @@ import { joinLocation } from "@/lib/calendar/meeting-link";
 import { parseInvite, type InviteAttendee, type PartStat } from "@/lib/calendar/ics-invite";
 import { sendIncomingScheduling, sendRSVP } from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-api";
 import { useCalDevStore } from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-store";
+import { RsvpButtons, type RsvpReply } from "@/components/common/rsvp-buttons";
+import { RsvpSummary } from "@/components/common/rsvp-summary";
 
-type Reply = "ACCEPTED" | "TENTATIVE" | "DECLINED";
-
-const REPLIES: { value: Reply; label: string; icon: React.ReactNode; active: string }[] = [
-  { value: "ACCEPTED", label: "Yes", icon: <Check className="h-4 w-4" />, active: "bg-emerald-600 text-white hover:bg-emerald-600 border-emerald-600" },
-  { value: "TENTATIVE", label: "Maybe", icon: <HelpCircle className="h-4 w-4" />, active: "bg-amber-500 text-white hover:bg-amber-500 border-amber-500" },
-  { value: "DECLINED", label: "No", icon: <X className="h-4 w-4" />, active: "bg-red-600 text-white hover:bg-red-600 border-red-600" },
-];
+type Reply = RsvpReply;
 
 const STATUS_TEXT: Record<string, string> = {
   ACCEPTED: "Going",
@@ -212,7 +205,12 @@ export function InviteCard({ ics }: { ics: string }) {
   };
 
   const canAct = canAccessCalendar && !!invite.uid;
-  const guests = invite.attendees;
+  // Answers change after the mail was sent: prefer the calendar's live copy when it has guests
+  const live = invite.uid ? rawEvents.find((e) => e.uid === invite.uid) : undefined;
+  const guests: InviteAttendee[] =
+    live && live.attendees?.length
+      ? live.attendees.map((a) => ({ email: a.email, name: a.display_name, partstat: a.status, role: a.role }))
+      : invite.attendees;
   const visibleGuests = showGuests ? guests : guests.slice(0, 4);
 
   return (
@@ -300,6 +298,10 @@ export function InviteCard({ ics }: { ics: string }) {
                 {guests.length} guest{guests.length > 1 ? "s" : ""}
                 {guests.length > 4 && <span className="underline">{showGuests ? "show less" : "show all"}</span>}
               </button>
+              <RsvpSummary
+                people={guests.map((g) => ({ status: g.partstat }))}
+                className="mt-1.5 max-w-sm"
+              />
               <ul className="mt-1.5 flex flex-wrap gap-1.5">
                 {visibleGuests.map((g) => (
                   <li
@@ -333,23 +335,11 @@ export function InviteCard({ ics }: { ics: string }) {
         {invite.meetingLink && !cancelled && <JoinMeetingButton link={invite.meetingLink} size="sm" />}
 
         {canAct && invite.method === "REQUEST" && !cancelled && !iAmOrganizer && me && (
-          <div className="flex items-center gap-1.5">
-            <span className="mr-1 text-xs text-muted-foreground">Going?</span>
-            {REPLIES.map((r) => (
-              <Button
-                key={r.value}
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!!busy}
-                onClick={() => reply(r.value)}
-                className={cn("h-7 gap-1 rounded-lg px-2.5 text-xs", currentStatus === r.value && r.active)}
-              >
-                {busy === r.value ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : r.icon}
-                {r.label}
-              </Button>
-            ))}
-          </div>
+          <RsvpButtons
+            value={currentStatus}
+            pending={busy === "ACCEPTED" || busy === "TENTATIVE" || busy === "DECLINED" ? busy : null}
+            onReply={reply}
+          />
         )}
 
         {canAct && !cancelled && !isReply && !iAmOrganizer && (invite.method !== "REQUEST" || me) && (
