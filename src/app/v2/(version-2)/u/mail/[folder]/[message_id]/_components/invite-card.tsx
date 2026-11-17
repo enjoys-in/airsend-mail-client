@@ -1,30 +1,40 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format, isSameDay } from "date-fns";
 import {
   CalendarCheck,
   CalendarPlus,
   CalendarX,
+  Check,
+  Clock3,
   Download,
   Loader2,
   MapPin,
+  MoreVertical,
   Repeat,
+  UserRound,
   Users,
+  Video,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useAppSelector } from "@/store/hooks";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { getMid } from "@/lib/api/auth-state";
-import { JoinMeetingButton } from "@/components/common/join-meeting-button";
 import { joinLocation } from "@/lib/calendar/meeting-link";
 import { parseInvite, type InviteAttendee, type PartStat } from "@/lib/calendar/ics-invite";
 import { sendIncomingScheduling, sendRSVP } from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-api";
 import { useCalDevStore } from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-store";
-import { RsvpButtons, type RsvpReply } from "@/components/common/rsvp-buttons";
-import { RsvpSummary } from "@/components/common/rsvp-summary";
+import type { RsvpReply } from "@/components/common/rsvp-buttons";
 
 type Reply = RsvpReply;
 
@@ -35,12 +45,21 @@ const STATUS_TEXT: Record<string, string> = {
   "NEEDS-ACTION": "Awaiting reply",
 };
 
-const STATUS_DOT: Record<string, string> = {
-  ACCEPTED: "bg-emerald-500",
-  TENTATIVE: "bg-amber-500",
-  DECLINED: "bg-red-500",
-  "NEEDS-ACTION": "bg-muted-foreground/40",
+/** Filled status badge on a guest chip: ✓ going, ? maybe, ✕ not going, clock awaiting. */
+const STATUS_BADGE: Record<string, { bg: string; icon: React.ReactNode }> = {
+  ACCEPTED: { bg: "bg-emerald-500", icon: <Check className="h-2.5 w-2.5" strokeWidth={3.5} /> },
+  TENTATIVE: { bg: "bg-amber-500", icon: <span className="text-[10px] font-bold leading-none">?</span> },
+  DECLINED: { bg: "bg-red-500", icon: <X className="h-2.5 w-2.5" strokeWidth={3.5} /> },
+  "NEEDS-ACTION": { bg: "bg-muted-foreground/40", icon: <Clock3 className="h-2.5 w-2.5" strokeWidth={3} /> },
 };
+
+const REPLIES: { value: Reply; label: string; active: string }[] = [
+  { value: "ACCEPTED", label: "Yes", active: "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-600" },
+  { value: "TENTATIVE", label: "Maybe", active: "border-amber-500 bg-amber-500 text-white hover:bg-amber-500" },
+  { value: "DECLINED", label: "No", active: "border-red-600 bg-red-600 text-white hover:bg-red-600" },
+];
+
+const GUESTS_SHOWN = 6;
 
 const sameEmail = (a?: string | null, b?: string | null) =>
   !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -51,21 +70,113 @@ function errorText(e: unknown, fallback: string): string {
   return data?.error?.details || data?.message || (e instanceof Error ? e.message : "") || fallback;
 }
 
+/** Short zone name of the viewer for a date, e.g. "PST" or "GMT+5:30". */
+function zoneName(d: Date): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(d).find((p) => p.type === "timeZoneName")?.value ?? "";
+  } catch {
+    return format(d, "O");
+  }
+}
+
+/** "Tue Jul 18, 2019 10:30am – 11:30am PST" */
 function whenText(start: Date, end: Date, allDay: boolean): string {
   if (allDay) {
     // all-day end is exclusive
     const last = new Date(end.getTime() - 1);
     return isSameDay(start, last)
-      ? `${format(start, "EEE, d MMM yyyy")} · All day`
-      : `${format(start, "EEE, d MMM")} – ${format(last, "EEE, d MMM yyyy")} · All day`;
+      ? `${format(start, "EEE MMM d, yyyy")} · All day`
+      : `${format(start, "EEE MMM d")} – ${format(last, "EEE MMM d, yyyy")} · All day`;
   }
-  const zone = format(start, "O");
+  const time = (d: Date) => format(d, "h:mmaaa");
   return isSameDay(start, end)
-    ? `${format(start, "EEE, d MMM yyyy")} · ${format(start, "h:mm a")} – ${format(end, "h:mm a")} (${zone})`
-    : `${format(start, "EEE, d MMM, h:mm a")} – ${format(end, "EEE, d MMM yyyy, h:mm a")} (${zone})`;
+    ? `${format(start, "EEE MMM d, yyyy")} ${time(start)} – ${time(end)} ${zoneName(start)}`
+    : `${format(start, "EEE MMM d, yyyy")} ${time(start)} – ${format(end, "EEE MMM d")} ${time(end)} ${zoneName(start)}`;
+}
+
+const DAY_NAMES: Record<string, string> = { MO: "Mon", TU: "Tue", WE: "Wed", TH: "Thu", FR: "Fri", SA: "Sat", SU: "Sun" };
+
+/** RRULE → "Weekly on weekdays", "Every 2 weeks on Mon, Wed", "Monthly, 10 times", … */
+function repeatText(rrule: string, start: Date): string {
+  const parts = Object.fromEntries(
+    rrule.split(";").map((p) => {
+      const [k, v = ""] = p.split("=");
+      return [k.toUpperCase(), v.toUpperCase()];
+    }),
+  );
+  const n = Math.max(1, Number(parts.INTERVAL) || 1);
+  const days = (parts.BYDAY || "")
+    .split(",")
+    .map((d) => d.replace(/^[+-]?\d+/, ""))
+    .filter((d) => DAY_NAMES[d]);
+
+  let text: string;
+  switch (parts.FREQ) {
+    case "DAILY":
+      text = n > 1 ? `Every ${n} days` : "Daily";
+      break;
+    case "WEEKLY": {
+      const on =
+        days.length === 5 && ["MO", "TU", "WE", "TH", "FR"].every((d) => days.includes(d))
+          ? "weekdays"
+          : days.length
+            ? days.map((d) => DAY_NAMES[d]).join(", ")
+            : format(start, "EEEE");
+      text = `${n > 1 ? `Every ${n} weeks` : "Weekly"} on ${on}`;
+      break;
+    }
+    case "MONTHLY":
+      text = n > 1 ? `Every ${n} months` : "Monthly";
+      break;
+    case "YEARLY":
+      text = n > 1 ? `Every ${n} years` : "Annually";
+      break;
+    default:
+      return "Repeating event";
+  }
+  if (parts.COUNT) text += `, ${parts.COUNT} times`;
+  else if (/^\d{8}/.test(parts.UNTIL || "")) {
+    const u = parts.UNTIL;
+    text += `, until ${format(new Date(+u.slice(0, 4), +u.slice(4, 6) - 1, +u.slice(6, 8)), "MMM d, yyyy")}`;
+  }
+  return text;
+}
+
+/** Location without the meeting link (CalDev keeps "Room · https://meet…" in LOCATION). */
+function placeText(location: string, meetingUrl?: string): string {
+  if (!meetingUrl) return location.trim();
+  return location
+    .replace(meetingUrl, "")
+    .replace(/\s*[·|,;-]\s*$/, "")
+    .replace(/^\s*[·|,;-]\s*/, "")
+    .trim();
 }
 
 const personLabel = (p: { name: string; email: string }) => p.name || p.email;
+
+function GuestChip({ guest, isMe }: { guest: InviteAttendee; isMe: boolean }) {
+  const badge = STATUS_BADGE[guest.partstat] ?? STATUS_BADGE["NEEDS-ACTION"];
+  return (
+    <li
+      title={`${guest.email} · ${STATUS_TEXT[guest.partstat] ?? guest.partstat}`}
+      className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full bg-muted py-1 pl-1.5 pr-3 text-sm"
+    >
+      <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-white", badge.bg)}>
+        {badge.icon}
+      </span>
+      <span className="truncate">{isMe ? "You" : personLabel(guest)}</span>
+    </li>
+  );
+}
+
+function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 text-sm">
+      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground">{icon}</span>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
 
 /**
  * Calendar invitation shown above a mail body. Lets the user reply Yes / Maybe /
@@ -83,6 +194,29 @@ export function InviteCard({ ics }: { ics: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [showGuests, setShowGuests] = useState(false);
+  const autoApplied = useRef(false);
+
+  // A guest answered from their own mail app (e.g. Gmail's Yes / Maybe / No), which mails a
+  // METHOD:REPLY to the organizer. Apply it as soon as the organizer opens that mail, but only
+  // while the calendar still shows the guest as awaiting, so an older reply opened later never
+  // overwrites a newer answer. "Update in calendar" stays available for that case.
+  useEffect(() => {
+    if (autoApplied.current || !canAccessCalendar || !invite?.uid || invite.method !== "REPLY") return;
+    if (!sameEmail(invite.organizer?.email, myEmail)) return;
+    const replier = invite.attendees[0];
+    if (!replier || !["ACCEPTED", "TENTATIVE", "DECLINED"].includes(replier.partstat)) return;
+    const live = rawEvents.find((e) => e.uid === invite.uid);
+    const guest = live?.attendees?.find((a) => sameEmail(a.email, replier.email));
+    if (!guest || (guest.status && guest.status.toUpperCase() !== "NEEDS-ACTION")) return;
+
+    autoApplied.current = true;
+    sendIncomingScheduling({ tenant_id: getMid() || "", ics, sender_email: replier.email })
+      .then(() => {
+        setDone("updated");
+        Promise.resolve(useCalDevStore.getState().syncEventChanges()).catch(() => {});
+      })
+      .catch(() => {}); // the manual "Update in calendar" button remains
+  }, [invite, ics, myEmail, canAccessCalendar, rawEvents]);
 
   if (!invite) return null;
 
@@ -211,20 +345,74 @@ export function InviteCard({ ics }: { ics: string }) {
     live && live.attendees?.length
       ? live.attendees.map((a) => ({ email: a.email, name: a.display_name, partstat: a.status, role: a.role }))
       : invite.attendees;
-  const visibleGuests = showGuests ? guests : guests.slice(0, 4);
+  const visibleGuests = showGuests ? guests : guests.slice(0, GUESTS_SHOWN);
 
-  return (
-    <div className="mx-3 my-3 overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:mx-4">
-      {cancelled && (
-        <div className="flex items-center gap-2 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400">
-          <CalendarX className="h-4 w-4" />
-          This event was cancelled
+  const place = placeText(invite.location, invite.meetingLink?.url);
+  const placeIsUrl = /^https?:\/\//i.test(place);
+  const meetingText = !invite.meetingLink
+    ? ""
+    : invite.meetingLink.provider === "other"
+      ? "Join meeting"
+      : invite.meetingLink.provider === "zoom" || invite.meetingLink.provider === "teams"
+        ? `Join ${invite.meetingLink.provider === "zoom" ? "Zoom" : "Teams"} Meeting`
+        : `Join ${invite.meetingLink.label}`;
+
+  const added = inCalendar || done === "added" || done === "replied";
+  const showAddInMenu = canAct && !cancelled && !isReply && !iAmOrganizer && (invite.method !== "REQUEST" || me) && !added;
+  const canRsvp = canAct && invite.method === "REQUEST" && !cancelled && !iAmOrganizer && !!me;
+  const replyPending = busy === "ACCEPTED" || busy === "TENTATIVE" || busy === "DECLINED";
+
+  /** Bottom line: the question and its answer buttons, or the one action that fits this mail. */
+  let footer: React.ReactNode = null;
+  if (canRsvp) {
+    footer = (
+      <>
+        <p className="min-w-0 truncate text-sm">
+          Are you attending? <span className="text-muted-foreground">({myEmail})</span>
+        </p>
+        <div className="flex shrink-0 items-center gap-2" role="group" aria-label="Your reply">
+          {REPLIES.map((r) => (
+            <Button
+              key={r.value}
+              type="button"
+              variant="outline"
+              disabled={replyPending}
+              aria-pressed={currentStatus === r.value}
+              onClick={() => reply(r.value)}
+              className={cn(
+                "h-9 min-w-[76px] rounded-full px-4 text-sm font-medium",
+                currentStatus === r.value && r.active,
+              )}
+            >
+              {busy === r.value ? <Loader2 className="h-4 w-4 animate-spin" /> : r.label}
+            </Button>
+          ))}
         </div>
-      )}
-      {isReply && replier && (
-        <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 text-sm">
-          <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[replier.partstat] ?? STATUS_DOT["NEEDS-ACTION"])} />
-          <span>
+      </>
+    );
+  } else if (canAct && cancelled && !iAmOrganizer) {
+    footer = (
+      <>
+        <p className="text-sm text-red-600 dark:text-red-400">This event was cancelled</p>
+        {done === "removed" ? (
+          <span className="text-sm text-muted-foreground">Removed from your calendar</span>
+        ) : (
+          <Button type="button" variant="outline" disabled={!!busy} onClick={applyCancel} className="h-9 gap-1.5 rounded-full px-4">
+            {busy === "cancel" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarX className="h-4 w-4" />}
+            Remove from calendar
+          </Button>
+        )}
+      </>
+    );
+  } else if (canAct && isReply && replier) {
+    const badge = STATUS_BADGE[replier.partstat] ?? STATUS_BADGE["NEEDS-ACTION"];
+    footer = (
+      <>
+        <p className="flex min-w-0 items-center gap-2 text-sm">
+          <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-white", badge.bg)}>
+            {badge.icon}
+          </span>
+          <span className="truncate">
             <b>{personLabel(replier)}</b>{" "}
             {replier.partstat === "ACCEPTED"
               ? "accepted"
@@ -235,186 +423,146 @@ export function InviteCard({ ics }: { ics: string }) {
                   : "replied to"}{" "}
             your invitation
           </span>
-        </div>
-      )}
-
-      <div className="flex gap-4 p-4">
-        {/* Date tile */}
-        <div
-          className={cn(
-            "flex h-16 w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-border text-center",
-            cancelled && "opacity-60",
-          )}
-        >
-          <span className="w-full bg-red-500 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-            {format(invite.start, "MMM")}
+        </p>
+        {done === "updated" ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+            <CalendarCheck className="h-4 w-4" /> Updated in calendar
           </span>
-          <span className="flex-1 pt-1 text-xl font-semibold leading-none tabular-nums">{format(invite.start, "d")}</span>
-          <span className="pb-1 text-[10px] text-muted-foreground">{format(invite.start, "EEE")}</span>
-        </div>
+        ) : (
+          <Button type="button" variant="outline" disabled={!!busy} onClick={applyReply} className="h-9 gap-1.5 rounded-full px-4">
+            {busy === "reply" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarCheck className="h-4 w-4" />}
+            Update in calendar
+          </Button>
+        )}
+      </>
+    );
+  } else if (canAct && !cancelled && !isReply && !iAmOrganizer && invite.method !== "REQUEST") {
+    footer = (
+      <>
+        <p className="text-sm text-muted-foreground">Add this event to your calendar?</p>
+        {added ? (
+          <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+            <CalendarCheck className="h-4 w-4" /> In your calendar
+          </span>
+        ) : (
+          <Button type="button" disabled={!!busy} onClick={addToCalendar} className="h-9 gap-1.5 rounded-full px-4">
+            {busy === "add" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
+            Add to calendar
+          </Button>
+        )}
+      </>
+    );
+  } else if (invite.method === "REQUEST" && !me && !iAmOrganizer) {
+    footer = <p className="text-sm text-muted-foreground">You aren&apos;t on the guest list</p>;
+  }
 
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <h3 className={cn("text-base font-semibold leading-snug", cancelled && "line-through opacity-70")}>
-              {invite.title || "(no title)"}
-            </h3>
-            {currentStatus && STATUS_TEXT[currentStatus] && !iAmOrganizer && !isReply && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[currentStatus])} />
-                {STATUS_TEXT[currentStatus]}
+  return (
+    <div className="mx-3 my-3 overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:mx-4">
+      {/* Header: title, when, menu */}
+      <div className="flex items-start gap-3 px-5 pb-4 pt-4">
+        <div className="min-w-0 flex-1">
+          <h3 className={cn("text-base font-semibold leading-snug", cancelled && "line-through opacity-70")}>
+            {invite.title || "(no title)"}
+          </h3>
+          <p className="mt-0.5 text-sm text-muted-foreground">{whenText(invite.start, invite.end, invite.allDay)}</p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="ghost" size="icon" className="-mr-2 h-8 w-8 shrink-0 rounded-full" aria-label="More">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {showAddInMenu && (
+              <DropdownMenuItem disabled={!!busy} onSelect={() => addToCalendar()}>
+                <CalendarPlus className="mr-2 h-4 w-4" /> Add to calendar
+              </DropdownMenuItem>
+            )}
+            {canAct && added && !cancelled && !isReply && (
+              <DropdownMenuItem disabled>
+                <CalendarCheck className="mr-2 h-4 w-4" /> In your calendar
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={downloadIcs}>
+              <Download className="mr-2 h-4 w-4" /> Download .ics
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Details */}
+      <div className="space-y-3 border-t border-border px-5 py-4">
+        {invite.rrule && <Row icon={<Repeat className="h-4 w-4" />}>{repeatText(invite.rrule, invite.start)}</Row>}
+
+        {place && (
+          <Row icon={<MapPin className="h-4 w-4" />}>
+            {placeIsUrl ? (
+              <a href={place} target="_blank" rel="noopener noreferrer" className="break-all text-primary hover:underline">
+                {place}
+              </a>
+            ) : (
+              <span className="break-words">
+                {place}
+                {" — "}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Map
+                </a>
               </span>
             )}
-          </div>
+          </Row>
+        )}
 
-          <p className="text-sm text-muted-foreground">{whenText(invite.start, invite.end, invite.allDay)}</p>
+        {invite.meetingLink && !cancelled && (
+          <Row icon={<Video className="h-4 w-4" />}>
+            <a
+              href={invite.meetingLink.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={invite.meetingLink.url}
+              className="text-primary hover:underline"
+            >
+              {meetingText}
+            </a>
+          </Row>
+        )}
 
-          {invite.rrule && (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Repeat className="h-3.5 w-3.5" /> Repeating event
-            </p>
-          )}
+        {invite.organizer && (
+          <Row icon={<UserRound className="h-4 w-4" />}>
+            <span className="text-muted-foreground">Organizer: </span>
+            {iAmOrganizer ? "You" : personLabel(invite.organizer)}
+          </Row>
+        )}
 
-          {invite.location && (
-            <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span className="break-words">{invite.location}</span>
-            </p>
-          )}
-
-          {invite.organizer && (
-            <p className="text-xs text-muted-foreground">
-              Organizer: <span className="text-foreground">{iAmOrganizer ? "You" : personLabel(invite.organizer)}</span>
-            </p>
-          )}
-
-          {guests.length > 0 && !isReply && (
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => setShowGuests((v) => !v)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-              >
-                <Users className="h-3.5 w-3.5" />
-                {guests.length} guest{guests.length > 1 ? "s" : ""}
-                {guests.length > 4 && <span className="underline">{showGuests ? "show less" : "show all"}</span>}
-              </button>
-              <RsvpSummary
-                people={guests.map((g) => ({ status: g.partstat }))}
-                className="mt-1.5 max-w-sm"
-              />
-              <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                {visibleGuests.map((g) => (
-                  <li
-                    key={g.email}
-                    title={`${g.email} · ${STATUS_TEXT[g.partstat] ?? g.partstat}`}
-                    className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-border bg-muted/40 py-0.5 pl-0.5 pr-2 text-xs"
+        {guests.length > 0 && !isReply && (
+          <Row icon={<Users className="h-4 w-4" />}>
+            <ul className="-mt-1 flex flex-wrap gap-1.5">
+              {visibleGuests.map((g) => (
+                <GuestChip key={g.email} guest={g} isMe={sameEmail(g.email, myEmail)} />
+              ))}
+              {guests.length > GUESTS_SHOWN && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setShowGuests((v) => !v)}
+                    className="rounded-full px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
                   >
-                    <span className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold uppercase">
-                      {personLabel(g).charAt(0)}
-                      <span
-                        className={cn(
-                          "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-card",
-                          STATUS_DOT[g.partstat] ?? STATUS_DOT["NEEDS-ACTION"],
-                        )}
-                      />
-                    </span>
-                    <span className="truncate">{sameEmail(g.email, myEmail) ? "You" : personLabel(g)}</span>
-                  </li>
-                ))}
-                {!showGuests && guests.length > 4 && (
-                  <li className="px-1 text-xs text-muted-foreground">+{guests.length - 4}</li>
-                )}
-              </ul>
-            </div>
-          )}
-        </div>
+                    {showGuests ? "Show less" : `+${guests.length - GUESTS_SHOWN} more`}
+                  </button>
+                </li>
+              )}
+            </ul>
+          </Row>
+        )}
       </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap items-center gap-2 border-t border-border bg-muted/30 px-4 py-2.5">
-        {invite.meetingLink && !cancelled && <JoinMeetingButton link={invite.meetingLink} size="sm" />}
-
-        {canAct && invite.method === "REQUEST" && !cancelled && !iAmOrganizer && me && (
-          <RsvpButtons
-            value={currentStatus}
-            pending={busy === "ACCEPTED" || busy === "TENTATIVE" || busy === "DECLINED" ? busy : null}
-            onReply={reply}
-          />
-        )}
-
-        {canAct && !cancelled && !isReply && !iAmOrganizer && (invite.method !== "REQUEST" || me) && (
-          inCalendar || done === "added" || done === "replied" ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-              <CalendarCheck className="h-4 w-4" /> In your calendar
-            </span>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!!busy}
-              onClick={addToCalendar}
-              className="h-7 gap-1.5 rounded-lg px-2.5 text-xs"
-            >
-              {busy === "add" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5" />}
-              Add to calendar
-            </Button>
-          )
-        )}
-
-        {canAct && cancelled && !iAmOrganizer && (
-          done === "removed" ? (
-            <span className="text-xs text-muted-foreground">Removed from your calendar</span>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!!busy}
-              onClick={applyCancel}
-              className="h-7 gap-1.5 rounded-lg px-2.5 text-xs"
-            >
-              {busy === "cancel" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarX className="h-3.5 w-3.5" />}
-              Remove from calendar
-            </Button>
-          )
-        )}
-
-        {canAct && isReply && replier && (
-          done === "updated" ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-              <CalendarCheck className="h-4 w-4" /> Guest status updated
-            </span>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!!busy}
-              onClick={applyReply}
-              className="h-7 gap-1.5 rounded-lg px-2.5 text-xs"
-            >
-              {busy === "reply" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarCheck className="h-3.5 w-3.5" />}
-              Update in calendar
-            </Button>
-          )
-        )}
-
-        {invite.method === "REQUEST" && !me && !iAmOrganizer && (
-          <span className="text-xs text-muted-foreground">You aren&apos;t on the guest list</span>
-        )}
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={downloadIcs}
-          className="ml-auto h-7 gap-1.5 rounded-lg px-2 text-xs text-muted-foreground"
-        >
-          <Download className="h-3.5 w-3.5" />
-          .ics
-        </Button>
-      </div>
+      {footer && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-4">{footer}</div>
+      )}
     </div>
   );
 }
