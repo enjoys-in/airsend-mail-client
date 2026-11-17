@@ -243,7 +243,7 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
     try {
       const calendars = await api.getCalendars(accountId);
       set({ calendars, calendarsLoading: false, calendarsLoaded: true });
-      // Sync calendar list to main backend
+      // Push to the main backend only if the list differs from the stored copy
       api.syncCalendarsToBackend(calendars);
     } catch {
       set({ calendarsLoading: false });
@@ -285,6 +285,8 @@ export const useCalDevStore = create<CalDevState>()((set, get) => ({
             c.id === id ? { ...c, ...updates } : c,
           ),
         }));
+        // A rename changes the backend copy; colour/description don't (no-op then)
+        api.syncCalendarsToBackend(get().calendars);
       }
       return ok;
     } catch {

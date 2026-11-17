@@ -27,6 +27,8 @@ import type {
 import { normalizeJMAPEvent, normalizeJMAPCalendar, buildFullCalendar } from "./caldev-types";
 import type { ICalenderConfig } from "@/lib/types/get-user-settings-response";
 import { airsendDB } from "@/db";
+import { API } from "@/lib/api/handler";
+import { withSyncGuard } from "@/lib/api/sync-guard";
 import { useSettingsStore } from "@/store/settings";
 import { useUserConfigStore } from "@/store/settings/user-config";
 
@@ -48,18 +50,38 @@ export function getCalDevBaseURL(): string {
 // Backend config-array helpers
 // ---------------------------------------------------------------------------
 
-/** Convert JMAP calendars → backend `calender_config.config` entries */
+type BackendCalendarConfig = ICalenderConfig["config"];
+
+/**
+ * Convert JMAP calendars → backend `calender_config.config` entries.
+ * With `previous`, an unchanged calendar (same id + name) keeps its `last_synced_at`;
+ * new or renamed ones are stamped now.
+ */
 export function buildBackendConfigArray(
   calendars: CalDevCalendar[],
-): ICalenderConfig["config"] {
-  return calendars.map((cal) => ({
-    calendar_id: cal.id,
-    calendar_name: cal.name,
-    calender_url: "",
-    sync_status: "synced",
-    last_synced_at: cal.updated_at ? new Date(cal.updated_at) : null,
-    sync_error: null,
-  }));
+  previous: BackendCalendarConfig = [],
+): BackendCalendarConfig {
+  const prev = new Map(previous.map((c) => [c.calendar_id, c]));
+  const now = new Date();
+  return calendars.map((cal) => {
+    const old = prev.get(cal.id);
+    return {
+      calendar_id: cal.id,
+      calendar_name: cal.name,
+      calender_url: old?.calender_url ?? "",
+      sync_status: "synced",
+      last_synced_at: old && old.calendar_name === cal.name ? old.last_synced_at : now,
+      sync_error: null,
+    };
+  });
+}
+
+/** What the backend needs to know about the calendar list (timestamps excluded). */
+function calendarListKey(config: BackendCalendarConfig = []): string {
+  return config
+    .map((c) => `${c.calendar_id}:${c.calendar_name}`)
+    .sort()
+    .join("|");
 }
 
 /**
@@ -78,46 +100,62 @@ export async function fetchCalendarConfigArray(
   return buildBackendConfigArray(calendars);
 }
 
+/** Runs syncs one after another, so each compares against the previous one's result. */
+let calendarSyncQueue: Promise<void> = Promise.resolve();
+
 /**
- * Sync the current JMAP calendars to the main backend's calender_config.config.
- * Writes to IDB → dexie-observable auto-pushes to backend API.
+ * Keep the main backend's `calender_config` in step with the CalDev calendar list.
+ *
+ * - Compares with the copy in IndexedDB (written by get-user-settings = source of truth)
+ *   and does nothing when no calendar was added, removed or renamed — so page loads
+ *   don't PUT. Real changes arrive through the CalDev live stream / local edits.
+ * - API first; only after a successful response is IndexedDB updated, under the sync
+ *   guard so dexie-observable does not push the same change a second time.
+ *
  * Safe to call from non-React code (Zustand store actions).
  */
-export async function syncCalendarsToBackend(
-  calendars: CalDevCalendar[],
-): Promise<void> {
+export function syncCalendarsToBackend(calendars: CalDevCalendar[]): Promise<void> {
+  calendarSyncQueue = calendarSyncQueue
+    .then(() => pushCalendarConfigIfChanged(calendars))
+    .catch((err) => console.error("[syncCalendarsToBackend] failed:", err));
+  return calendarSyncQueue;
+}
+
+async function pushCalendarConfigIfChanged(calendars: CalDevCalendar[]): Promise<void> {
   const email = getEmail();
   if (!email) return;
 
-  const configArray = buildBackendConfigArray(calendars);
-  const settings = useSettingsStore.getState().settings;
-  const currentConfig: ICalenderConfig = (settings?.calender_config as ICalenderConfig) || {
-    enable_calender: false,
-    calender_sync_interval: 15,
-    notifications: true,
-    sharing: false,
-    config: [],
-  };
+  const path = "settings.calender_config" as any;
+  const { value } = await airsendDB.getNestedItem("settings", email, path);
+  const stored = value as ICalenderConfig | undefined;
+  if (!stored) return; // settings not loaded yet — nothing to compare with
 
-  // Auto-enable calendar when calendars exist
-  const shouldEnable = configArray.length > 0 || currentConfig.enable_calender;
-  const updatedConfig: ICalenderConfig = {
-    ...currentConfig,
-    config: configArray,
-    enable_calender: shouldEnable,
-  };
+  const enable = stored.enable_calender || calendars.length > 0;
+  if (
+    enable === stored.enable_calender &&
+    calendarListKey(stored.config) === calendarListKey(buildBackendConfigArray(calendars))
+  ) {
+    return; // backend already up to date
+  }
 
-  try {
-    await airsendDB.updateNestedItem(
-      "settings",
-      email,
-      "settings.calender_config" as any,
-      updatedConfig as any,
-    );
-    useSettingsStore.getState().setSettings({ calender_config: updatedConfig });
-    useUserConfigStore.getState().hydrate({ ...settings, calender_config: updatedConfig });
-  } catch (err) {
-    console.error("[syncCalendarsToBackend] failed:", err);
+  const next: ICalenderConfig = {
+    ...stored,
+    enable_calender: enable,
+    config: buildBackendConfigArray(calendars, stored.config),
+  };
+  const { data } = await API.handleUpdateMailUserSetting({
+    email,
+    settings: { calender_config: next },
+  });
+  if (!data?.success) return;
+
+  await withSyncGuard(() => airsendDB.updateNestedItem("settings", email, path, next as any));
+  useSettingsStore.getState().setSettings({ calender_config: next });
+
+  // Calendar access depends on enable_calender: re-derive flags from the full stored settings
+  if (enable !== stored.enable_calender) {
+    const { value: all } = await airsendDB.getNestedItem("settings", email, "settings" as any);
+    if (all) useUserConfigStore.getState().hydrate(all as any);
   }
 }
 
