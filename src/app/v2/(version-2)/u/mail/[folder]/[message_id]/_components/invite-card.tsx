@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { format, isSameDay } from "date-fns";
+import { format } from "date-fns";
 import {
   CalendarCheck,
   CalendarPlus,
@@ -32,6 +32,7 @@ import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { getMid } from "@/lib/api/auth-state";
 import { joinLocation } from "@/lib/calendar/meeting-link";
 import { parseInvite, type InviteAttendee, type PartStat } from "@/lib/calendar/ics-invite";
+import { errorText, personLabel, placeText, sameEmail, whenText } from "@/lib/calendar/invite-format";
 import { sendIncomingScheduling, sendRSVP } from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-api";
 import { useCalDevStore } from "@/app/v2/(version-2)/(home)/calender/_lib/caldev-store";
 import type { RsvpReply } from "@/components/common/rsvp-buttons";
@@ -60,39 +61,6 @@ const REPLIES: { value: Reply; label: string; active: string }[] = [
 ];
 
 const GUESTS_SHOWN = 6;
-
-const sameEmail = (a?: string | null, b?: string | null) =>
-  !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
-
-/** Readable error from a CalDev REST failure */
-function errorText(e: unknown, fallback: string): string {
-  const data = (e as { response?: { data?: { message?: string; error?: { details?: string } } } })?.response?.data;
-  return data?.error?.details || data?.message || (e instanceof Error ? e.message : "") || fallback;
-}
-
-/** Short zone name of the viewer for a date, e.g. "PST" or "GMT+5:30". */
-function zoneName(d: Date): string {
-  try {
-    return new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(d).find((p) => p.type === "timeZoneName")?.value ?? "";
-  } catch {
-    return format(d, "O");
-  }
-}
-
-/** "Tue Jul 18, 2019 10:30am – 11:30am PST" */
-function whenText(start: Date, end: Date, allDay: boolean): string {
-  if (allDay) {
-    // all-day end is exclusive
-    const last = new Date(end.getTime() - 1);
-    return isSameDay(start, last)
-      ? `${format(start, "EEE MMM d, yyyy")} · All day`
-      : `${format(start, "EEE MMM d")} – ${format(last, "EEE MMM d, yyyy")} · All day`;
-  }
-  const time = (d: Date) => format(d, "h:mmaaa");
-  return isSameDay(start, end)
-    ? `${format(start, "EEE MMM d, yyyy")} ${time(start)} – ${time(end)} ${zoneName(start)}`
-    : `${format(start, "EEE MMM d, yyyy")} ${time(start)} – ${format(end, "EEE MMM d")} ${time(end)} ${zoneName(start)}`;
-}
 
 const DAY_NAMES: Record<string, string> = { MO: "Mon", TU: "Tue", WE: "Wed", TH: "Thu", FR: "Fri", SA: "Sat", SU: "Sun" };
 
@@ -141,18 +109,6 @@ function repeatText(rrule: string, start: Date): string {
   }
   return text;
 }
-
-/** Location without the meeting link (CalDev keeps "Room · https://meet…" in LOCATION). */
-function placeText(location: string, meetingUrl?: string): string {
-  if (!meetingUrl) return location.trim();
-  return location
-    .replace(meetingUrl, "")
-    .replace(/\s*[·|,;-]\s*$/, "")
-    .replace(/^\s*[·|,;-]\s*/, "")
-    .trim();
-}
-
-const personLabel = (p: { name: string; email: string }) => p.name || p.email;
 
 function GuestChip({ guest, isMe }: { guest: InviteAttendee; isMe: boolean }) {
   const badge = STATUS_BADGE[guest.partstat] ?? STATUS_BADGE["NEEDS-ACTION"];

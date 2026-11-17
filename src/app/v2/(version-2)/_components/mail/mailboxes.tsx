@@ -19,6 +19,8 @@ import { AccountSwitcherV2 } from "./AccountSwitcher"
 import MultiTabSystem from "./composeMail"
 import { useMailStore } from "@/store/mails"
 import { useFeatureAccess } from "@/hooks/use-feature-access"
+import Link from "next/link"
+import { APP_VERSION } from "@/constants/version"
 
 export function Mailboxes() {
   const all_folders = useMailStore((state) => state.all_folders)
@@ -54,6 +56,13 @@ export function Mailboxes() {
             <ShowMeetings />
           </>
         )}
+        <Link
+          href="/change-logs"
+          title="See what's new"
+          className="px-4 pt-1 text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+        >
+          Airsend Web Client v{APP_VERSION}
+        </Link>
       </SidebarFooter>
     </Sidebar>
   )

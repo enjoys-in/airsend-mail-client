@@ -5,18 +5,15 @@ import { MailIframe } from './mail-iframe'
 import { useKeyStore } from '@/store/keys'
 import { useMailStore } from '@/store/mails'
 import PostalMime from "postal-mime"
-import { Security } from '@/lib/security';
-import { DecryptEncryptedMail } from '@/lib/pgp-service';
+import { decryptEncodedMail } from '@/lib/mail/load-raw-mail';
 import FileAttachment from '../../../_components/file-attachment'
 import { Separator } from '@/components/ui/separator'
 import { findCalendarPart } from '@/lib/calendar/ics-invite'
 import InviteCard from './invite-card'
-const s = new Security()
 const DecodingComponent = ({ message_id, data }: { message_id: string, data: EncodedMessageResponse }) => {
     // Selectors only — subscribing to the whole store re-rendered the mail
     // iframe on every unrelated mail-store update (list sync, checkboxes, ...).
     const setEncryptedData = useKeyStore((s) => s.setEncryptedData)
-    const setRawData = useMailStore((s) => s.setRawData)
     const [html, setHtml] = React.useState("");
     const [attachments, setAttachments] = React.useState<any[]>([]);
     // Calendar invitation (text/calendar part or .ics attachment), shown as a card
@@ -33,18 +30,9 @@ const DecodingComponent = ({ message_id, data }: { message_id: string, data: Enc
             }
 
 
-            const decryptedCipher = s.decryptAES(data.chiper_text);
-            const decryptedPrivKey = s.decryptAES(data.open_pgp.privateKey);
-            const decryptedPubKey = s.decryptAES(data.open_pgp.publicKey);
-            const decrypted = await DecryptEncryptedMail({
-                encrypted: decryptedCipher,
-                privateKeyArmored: decryptedPrivKey,
-                publicKeyArmored: decryptedPubKey,
-                password: data.k
-            })
+            const decrypted = await decryptEncodedMail(message_id, data)
             const email = await PostalMime.parse(decrypted);
             setAttachments(email.attachments)
-            setRawData({ ...useMailStore.getState().rawData, [message_id]: decrypted })
 
             return setHtml(email.html! || "No HTML content")
         } catch (e) {

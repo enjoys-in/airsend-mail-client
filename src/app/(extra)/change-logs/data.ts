@@ -1,5 +1,20 @@
 export const CHANGE_LOGS = [
     {
+        date: "November 18, 2026",
+        version: "2",
+        color: "from-sky-500 to-indigo-600",
+        versionNumber: "2.8.0",
+        improvements: [
+            "RSVP from the Inbox — Mails with a calendar invite now show an RSVP button in the mail list; see the event details and answer Yes, Maybe or No without opening the mail",
+            "Invite Details at a Glance — The RSVP popup shows the event title, time with time zone, location, meeting link and how many people are going",
+            "Faster Invites — An invite is loaded only when you open its RSVP popup, and opening the mail afterwards no longer loads it again",
+            "Version in Mail — The Airsend web client version now shows at the bottom of the mail sidebar and links to this changelog",
+        ],
+        bugfixes: [
+            "Fixed the landing page banner showing an old version number",
+        ]
+    },
+    {
         date: "November 17, 2026",
         version: "2",
         color: "from-teal-500 to-rose-600",

@@ -14,6 +14,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { EmailContextMenu } from './EmailContextMenu';
 import { MailStatusIndicators } from './MailStatusIndicators';
 import { DomainFavicon } from './DomainFavicon';
+import { InviteRsvpChip, hasCalendarAttachment } from './InviteRsvpChip';
 
 import { GetAllMailsPayload } from '@/lib/types/mail.interface';
 import { Security } from '@/lib/security';
@@ -116,6 +117,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
         if (Array.isArray(item.hasAttachment)) return item.hasAttachment
         return []
     }, [item.hasAttachment])
+    const isInvite = React.useMemo(() => hasCalendarAttachment(attachments), [attachments])
 
     const handleCheckChange = useCallback(
         (id: string, checked: boolean) => {
@@ -246,6 +248,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                 <p className="text-xs text-muted-foreground/60 truncate flex-1 min-w-0 leading-relaxed">
                                     {previewText}
                                 </p>
+                                {isInvite && <InviteRsvpChip messageId={item.message_id} />}
                                 {(attachments.length > 0 || item.has_attachments) && (
                                     <Badge variant="secondary" className="flex-shrink-0 gap-1 text-[10px] font-normal px-1.5 py-0 h-5 rounded-md bg-muted text-muted-foreground">
                                         <RiAttachment2 className="w-3 h-3" />
@@ -292,6 +295,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                         <span className="text-xs text-muted-foreground/50">{previewText}</span>
                                     </span>
                                 )}
+                                {isInvite && <InviteRsvpChip messageId={item.message_id} className="ml-2" />}
                             </div>
 
                             {/* Right: attachments + indicators + timestamp */}
