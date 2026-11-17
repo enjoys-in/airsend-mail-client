@@ -9,7 +9,9 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
       <div className="flex">
         <DocsSidebar />
         <main className="flex-1 min-w-0">
-          <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 md:py-12">
+          {/* Pages that render a right-hand "On this page" rail mark themselves with [data-docs-wide]
+              and get a wider container; every other docs page keeps max-w-4xl. */}
+          <div className="max-w-4xl has-[[data-docs-wide]]:max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
             <DocsMobileNav />
             {children}
           </div>

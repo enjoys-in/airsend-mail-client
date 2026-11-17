@@ -99,7 +99,7 @@ export const Navbar = () => {
     <nav className="relative mx-auto flex items-center justify-center bg-transparent px-4 pt-3 md:pt-6">
       <div
         ref={navContainerRef}
-        className="relative flex items-center rounded-full border-secondary/30 border-[1px] bg-[#31343cfe] max-w-[92vw] md:max-w-4xl px-3 py-1.5 shadow-lg backdrop-blur-md"
+        className="relative flex items-center rounded-full border-secondary/30 border-[1px] bg-[#31343cfe] max-w-[92vw] md:max-w-4xl pl-3 pr-0.5 py-0.5 shadow-lg backdrop-blur-md"
       >
         <Link
           href="/"
