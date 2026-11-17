@@ -61,6 +61,13 @@ let contactCache: { at: number; mine: string; list: Contact[] } | null = null;
 const CONTACT_TTL = 2 * 60 * 1000;
 const CONTACT_SCAN = 2000; // mails read from the local store
 
+/**
+ * How long the user must stop typing before the team directory is asked. Contacts come from the
+ * local store and filter on every keystroke; only the server search waits. Each keystroke
+ * restarts the wait and cancels the request still in flight.
+ */
+export const TEAM_SEARCH_DEBOUNCE_MS = 2800;
+
 async function loadContacts(myEmail: string): Promise<Contact[]> {
   if (contactCache && contactCache.mine === myEmail && Date.now() - contactCache.at < CONTACT_TTL) {
     return contactCache.list;
@@ -160,7 +167,8 @@ export function useGuestSuggestions({
           .catch(() => !ctl.signal.aborted && setTeam([]))
           .finally(() => !ctl.signal.aborted && setLoading(false));
       },
-      q ? 200 : 0,
+      // typing: wait for a pause; the list when the dialog opens or the time changes: almost at once
+      q ? TEAM_SEARCH_DEBOUNCE_MS : 300,
     );
     return () => {
       clearTimeout(t);
