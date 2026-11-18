@@ -11,8 +11,19 @@ async function handleProxy(
 ) {
   const { path } = await context.params;
   const targetPath = Array.isArray(path) ? path.join("/") : (path || "");
-  const search = request.nextUrl.search || "";
+  let search = request.nextUrl.search || "";
   const backendBase = getTasksBackendUrl();
+
+  // If workspaceId is not specified in query params and default is configured, inject it
+  const defaultWs = process.env.TASKS_DEFAULT_WORKSPACE_ID;
+  if (
+    defaultWs &&
+    !search.includes("workspaceId") &&
+    (targetPath === "project" || targetPath === "task/assigned")
+  ) {
+    search = search ? `${search}&workspaceId=${encodeURIComponent(defaultWs)}` : `?workspaceId=${encodeURIComponent(defaultWs)}`;
+  }
+
   const targetUrl = `${backendBase}/api/${targetPath}${search}`;
 
   const headers: Record<string, string> = {
@@ -28,7 +39,8 @@ async function handleProxy(
   const email = request.headers.get("X-User-Email");
   if (email) headers["X-User-Email"] = email;
 
-  const apiKey = request.headers.get("x-api-key");
+  // Use caller's api key or fallback to configured service api key
+  const apiKey = request.headers.get("x-api-key") || process.env.TASKS_API_KEY;
   if (apiKey) headers["x-api-key"] = apiKey;
 
   try {

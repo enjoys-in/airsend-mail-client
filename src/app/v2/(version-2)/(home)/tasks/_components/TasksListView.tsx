@@ -31,7 +31,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTasks } from "../_lib/tasks-context";
-import type { TaskItem, TaskPriority, TaskStatus } from "../_lib/tasks-types";
+import {
+  type TaskItem,
+  type TaskPriority,
+  type TaskStatus,
+  normalizeTaskStatus,
+} from "../_lib/tasks-types";
 import { TaskDetailDialog } from "./TaskDetailDialog";
 
 export function TasksListView() {
@@ -129,7 +134,9 @@ export function TasksListView() {
         .map((status) => ({
           id: status,
           title: titles[status],
-          tasks: filteredTasks.filter((t) => t.status === status),
+          tasks: filteredTasks.filter(
+            (t) => normalizeTaskStatus(t.status) === status
+          ),
         }))
         .filter((g) => g.tasks.length > 0);
     }

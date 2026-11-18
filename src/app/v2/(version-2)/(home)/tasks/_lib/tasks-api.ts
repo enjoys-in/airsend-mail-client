@@ -1,9 +1,11 @@
-import type {
-  CreateTaskInput,
-  TaskItem,
-  TaskProject,
-  TaskWorkspace,
-  UpdateTaskInput,
+import {
+  type CreateTaskInput,
+  type TaskItem,
+  type TaskProject,
+  type TaskWorkspace,
+  type UpdateTaskInput,
+  normalizeTaskStatus,
+  toBackendTaskStatus,
 } from "./tasks-types";
 
 export function getTasksApiUrl(): string {
@@ -181,9 +183,10 @@ class TasksApiService {
   // ── Workspaces & Projects ──
 
   async getWorkspaces(): Promise<TaskWorkspace[]> {
-    const res = await this.fetchApi<TaskWorkspace[] | { workspaces: TaskWorkspace[] }>("workspace");
+    const res = await this.fetchApi<any>("workspace");
     if (res.ok && res.data) {
       if (Array.isArray(res.data)) return res.data;
+      if (res.data.id && res.data.name) return [res.data];
       if (Array.isArray((res.data as any).workspaces)) return (res.data as any).workspaces;
     }
     return [MOCK_WORKSPACE];
@@ -191,10 +194,19 @@ class TasksApiService {
 
   async getProjects(workspaceId?: string): Promise<TaskProject[]> {
     const query = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : "";
-    const res = await this.fetchApi<TaskProject[] | { projects: TaskProject[] }>(`project${query}`);
+    const res = await this.fetchApi<any>(`project${query}`);
     if (res.ok && res.data) {
-      if (Array.isArray(res.data)) return res.data;
-      if (Array.isArray((res.data as any).projects)) return (res.data as any).projects;
+      const list = Array.isArray(res.data) ? res.data : (res.data as any).projects || [];
+      return list.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        icon: p.icon || "Folder",
+        color: p.color || "#3b82f6",
+        description: p.description,
+        workspaceId: p.workspaceId,
+        taskCount: p.statistics?.totalTasks ?? p.taskCount ?? 0,
+      }));
     }
     return MOCK_PROJECTS;
   }
@@ -202,8 +214,8 @@ class TasksApiService {
   // ── Assigned Tasks (User's Workspace Tasks) ──
 
   async getAssignedTasks(workspaceId?: string): Promise<{ tasks: TaskItem[]; total: number; isLive: boolean }> {
-    const wsId = workspaceId || "ws-airsend-primary";
-    const res = await this.fetchApi<{ tasks: any[]; total: number }>(`task/assigned?workspaceId=${encodeURIComponent(wsId)}`);
+    const wsQuery = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : "";
+    const res = await this.fetchApi<{ tasks: any[]; total: number }>(`task/assigned${wsQuery}`);
 
     if (res.ok && res.data && Array.isArray(res.data.tasks)) {
       const mapped: TaskItem[] = res.data.tasks.map((t: any) => ({
@@ -216,7 +228,7 @@ class TasksApiService {
         ticketId: t.number != null ? `${t.projectSlug || "TASK"}-${t.number}` : t.projectSlug || "TASK",
         title: t.title,
         description: t.description,
-        status: (t.status || "todo") as any,
+        status: normalizeTaskStatus(t.status),
         statusName: t.statusName,
         statusIcon: t.statusIcon,
         priority: (t.priority || "none") as any,
@@ -235,25 +247,46 @@ class TasksApiService {
   // ── Project Tasks ──
 
   async getProjectTasks(projectId: string): Promise<{ tasks: TaskItem[]; total: number; isLive: boolean }> {
-    const res = await this.fetchApi<{ tasks: any[]; total: number }>(`task/tasks/${encodeURIComponent(projectId)}`);
+    const res = await this.fetchApi<any>(`task/tasks/${encodeURIComponent(projectId)}`);
 
-    if (res.ok && res.data && Array.isArray(res.data.tasks)) {
-      const mapped: TaskItem[] = res.data.tasks.map((t: any) => ({
+    if (res.ok && res.data) {
+      const boardData = res.data.data || res.data;
+      let rawTasks: any[] = [];
+      if (Array.isArray(boardData.columns)) {
+        for (const col of boardData.columns) {
+          if (Array.isArray(col.tasks)) {
+            for (const t of col.tasks) {
+              rawTasks.push({
+                ...t,
+                status: col.slug || t.status,
+                statusName: col.name,
+              });
+            }
+          }
+        }
+      } else if (Array.isArray(boardData.tasks)) {
+        rawTasks = boardData.tasks;
+      }
+
+      const mapped: TaskItem[] = rawTasks.map((t: any) => ({
         id: t.id,
         projectId: t.projectId || projectId,
-        projectName: t.projectName,
-        projectSlug: t.projectSlug,
+        projectName: t.projectName || boardData.name,
+        projectSlug: t.projectSlug || boardData.slug,
         number: t.number,
-        ticketId: t.number != null ? `${t.projectSlug || "TASK"}-${t.number}` : undefined,
+        ticketId: t.number != null ? `${t.projectSlug || boardData.slug || "TASK"}-${t.number}` : undefined,
         title: t.title,
         description: t.description,
-        status: (t.status || "todo") as any,
+        status: normalizeTaskStatus(t.status),
+        statusName: t.statusName,
         priority: (t.priority || "none") as any,
         dueDate: t.dueDate,
+        assigneeId: t.userId,
+        assigneeName: t.userName,
         labels: t.labels || [],
         createdAt: t.createdAt,
       }));
-      return { tasks: mapped, total: res.data.total ?? mapped.length, isLive: true };
+      return { tasks: mapped, total: mapped.length, isLive: true };
     }
 
     const local = getLocalStoredTasks().filter((t) => t.projectId === projectId);
@@ -267,11 +300,11 @@ class TasksApiService {
       method: "POST",
       body: JSON.stringify({
         title: input.title,
-        description: input.description,
+        description: input.description || "",
         priority: input.priority || "medium",
-        status: input.status || "todo",
+        status: toBackendTaskStatus(input.status || "todo"),
         dueDate: input.dueDate,
-        assigneeId: input.assigneeId,
+        userId: input.assigneeId,
       }),
     });
 
@@ -282,7 +315,7 @@ class TasksApiService {
         projectId: t.projectId || input.projectId,
         title: t.title,
         description: t.description,
-        status: t.status || input.status || "todo",
+        status: normalizeTaskStatus(t.status || input.status),
         priority: t.priority || input.priority || "medium",
         dueDate: t.dueDate || input.dueDate,
         labels: t.labels || [],
@@ -301,7 +334,7 @@ class TasksApiService {
       title: input.title,
       description: input.description,
       priority: input.priority || "medium",
-      status: input.status || "todo",
+      status: normalizeTaskStatus(input.status),
       dueDate: input.dueDate,
       number: local.length + 100,
       ticketId: `TASK-${local.length + 100}`,
@@ -318,7 +351,7 @@ class TasksApiService {
   async updateTaskStatus(taskId: string, status: TaskItem["status"]): Promise<{ ok: boolean; isLive: boolean }> {
     const res = await this.fetchApi<any>(`task/status/${encodeURIComponent(taskId)}`, {
       method: "PUT",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status: toBackendTaskStatus(status) }),
     });
 
     if (res.ok) {
@@ -327,7 +360,7 @@ class TasksApiService {
 
     // Fallback local update
     const local = getLocalStoredTasks();
-    const updated = local.map((t) => (t.id === taskId ? { ...t, status } : t));
+    const updated = local.map((t) => (t.id === taskId ? { ...t, status: normalizeTaskStatus(status) } : t));
     saveLocalStoredTasks(updated);
     return { ok: true, isLive: false };
   }

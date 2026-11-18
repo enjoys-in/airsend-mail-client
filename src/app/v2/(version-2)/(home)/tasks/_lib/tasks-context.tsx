@@ -64,16 +64,35 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       setWorkspaces(wsList);
       setProjects(projList);
 
-      // 2. Fetch assigned tasks from ../tasks backend
-      const res = await tasksApi.getAssignedTasks(activeWorkspaceId);
-      setTasks(res.tasks);
-      setIsBackendLive(res.isLive);
+      const targetWsId =
+        wsList.length > 0 && wsList[0].id ? wsList[0].id : activeWorkspaceId;
+      if (targetWsId !== activeWorkspaceId) {
+        setActiveWorkspaceId(targetWsId);
+      }
+
+      // 2. Fetch tasks based on active project or assigned view
+      if (activeProjectId) {
+        const res = await tasksApi.getProjectTasks(activeProjectId);
+        setTasks(res.tasks);
+        setIsBackendLive(res.isLive);
+      } else {
+        const res = await tasksApi.getAssignedTasks(targetWsId);
+        if (res.tasks.length === 0 && projList.length > 0) {
+          // If no assigned tasks, load first project's tasks so user sees the board right away
+          const firstProjRes = await tasksApi.getProjectTasks(projList[0].id);
+          setTasks(firstProjRes.tasks);
+          setIsBackendLive(firstProjRes.isLive);
+        } else {
+          setTasks(res.tasks);
+          setIsBackendLive(res.isLive);
+        }
+      }
     } catch {
       setIsBackendLive(false);
     } finally {
       setIsLoading(false);
     }
-  }, [activeWorkspaceId]);
+  }, [activeWorkspaceId, activeProjectId]);
 
   useEffect(() => {
     refreshTasks();

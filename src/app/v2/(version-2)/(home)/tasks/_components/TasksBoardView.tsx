@@ -24,7 +24,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTasks } from "../_lib/tasks-context";
-import type { TaskItem, TaskPriority, TaskStatus } from "../_lib/tasks-types";
+import {
+  type TaskItem,
+  type TaskPriority,
+  type TaskStatus,
+  normalizeTaskStatus,
+} from "../_lib/tasks-types";
 import { TaskDetailDialog } from "./TaskDetailDialog";
 import { TaskCreateDialog } from "./TaskCreateDialog";
 
@@ -145,7 +150,9 @@ export function TasksBoardView() {
       <div className="flex-1 overflow-x-auto p-4 md:p-6 bg-muted/10">
         <div className="flex gap-4 min-w-[900px] h-full items-start">
           {COLUMNS.map((col) => {
-            const colTasks = filteredTasks.filter((t) => t.status === col.id);
+            const colTasks = filteredTasks.filter(
+              (t) => normalizeTaskStatus(t.status) === col.id
+            );
 
             return (
               <div

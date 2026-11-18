@@ -3,11 +3,30 @@ export type TaskPriority = "urgent" | "high" | "medium" | "low" | "none";
 export type TaskStatus =
   | "backlog"
   | "todo"
+  | "to-do"
   | "in-progress"
   | "in-review"
   | "done"
   | "canceled"
   | "archived";
+
+export function normalizeTaskStatus(status?: string | null): TaskStatus {
+  if (!status) return "todo";
+  const s = status.toLowerCase();
+  if (s === "to-do" || s === "todo") return "todo";
+  if (s === "in_progress" || s === "in-progress") return "in-progress";
+  if (s === "in_review" || s === "in-review") return "in-review";
+  if (s === "done" || s === "completed") return "done";
+  if (s === "backlog") return "backlog";
+  if (s === "canceled" || s === "cancelled") return "canceled";
+  if (s === "archived") return "archived";
+  return s as TaskStatus;
+}
+
+export function toBackendTaskStatus(status: TaskStatus | string): string {
+  if (status === "todo") return "to-do";
+  return status;
+}
 
 export interface TaskLabel {
   id: string;
