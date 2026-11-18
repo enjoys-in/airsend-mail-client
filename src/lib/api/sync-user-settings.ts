@@ -1,6 +1,7 @@
 import { API } from "@/lib/api/handler"
 import { airsendDB } from "@/db"
 import { useUserConfigStore } from "@/store/settings/user-config"
+import { useSettingsStore } from "@/store/settings"
 import type { AxiosResponse } from "axios"
 import type { GetUserSettingsResponse } from "@/lib/types/get-user-settings-response"
 import type { AccountSettings } from "@/lib/types/account-settings.interface"
@@ -66,6 +67,11 @@ export async function syncUserSettings(
 
         /* ---- Hydrate Zustand feature-flag store ---- */
         useUserConfigStore.getState().hydrate(settingsObj, domainName)
+
+        /* The mail UI (inbox layout, density, …) reads useSettingsStore, which was
+           only filled after visiting a settings page — so saved preferences were
+           ignored on a fresh load. Hydrate it here too. */
+        useSettingsStore.getState().setSettings(settingsObj)
 
         return settingsObj
     } catch (err) {

@@ -2,7 +2,7 @@
 
 import React, { Suspense, useMemo } from "react"
 import { useParams } from "next/navigation"
-import { useSettingsStore } from "@/store/settings"
+import { useInboxLayout } from "@/hooks/use-inbox-layout"
 import ClientMailCard from "../[folder]/_components/ClientMailCard"
 import { Mail } from "lucide-react"
 
@@ -10,9 +10,7 @@ export function MailSplitWrapper({ children }: { children: React.ReactNode }) {
     const params = useParams()
     const hasMessageId = Boolean(params?.message_id)
 
-    const inboxLayout = useSettingsStore((s) => (s.settings?.personalization?.layout === "list" ? "row" : "column"))
-        || (typeof window !== "undefined" ? (localStorage.getItem("airsend_inbox_layout") as "column" | "row") : null)
-        || "column"
+    const inboxLayout = useInboxLayout()
 
     const isColumnSplit = inboxLayout === "column"
 

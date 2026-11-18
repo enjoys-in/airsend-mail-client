@@ -50,7 +50,7 @@ import { MailDropdown, type MailDropdownActions } from "./menu-dropdown";
 import { useMailRenderSettings } from "@/store/mails/mail-render-settings";
 import { MailStatusIndicators } from "../../_components/MailStatusIndicators";
 import { useMailActions, safeDecrypt } from "./use-mail-actions";
-import { useSettingsStore } from "@/store/settings";
+import { useInboxLayout } from "@/hooks/use-inbox-layout";
 import { OtpCard } from "@/components/common/otp-card";
 import { detectOtp, otpCache, OTP_DISCOVERED_EVENT, type OtpInfo } from "@/lib/mail/otp-detector";
 
@@ -74,9 +74,7 @@ const ClientDisplay = ({
     const selectedMail =
         storedMail && storedMail.message_id === message_id ? storedMail : null;
 
-    const inboxLayout = useSettingsStore((s) => (s.settings?.personalization?.layout === "list" ? "row" : "column"))
-        || (typeof window !== "undefined" ? (localStorage.getItem("airsend_inbox_layout") as "column" | "row") : null)
-        || "column";
+    const inboxLayout = useInboxLayout()
     const isColumnSplit = inboxLayout === "column";
 
     const {

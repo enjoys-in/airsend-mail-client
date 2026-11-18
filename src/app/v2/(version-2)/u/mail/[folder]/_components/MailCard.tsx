@@ -22,6 +22,7 @@ import { GetAllMailsPayload } from '@/lib/types/mail.interface';
 import { Security } from '@/lib/security';
 import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event';
 import { useSettingsStore } from '@/store/settings';
+import { useInboxLayout } from '@/hooks/use-inbox-layout';
 
 const s = new Security();
 
@@ -95,9 +96,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
         || (typeof window !== "undefined" ? (localStorage.getItem("airsend_density") as "comfortable" | "compact") : null)
         || "comfortable"
     const isCompact = density === "compact"
-    const inboxLayout = useSettingsStore((s) => (s.settings?.personalization?.layout === "list" ? "row" : "column"))
-        || (typeof window !== "undefined" ? (localStorage.getItem("airsend_inbox_layout") as "column" | "row") : null)
-        || "column"
+    const inboxLayout = useInboxLayout()
     const isCurrentMessage = params?.message_id === item.message_id
 
     const decryptedFromEmail = React.useMemo(() => safeDecrypt(item.from_email), [item.from_email])
