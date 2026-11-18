@@ -2,6 +2,7 @@ import {
   type CreateProjectInput,
   type TaskColumn,
   type TaskLabel,
+  type TaskMember,
   type TaskProject,
 } from "./tasks-types";
 
@@ -111,5 +112,24 @@ export async function deleteColumn(id: string): Promise<boolean> {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+export async function fetchWorkspaceMembers(workspaceId: string): Promise<TaskMember[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/workspace/${workspaceId}/members`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map((m: any) => ({
+      id: String(m.id),
+      userId: String(m.id),
+      name: m.name || m.email?.split("@")[0] || "User",
+      email: m.email,
+      avatarUrl: m.image,
+      role: m.role || "member",
+    }));
+  } catch {
+    return [];
   }
 }
