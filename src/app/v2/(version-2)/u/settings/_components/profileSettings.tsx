@@ -21,6 +21,9 @@ import {
   SettingToggleRow,
   SaveSettingsBar,
 } from "./shared";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { User, HardDrive, ShieldCheck, Mail, Sparkles } from "lucide-react";
 
 export default function ProfileSettings({ email }: { email: string }) {
   const { currAccount, accounts } = useAppSelector((state) => state.accounts);
@@ -122,105 +125,154 @@ export default function ProfileSettings({ email }: { email: string }) {
     }
   };
 
-  const usage = settings?.usage ?? 0;
-  const limit = settings?.mailbox_size ?? 0;
+  const usage = Number(settings?.usage ?? 0);
+  const limit = Number(settings?.mailbox_size ?? 0);
+  const percentUsed = limit > 0 ? Math.min(100, Math.round((usage / limit) * 100)) : 0;
 
   return (
-    <div className="p-4 md:p-8 flex justify-center">
-      <div className="w-full max-w-3xl space-y-6">
-        <SettingsPageHeader title="Display name and signature" />
+    <div className="w-full space-y-8 animate-in fade-in duration-150">
+      <SettingsPageHeader
+        title="Account and password"
+        description="Manage your profile information, display name, mailbox quota, and outgoing email branding."
+        icon={<User className="size-5" />}
+        badge={<Badge variant="outline" className="text-xs font-normal">Profile</Badge>}
+      />
 
-        {/* Email address selector */}
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <Label className="w-full md:w-40 text-sm font-medium">
-            Email address
-          </Label>
-          <div className="flex-1">
-            {accounts.length === 0 ? (
-              <Input
-                value={currAccount?.email || email || ""}
-                readOnly
-                className="w-full"
-              />
-            ) : (
-              <Select value={selectedEmail} onValueChange={setSelectedEmail}>
-                <SelectTrigger className="w-full">
-                  <SelectValue
-                    placeholder={
-                      currAccount?.email || email || "Select email"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((acc) => (
-                    <SelectItem key={acc.email} value={acc.email}>
-                      {acc.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        </div>
-
-        {/* Display Name */}
-        <form onSubmit={handleSubmit(onSave)} className="space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <Label
-              htmlFor="display-name"
-              className="w-full md:w-40 text-sm font-medium"
-            >
-              Display Name
-            </Label>
-            <div className="flex-1">
-              <Input
-                id="display-name"
-                {...register("display_name", { required: true })}
-                className="w-full"
-              />
-              {errors.display_name && (
-                <p className="text-red-500 text-sm mt-1">
-                  Display name is required.
+      <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+        {/* Account Identity Section */}
+        <SettingsSection
+          title="Account Identity"
+          description="Your public display name and currently active sending mailbox."
+          icon={<Mail className="size-4" />}
+        >
+          <div className="space-y-4 pt-1">
+            {/* Email Address */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2">
+              <div className="space-y-0.5">
+                <Label className="text-sm sm:text-base font-medium text-foreground">
+                  Active Account
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Switch account to configure separate display preferences
                 </p>
-              )}
+              </div>
+              <div className="w-full sm:w-[280px]">
+                {accounts.length === 0 ? (
+                  <Input
+                    value={currAccount?.email || email || ""}
+                    readOnly
+                    className="w-full text-xs sm:text-sm bg-muted/40 font-mono"
+                  />
+                ) : (
+                  <Select value={selectedEmail} onValueChange={setSelectedEmail}>
+                    <SelectTrigger className="w-full text-xs sm:text-sm bg-background/80 border-border/80 rounded-xl shadow-2xs">
+                      <SelectValue
+                        placeholder={currAccount?.email || email || "Select email"}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((acc) => (
+                        <SelectItem key={acc.email} value={acc.email} className="text-xs sm:text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate">{acc.email}</span>
+                            {acc.email === currAccount?.email && (
+                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 ml-auto">
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+
+            {/* Display Name */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 py-2 border-t border-border/40">
+              <div className="space-y-0.5 max-w-sm">
+                <Label htmlFor="display-name" className="text-sm sm:text-base font-medium text-foreground">
+                  Display Name
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  The sender name that recipients will see on incoming emails
+                </p>
+              </div>
+              <div className="w-full sm:w-[280px] space-y-1">
+                <Input
+                  id="display-name"
+                  placeholder="e.g. John Doe"
+                  {...register("display_name", { required: true })}
+                  className="w-full text-xs sm:text-sm bg-background/80 border-border/80 rounded-xl shadow-2xs"
+                />
+                {errors.display_name && (
+                  <p className="text-destructive text-xs font-medium">
+                    Display name is required.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
+        </SettingsSection>
 
-          {/* Usage & Limit (read-only) */}
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <Label className="w-full md:w-40 text-sm font-medium">
-              Current Usage
-            </Label>
-            <Input
-              className="flex-1"
-              value={formatBytes(+usage || 0)}
-              readOnly
+        {/* Storage Quota Section */}
+        <SettingsSection
+          title="Mailbox Storage"
+          description="Storage space allocated for your emails, attachments, and synced files."
+          icon={<HardDrive className="size-4" />}
+          badge={
+            <Badge
+              variant={percentUsed > 85 ? "destructive" : "secondary"}
+              className="text-[11px] font-medium"
+            >
+              {percentUsed}% Used
+            </Badge>
+          }
+        >
+          <div className="space-y-4 pt-1">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
+                <span className="text-muted-foreground">Used: <strong className="text-foreground">{formatBytes(usage)}</strong></span>
+                <span className="text-muted-foreground">Total: <strong className="text-foreground">{limit > 0 ? formatBytes(limit) : "Unlimited"}</strong></span>
+              </div>
+              <Progress value={percentUsed} className="h-2 rounded-full" />
+              <div className="flex items-center justify-between text-xs text-muted-foreground/70">
+                <span>0 MB</span>
+                <span>{limit > 0 ? `${formatBytes(Math.max(0, limit - usage))} remaining` : "No limit set"}</span>
+              </div>
+            </div>
+          </div>
+        </SettingsSection>
+
+        {/* Email Branding Section */}
+        <SettingsSection
+          title="Email Branding"
+          description="Configure signatures, footers, and verification badges appended to outgoing emails."
+          icon={<Sparkles className="size-4" />}
+        >
+          <div className="space-y-1">
+            <SettingToggleRow
+              label="Airsend Mail footer"
+              description="Appends 'Sent with Airsend Mail' to outgoing messages"
+              tooltip="Includes a subtle footer on outgoing emails highlighting secure delivery"
+              checked={footerEnabled}
+              onCheckedChange={setFooterEnabled}
+            />
+            <SettingToggleRow
+              label="Secure email badge"
+              description="Includes a verified secure transport badge in the footer"
+              tooltip="Shows 'Sent with Airsend Mail secure email' in the footer"
+              checked={secureEmailEnabled}
+              onCheckedChange={setSecureEmailEnabled}
+              badge={
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+                  <ShieldCheck className="size-3" />
+                  Verified
+                </span>
+              }
             />
           </div>
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <Label className="w-full md:w-40 text-sm font-medium">Limit</Label>
-            <Input
-              className="flex-1"
-              value={formatBytes(+limit || 0)}
-              readOnly
-            />
-          </div>
-        </form>
-
-        {/* Branding toggles */}
-        <SettingsSection title="Email Branding">
-          <SettingToggleRow
-            label="Airsend Mail footer"
-            tooltip="Adds 'Sent with Airsend Mail' to outgoing messages"
-            checked={footerEnabled}
-            onCheckedChange={setFooterEnabled}
-          />
-          <SettingToggleRow
-            label="Secure email badge"
-            tooltip="Shows 'Sent with Airsend Mail secure email' in the footer"
-            checked={secureEmailEnabled}
-            onCheckedChange={setSecureEmailEnabled}
-          />
         </SettingsSection>
 
         <SaveSettingsBar
@@ -228,7 +280,7 @@ export default function ProfileSettings({ email }: { email: string }) {
           show={dirty}
           isSaving={isSaving}
         />
-      </div>
+      </form>
     </div>
   );
 }

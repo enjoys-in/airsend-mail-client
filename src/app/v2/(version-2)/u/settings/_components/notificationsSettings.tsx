@@ -1,27 +1,25 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { z } from "zod"
 import { useState } from "react"
-import { Check, Info } from "lucide-react"
+import { Check, Bell, Mail, AlertTriangle, CheckCircle2, ShieldAlert, Smartphone, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form"
-import { Switch } from "@/components/ui/switch"
-
 import { airsendDB } from "@/db"
 import { useSettingsStore } from "@/store/settings"
+import { SettingsPageHeader, SettingsSection, SettingToggleRow } from "./shared"
+import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
 
 // Define the schema based on the provided interface
 const notificationFormSchema = z.object({
-  new_email: z.boolean().default(true),
-  delivery_failed: z.boolean().default(false),
-  delivery_success: z.boolean().default(false),
-  undelivered_email: z.boolean().default(true),
-  push_notification: z.boolean().default(false),
-
+  new_email: z.boolean(),
+  delivery_failed: z.boolean(),
+  delivery_success: z.boolean(),
+  undelivered_email: z.boolean(),
+  push_notification: z.boolean(),
 })
 
 type NotificationFormValues = z.infer<typeof notificationFormSchema>
@@ -47,131 +45,150 @@ export default function NotificationPreferencesForm({ email }: { email: string }
   // Handle form submission
   async function onSubmit(data: NotificationFormValues) {
     setIsSubmitting(true)
-
-    // Simulate API call
-    await airsendDB.updateNestedItem("settings", email, "settings.notifications", data)
-    setIsSubmitting(false)
-    setSettings({ notifications: data })
-
+    try {
+      await airsendDB.updateNestedItem("settings", email, "settings.notifications", data)
+      setSettings({ notifications: data })
+      toast.success("Notification preferences saved")
+    } catch (err) {
+      toast.error("Failed to update notification settings")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
+  const isDirty = form.formState.isDirty
+
   return (
-    <Card className="w-full max-w-lg mx-auto">
-      <CardHeader>
-        <CardTitle className="text-xl md:text-2xl">Notification Preferences</CardTitle>
-        <CardDescription>Choose which notifications you want to receive</CardDescription>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="new_email"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel className="text-sm font-medium">New Email</FormLabel>
-                      <FormDescription className="text-xs text-muted-foreground">
-                        Receive Toast notifications about new emails
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
+    <div className="w-full space-y-8 animate-in fade-in duration-150">
+      <SettingsPageHeader
+        title="Notifications"
+        description="Choose how and when you receive in-app alerts, delivery notifications, and push messages."
+        icon={<Bell className="size-5" />}
+        badge={<Badge variant="outline" className="text-xs font-normal">Alerts</Badge>}
+      />
+
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Email Event Notifications */}
+        <SettingsSection
+          title="Email Activity Alerts"
+          description="In-app and toast notifications triggered by incoming or outgoing messages"
+          icon={<Mail className="size-4" />}
+        >
+          <Controller
+            name="new_email"
+            control={form.control}
+            render={({ field }) => (
+              <SettingToggleRow
+                label="New email arrival"
+                description="Show toast notifications when new messages arrive in your inbox"
+                icon={<Mail className="size-4 text-primary" />}
+                checked={field.value}
+                onCheckedChange={field.onChange}
               />
+            )}
+          />
 
-              <FormField
-                control={form.control}
-                name="delivery_failed"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel className="text-sm font-medium">Delivery Failed</FormLabel>
-                      <FormDescription className="text-xs text-muted-foreground">
-                        Receive Toast notifications when an email fails to deliver
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
+          <Controller
+            name="delivery_success"
+            control={form.control}
+            render={({ field }) => (
+              <SettingToggleRow
+                label="Delivery success confirmation"
+                description="Notify when outgoing emails are accepted by the recipient's mail exchange server"
+                icon={<CheckCircle2 className="size-4 text-emerald-500" />}
+                checked={field.value}
+                onCheckedChange={field.onChange}
               />
+            )}
+          />
 
-              <FormField
-                control={form.control}
-                name="delivery_success"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel className="text-sm font-medium">Delivery Success</FormLabel>
-                      <FormDescription className="text-xs text-muted-foreground">
-                        Receive Toast notifications when an email is successfully delivered
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
+          <Controller
+            name="delivery_failed"
+            control={form.control}
+            render={({ field }) => (
+              <SettingToggleRow
+                label="Delivery failed warning"
+                description="Immediately alert when an outgoing email bounces or fails delivery"
+                icon={<AlertTriangle className="size-4 text-amber-500" />}
+                checked={field.value}
+                onCheckedChange={field.onChange}
               />
+            )}
+          />
 
-              <FormField
-                control={form.control}
-                name="undelivered_email"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <div className="flex items-center gap-1">
-                        <FormLabel className="text-sm font-medium">Undelivered Emails</FormLabel>
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                      <FormDescription className="text-xs text-muted-foreground">
-                        Receive Toast notifications for emails that have not been recieved/delivered in your mailbox
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
+          <Controller
+            name="undelivered_email"
+            control={form.control}
+            render={({ field }) => (
+              <SettingToggleRow
+                label="Undelivered email warning"
+                description="Alert for emails that have not been received or confirmed in your mailbox"
+                tooltip="Receive alerts for messages flagged as delayed or rejected upstream"
+                icon={<ShieldAlert className="size-4 text-rose-500" />}
+                checked={field.value}
+                onCheckedChange={field.onChange}
               />
+            )}
+          />
+        </SettingsSection>
 
-              <FormField
-                control={form.control}
-                name="push_notification"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel className="text-sm font-medium">WebPush Notifications</FormLabel>
-                      <FormDescription className="text-xs text-muted-foreground">
-                        Enable/Disbale WebPush notifications for email events
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
+        {/* Browser & Push Notifications */}
+        <SettingsSection
+          title="Browser & Push Notifications"
+          description="System-level push alerts when Airsend is running in the background"
+          icon={<Smartphone className="size-4" />}
+        >
+          <Controller
+            name="push_notification"
+            control={form.control}
+            render={({ field }) => (
+              <SettingToggleRow
+                label="WebPush notifications"
+                description="Allow OS-level browser push notifications even when the browser tab is inactive"
+                tooltip="Uses standard WebPush API supported by Chrome, Firefox, Safari, and Edge"
+                icon={<Bell className="size-4 text-blue-500" />}
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                badge={
+                  <Badge variant="secondary" className="text-[10px] font-medium">
+                    WebPush
+                  </Badge>
+                }
               />
+            )}
+          />
+        </SettingsSection>
 
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => form.reset()}
+            disabled={!isDirty || isSubmitting}
+            className="rounded-xl"
+          >
+            <RotateCcw className="size-3.5 mr-1.5 opacity-70" />
+            Reset to defaults
+          </Button>
 
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between border-t p-4">
-            <Button variant="outline" type="button" onClick={() => form.reset()}>
-              Reset
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="gap-1">
-              {isSubmitting ? "Saving..." : "Save preferences"}
-              {!isSubmitting && <Check className="h-4 w-4" />}
-            </Button>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="rounded-xl px-5 gap-1.5"
+          >
+            {isSubmitting ? (
+              "Saving..."
+            ) : (
+              <>
+                <Check className="size-4" />
+                Save preferences
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
   )
 }

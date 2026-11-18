@@ -9,6 +9,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 interface SettingToggleRowProps {
     label: string
@@ -18,11 +19,13 @@ interface SettingToggleRowProps {
     onCheckedChange: (checked: boolean) => void
     disabled?: boolean
     badge?: ReactNode
+    icon?: ReactNode
+    className?: string
 }
 
 /**
- * A single settings row with a label on the left and a Switch on the right.
- * Optionally shows an info tooltip and/or a badge (e.g. "AI").
+ * A single settings row with an interactive label on the left and a Switch on the right.
+ * Accessible, mobile-friendly, and gracefully wraps on compact viewports.
  */
 function SettingToggleRow({
     label,
@@ -32,36 +35,63 @@ function SettingToggleRow({
     onCheckedChange,
     disabled,
     badge,
+    icon,
+    className,
 }: SettingToggleRowProps) {
     return (
-        <div className="flex items-center justify-between gap-4 py-1">
-            <div className="flex items-center gap-2 min-w-0">
-                <div className="min-w-0">
-                    <span className="text-sm">{label}</span>
+        <div
+            className={cn(
+                "flex items-center justify-between gap-4 py-3 px-2 rounded-xl transition-colors duration-150 hover:bg-muted/40",
+                disabled && "opacity-60 pointer-events-none",
+                className
+            )}
+        >
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+                {icon && (
+                    <div className="mt-0.5 text-muted-foreground shrink-0 size-4">
+                        {icon}
+                    </div>
+                )}
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm sm:text-base font-medium text-foreground leading-snug">
+                            {label}
+                        </span>
+                        {badge && <div className="shrink-0">{badge}</div>}
+                        {tooltip && (
+                            <TooltipProvider delayDuration={200}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className="text-muted-foreground hover:text-foreground inline-flex items-center p-0.5 rounded-full transition-colors"
+                                            aria-label="More information"
+                                        >
+                                            <Info className="h-3.5 w-3.5 shrink-0 text-blue-500/80 cursor-help" />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs text-xs">
+                                        <p>{tooltip}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                    </div>
                     {description && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
+                            {description}
+                        </p>
                     )}
                 </div>
-                {tooltip && (
-                    <TooltipProvider delayDuration={200}>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Info className="h-4 w-4 shrink-0 text-blue-400 cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                                <p>{tooltip}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                )}
-                {badge}
             </div>
-            <Switch
-                checked={checked}
-                onCheckedChange={onCheckedChange}
-                disabled={disabled}
-                className="shrink-0 data-[state=checked]:bg-blue-500"
-            />
+            <div className="shrink-0 pl-2">
+                <Switch
+                    checked={checked}
+                    onCheckedChange={onCheckedChange}
+                    disabled={disabled}
+                    className="data-[state=checked]:bg-primary transition-all duration-200"
+                />
+            </div>
         </div>
     )
 }

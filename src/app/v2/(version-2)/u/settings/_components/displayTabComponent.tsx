@@ -1,11 +1,14 @@
 "use client"
+
 import React, { lazy } from 'react'
 import { useSettingsStore } from '@/store/settings'
-import { Settings } from 'lucide-react'
 import { CustomEventKey, useCustomEvent } from '@/hooks/use-custom-event'
 import { airsendDB } from '@/db'
 import { syncUserSettings } from '@/lib/api/sync-user-settings'
 import { useAppSelector } from '@/store/hooks'
+import { MobileSettingsNav } from './mobile-settings-nav'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Settings2 } from 'lucide-react'
 
 // Module-level lazy map – created once, never re-created on re-render
 const componentMap: Record<string, React.LazyExoticComponent<React.ComponentType<{ email: string }>>> = {
@@ -44,7 +47,7 @@ export const DisplayTabComponent = () => {
                 setSettings(value)
             }
         },
-        [currAccount?.email],
+        [currAccount?.email, setSettings],
     )
 
     const fetchUser = async () => {
@@ -53,32 +56,81 @@ export const DisplayTabComponent = () => {
             setSettings(result)
         }
     }
+
     React.useEffect(() => {
         if (!settings) {
             updateSettingsToStore()
         }
-    }, [currAccount?.email, settings])
+    }, [currAccount?.email, settings, updateSettingsToStore])
 
     React.useEffect(() => {
         const unsubscribe = listen(fetchUser)
         return unsubscribe
     }, [listen])
+
     return (
-        <React.Suspense fallback={<FallbackSkelton activeItem={keys[activeItem]} />}>
-            {TabComponent ? <TabComponent email={currAccount?.email ?? ""} /> : <FallbackSkelton activeItem={keys[activeItem]} />}
-        </React.Suspense>
+        <div className="w-full">
+            {/* Mobile / Tablet Tab Switcher */}
+            <MobileSettingsNav />
+
+            {/* Active Settings Tab View */}
+            <React.Suspense fallback={<SettingsSkeleton title={keys[activeItem] || activeItem} />}>
+                {TabComponent ? (
+                    <TabComponent email={currAccount?.email ?? ""} />
+                ) : (
+                    <SettingsSkeleton title={keys[activeItem] || activeItem} />
+                )}
+            </React.Suspense>
+        </div>
     )
 }
 
-const FallbackSkelton = ({ activeItem }: { activeItem: string }) => {
+function SettingsSkeleton({ title }: { title: string }) {
     return (
-        <div className={`bg-transparent rounded-lg shadow-sm`}>
-            <div className="p-6 flex flex-col items-center justify-center">
-                <div className="relative">
-                    <Settings size={64} className="text-gray-200" />
+        <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-200 p-2 sm:p-4">
+            {/* Header skeleton */}
+            <div className="space-y-2 pb-6 border-b border-border/50">
+                <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-xl bg-muted/70 flex items-center justify-center animate-pulse">
+                        <Settings2 className="size-4 text-muted-foreground/60" />
+                    </div>
+                    <Skeleton className="h-8 w-48 sm:w-64 rounded-lg" />
                 </div>
-                <div className="mt-4 space-y-2">
-                    Loading {activeItem}...
+                <Skeleton className="h-4 w-72 sm:w-96 rounded-md ml-11" />
+            </div>
+
+            {/* Section card 1 */}
+            <div className="rounded-2xl border border-border/60 bg-card/60 p-5 sm:p-6 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                    <Skeleton className="h-5 w-36 rounded-md" />
+                    <Skeleton className="h-4 w-12 rounded-md" />
+                </div>
+                <div className="space-y-4 pt-1">
+                    <div className="flex items-center justify-between py-2">
+                        <div className="space-y-1.5 flex-1 max-w-md">
+                            <Skeleton className="h-4 w-40 rounded" />
+                            <Skeleton className="h-3 w-60 rounded" />
+                        </div>
+                        <Skeleton className="h-6 w-11 rounded-full" />
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                        <div className="space-y-1.5 flex-1 max-w-md">
+                            <Skeleton className="h-4 w-36 rounded" />
+                            <Skeleton className="h-3 w-52 rounded" />
+                        </div>
+                        <Skeleton className="h-6 w-11 rounded-full" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Section card 2 */}
+            <div className="rounded-2xl border border-border/60 bg-card/60 p-5 sm:p-6 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                    <Skeleton className="h-5 w-44 rounded-md" />
+                </div>
+                <div className="space-y-3 pt-1">
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                    <Skeleton className="h-10 w-full rounded-xl" />
                 </div>
             </div>
         </div>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useSettingsPersist } from "@/hooks/use-settings-persist";
 import type { IComposingSettings, IDisplay, IPersonalization } from "@/lib/types/get-user-settings-response";
 import {
@@ -11,6 +10,9 @@ import {
   SettingSelectRow,
   SaveSettingsBar,
 } from "./shared";
+import { Paintbrush, Layout, Type, Columns, Rows, Maximize2, Minimize2, Check, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 /* ---- defaults ---- */
 const DEFAULT_COMPOSING: IComposingSettings = {
@@ -21,7 +23,6 @@ const DEFAULT_COMPOSING: IComposingSettings = {
   default_font_size: 14,
 };
 
-/* ---- component ---- */
 export default function MailAppearance({ email }: { email: string }) {
   const { settings, saveMultiple, isSaving } = useSettingsPersist(email);
 
@@ -79,55 +80,82 @@ export default function MailAppearance({ email }: { email: string }) {
   };
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-10">
-        <SettingsPageHeader title="Messages and composing" />
+    <div className="w-full space-y-8 animate-in fade-in duration-150">
+      <SettingsPageHeader
+        title="Appearance"
+        description="Customize the layout, message density, typography, and composing environment."
+        icon={<Paintbrush className="size-5" />}
+        badge={<Badge variant="outline" className="text-xs font-normal">Interface</Badge>}
+      />
 
-        {/* ---- General ---- */}
-        <SettingsSection title="General">
-          <SettingToggleRow
-            label="Daily email notifications"
-            tooltip="Receive a daily summary of your messages"
-            checked={dailyEmails}
-            onCheckedChange={(v) => { setDailyEmails(v); markDirty(); }}
-          />
-        </SettingsSection>
+      {/* ---- General Section ---- */}
+      <SettingsSection
+        title="General Preferences"
+        description="Daily summaries and appearance preferences"
+        icon={<Sparkles className="size-4" />}
+      >
+        <SettingToggleRow
+          label="Daily email digest & highlights"
+          description="Receive a consolidated daily summary of notable emails"
+          tooltip="Receive a daily summary of your messages"
+          checked={dailyEmails}
+          onCheckedChange={(v) => { setDailyEmails(v); markDirty(); }}
+        />
+      </SettingsSection>
 
-        {/* ---- Composing ---- */}
-        <SettingsSection title="Composing">
-          <SettingSelectRow
-            label="Composer mode"
-            value={composing.composer_mode}
-            onValueChange={(v) => updateComposing("composer_mode", v as IComposingSettings["composer_mode"])}
-            options={[
-              { value: "normal", label: "Normal" },
-              { value: "rich", label: "Rich Text" },
-              { value: "plain", label: "Plain Text" },
-            ]}
-          />
-          <SettingSelectRow
-            label="Conversations per page"
-            value={String(composing.conversations_per_page)}
-            onValueChange={(v) => updateComposing("conversations_per_page", Number(v))}
-            options={[
-              { value: "25", label: "25" },
-              { value: "50", label: "50" },
-              { value: "100", label: "100" },
-            ]}
-            triggerClassName="w-[100px]"
-          />
-          <SettingSelectRow
-            label="Text direction"
-            value={composing.text_direction}
-            onValueChange={(v) => updateComposing("text_direction", v as "ltr" | "rtl")}
-            options={[
-              { value: "ltr", label: "Left to Right" },
-              { value: "rtl", label: "Right to Left" },
-            ]}
-          />
-          <div className="flex items-center justify-between py-2">
-            <span className="text-sm">Default font / size</span>
-            <div className="flex gap-2">
+      {/* ---- Composing Section ---- */}
+      <SettingsSection
+        title="Typography & Composing"
+        description="Default text editor mode, fonts, and pagination"
+        icon={<Type className="size-4" />}
+      >
+        <SettingSelectRow
+          label="Composer editor mode"
+          description="Standard rich text or lightweight markdown-style editor"
+          value={composing.composer_mode}
+          onValueChange={(v) => updateComposing("composer_mode", v as IComposingSettings["composer_mode"])}
+          options={[
+            { value: "normal", label: "Normal (Standard)" },
+            { value: "rich", label: "Rich Text (Full formatting)" },
+            { value: "plain", label: "Plain Text (Markdown friendly)" },
+          ]}
+        />
+        <SettingSelectRow
+          label="Conversations per page"
+          description="How many threads to show per mailbox page"
+          value={String(composing.conversations_per_page)}
+          onValueChange={(v) => updateComposing("conversations_per_page", Number(v))}
+          options={[
+            { value: "25", label: "25 conversations" },
+            { value: "50", label: "50 conversations" },
+            { value: "100", label: "100 conversations" },
+          ]}
+          triggerClassName="sm:w-[160px]"
+        />
+        <SettingSelectRow
+          label="Reading & text direction"
+          description="Default direction for message viewing and typing"
+          value={composing.text_direction}
+          onValueChange={(v) => updateComposing("text_direction", v as "ltr" | "rtl")}
+          options={[
+            { value: "ltr", label: "Left to Right (LTR)" },
+            { value: "rtl", label: "Right to Left (RTL)" },
+          ]}
+          triggerClassName="sm:w-[160px]"
+        />
+
+        {/* Font family & Font size */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 px-2 rounded-xl hover:bg-muted/40 transition-colors">
+          <div className="space-y-0.5">
+            <span className="text-sm sm:text-base font-medium text-foreground">
+              Default font family & size
+            </span>
+            <p className="text-xs text-muted-foreground">
+              Applied automatically to newly composed emails
+            </p>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex-1 sm:flex-none">
               <SettingSelectRow
                 label=""
                 value={composing.default_font}
@@ -137,127 +165,225 @@ export default function MailAppearance({ email }: { email: string }) {
                   { value: "times", label: "Times New Roman" },
                   { value: "calibri", label: "Calibri" },
                 ]}
-                triggerClassName="w-[130px]"
+                triggerClassName="w-full sm:w-[130px]"
+                className="py-0 px-0 hover:bg-transparent"
               />
+            </div>
+            <div className="w-24 sm:w-[80px]">
               <SettingSelectRow
                 label=""
                 value={String(composing.default_font_size)}
                 onValueChange={(v) => updateComposing("default_font_size", Number(v))}
                 options={[
-                  { value: "12", label: "12" },
-                  { value: "14", label: "14" },
-                  { value: "16", label: "16" },
-                  { value: "18", label: "18" },
+                  { value: "12", label: "12 px" },
+                  { value: "14", label: "14 px" },
+                  { value: "16", label: "16 px" },
+                  { value: "18", label: "18 px" },
                 ]}
-                triggerClassName="w-[70px]"
+                triggerClassName="w-full sm:w-[80px]"
+                className="py-0 px-0 hover:bg-transparent"
               />
             </div>
           </div>
-        </SettingsSection>
+        </div>
+      </SettingsSection>
 
-        {/* ---- Layout ---- */}
-        <SettingsSection title="Layout">
-          <div className="space-y-6">
-            {/* Inbox layout */}
-            <div>
-              <p className="text-sm mb-3">Inbox</p>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                <LayoutOption
-                  id="column"
-                  selected={inboxLayout === "column"}
-                  onSelect={() => { setInboxLayout("column"); markDirty(); }}
-                  label="Column"
-                  imageSrc="/email-inbox-layout.png"
-                />
-                <LayoutOption
-                  id="row"
-                  selected={inboxLayout === "row"}
-                  onSelect={() => { setInboxLayout("row"); markDirty(); }}
-                  label="Row"
-                  imageSrc="/email-inbox-row.png"
-                />
-              </div>
-            </div>
-
-            {/* Composer layout */}
-            <div>
-              <p className="text-sm mb-3">Composer</p>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                <LayoutOption
-                  id="normal"
-                  selected={composerLayout === "normal"}
-                  onSelect={() => { setComposerLayout("normal"); markDirty(); }}
-                  label="Normal"
-                  imageSrc="/email-composer-normal.png"
-                />
-                <LayoutOption
-                  id="maximized"
-                  selected={composerLayout === "maximized"}
-                  onSelect={() => { setComposerLayout("maximized"); markDirty(); }}
-                  label="Maximized"
-                  imageSrc="/maximized-email-composer.png"
-                />
-              </div>
+      {/* ---- Layout Section ---- */}
+      <SettingsSection
+        title="Layout & Panes"
+        description="Configure your inbox view split and default composer sizing"
+        icon={<Layout className="size-4" />}
+      >
+        <div className="space-y-6 pt-2">
+          {/* Inbox layout */}
+          <div className="space-y-3">
+            <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Inbox Layout
+            </span>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-lg">
+              <VisualLayoutCard
+                title="Column Split"
+                description="List and reading pane side-by-side"
+                icon={<Columns className="size-5" />}
+                selected={inboxLayout === "column"}
+                onSelect={() => { setInboxLayout("column"); markDirty(); }}
+                preview={
+                  <div className="w-full h-16 rounded-md bg-muted/60 p-1.5 flex gap-1.5 border border-border/50">
+                    <div className="w-1/3 h-full rounded bg-muted-foreground/20 space-y-1 p-1">
+                      <div className="w-full h-1.5 bg-muted-foreground/30 rounded" />
+                      <div className="w-3/4 h-1.5 bg-muted-foreground/20 rounded" />
+                    </div>
+                    <div className="flex-1 h-full rounded bg-muted-foreground/10 p-1 space-y-1">
+                      <div className="w-1/2 h-2 bg-muted-foreground/30 rounded" />
+                      <div className="w-full h-1.5 bg-muted-foreground/20 rounded" />
+                      <div className="w-4/5 h-1.5 bg-muted-foreground/20 rounded" />
+                    </div>
+                  </div>
+                }
+              />
+              <VisualLayoutCard
+                title="Row View"
+                description="Full-width thread list"
+                icon={<Rows className="size-5" />}
+                selected={inboxLayout === "row"}
+                onSelect={() => { setInboxLayout("row"); markDirty(); }}
+                preview={
+                  <div className="w-full h-16 rounded-md bg-muted/60 p-1.5 flex flex-col gap-1 border border-border/50 justify-center">
+                    <div className="w-full h-2 rounded bg-muted-foreground/25" />
+                    <div className="w-full h-2 rounded bg-muted-foreground/20" />
+                    <div className="w-full h-2 rounded bg-muted-foreground/15" />
+                  </div>
+                }
+              />
             </div>
           </div>
-        </SettingsSection>
 
-        {/* ---- Density ---- */}
-        <SettingsSection title="Density" description="Choose the spacing between elements">
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <LayoutOption
-              id="comfortable"
-              selected={density === "comfortable"}
-              onSelect={() => { setDensity("comfortable"); markDirty(); }}
-              label="Comfortable"
-              imageSrc="/comfortable-email-density.png"
-            />
-            <LayoutOption
-              id="compact"
-              selected={density === "compact"}
-              onSelect={() => { setDensity("compact"); markDirty(); }}
-              label="Compact"
-              imageSrc="/placeholder.svg?height=150&width=150&query=email compact density"
-            />
+          {/* Composer layout */}
+          <div className="space-y-3 pt-4 border-t border-border/40">
+            <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Composer Sizing
+            </span>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-lg">
+              <VisualLayoutCard
+                title="Normal Window"
+                description="Floating bottom-right drawer"
+                icon={<Minimize2 className="size-5" />}
+                selected={composerLayout === "normal"}
+                onSelect={() => { setComposerLayout("normal"); markDirty(); }}
+                preview={
+                  <div className="w-full h-16 rounded-md bg-muted/60 p-1.5 relative border border-border/50">
+                    <div className="absolute bottom-1.5 right-1.5 w-1/2 h-4/5 rounded bg-primary/20 border border-primary/40 flex flex-col p-1 gap-0.5">
+                      <div className="w-full h-1 bg-primary/40 rounded" />
+                      <div className="w-3/4 h-1 bg-primary/30 rounded" />
+                    </div>
+                  </div>
+                }
+              />
+              <VisualLayoutCard
+                title="Maximized Modal"
+                description="Centered modal with focus"
+                icon={<Maximize2 className="size-5" />}
+                selected={composerLayout === "maximized"}
+                onSelect={() => { setComposerLayout("maximized"); markDirty(); }}
+                preview={
+                  <div className="w-full h-16 rounded-md bg-muted/60 p-1.5 flex items-center justify-center border border-border/50">
+                    <div className="w-4/5 h-4/5 rounded bg-primary/20 border border-primary/40 p-1 space-y-1">
+                      <div className="w-1/2 h-1 bg-primary/40 rounded" />
+                      <div className="w-full h-1 bg-primary/30 rounded" />
+                      <div className="w-3/4 h-1 bg-primary/20 rounded" />
+                    </div>
+                  </div>
+                }
+              />
+            </div>
           </div>
-        </SettingsSection>
+        </div>
+      </SettingsSection>
 
-        <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
-      </div>
+      {/* ---- Density Section ---- */}
+      <SettingsSection
+        title="Display Density"
+        description="Choose the compact spacing between list items and table rows"
+        icon={<Paintbrush className="size-4" />}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-lg pt-1">
+          <VisualLayoutCard
+            title="Comfortable"
+            description="Generous padding for clarity"
+            selected={density === "comfortable"}
+            onSelect={() => { setDensity("comfortable"); markDirty(); }}
+            preview={
+              <div className="w-full h-16 rounded-md bg-muted/60 p-2 flex flex-col justify-around border border-border/50">
+                <div className="flex items-center gap-2">
+                  <div className="size-2 rounded-full bg-primary/60 shrink-0" />
+                  <div className="h-2 w-full bg-muted-foreground/30 rounded" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="size-2 rounded-full bg-muted-foreground/40 shrink-0" />
+                  <div className="h-2 w-3/4 bg-muted-foreground/20 rounded" />
+                </div>
+              </div>
+            }
+          />
+          <VisualLayoutCard
+            title="Compact"
+            description="Dense layout for large inboxes"
+            selected={density === "compact"}
+            onSelect={() => { setDensity("compact"); markDirty(); }}
+            preview={
+              <div className="w-full h-16 rounded-md bg-muted/60 p-1 flex flex-col justify-between border border-border/50">
+                <div className="h-1.5 w-full bg-muted-foreground/30 rounded" />
+                <div className="h-1.5 w-5/6 bg-muted-foreground/25 rounded" />
+                <div className="h-1.5 w-4/5 bg-muted-foreground/20 rounded" />
+                <div className="h-1.5 w-full bg-muted-foreground/15 rounded" />
+              </div>
+            }
+          />
+        </div>
+      </SettingsSection>
+
+      <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
     </div>
   );
 }
 
-/* ---- LayoutOption sub-component ---- */
-interface LayoutOptionProps {
-  id: string;
+/* ---- Visual layout selector card ---- */
+interface VisualLayoutCardProps {
+  title: string;
+  description?: string;
+  icon?: React.ReactNode;
   selected: boolean;
   onSelect: () => void;
-  label: string;
-  imageSrc: string;
+  preview: React.ReactNode;
 }
 
-function LayoutOption({ id, selected, onSelect, label, imageSrc }: LayoutOptionProps) {
+const VisualLayoutCard = memo(function VisualLayoutCard({
+  title,
+  description,
+  icon,
+  selected,
+  onSelect,
+  preview,
+}: VisualLayoutCardProps) {
   return (
-    <div
+    <button
+      type="button"
       role="radio"
       aria-checked={selected}
-      tabIndex={0}
       onClick={onSelect}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect(); }}
-      className={`relative rounded-md overflow-hidden cursor-pointer border transition-colors ${
-        selected ? "border-blue-500" : "border-border"
-      }`}
+      className={cn(
+        "group relative flex flex-col text-left p-3 rounded-2xl border transition-all duration-150 focus:outline-hidden",
+        selected
+          ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary/40"
+          : "border-border/70 bg-card/60 hover:border-border hover:bg-muted/40"
+      )}
     >
-      <div className="bg-muted aspect-square relative">
-        <Image
-          src={imageSrc || "/placeholder.svg"}
-          alt={`${label} layout`}
-          fill
-          className="object-contain p-2"
-        />
+      <div className="mb-2.5 overflow-hidden rounded-lg">
+        {preview}
       </div>
-      <div className="text-center py-2 text-sm bg-muted/50">{label}</div>
-    </div>
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {icon && <span className="text-muted-foreground shrink-0">{icon}</span>}
+          <span className="text-xs sm:text-sm font-semibold truncate text-foreground">
+            {title}
+          </span>
+        </div>
+        <div
+          className={cn(
+            "size-4 rounded-full border flex items-center justify-center shrink-0 transition-colors",
+            selected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border/80 bg-background"
+          )}
+        >
+          {selected && <Check className="size-2.5 stroke-[3]" />}
+        </div>
+      </div>
+      {description && (
+        <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">
+          {description}
+        </p>
+      )}
+    </button>
   );
-}
+});

@@ -1,7 +1,7 @@
-
 "use client"
 
 import { useForm, FormProvider } from "react-hook-form"
+import { Button } from "@/components/ui/button"
 
 type LabelVisibility = {
   showInLabelList: boolean
@@ -10,12 +10,12 @@ type LabelVisibility = {
   showInIMAP: boolean
 }
 
-type LabelSettings = {
+type LabelSettingsData = {
   [key: string]: LabelVisibility
 }
 
 export default function LabelSettings() {
-  const defaultValues: LabelSettings = {
+  const defaultValues: LabelSettingsData = {
     inbox: { showInLabelList: false, showIfUnread: false, showInIMAP: false },
     starred: { showInLabelList: true, showIfUnread: false, showInIMAP: true },
     snoozed: { showInLabelList: true, showIfUnread: false, showInIMAP: true },
@@ -35,362 +35,75 @@ export default function LabelSettings() {
     repo: { showInLabelList: true, showIfUnread: true, showInMessageList: true, showInIMAP: true },
   }
 
-  const methods = useForm<LabelSettings>({
+  const methods = useForm<LabelSettingsData>({
     defaultValues,
   })
 
-  const { handleSubmit, register, watch } = methods
+  const { handleSubmit, register } = methods
 
-  const onSubmit = (data: LabelSettings) => {
+  const onSubmit = (data: LabelSettingsData) => {
     console.log("Form submitted:", data)
-    // Here you would typically send this data to your backend
   }
-
-  const formValues = watch()
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className=" bg-[#0c0c0e] p-6">
-        <div className="space-y-6 bg-[#0c0c0e]">
+      <form onSubmit={handleSubmit(onSubmit)} className="rounded-2xl border border-border/70 bg-card/70 p-4 sm:p-6 space-y-6">
+        <div className="space-y-6">
           {/* System Labels Section */}
-          <div>
-            <div className="grid grid-cols-[1fr_1fr_1fr] font-medium text-sm mb-2">
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              System Labels Visibility
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-semibold uppercase text-muted-foreground/70 pb-2 border-b border-border/40">
               <div>System labels</div>
               <div>Show in label list</div>
-              <div></div>
+              <div>IMAP Visibility</div>
             </div>
 
-            <div className="space-y-1">
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>Inbox</div>
-                <div></div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("inbox.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>Starred</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("starred.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("starred.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>Snoozed</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("snoozed.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("snoozed.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>Important</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("important.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("important.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>Sent</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("sent.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("sent.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>Scheduled</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("scheduled.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("scheduled.showIfUnread")} />
-                    <span>Show if unread</span>
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("scheduled.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm bg-[#1a1a1e]">
-                <div>Drafts</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("drafts.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("drafts.showIfUnread")} />
-                    <span>Show if unread</span>
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("drafts.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>All Mail</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("allMail.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("allMail.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>Spam</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("spam.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("spam.showIfUnread")} />
-                    <span>Show if unread</span>
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("spam.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>Trash</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("trash.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input type="checkbox" className="mr-2" {...register("trash.showInIMAP")} />
-                  <span>Show in IMAP</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Categories Section */}
-          <div>
-            <div className="grid grid-cols-[1fr_1fr_1fr]  bg-[#0c0c0e] font-medium text-sm mb-2">
-              <div>Categories</div>
-              <div>Show in label list</div>
-              <div>Show in message list</div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="grid grid-cols-[1fr_1fr_1fr]  bg-[#0c0c0e] items-center py-1 text-sm">
-                <div>Categories</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("categories.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div></div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr]  bg-[#0c0c0e] items-center py-1 text-sm">
-                <div>Social</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("social.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("social.showInMessageList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr]  bg-[#0c0c0e] items-center py-1 text-sm">
-                <div>Updates</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("updates.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("updates.showInMessageList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr]  bg-[#0c0c0e]   items-center py-1 text-sm">
-                <div>Forums</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("forums.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("forums.showInMessageList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>Promotions</div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("promotions.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("promotions.showInMessageList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Labels Section */}
-          <div>
-            <div className="grid grid-cols-[1fr_1fr_1fr_1fr] font-medium text-sm mb-2">
-              <div>Labels</div>
-              <div>Show in label list</div>
-              <div>Show in message list</div>
-              <div>Actions</div>
-            </div>
-
-            <div>
-              <button type="button" className="border border-gray-300 rounded px-2 py-1 text-sm mb-2">
-                Create new label
-              </button>
-            </div>
-
-            <div className="space-y-1">
-              <div className="grid grid-cols-[1fr_1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>
-                  <div>Meetings</div>
-                  <div className="text-gray-500 text-xs">5 conversations</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("meetings.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("meetings.showIfUnread")} />
-                    <span>Show if unread</span>
-                  </label>
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("meetings.showInMessageList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button type="button" className="text-blue-600">
-                    remove
-                  </button>
-                  <button type="button" className="text-blue-600">
-                    edit
-                  </button>
-                  <div className="flex items-center ml-4">
-                    <input type="checkbox" className="mr-2" {...register("meetings.showInIMAP")} />
-                    <span>Show in IMAP</span>
+            <div className="divide-y divide-border/30 text-xs sm:text-sm">
+              {[
+                { name: "Inbox", key: "inbox", imapOnly: true },
+                { name: "Starred", key: "starred" },
+                { name: "Snoozed", key: "snoozed" },
+                { name: "Important", key: "important" },
+                { name: "Sent", key: "sent" },
+                { name: "Scheduled", key: "scheduled", hasUnread: true },
+                { name: "Drafts", key: "drafts", hasUnread: true },
+                { name: "All Mail", key: "allMail" },
+                { name: "Spam", key: "spam", hasUnread: true },
+                { name: "Trash", key: "trash" },
+              ].map((item) => (
+                <div key={item.key} className="grid grid-cols-1 sm:grid-cols-3 items-center py-2.5 gap-2">
+                  <div className="font-medium text-foreground">{item.name}</div>
+                  <div className="flex items-center gap-3">
+                    {!item.imapOnly && (
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" className="rounded" {...register(`${item.key}.showInLabelList` as any)} />
+                        <span className="text-xs text-muted-foreground">Show</span>
+                      </label>
+                    )}
+                    {item.hasUnread && (
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" className="rounded" {...register(`${item.key}.showIfUnread` as any)} />
+                        <span className="text-xs text-muted-foreground">If unread</span>
+                      </label>
+                    )}
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" className="rounded" {...register(`${item.key}.showInIMAP` as any)} />
+                      <span className="text-xs text-muted-foreground">Show in IMAP</span>
+                    </label>
                   </div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_1fr_1fr_1fr] items-center py-1 text-sm">
-                <div>
-                  <div>Repo</div>
-                  <div className="text-gray-500 text-xs">0 conversations</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("repo.showInLabelList")} />
-                    <span>Show</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("repo.showIfUnread")} />
-                    <span>Show if unread</span>
-                  </label>
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" {...register("repo.showInMessageList")} />
-                    <span>Show</span>
-                  </label>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button type="button" className="text-blue-600">
-                    remove
-                  </button>
-                  <button type="button" className="text-blue-600">
-                    edit
-                  </button>
-                  <div className="flex items-center ml-4">
-                    <input type="checkbox" className="mr-2" {...register("repo.showInIMAP")} />
-                    <span>Show in IMAP</span>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          <div className="mt-6">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-            >
-              Save Changes
-            </button>
+          <div className="pt-2 flex justify-end">
+            <Button type="submit" size="sm" className="rounded-xl px-5">
+              Save Label Preferences
+            </Button>
           </div>
         </div>
       </form>

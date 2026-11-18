@@ -1,6 +1,5 @@
 "use client"
 
-
 import { useEffect, useState } from "react"
 import { useForm, useFieldArray, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -12,13 +11,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { X, Plus, Mail, CalendarIcon } from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { X, Plus, CalendarIcon, Ban, Inbox, MessageSquare, Palmtree, Check, Sliders } from "lucide-react"
 import { useSettingsStore } from "@/store/settings"
 import { useAppSelector } from "@/store/hooks"
 import { Calendar } from "@/components/ui/calendar"
-
 import {
   Popover,
   PopoverContent,
@@ -27,7 +23,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -36,6 +31,9 @@ import {
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { airsendDB } from "@/db"
+import { SettingsPageHeader, SettingsSection } from "../shared"
+import { toast } from "sonner"
+
 // Define the validation schema
 const emailOrDomainRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$|^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
@@ -56,11 +54,10 @@ const formSchema = z.object({
       value: z.string().regex(emailRegex, "Please enter a valid email").or(z.literal("*")).optional(),
     }),
   ),
-
   autoReply: z.object({
     enabled: z.boolean().optional(),
-    ON_NEW_MESSAGE: z.object({}).optional(),
-    ON_REPLY_MESSAGE: z.object({}).optional(),
+    ON_NEW_MESSAGE: z.any().optional(),
+    ON_REPLY_MESSAGE: z.any().optional(),
   }),
   vacationSender: z.object({
     enabled: z.boolean().optional(),
@@ -68,7 +65,6 @@ const formSchema = z.object({
     startDate: z.string().optional(),
     endDate: z.string().optional(),
   }),
-
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -80,6 +76,7 @@ export default function EmailSettingsForm({ email }: { email: string }) {
   const [newBlockedSender, setNewBlockedSender] = useState("")
   const [newBlockedRecipient, setNewBlockedRecipient] = useState("")
   const [newCatchAllEmail, setNewCatchAllEmail] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Initialize form with default values
   const form = useForm<FormValues>({
@@ -90,8 +87,8 @@ export default function EmailSettingsForm({ email }: { email: string }) {
       catchAllEmails: [{ value: "*" }],
       autoReply: {
         enabled: false,
-        ON_NEW_MESSAGE: {},
-        ON_REPLY_MESSAGE: {}
+        ON_NEW_MESSAGE: "",
+        ON_REPLY_MESSAGE: "",
       },
       vacationSender: {
         enabled: false,
@@ -101,12 +98,8 @@ export default function EmailSettingsForm({ email }: { email: string }) {
       },
     },
   })
-  const {
+  const { reset } = form
 
-    reset, watch,
-    formState: { errors },
-  } = form
-  // Set up field arrays for lists
   const {
     fields: blockedSendersFields,
     append: appendBlockedSender,
@@ -134,431 +127,452 @@ export default function EmailSettingsForm({ email }: { email: string }) {
     name: "catchAllEmails",
   })
 
-
-
   // Handle form submission
   const onSubmit = async (data: FormValues) => {
-
     if (!currAccount?.email) return
-    const obj = {
-      blocked_sent_domain: data.blockedSenders.map((sender) => sender.value) || [],
-      blocked_recepient_domain: data.blockedRecipients.map((recipient) => recipient.value) || [],
-      catch_emails: data.catchAllEmails.map((email) => email.value) || [],
-      auto_reply: data.autoReply,
-      vacationSender: data.vacationSender,
+    setIsSubmitting(true)
+    try {
+      const obj = {
+        blocked_sent_domain: data.blockedSenders.map((s) => s.value).filter(Boolean) as string[],
+        blocked_recepient_domain: data.blockedRecipients.map((r) => r.value).filter(Boolean) as string[],
+        catch_emails: data.catchAllEmails.map((c) => c.value).filter(Boolean) as string[],
+        auto_reply: data.autoReply,
+        vacationSender: data.vacationSender,
+      }
+      await airsendDB.updateMultipleNestedItems("settings", currAccount.email, {
+        "settings.blocked_sent_domain": obj.blocked_sent_domain,
+        "settings.blocked_recepient_domain": obj.blocked_recepient_domain,
+        "settings.catch_emails": obj.catch_emails,
+        "settings.auto_reply": data.autoReply as any || {},
+        "settings.vacationSender": data.vacationSender as any || {},
+      })
+      setSettings(obj as any)
+      toast.success("Email configuration updated")
+    } catch (err) {
+      toast.error("Failed to update email configuration")
+    } finally {
+      setIsSubmitting(false)
     }
-    await airsendDB.updateMultipleNestedItems("settings", currAccount?.email as string, {
-      "settings.blocked_sent_domain": data?.blockedSenders?.map((sender) => sender.value) as string[] || [],
-      "settings.blocked_recepient_domain": data?.blockedRecipients?.map((recipient) => recipient.value) as string[] || [],
-      "settings.catch_emails": data?.catchAllEmails?.map((email) => email.value) as string[] || [],
-      "settings.auto_reply": data.autoReply as any|| {},
-      "settings.vacationSender": data.vacationSender as any || {}
-    })
-    setSettings(obj as any)
-
   }
 
-  // Add a new blocked sender
   const handleAddBlockedSender = () => {
-    if (newBlockedSender && emailOrDomainRegex.test(newBlockedSender)) {
-      appendBlockedSender({ value: newBlockedSender })
+    if (newBlockedSender && emailOrDomainRegex.test(newBlockedSender.trim())) {
+      appendBlockedSender({ value: newBlockedSender.trim() })
       setNewBlockedSender("")
     }
   }
 
-  // Add a new blocked recipient
   const handleAddBlockedRecipient = () => {
-    if (newBlockedRecipient && emailOrDomainRegex.test(newBlockedRecipient)) {
-      appendBlockedRecipient({ value: newBlockedRecipient })
+    if (newBlockedRecipient && emailOrDomainRegex.test(newBlockedRecipient.trim())) {
+      appendBlockedRecipient({ value: newBlockedRecipient.trim() })
       setNewBlockedRecipient("")
     }
   }
 
-  // Add a new catch-all email
   const handleAddCatchAllEmail = () => {
-    if (newCatchAllEmail && (emailRegex.test(newCatchAllEmail) || newCatchAllEmail === "*")) {
-      appendCatchAllEmail({ value: newCatchAllEmail })
+    const trimmed = newCatchAllEmail.trim()
+    if (trimmed && (emailRegex.test(trimmed) || trimmed === "*")) {
+      appendCatchAllEmail({ value: trimmed })
       setNewCatchAllEmail("")
     }
   }
 
-
-
   useEffect(() => {
-    reset({
-      blockedSenders: settings?.blocked_sent_domain?.map((domain) => ({ value: domain })) || [],
-      blockedRecipients: settings?.blocked_recepient_domain?.map((domain) => ({ value: domain })) || [],
-      catchAllEmails: settings?.catch_emails?.map((email) => ({ value: email })) || [{ value: "*" }],
-
-      autoReply: settings?.auto_reply,
-      vacationSender: settings?.vacationSender || { enabled: false, message: "", startDate: "", endDate: "" },
-
-    });
-  }, [settings, reset]);
+    if (settings) {
+      reset({
+        blockedSenders: settings?.blocked_sent_domain?.map((domain) => ({ value: domain })) || [],
+        blockedRecipients: settings?.blocked_recepient_domain?.map((domain) => ({ value: domain })) || [],
+        catchAllEmails: settings?.catch_emails?.map((e) => ({ value: e })) || [{ value: "*" }],
+        autoReply: settings?.auto_reply || { enabled: false, ON_NEW_MESSAGE: "", ON_REPLY_MESSAGE: "" },
+        vacationSender: settings?.vacationSender || { enabled: false, message: "", startDate: "", endDate: "" },
+      })
+    }
+  }, [settings, reset])
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Tabs defaultValue="blocking" className="w-full">
-          <TabsList className="grid grid-cols-3 md:grid-cols-4 mb-4">
-            <TabsTrigger value="blocking">Blocking</TabsTrigger>
+    <div className="w-full space-y-8 animate-in fade-in duration-150">
+      <SettingsPageHeader
+        title="Email Config"
+        description="Manage domain-level spam blocklists, catch-all routing, automated responses, and vacation responders."
+        icon={<Sliders className="size-5" />}
+        badge={<Badge variant="outline" className="text-xs font-normal">Delivery</Badge>}
+      />
 
-            <TabsTrigger value="catchall">Catch All</TabsTrigger>
-            <TabsTrigger value="autoreply">Auto Reply</TabsTrigger>
-            <TabsTrigger value="vacation">Vacation</TabsTrigger>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Tabs defaultValue="blocking" className="w-full">
+            {/* Responsive Scrollable Tab List */}
+            <div className="overflow-x-auto no-scrollbar pb-1">
+              <TabsList className="h-10 p-1 bg-muted/60 rounded-xl inline-flex min-w-full sm:min-w-0 sm:grid sm:grid-cols-4">
+                <TabsTrigger value="blocking" className="rounded-lg text-xs sm:text-sm gap-1.5 flex-1 whitespace-nowrap">
+                  <Ban className="size-3.5" />
+                  <span>Blocking</span>
+                </TabsTrigger>
+                <TabsTrigger value="catchall" className="rounded-lg text-xs sm:text-sm gap-1.5 flex-1 whitespace-nowrap">
+                  <Inbox className="size-3.5" />
+                  <span>Catch All</span>
+                </TabsTrigger>
+                <TabsTrigger value="autoreply" className="rounded-lg text-xs sm:text-sm gap-1.5 flex-1 whitespace-nowrap">
+                  <MessageSquare className="size-3.5" />
+                  <span>Auto Reply</span>
+                </TabsTrigger>
+                <TabsTrigger value="vacation" className="rounded-lg text-xs sm:text-sm gap-1.5 flex-1 whitespace-nowrap">
+                  <Palmtree className="size-3.5" />
+                  <span>Vacation</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-          </TabsList>
-
-          {/* Blocking Tab */}
-          <TabsContent value="blocking" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Blocked Senders</CardTitle>
-                <CardDescription>
-                  Add email addresses or domains you want to block from sending you emails.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+            {/* ---- Blocking Tab ---- */}
+            <TabsContent value="blocking" className="space-y-6 pt-2">
+              <Card className="rounded-2xl border-border/70 bg-card/70 shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base sm:text-lg">Blocked Senders</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Emails from these addresses or entire domains will be rejected immediately.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Input
-                      placeholder="Enter email or domain to block"
+                      placeholder="e.g. spammer@domain.com or @annoying.com"
                       value={newBlockedSender}
                       onChange={(e) => setNewBlockedSender(e.target.value)}
-                      className="flex-1"
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddBlockedSender())}
+                      className="h-9 text-xs sm:text-sm bg-background flex-1 rounded-xl"
                     />
                     <Button
                       type="button"
+                      size="sm"
                       onClick={handleAddBlockedSender}
-                      disabled={!newBlockedSender || !emailOrDomainRegex.test(newBlockedSender)}
+                      disabled={!newBlockedSender.trim() || !emailOrDomainRegex.test(newBlockedSender.trim())}
+                      className="h-9 rounded-xl text-xs gap-1"
                     >
-                      <Plus className="h-4 w-4 mr-2" /> Add
+                      <Plus className="size-3.5" /> Block Sender
                     </Button>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 pt-2">
                     {blockedSendersFields.map((field, index) => (
-                      <Badge key={field.id} variant="secondary" className="px-3 py-1.5 text-sm">
-                        {field.value}
-                        <Button
+                      <Badge
+                        key={field.id}
+                        variant="secondary"
+                        className="px-2.5 py-1 text-xs font-mono rounded-lg flex items-center gap-1.5 bg-muted/80 border border-border/60"
+                      >
+                        <span>{field.value}</span>
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-4 p-0 ml-2"
                           onClick={() => removeBlockedSender(index)}
+                          className="hover:text-destructive transition-colors p-0.5 rounded-full"
+                          aria-label={`Remove ${field.value}`}
                         >
-                          <X className="h-3 w-3" />
-                          <span className="sr-only">Remove</span>
-                        </Button>
+                          <X className="size-3" />
+                        </button>
                       </Badge>
                     ))}
                     {blockedSendersFields.length === 0 && (
-                      <p className="text-sm text-muted-foreground">No blocked senders added yet.</p>
+                      <p className="text-xs text-muted-foreground py-2">No blocked senders configured.</p>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Blocked Recipients</CardTitle>
-                <CardDescription>Add email addresses or domains you want to prevent sending emails to.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <Card className="rounded-2xl border-border/70 bg-card/70 shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base sm:text-lg">Blocked Recipients</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Prevent outbound messages from being sent to these destination addresses or domains.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Input
-                      placeholder="Enter email or domain to block"
+                      placeholder="e.g. competitor.com or restricted@org.com"
                       value={newBlockedRecipient}
                       onChange={(e) => setNewBlockedRecipient(e.target.value)}
-                      className="flex-1"
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddBlockedRecipient())}
+                      className="h-9 text-xs sm:text-sm bg-background flex-1 rounded-xl"
                     />
                     <Button
                       type="button"
+                      size="sm"
                       onClick={handleAddBlockedRecipient}
-                      disabled={!newBlockedRecipient || !emailOrDomainRegex.test(newBlockedRecipient)}
+                      disabled={!newBlockedRecipient.trim() || !emailOrDomainRegex.test(newBlockedRecipient.trim())}
+                      className="h-9 rounded-xl text-xs gap-1"
                     >
-                      <Plus className="h-4 w-4 mr-2" /> Add
+                      <Plus className="size-3.5" /> Block Recipient
                     </Button>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 pt-2">
                     {blockedRecipientsFields.map((field, index) => (
-                      <Badge key={field.id} variant="secondary" className="px-3 py-1.5 text-sm">
-                        {field.value}
-                        <Button
+                      <Badge
+                        key={field.id}
+                        variant="secondary"
+                        className="px-2.5 py-1 text-xs font-mono rounded-lg flex items-center gap-1.5 bg-muted/80 border border-border/60"
+                      >
+                        <span>{field.value}</span>
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-4 p-0 ml-2"
                           onClick={() => removeBlockedRecipient(index)}
+                          className="hover:text-destructive transition-colors p-0.5 rounded-full"
+                          aria-label={`Remove ${field.value}`}
                         >
-                          <X className="h-3 w-3" />
-                          <span className="sr-only">Remove</span>
-                        </Button>
+                          <X className="size-3" />
+                        </button>
                       </Badge>
                     ))}
                     {blockedRecipientsFields.length === 0 && (
-                      <p className="text-sm text-muted-foreground">No blocked recipients added yet.</p>
+                      <p className="text-xs text-muted-foreground py-2">No blocked recipients configured.</p>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-
-
-
-          {/* Catch All Tab */}
-          <TabsContent value="catchall" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Catch All Email Addresses</CardTitle>
-                <CardDescription>
-                  Add email addresses that will receive all emails sent to non-existent addresses in your domain. Use * as
-                  a wildcard to catch all emails.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+            {/* ---- Catch All Tab ---- */}
+            <TabsContent value="catchall" className="space-y-6 pt-2">
+              <Card className="rounded-2xl border-border/70 bg-card/70 shadow-xs">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base sm:text-lg">Catch-All Addresses</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Designate mailboxes that will intercept all emails sent to non-existent addresses on your domain. Use &quot;*&quot; to route all unmatched mail.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Input
-                      placeholder="Enter email address or *"
+                      placeholder="Enter catch email or *"
                       value={newCatchAllEmail}
                       onChange={(e) => setNewCatchAllEmail(e.target.value)}
-                      className="flex-1"
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddCatchAllEmail())}
+                      className="h-9 text-xs sm:text-sm bg-background flex-1 rounded-xl"
                     />
                     <Button
                       type="button"
+                      size="sm"
                       onClick={handleAddCatchAllEmail}
-                      disabled={!newCatchAllEmail || !(emailRegex.test(newCatchAllEmail) || newCatchAllEmail === "*")}
+                      disabled={!newCatchAllEmail.trim() || !(emailRegex.test(newCatchAllEmail.trim()) || newCatchAllEmail.trim() === "*")}
+                      className="h-9 rounded-xl text-xs gap-1"
                     >
-                      <Plus className="h-4 w-4 mr-2" /> Add
+                      <Plus className="size-3.5" /> Add Catch-All
                     </Button>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 pt-2">
                     {catchAllEmailsFields.map((field, index) => (
-                      <Badge key={field.id} variant="secondary" className="px-3 py-1.5 text-sm">
-                        {field.value}
-                        <Button
+                      <Badge
+                        key={field.id}
+                        variant="secondary"
+                        className="px-2.5 py-1 text-xs font-mono rounded-lg flex items-center gap-1.5 bg-muted/80 border border-border/60"
+                      >
+                        <span>{field.value}</span>
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-4 p-0 ml-2"
                           onClick={() => removeCatchAllEmail(index)}
                           disabled={catchAllEmailsFields.length === 1 && field.value === "*"}
+                          className="hover:text-destructive transition-colors p-0.5 rounded-full disabled:opacity-40"
+                          aria-label={`Remove ${field.value}`}
                         >
-                          <X className="h-3 w-3" />
-                          <span className="sr-only">Remove</span>
-                        </Button>
+                          <X className="size-3" />
+                        </button>
                       </Badge>
                     ))}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* Auto Reply Tab */}
-          <TabsContent value="autoreply" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Auto Reply Settings</CardTitle>
-                <CardDescription>Configure automatic replies to incoming emails.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
+            {/* ---- Auto Reply Tab ---- */}
+            <TabsContent value="autoreply" className="space-y-6 pt-2">
+              <Card className="rounded-2xl border-border/70 bg-card/70 shadow-xs">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base sm:text-lg">Automated Responses</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        Automatically dispatch pre-written replies when incoming messages arrive
+                      </CardDescription>
+                    </div>
                     <Controller
                       name="autoReply.enabled"
                       control={form.control}
                       render={({ field }) => (
-                        <Switch checked={field.value} onCheckedChange={field.onChange} id="auto-reply-enabled" />
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          id="auto-reply-enabled"
+                        />
                       )}
                     />
-                    <Label htmlFor="auto-reply-enabled">Enable Auto Reply</Label>
                   </div>
+                </CardHeader>
+                {form.watch("autoReply.enabled") && (
+                  <CardContent className="space-y-4 pt-2 border-t border-border/40 animate-in fade-in duration-150">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="auto-reply-new" className="text-xs sm:text-sm font-medium">
+                        Reply on New Inbound Threads
+                      </Label>
+                      <textarea
+                        id="auto-reply-new"
+                        className="w-full min-h-[100px] p-3 text-xs sm:text-sm border rounded-xl bg-background/80 outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="Thank you for reaching out. We have received your message and will get back to you shortly."
+                        {...form.register("autoReply.ON_NEW_MESSAGE")}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="auto-reply-thread" className="text-xs sm:text-sm font-medium">
+                        Reply on Existing Thread Follow-ups
+                      </Label>
+                      <textarea
+                        id="auto-reply-thread"
+                        className="w-full min-h-[100px] p-3 text-xs sm:text-sm border rounded-xl bg-background/80 outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="Your reply has been logged. Our team is continuing to investigate."
+                        {...form.register("autoReply.ON_REPLY_MESSAGE")}
+                      />
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            </TabsContent>
 
-                  {form.watch("autoReply.enabled") && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="auto-reply-message">Auto Reply on New Message</Label>
-                        <textarea
-                          id="auto-reply-message"
-                          className="w-full min-h-[120px] p-2 border rounded-md"
-                          placeholder="Thank you for your email. I am currently unavailable and will respond as soon as possible."
-                          {...form.register("autoReply.ON_NEW_MESSAGE", { required: "Auto reply message is required" })}
-                        />
-                        {form.formState.errors.autoReply?.message && (
-                          <p className="text-sm text-red-500">{form.formState.errors.autoReply.message.toString()}</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="auto-reply-message">Auto Reply on Reply of Existing Message</Label>
-                        <textarea
-                          id="auto-reply-message"
-                          className="w-full min-h-[120px] p-2 border rounded-md"
-                          placeholder="Thank you for your email. I am currently unavailable and will respond as soon as possible."
-                          {...form.register("autoReply.ON_REPLY_MESSAGE", { required: "Auto reply message is required" })}
-                        />
-                        {form.formState.errors.autoReply?.message && (
-                          <p className="text-sm text-red-500">{form.formState.errors.autoReply.message.toString()}</p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Vacation Tab */}
-          <TabsContent value="vacation" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Vacation Auto-Responder</CardTitle>
-                <CardDescription>Set up an automatic response when you're away.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
+            {/* ---- Vacation Tab ---- */}
+            <TabsContent value="vacation" className="space-y-6 pt-2">
+              <Card className="rounded-2xl border-border/70 bg-card/70 shadow-xs">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base sm:text-lg">Out of Office Responder</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        Notify senders that you are away during a scheduled date range
+                      </CardDescription>
+                    </div>
                     <Controller
                       name="vacationSender.enabled"
                       control={form.control}
                       render={({ field }) => (
-                        <Switch checked={field.value} onCheckedChange={field.onChange} id="vacation-enabled" />
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          id="vacation-enabled"
+                        />
                       )}
                     />
-                    <Label htmlFor="vacation-enabled">Enable Vacation Auto-Responder</Label>
                   </div>
-
-                  {form.watch("vacationSender.enabled") && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-
-                          <FormField
-                            control={form.control}
-                            name="vacationSender.startDate"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-col">
-                                <FormLabel>Start Date</FormLabel>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <FormControl>
-                                      <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                          "w-[240px] pl-3 text-left font-normal",
-                                          !field.value && "text-muted-foreground"
-                                        )}
-                                      >
-                                        {field.value ? (
-                                          format(field.value, "PPP")
-                                        ) : (
-                                          <span>Pick a date</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                      </Button>
-                                    </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                      mode="single"
-                                      selected={new Date(field.value || new Date())}
-
-                                      onSelect={(date) => field.onChange(date?.toISOString())}
-                                      disabled={(date) => date < new Date()}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="space-y-2">
-
-                          <FormField
-                            control={form.control}
-                            name="vacationSender.endDate"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-col">
-                                <FormLabel>End Date</FormLabel>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <FormControl>
-                                      <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                          "w-[240px] pl-3 text-left font-normal",
-                                          !field.value && "text-muted-foreground"
-                                        )}
-                                      >
-                                        {field.value ? (
-                                          format(field.value, "PPP")
-                                        ) : (
-                                          <span>Pick a date</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                      </Button>
-                                    </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                      mode="single"
-                                      selected={new Date(field.value || new Date())}
-                                      onSelect={(date) => field.onChange(date?.toISOString())}
-                                      disabled={(date) => date < new Date()}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-
-
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="vacation-message">Vacation Message</Label>
-                        <textarea
-                          id="vacation-message"
-                          className="w-full min-h-[120px] p-2 border rounded-md"
-                          placeholder="I am currently on vacation until [return date]. I will have limited access to email during this time."
-                          {...form.register("vacationSender.message")}
-                        />
-                        {form.formState.errors.vacationSender?.message && (
-                          <p className="text-sm text-red-500">{(form.formState.errors.vacationSender.message as any).message.toString()}</p>
+                </CardHeader>
+                {form.watch("vacationSender.enabled") && (
+                  <CardContent className="space-y-4 pt-2 border-t border-border/40 animate-in fade-in duration-150">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Start Date */}
+                      <FormField
+                        control={form.control}
+                        name="vacationSender.startDate"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col space-y-1">
+                            <FormLabel className="text-xs font-medium">Start Date</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full h-9 pl-3 text-left font-normal text-xs sm:text-sm rounded-xl",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {field.value ? (
+                                      format(new Date(field.value), "PPP")
+                                    ) : (
+                                      <span>Pick start date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value ? new Date(field.value) : undefined}
+                                  onSelect={(date: any) => field.onChange(date?.toISOString())}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                      </div>
+                      />
+
+                      {/* End Date */}
+                      <FormField
+                        control={form.control}
+                        name="vacationSender.endDate"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col space-y-1">
+                            <FormLabel className="text-xs font-medium">End Date</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full h-9 pl-3 text-left font-normal text-xs sm:text-sm rounded-xl",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {field.value ? (
+                                      format(new Date(field.value), "PPP")
+                                    ) : (
+                                      <span>Pick return date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value ? new Date(field.value) : undefined}
+                                  onSelect={(date: any) => field.onChange(date?.toISOString())}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* Accounts Tab */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="vacation-message" className="text-xs sm:text-sm font-medium">
+                        Vacation Auto-Reply Message
+                      </Label>
+                      <textarea
+                        id="vacation-message"
+                        className="w-full min-h-[120px] p-3 text-xs sm:text-sm border rounded-xl bg-background/80 outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="I am currently away and will have limited access to email until [return date]."
+                        {...form.register("vacationSender.message")}
+                      />
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            </TabsContent>
+          </Tabs>
 
-        </Tabs>
-
-        <div className="flex justify-end">
-          <Button type="submit" size="lg">
-            Save Settings
-          </Button>
-        </div>
-      </form>
-    </Form>
+          <div className="flex justify-end pt-2">
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl px-6 gap-1.5">
+              {isSubmitting ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Check className="size-4" />
+                  Save Email Configuration
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   )
 }

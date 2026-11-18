@@ -8,6 +8,8 @@ import {
     SettingToggleRow,
     SaveSettingsBar,
 } from "../shared"
+import { Server, Shield, Send, Radio } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 interface ImapSmtpLocal {
     imap_enabled: boolean
@@ -68,13 +70,24 @@ function IMAPSMTP({ email }: { email: string }) {
     }
 
     return (
-        <div className="p-4 md:p-8">
-            <div className="max-w-2xl mx-auto space-y-10">
+        <div className="w-full space-y-8 animate-in fade-in duration-150">
+            <SettingsPageHeader
+                title="IMAP/SMTP"
+                description="Manage external mail client protocols, credentials, read-tracking, and alias sending permissions."
+                icon={<Server className="size-5" />}
+                badge={<Badge variant="outline" className="text-xs font-normal">Protocols</Badge>}
+            />
 
+            <div className="space-y-6">
                 {/* IMAP Section */}
-                <SettingsSection title="IMAP Configuration">
+                <SettingsSection
+                    title="IMAP (Incoming Mail Access)"
+                    description="Allow third-party desktop and mobile clients (Apple Mail, Thunderbird, Outlook) to sync emails via IMAP"
+                    icon={<Radio className="size-4" />}
+                >
                     <SettingToggleRow
                         label="Enable IMAP access"
+                        description="Permit authenticated clients to download and sync your inbox via standard port 993 (SSL/TLS)"
                         tooltip="Allow email clients to connect via IMAP"
                         checked={local.imap_enabled}
                         onCheckedChange={(v) => update("imap_enabled", v)}
@@ -82,29 +95,36 @@ function IMAPSMTP({ email }: { email: string }) {
                 </SettingsSection>
 
                 {/* SMTP Section */}
-                <SettingsSection title="SMTP Configuration">
+                <SettingsSection
+                    title="SMTP (Outgoing Mail Delivery)"
+                    description="Allow external devices and mail servers to dispatch emails through Airsend SMTP relays"
+                    icon={<Send className="size-4" />}
+                >
                     <SettingToggleRow
-                        label="Enable SMTP access"
+                        label="Enable SMTP submission"
+                        description="Allows outgoing message dispatch via port 465 (SSL) or port 587 (STARTTLS)"
                         tooltip="Allow sending emails via external SMTP clients"
                         checked={local.smtp_enabled}
                         onCheckedChange={(v) => update("smtp_enabled", v)}
                     />
                     <SettingToggleRow
-                        label="Allow email tracking"
+                        label="Allow email read-tracking"
+                        description="Inject invisible tracking pixels and delivery receipts into outgoing messages"
                         tooltip="Enable read receipts and tracking pixels in outgoing mails"
                         checked={local.allow_tracking}
                         onCheckedChange={(v) => update("allow_tracking", v)}
                     />
                     <SettingToggleRow
-                        label="Allow sending from aliases"
+                        label="Allow sending from configured aliases"
+                        description="Permit authenticated SMTP sessions to authenticate using any authorized account alias"
                         tooltip="Send emails using any of your configured aliases"
                         checked={local.allow_aliases}
                         onCheckedChange={(v) => update("allow_aliases", v)}
                     />
                 </SettingsSection>
-
-                <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
             </div>
+
+            <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
         </div>
     )
 }

@@ -6,8 +6,9 @@ import { useSettingsPersist } from "@/hooks/use-settings-persist";
 import { SettingsPageHeader, SaveSettingsBar } from "./shared";
 import CalendarGeneral from "./calendar/calendar-general";
 import ConnectedCalendars from "./calendar/connected-calendars";
-import { toast } from "sonner";
 import { useUserConfigStore } from "@/store/settings/user-config";
+import { Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 /* ---- defaults (used before API data arrives) ---- */
 const DEFAULT_CALENDAR: ICalenderConfig = {
@@ -18,7 +19,6 @@ const DEFAULT_CALENDAR: ICalenderConfig = {
   config: [],
 };
 
-/* ------------------------------------------------------------------ */
 function CalendarSettings({ email }: { email: string }) {
   const { settings, save, isSaving } = useSettingsPersist(email);
 
@@ -32,7 +32,7 @@ function CalendarSettings({ email }: { email: string }) {
     }
   }, [settings?.calender_config]);
 
-  /* ---- field-level updater (memoised — passed to children) ---- */
+  /* ---- field-level updater ---- */
   const handleChange = useCallback(
     <K extends keyof ICalenderConfig>(key: K, value: ICalenderConfig[K]) => {
       setLocal((prev) => ({ ...prev, [key]: value }));
@@ -51,10 +51,9 @@ function CalendarSettings({ email }: { email: string }) {
     setDirty(false);
   }, [settings?.calender_config]);
 
-  /* ---- persist & re-hydrate (called after app password created) ---- */
+  /* ---- persist & re-hydrate ---- */
   const handleSaveAndHydrate = useCallback(async (config: ICalenderConfig) => {
     await save("calender_config", config);
-    // Re-hydrate user-config store so sidebar/feature flags update immediately
     if (settings) {
       useUserConfigStore.getState().hydrate({ ...settings, calender_config: config });
     }
@@ -66,7 +65,6 @@ function CalendarSettings({ email }: { email: string }) {
     (configArray: ICalenderConfig["config"]) => {
       setLocal((prev) => {
         const next = { ...prev, config: configArray };
-        // Fire-and-forget save to IDB → auto-syncs to backend via dexie-observable
         save("calender_config", next);
         if (settings) {
           useUserConfigStore.getState().hydrate({ ...settings, calender_config: next });
@@ -80,32 +78,36 @@ function CalendarSettings({ email }: { email: string }) {
   /* ---- persist ---- */
   const handleSave = async () => {
     await save("calender_config", local);
-    useUserConfigStore.getState().hydrate({ ...settings, calender_config: local });
+    if (settings) {
+      useUserConfigStore.getState().hydrate({ ...settings, calender_config: local });
+    }
     setDirty(false);
   };
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-10">
-        <SettingsPageHeader
-          title="Calendar"
-          description="Manage calendar preferences and connected external calendars."
-        />
+    <div className="w-full space-y-8 animate-in fade-in duration-150">
+      <SettingsPageHeader
+        title="Calendar"
+        description="Configure CalDAV server synchronization, reminders, sharing, and subscribed external calendar feeds."
+        icon={<Calendar className="size-5" />}
+        badge={<Badge variant="outline" className="text-xs font-normal">Scheduling</Badge>}
+      />
 
+      <div className="space-y-6">
         <CalendarGeneral local={local} onChange={handleChange} onSave={handleSaveAndHydrate} />
 
         <ConnectedCalendars
           disabled={!local.enable_calender}
           onConfigSync={handleConfigSync}
         />
-
-        <SaveSettingsBar
-          onSave={handleSave}
-          onReset={handleReset}
-          show={dirty}
-          isSaving={isSaving}
-        />
       </div>
+
+      <SaveSettingsBar
+        onSave={handleSave}
+        onReset={handleReset}
+        show={dirty}
+        isSaving={isSaving}
+      />
     </div>
   );
 }

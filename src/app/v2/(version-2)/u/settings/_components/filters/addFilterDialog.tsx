@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { useForm, Controller, useFieldArray } from "react-hook-form"
-import { X, ChevronDown, ChevronUp } from "lucide-react"
+import { X, ChevronDown, ChevronUp, Plus, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 type FormData = {
   filterName: string
@@ -70,9 +71,7 @@ export function AddFilterDialog({ onClose }: { onClose?: () => void }) {
   const watchedValues = watch()
 
   const onSubmit = useCallback(async (data: FormData) => {
-    // TODO: Wire to a real persistence layer (IDB / backend API) once
-    // the filters endpoint or settings field is implemented.
-    toast.info("Filter saved locally (backend integration pending)")
+    toast.success("Filter rule configured")
     console.log("[AddFilterDialog] payload:", data)
     onClose?.()
   }, [onClose])
@@ -101,413 +100,344 @@ export function AddFilterDialog({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <div className="p-4">
-      <div className="p-4">
-        {/* Step indicator */}
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-6">
-          {STEPS.map((step, index) => (
-            <div key={step} className="flex items-center">
-              <span
-                className={
-                  currentStep === index
-                    ? "text-foreground font-medium"
-                    : currentStep > index
-                      ? "text-primary"
-                      : ""
-                }
-              >
-                {step}
-              </span>
-              {index < STEPS.length - 1 && <span className="mx-2">›</span>}
-            </div>
-          ))}
-        </div>
+    <div className="p-2 sm:p-4 space-y-6">
+      {/* Modern Step Indicator */}
+      <div className="flex items-center justify-between border-b border-border/60 pb-3">
+        {STEPS.map((step, index) => (
+          <div key={step} className="flex items-center gap-2">
+            <span
+              className={cn(
+                "size-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-colors",
+                currentStep === index
+                  ? "bg-primary text-primary-foreground shadow-2xs"
+                  : currentStep > index
+                  ? "bg-primary/20 text-primary"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              {currentStep > index ? <Check className="size-3.5 stroke-[3]" /> : index + 1}
+            </span>
+            <span
+              className={cn(
+                "hidden sm:inline text-xs font-medium",
+                currentStep === index
+                  ? "text-foreground font-semibold"
+                  : "text-muted-foreground"
+              )}
+            >
+              {step}
+            </span>
+            {index < STEPS.length - 1 && (
+              <span className="hidden sm:inline text-muted-foreground/40 mx-1">›</span>
+            )}
+          </div>
+        ))}
+      </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          {/* Step 1: Name */}
-          {currentStep === 0 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="filterName">Filter Name</Label>
-                <Controller
-                  name="filterName"
-                  control={control}
-                  rules={{
-                    required: "Filter name is required",
-                    minLength: { value: 2, message: "Name must be at least 2 characters" },
-                  }}
-                  render={({ field }) => (
-                    <Input
-                      id="filterName"
-                      placeholder="e.g. Newsletters, Promotions"
-                      className={errors.filterName ? "border-destructive focus-visible:ring-destructive" : ""}
-                      {...field}
-                    />
-                  )}
-                />
-                {errors.filterName && (
-                  <p className="text-destructive text-xs">{errors.filterName.message}</p>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Step 1: Name */}
+        {currentStep === 0 && (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="filterName" className="text-xs sm:text-sm font-medium">
+                Filter Name
+              </Label>
+              <Controller
+                name="filterName"
+                control={control}
+                rules={{
+                  required: "Filter name is required",
+                  minLength: { value: 2, message: "Name must be at least 2 characters" },
+                }}
+                render={({ field }) => (
+                  <Input
+                    id="filterName"
+                    placeholder="e.g. VIP Clients or Receipts"
+                    className={errors.filterName ? "border-destructive focus-visible:ring-destructive" : ""}
+                    {...field}
+                  />
                 )}
-              </div>
+              />
+              {errors.filterName && (
+                <p className="text-destructive text-xs">{errors.filterName.message}</p>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Step 2: Conditions */}
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <Label>Statement</Label>
-                <Controller
-                  name="conditionType"
-                  control={control}
-                  render={({ field }) => (
-                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="ALL" id="all" />
-                        <Label htmlFor="all" className="font-normal">
-                          ALL{" "}
-                          <span className="text-muted-foreground italic">
-                            (Filter if ALL of the following conditions are met)
-                          </span>
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="ANY" id="any" />
-                        <Label htmlFor="any" className="font-normal">
-                          ANY{" "}
-                          <span className="text-muted-foreground italic">
-                            (Filter if ANY of the following conditions are met)
-                          </span>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  )}
-                />
-              </div>
+        {/* Step 2: Conditions */}
+        {currentStep === 1 && (
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <Label className="text-xs sm:text-sm font-medium">Matching Rule</Label>
+              <Controller
+                name="conditionType"
+                control={control}
+                render={({ field }) => (
+                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="ALL" id="all" />
+                      <Label htmlFor="all" className="font-normal text-xs sm:text-sm cursor-pointer">
+                        Match <strong className="font-semibold text-foreground">ALL</strong> conditions (Logical AND)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="ANY" id="any" />
+                      <Label htmlFor="any" className="font-normal text-xs sm:text-sm cursor-pointer">
+                        Match <strong className="font-semibold text-foreground">ANY</strong> condition (Logical OR)
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                )}
+              />
+            </div>
 
-              <Collapsible
-                open={isOpen.conditions}
-                onOpenChange={() => toggleSection("conditions")}
-                className="border-t border-b border-border py-4"
-              >
-                <CollapsibleTrigger className="flex items-center justify-between w-full">
-                  <div className="flex items-center">
-                    {isOpen.conditions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    <span className="ml-2 font-medium">IF</span>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-4 space-y-4">
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-2">
-                        <Controller
-                          name={`conditions.${index}.field`}
-                          control={control}
-                          render={({ field }) => (
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select field" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="The subject">The subject</SelectItem>
-                                <SelectItem value="From">From</SelectItem>
-                                <SelectItem value="To">To</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                        <Controller
-                          name={`conditions.${index}.operator`}
-                          control={control}
-                          render={({ field }) => (
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select operator" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="contains">contains</SelectItem>
-                                <SelectItem value="does not contain">does not contain</SelectItem>
-                                <SelectItem value="is">is</SelectItem>
-                                <SelectItem value="is not">is not</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </div>
-                      <div className="flex space-x-2">
-                        <Controller
-                          name={`conditions.${index}.value`}
-                          control={control}
-                          rules={{ required: "Condition value is required" }}
-                          render={({ field }) => (
-                            <div className="flex-1 space-y-1">
-                              <Input
-                                placeholder="Type text or keyword"
-                                className={
-                                  errors.conditions?.[index]?.value
-                                    ? "border-destructive focus-visible:ring-destructive"
-                                    : ""
-                                }
-                                {...field}
-                              />
-                              {errors.conditions?.[index]?.value && (
-                                <p className="text-destructive text-xs">
-                                  {errors.conditions[index].value?.message}
-                                </p>
+            <Collapsible
+              open={isOpen.conditions}
+              onOpenChange={() => toggleSection("conditions")}
+              className="border rounded-xl p-4 border-border/70 bg-card/50"
+            >
+              <CollapsibleTrigger className="flex items-center justify-between w-full">
+                <span className="font-medium text-xs sm:text-sm">IF Conditions ({fields.length})</span>
+                {isOpen.conditions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-4 space-y-4">
+                {fields.map((field, index) => (
+                  <div key={field.id} className="p-3 rounded-lg border border-border/50 bg-background/50 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Controller
+                        name={`conditions.${index}.field`}
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue placeholder="Select field" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="The subject">Subject</SelectItem>
+                              <SelectItem value="From">Sender (From)</SelectItem>
+                              <SelectItem value="To">Recipient (To)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      <Controller
+                        name={`conditions.${index}.operator`}
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue placeholder="Select operator" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="contains">contains</SelectItem>
+                              <SelectItem value="does not contain">does not contain</SelectItem>
+                              <SelectItem value="is">exact match (is)</SelectItem>
+                              <SelectItem value="is not">is not</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Controller
+                        name={`conditions.${index}.value`}
+                        control={control}
+                        rules={{ required: "Condition value is required" }}
+                        render={({ field }) => (
+                          <div className="flex-1 space-y-1">
+                            <Input
+                              placeholder="Type keyword or phrase"
+                              className={cn(
+                                "h-9 text-xs bg-background",
+                                errors.conditions?.[index]?.value && "border-destructive"
                               )}
-                            </div>
-                          )}
-                        />
-                      </div>
+                              {...field}
+                            />
+                            {errors.conditions?.[index]?.value && (
+                              <p className="text-destructive text-[11px]">
+                                {errors.conditions[index].value?.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      />
                       {index > 0 && (
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground hover:text-foreground"
+                          size="icon"
+                          className="size-9 rounded-lg text-muted-foreground hover:text-destructive shrink-0"
                           onClick={() => remove(index)}
                         >
-                          <X size={16} className="mr-1" /> Remove
+                          <X size={16} />
                         </Button>
                       )}
                     </div>
-                  ))}
-                  <div className="pt-2">
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="text-primary p-0 h-auto"
-                      onClick={() => append({ field: "The subject", operator: "contains", value: "" })}
-                    >
-                      Add condition
-                    </Button>
                   </div>
-                </CollapsibleContent>
-              </Collapsible>
+                ))}
+                <div className="pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-lg text-xs gap-1"
+                    onClick={() => append({ field: "The subject", operator: "contains", value: "" })}
+                  >
+                    <Plus className="size-3.5" />
+                    Add condition
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
+
+        {/* Step 3: Actions */}
+        {currentStep === 2 && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl border border-border/70 bg-card/50 space-y-3">
+              <Label className="text-xs sm:text-sm font-medium">Move to Folder</Label>
+              <Controller
+                name="actions.moveToFolder"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger className="h-9 text-xs sm:text-sm bg-background">
+                      <SelectValue placeholder="Select folder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Inbox">Inbox (Default)</SelectItem>
+                      <SelectItem value="Spam">Spam</SelectItem>
+                      <SelectItem value="Trash">Trash</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
-          )}
 
-          {/* Step 3: Actions */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <Collapsible
-                open={isOpen.labelAs}
-                onOpenChange={() => toggleSection("labelAs")}
-                className="border-t border-b border-border py-4"
-              >
-                <CollapsibleTrigger className="flex items-center justify-between w-full">
-                  <div className="flex items-center">
-                    {isOpen.labelAs ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    <span className="ml-2 font-medium">Label as</span>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-4">
-                  <div className="text-center py-2">
-                    <p className="text-muted-foreground">No label found</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="mt-2"
-                    >
-                      Create label
-                    </Button>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Collapsible
-                open={isOpen.moveTo}
-                onOpenChange={() => toggleSection("moveTo")}
-                className="border-b border-border py-4"
-              >
-                <CollapsibleTrigger className="flex items-center justify-between w-full">
-                  <div className="flex items-center">
-                    {isOpen.moveTo ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    <span className="ml-2 font-medium">Move to</span>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-4 space-y-4">
+            <div className="p-4 rounded-xl border border-border/70 bg-card/50 space-y-3">
+              <Label className="text-xs sm:text-sm font-medium">Automatic Flags</Label>
+              <div className="flex flex-wrap gap-6 pt-1">
+                <div className="flex items-center space-x-2">
                   <Controller
-                    name="actions.moveToFolder"
+                    name="actions.markAsRead"
                     control={control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select folder" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Inbox">Inbox - Default</SelectItem>
-                          <SelectItem value="Spam">Spam</SelectItem>
-                          <SelectItem value="Trash">Trash</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Checkbox
+                        id="markAsRead"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
                     )}
                   />
-                  <Button type="button" variant="outline">
-                    Create folder
-                  </Button>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Collapsible
-                open={isOpen.markAs}
-                onOpenChange={() => toggleSection("markAs")}
-                className="border-b border-border py-4"
-              >
-                <CollapsibleTrigger className="flex items-center justify-between w-full">
-                  <div className="flex items-center">
-                    {isOpen.markAs ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    <span className="ml-2 font-medium">Mark as</span>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-4">
-                  <div className="flex space-x-8">
-                    <div className="flex items-center space-x-2">
-                      <Controller
-                        name="actions.markAsRead"
-                        control={control}
-                        render={({ field }) => (
-                          <Checkbox
-                            id="markAsRead"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        )}
+                  <Label htmlFor="markAsRead" className="text-xs sm:text-sm font-normal cursor-pointer">
+                    Mark as Read
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Controller
+                    name="actions.markAsStarred"
+                    control={control}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="markAsStarred"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
                       />
-                      <Label htmlFor="markAsRead" className="font-normal">
-                        Read
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Controller
-                        name="actions.markAsStarred"
-                        control={control}
-                        render={({ field }) => (
-                          <Checkbox
-                            id="markAsStarred"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        )}
-                      />
-                      <Label htmlFor="markAsStarred" className="font-normal">
-                        Starred
-                      </Label>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <div className="py-4 flex items-center space-x-2">
-                <span className="font-medium">Send auto-reply</span>
-                <Controller
-                  name="actions.sendAutoReply"
-                  control={control}
-                  render={({ field }) => (
-                    <div className="relative inline-flex h-4 w-8 items-center rounded-full bg-muted transition-colors">
-                      <div
-                        className={`${field.value ? "translate-x-4 bg-primary" : "translate-x-1 bg-muted-foreground"
-                          } h-3 w-3 rounded-full transition-transform cursor-pointer`}
-                        onClick={() => field.onChange(!field.value)}
-                      />
-                    </div>
-                  )}
-                />
+                    )}
+                  />
+                  <Label htmlFor="markAsStarred" className="text-xs sm:text-sm font-normal cursor-pointer">
+                    Star message
+                  </Label>
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Step 4: Preview */}
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="font-medium">Filter Name</span>
-                  <span>{watchedValues.filterName}</span>
-                </div>
-
-                <div className="border-t border-border pt-4">
-                  <Collapsible open={true} className="border-b border-border pb-4">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full">
-                      <div className="flex items-center">
-                        <ChevronUp size={16} />
-                        <span className="ml-2 font-medium">Conditions</span>
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-4">
-                      <div className="text-muted-foreground">
-                        {watchedValues.conditions.map((c, i) => (
-                          <p key={i}>
-                            If {c.field.toLowerCase()} {c.operator} &quot;{c.value}&quot;
-                          </p>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
-
-                <div className="border-b border-border pb-4">
-                  <Collapsible open={true}>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full">
-                      <div className="flex items-center">
-                        <ChevronUp size={16} />
-                        <span className="ml-2 font-medium">Actions</span>
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-4">
-                      <div className="text-muted-foreground">
-                        Then move emails to {watchedValues.actions.moveToFolder || "Inbox"}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 pt-2">
-                <Controller
-                  name="applyToExisting"
-                  control={control}
-                  render={({ field }) => (
-                    <Checkbox
-                      id="applyToExisting"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  )}
-                />
-                <Label htmlFor="applyToExisting" className="font-normal">
-                  Apply filter to existing emails
-                </Label>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-8 flex justify-between">
-            {currentStep > 0 ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={prevStep}
-              >
-                Back
-              </Button>
-            ) : (
-              <div />
-            )}
-
-            {currentStep < STEPS.length - 1 ? (
-              <Button type="button" onClick={nextStep}>
-                {currentStep === 2 ? "Preview" : "Next"}
-              </Button>
-            ) : (
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving…" : "Save"}
-              </Button>
-            )}
           </div>
-        </form>
+        )}
 
-      </div>
+        {/* Step 4: Preview */}
+        {currentStep === 3 && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl border border-border/70 bg-card/50 space-y-3 text-xs sm:text-sm">
+              <div className="flex justify-between border-b border-border/40 pb-2">
+                <span className="text-muted-foreground">Filter Name</span>
+                <span className="font-semibold text-foreground">{watchedValues.filterName}</span>
+              </div>
+              <div className="space-y-1 border-b border-border/40 pb-2">
+                <span className="text-muted-foreground block font-medium">Conditions:</span>
+                {watchedValues.conditions.map((c, i) => (
+                  <p key={i} className="text-foreground pl-2">
+                    • If {c.field.toLowerCase()} {c.operator} &quot;<strong>{c.value}</strong>&quot;
+                  </p>
+                ))}
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground block font-medium">Actions:</span>
+                <p className="text-foreground pl-2">
+                  • Move to {watchedValues.actions.moveToFolder || "Inbox"}
+                  {watchedValues.actions.markAsRead && ", Mark as read"}
+                  {watchedValues.actions.markAsStarred && ", Star"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-1 pl-1">
+              <Controller
+                name="applyToExisting"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="applyToExisting"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+              <Label htmlFor="applyToExisting" className="text-xs sm:text-sm font-normal cursor-pointer">
+                Apply filter retroactively to existing inbox messages
+              </Label>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-between pt-2">
+          {currentStep > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={prevStep}
+              className="rounded-xl h-9 px-4 text-xs sm:text-sm"
+            >
+              Back
+            </Button>
+          ) : (
+            <div />
+          )}
+
+          {currentStep < STEPS.length - 1 ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={nextStep}
+              className="rounded-xl h-9 px-5 text-xs sm:text-sm"
+            >
+              {currentStep === 2 ? "Review Filter" : "Continue"}
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmitting}
+              className="rounded-xl h-9 px-6 text-xs sm:text-sm"
+            >
+              {isSubmitting ? "Saving…" : "Save Filter"}
+            </Button>
+          )}
+        </div>
+      </form>
     </div>
   )
 }

@@ -8,10 +8,11 @@ import {
   SettingsSection,
   SettingToggleRow,
 } from "../shared"
+import { Shield, EyeOff, Image as ImageIcon, Globe } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 /**
- * Email Privacy settings — toggles save immediately on change
- * (no explicit save button needed since there are only 2 toggles).
+ * Email Privacy settings — toggles save immediately on change.
  */
 function EmailPrivacy() {
   const currAccount = useAppSelector((state) => state.accounts.currAccount)
@@ -28,27 +29,48 @@ function EmailPrivacy() {
   }
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-2xl mx-auto space-y-10">
-        <SettingsPageHeader title="Email Privacy" />
+    <div className="w-full space-y-8 animate-in fade-in duration-150">
+      <SettingsPageHeader
+        title="Email privacy"
+        description="Shield your identity, prevent senders from knowing when you open emails, and block third-party web trackers."
+        icon={<Shield className="size-5" />}
+        badge={<Badge variant="outline" className="text-xs font-normal">Privacy Shield</Badge>}
+      />
 
-        <SettingsSection title="Privacy Controls">
+      <div className="space-y-6">
+        <SettingsSection
+          title="Remote Content & Tracker Protections"
+          description="Control how external assets and tracking pixels are handled when reading incoming messages"
+          icon={<EyeOff className="size-4" />}
+        >
           <SettingToggleRow
-            label="Auto show remote images"
+            label="Auto-load remote images"
+            description="Automatically display images hosted on external servers. Disabling prevents senders from logging your IP address."
             tooltip="Automatically load external images in emails. Disabling improves privacy."
+            icon={<ImageIcon className="size-4 text-primary" />}
             checked={settings?.email_privacy?.autoShowImages ?? false}
             onCheckedChange={(v) => handleChange("autoShowImages", v)}
           />
+
           <SettingToggleRow
-            label="Block email tracking"
+            label="Block email tracking pixels"
+            description="Strip 1x1 tracking pixels, spy pixels, and read-receipt triggers before emails render"
             tooltip="Block tracking pixels and read receipts from external senders"
+            icon={<Shield className="size-4 text-emerald-500" />}
             checked={settings?.email_privacy?.block_email_tracking ?? false}
             onCheckedChange={(v) => handleChange("block_email_tracking", v)}
+            badge={
+              <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                Recommended
+              </Badge>
+            }
           />
+
           <SettingToggleRow
-            label="Show sender favicon"
-            description="Display the sender's domain favicon as avatar in mail list"
-            tooltip="Fetches the favicon of the sender's email domain and shows it instead of initials. Cached in browser."
+            label="Show sender domain favicon"
+            description="Display the sender's authentic domain favicon as their contact avatar in the thread list"
+            tooltip="Fetches the favicon of the sender's email domain and shows it instead of initials. Cached locally in browser."
+            icon={<Globe className="size-4 text-blue-500" />}
             checked={settings?.email_privacy?.show_sender_favicon ?? false}
             onCheckedChange={(v) => handleChange("show_sender_favicon", v)}
           />

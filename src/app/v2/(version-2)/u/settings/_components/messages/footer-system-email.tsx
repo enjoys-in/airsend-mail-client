@@ -1,7 +1,7 @@
 "use client"
 
-import { memo, useState } from "react"
-import { Check } from "lucide-react"
+import { memo } from "react"
+import { Check, MailCheck, Bot } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -18,7 +18,7 @@ interface FooterSystemEmailProps {
 }
 
 /**
- * Email footer and system email toggles with inline text inputs.
+ * Email footer and automated system mailbox responses.
  */
 function FooterSystemEmail({
     local,
@@ -28,87 +28,111 @@ function FooterSystemEmail({
     onSystemReplyChange,
     onChange,
 }: FooterSystemEmailProps) {
-    return (
-        <SettingsSection title="Footer & System Email">
-            {/* Email Footer toggle */}
-            <SettingToggleRow
-                label="Email Footer"
-                tooltip="Append a custom footer to all outgoing emails"
-                checked={local?.email_footer?.footer_enabled ?? false}
-                onCheckedChange={(checked) =>
-                    onChange("email_footer", {
-                        ...local?.email_footer,
-                        footer_enabled: checked,
-                    } as any)
-                }
-            />
-            {local?.email_footer?.footer_enabled && (
-                <div className="relative w-full">
-                    <Input
-                        className="w-full pr-10"
-                        value={footerText}
-                        placeholder="Enter footer text…"
-                        onChange={(e) => onFooterTextChange(e.target.value)}
-                    />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                            if (!footerText.trim()) {
-                                return toast.error("Footer text cannot be empty")
-                            }
-                            onChange("email_footer", {
-                                ...local?.email_footer,
-                                footer_text: footerText,
-                            } as any)
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground rounded-md"
-                    >
-                        <Check className="w-4 h-4" />
-                    </Button>
-                </div>
-            )}
+    const isFooterEnabled = local?.email_footer?.footer_enabled ?? false
+    const isSystemEmail = local?.system_email?.is_system_email ?? false
 
-            {/* System Email toggle */}
-            <SettingToggleRow
-                label="Is System Email"
-                tooltip="Mark this mailbox as a system email with an auto-reply message"
-                checked={local?.system_email?.is_system_email ?? false}
-                onCheckedChange={(checked) =>
-                    onChange("system_email", {
-                        ...local?.system_email,
-                        is_system_email: checked,
-                    } as any)
-                }
-            />
-            {local?.system_email?.is_system_email && (
-                <div className="relative w-full">
-                    <Input
-                        className="w-full pr-10"
-                        value={systemReply}
-                        placeholder="System reply message…"
-                        onChange={(e) => onSystemReplyChange(e.target.value)}
-                    />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                            if (!systemReply.trim()) {
-                                return toast.error("System reply text cannot be empty")
-                            }
-                            onChange("system_email", {
-                                ...local?.system_email,
-                                system_email_reply: systemReply,
-                            } as any)
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground rounded-md"
-                    >
-                        <Check className="w-4 h-4" />
-                    </Button>
-                </div>
-            )}
+    return (
+        <SettingsSection
+            title="Custom Footer & Automated System Replies"
+            description="Append standard company disclaimers or setup auto-responses for service mailboxes"
+            icon={<MailCheck className="size-4" />}
+        >
+            {/* Email Footer */}
+            <div className="space-y-3 py-2">
+                <SettingToggleRow
+                    label="Append outgoing email footer"
+                    description="Automatically attach a signature or disclaimer banner to every sent email"
+                    tooltip="Append a custom footer to all outgoing emails"
+                    checked={isFooterEnabled}
+                    onCheckedChange={(checked) =>
+                        onChange("email_footer", {
+                            ...local?.email_footer,
+                            footer_enabled: checked,
+                        } as any)
+                    }
+                    className="py-1 px-0 hover:bg-transparent"
+                />
+                {isFooterEnabled && (
+                    <div className="flex items-center gap-2 pt-1 pl-2 animate-in fade-in duration-150">
+                        <div className="relative flex-1">
+                            <Input
+                                className="h-9 pr-10 text-xs sm:text-sm bg-background/80 border-border/80 rounded-xl"
+                                value={footerText}
+                                placeholder="Enter footer text (e.g. Sent with ❤️ by Airsend)"
+                                onChange={(e) => onFooterTextChange(e.target.value)}
+                            />
+                        </div>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                                if (!footerText.trim()) {
+                                    return toast.error("Footer text cannot be empty")
+                                }
+                                onChange("email_footer", {
+                                    ...local?.email_footer,
+                                    footer_text: footerText,
+                                } as any)
+                                toast.success("Footer text updated")
+                            }}
+                            className="h-9 px-3 rounded-xl gap-1 shrink-0"
+                        >
+                            <Check className="size-3.5" />
+                            <span>Apply</span>
+                        </Button>
+                    </div>
+                )}
+            </div>
+
+            {/* System Email */}
+            <div className="space-y-3 py-3 border-t border-border/40">
+                <SettingToggleRow
+                    label="Configure as automated service/system mailbox"
+                    description="Marks this address as a no-reply system box and answers senders automatically"
+                    tooltip="Mark this mailbox as a system email with an auto-reply message"
+                    checked={isSystemEmail}
+                    icon={<Bot className="size-4 text-primary" />}
+                    onCheckedChange={(checked) =>
+                        onChange("system_email", {
+                            ...local?.system_email,
+                            is_system_email: checked,
+                        } as any)
+                    }
+                    className="py-1 px-0 hover:bg-transparent"
+                />
+                {isSystemEmail && (
+                    <div className="flex items-center gap-2 pt-1 pl-2 animate-in fade-in duration-150">
+                        <div className="relative flex-1">
+                            <Input
+                                className="h-9 pr-10 text-xs sm:text-sm bg-background/80 border-border/80 rounded-xl"
+                                value={systemReply}
+                                placeholder="Auto-reply message (e.g. This is an unattended mailbox)"
+                                onChange={(e) => onSystemReplyChange(e.target.value)}
+                            />
+                        </div>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                                if (!systemReply.trim()) {
+                                    return toast.error("System reply text cannot be empty")
+                                }
+                                onChange("system_email", {
+                                    ...local?.system_email,
+                                    system_email_reply: systemReply,
+                                } as any)
+                                toast.success("System reply message updated")
+                            }}
+                            className="h-9 px-3 rounded-xl gap-1 shrink-0"
+                        >
+                            <Check className="size-3.5" />
+                            <span>Apply</span>
+                        </Button>
+                    </div>
+                )}
+            </div>
         </SettingsSection>
     )
 }

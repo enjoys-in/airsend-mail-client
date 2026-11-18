@@ -6,6 +6,8 @@ import { useSettingsPersist } from "@/hooks/use-settings-persist";
 import { SettingsPageHeader, SaveSettingsBar } from "./shared";
 import MessageToggles from "./messages/message-toggles";
 import FooterSystemEmail from "./messages/footer-system-email";
+import { MessageSquare } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 function EmailSettings({ email }: { email: string }) {
   const { settings, save, isSaving } = useSettingsPersist(email);
@@ -49,10 +51,15 @@ function EmailSettings({ email }: { email: string }) {
   };
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-2xl mx-auto space-y-10">
-        <SettingsPageHeader title="Messages and composing" />
+    <div className="w-full space-y-8 animate-in fade-in duration-150">
+      <SettingsPageHeader
+        title="Messages and composing"
+        description="Fine-tune conversation grouping, spam behavior, sending thresholds, and system footers."
+        icon={<MessageSquare className="size-5" />}
+        badge={<Badge variant="outline" className="text-xs font-normal">Messages</Badge>}
+      />
 
+      <div className="space-y-6">
         <MessageToggles local={local} onChange={handleChange} />
 
         <FooterSystemEmail
@@ -63,9 +70,9 @@ function EmailSettings({ email }: { email: string }) {
           onSystemReplyChange={setSystemReply}
           onChange={handleChange}
         />
-
-        <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
       </div>
+
+      <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
     </div>
   );
 }

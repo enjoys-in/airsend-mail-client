@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SignatureCanvas } from "./signature-canvas"
 import { SignatureEditor } from "./signature-editor"
-import { Plus, Trash2, Upload, Check, Pencil, FileText, Star } from "lucide-react"
+import { Plus, Trash2, Upload, Check, Pencil, FileText, Star, Pen } from "lucide-react"
 import { useSignatureEditorStore } from "@/store/settings"
 import { useSettingsPersist } from "@/hooks/use-settings-persist"
 import { SettingsPageHeader, SaveSettingsBar } from "../shared"
 import type { ISignature } from "@/lib/types/get-user-settings-response"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 /* ------------------------------------------------------------------ */
 /*  Validation helpers                                                 */
@@ -65,79 +67,94 @@ const SignatureList = memo(function SignatureList({
   onAdd,
 }: SignatureListProps) {
   return (
-    <Card>
-      <CardHeader>
+    <Card className="rounded-2xl border-border/70 bg-card/70 shadow-xs">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Your Signatures</CardTitle>
-            <CardDescription>Select or create new signatures</CardDescription>
+            <CardTitle className="text-base sm:text-lg">Configured Signatures</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Create multiple signatures for work, personal, or legal communications
+            </CardDescription>
           </div>
-          <Button onClick={onAdd} type="button" size="sm">
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add New
+          <Button onClick={onAdd} type="button" size="sm" className="h-8 rounded-xl text-xs gap-1.5">
+            <Plus className="size-3.5" />
+            New Signature
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         {signatures.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            No signatures yet. Click &quot;Add New&quot; to create one.
-          </p>
+          <div className="text-center py-8 space-y-2">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              No signatures created yet. Click &quot;New Signature&quot; to begin.
+            </p>
+          </div>
         ) : (
           <div className="space-y-2">
-            {signatures.map((sig, index) => (
-              <div
-                key={sig.key}
-                className={`flex items-center justify-between p-3 rounded-md border transition-colors ${
-                  selectedIndex === index
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-muted-foreground/30"
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  {selectedIndex === index && (
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
+            {signatures.map((sig, index) => {
+              const isSelected = selectedIndex === index
+              return (
+                <div
+                  key={sig.key}
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-xl border transition-all duration-150",
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-2xs ring-1 ring-primary/30"
+                      : "border-border/60 bg-background/50 hover:border-border hover:bg-muted/30"
                   )}
-                  <span className="font-medium truncate">
-                    {sig.name || <span className="text-muted-foreground italic">Untitled</span>}
-                  </span>
-                  {sig.default && (
-                    <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500 fill-yellow-500" />
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  {!sig.default && (
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className={cn(
+                        "size-2 rounded-full shrink-0",
+                        sig.default ? "bg-amber-500" : "bg-muted-foreground/40"
+                      )}
+                    />
+                    <span className="text-xs sm:text-sm font-medium truncate text-foreground">
+                      {sig.name || <span className="text-muted-foreground italic">Untitled Signature</span>}
+                    </span>
+                    {sig.default && (
+                      <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 py-0 px-1.5">
+                        Default
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    {!sig.default && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        type="button"
+                        className="size-8 rounded-lg text-muted-foreground hover:text-amber-500"
+                        onClick={() => onSetDefault(index)}
+                        title="Set as default"
+                      >
+                        <Star className="size-3.5" />
+                      </Button>
+                    )}
                     <Button
-                      variant="ghost"
+                      variant={isSelected ? "secondary" : "outline"}
                       size="sm"
                       type="button"
-                      onClick={() => onSetDefault(index)}
-                      title="Set as default"
+                      className="h-7 text-xs rounded-lg px-2.5"
+                      onClick={() => onSelect(index)}
                     >
-                      <Star className="h-3.5 w-3.5" />
+                      {isSelected ? "Editing" : "Edit"}
                     </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    onClick={() => onSelect(index)}
-                    disabled={selectedIndex === index}
-                  >
-                    {selectedIndex === index ? "Editing" : "Edit"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="h-8 w-8"
-                    type="button"
-                    onClick={() => onRemove(index)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      type="button"
+                      onClick={() => onRemove(index)}
+                      title="Delete signature"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </CardContent>
@@ -222,7 +239,6 @@ function SignatureCreator({ email }: { email: string }) {
       setSignatures((prev) =>
         prev.map((s, i) => (i === selectedIndex ? { ...s, name: value } : s)),
       )
-      // Live validation
       setNameError((prevErr) => {
         const updated = signatures.map((s, i) =>
           i === selectedIndex ? { ...s, name: value } : s,
@@ -290,13 +306,15 @@ function SignatureCreator({ email }: { email: string }) {
   }, [settings?.signatures])
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <SettingsPageHeader
-          title="Signatures"
-          description="Create and manage email signatures"
-        />
+    <div className="w-full space-y-8 animate-in fade-in duration-150">
+      <SettingsPageHeader
+        title="Signatures"
+        description="Design professional email signatures with rich text, drawn handwriting, or uploaded graphics."
+        icon={<Pen className="size-5" />}
+        badge={<Badge variant="outline" className="text-xs font-normal">Composer</Badge>}
+      />
 
+      <div className="space-y-6">
         {/* ---- Signature list ---- */}
         <SignatureList
           signatures={signatures}
@@ -309,96 +327,122 @@ function SignatureCreator({ email }: { email: string }) {
 
         {/* ---- Signature editor ---- */}
         {selected && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+          <Card className="rounded-2xl border-border/70 bg-card/70 shadow-xs">
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <CardTitle>Signature Editor</CardTitle>
-                  <CardDescription>Customize your signature</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Signature Editor</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Customize formatting for &quot;{selected.name || "Untitled"}&quot;
+                  </CardDescription>
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant={type === "canvas" ? "default" : "ghost"}
-                    size="icon"
-                    className="h-8 w-8"
-                    type="button"
-                    onClick={() => setType("canvas")}
-                    title="Draw"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={type === "upload" ? "default" : "ghost"}
-                    size="icon"
-                    className="h-8 w-8"
-                    type="button"
-                    onClick={() => setType("upload")}
-                    title="Upload"
-                  >
-                    <Upload className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={type === "editor" ? "default" : "ghost"}
-                    size="icon"
-                    className="h-8 w-8"
+                {/* Segmented editor type tabs */}
+                <div className="inline-flex p-1 rounded-xl bg-muted/60 border border-border/50 self-start sm:self-center">
+                  <button
                     type="button"
                     onClick={() => setType("editor")}
-                    title="Text editor"
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all",
+                      type === "editor"
+                        ? "bg-background text-foreground shadow-2xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
                   >
-                    <FileText className="h-4 w-4" />
-                  </Button>
+                    <FileText className="size-3.5" />
+                    <span>Rich Text</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setType("canvas")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all",
+                      type === "canvas"
+                        ? "bg-background text-foreground shadow-2xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Pencil className="size-3.5" />
+                    <span>Draw</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setType("upload")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all",
+                      type === "upload"
+                        ? "bg-background text-foreground shadow-2xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Upload className="size-3.5" />
+                    <span>Upload Image</span>
+                  </button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Name input with validation */}
               <div className="space-y-1.5">
-                <Label htmlFor="signatureName">Signature Name</Label>
+                <Label htmlFor="signatureName" className="text-xs sm:text-sm font-medium">
+                  Signature Label
+                </Label>
                 <Input
                   id="signatureName"
                   value={selected.name}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g. Work, Personal"
-                  className={nameError ? "border-destructive focus-visible:ring-destructive" : ""}
+                  placeholder="e.g. Work Signature, Formal, or Mobile"
+                  className={cn(
+                    "h-9 text-xs sm:text-sm rounded-xl bg-background",
+                    nameError && "border-destructive focus-visible:ring-destructive"
+                  )}
                 />
                 {nameError && (
                   <p className="text-destructive text-xs">{nameError}</p>
                 )}
               </div>
 
-              {/* Canvas / Editor / Upload based on type */}
+              {/* Canvas / Editor / Upload */}
               {type === "canvas" && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Draw Signature</h3>
-                  <SignatureCanvas
-                    onSave={(data) => handleLineChange(data, "blob")}
-                  />
+                <div className="space-y-2">
+                  <Label className="text-xs sm:text-sm font-medium">Draw Handwritten Signature</Label>
+                  <div className="rounded-xl border border-border/70 overflow-hidden bg-background">
+                    <SignatureCanvas
+                      onSave={(data) => handleLineChange(data, "blob")}
+                    />
+                  </div>
                 </div>
               )}
 
               {type === "editor" && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Rich Text Editor</h3>
-                  <SignatureEditor
-                    value={selected.line || ""}
-                    onChange={(value) => handleLineChange(value, "text")}
-                  />
+                <div className="space-y-2">
+                  <Label className="text-xs sm:text-sm font-medium">Formatted Text Editor</Label>
+                  <div className="rounded-xl border border-border/70 overflow-hidden bg-background">
+                    <SignatureEditor
+                      value={selected.line || ""}
+                      onChange={(value) => handleLineChange(value, "text")}
+                    />
+                  </div>
                 </div>
               )}
 
               {type === "upload" && (
                 <div className="space-y-2">
-                  <Label htmlFor="uploadSignature">Upload Signature</Label>
+                  <Label htmlFor="uploadSignature" className="text-xs sm:text-sm font-medium">Upload Image Signature</Label>
                   <label
                     htmlFor="uploadSignature"
-                    className="flex items-center justify-center w-full h-32 px-4 border-2 border-dashed rounded-md cursor-pointer transition-colors border-muted-foreground/25 hover:border-muted-foreground/50 bg-muted/30"
+                    className="flex flex-col items-center justify-center w-full h-36 px-4 border-2 border-dashed rounded-xl cursor-pointer transition-colors border-border/70 hover:border-primary/50 bg-muted/20"
                   >
-                    <span className="flex items-center gap-2">
-                      <Upload className="h-6 w-6 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        Drop files to upload or click
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="size-10 rounded-full bg-muted flex items-center justify-center">
+                        <Upload className="size-5 text-muted-foreground" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-medium text-foreground">
+                        Drop image or click to browse
                       </span>
-                    </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        PNG, JPG, SVG or GIF up to 2MB
+                      </span>
+                    </div>
                     <Input
                       id="uploadSignature"
                       type="file"
@@ -412,33 +456,42 @@ function SignatureCreator({ email }: { email: string }) {
 
               {/* Preview of current signature */}
               {selected.line && (
-                <div className="rounded-md border p-3 bg-muted/20">
-                  <p className="text-xs text-muted-foreground mb-2">Preview</p>
-                  {selected.type === "blob" || selected.type === "upload" ? (
-                    <img
-                      src={selected.line}
-                      alt="Signature preview"
-                      className="max-h-20 max-w-full"
-                    />
-                  ) : (
-                    <div
-                      dangerouslySetInnerHTML={{ __html: selected.line }}
-                      className="text-sm"
-                    />
-                  )}
+                <div className="rounded-xl border border-border/70 p-4 bg-muted/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Live Preview
+                    </span>
+                    <Badge variant="outline" className="text-[10px] uppercase">
+                      {selected.type}
+                    </Badge>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border/40">
+                    {selected.type === "blob" || selected.type === "upload" ? (
+                      <img
+                        src={selected.line}
+                        alt="Signature preview"
+                        className="max-h-24 max-w-full object-contain"
+                      />
+                    ) : (
+                      <div
+                        dangerouslySetInnerHTML={{ __html: selected.line }}
+                        className="text-xs sm:text-sm prose prose-sm dark:prose-invert max-w-none"
+                      />
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
         )}
-
-        <SaveSettingsBar
-          onSave={handleSave}
-          onReset={handleReset}
-          show={dirty}
-          isSaving={isSaving}
-        />
       </div>
+
+      <SaveSettingsBar
+        onSave={handleSave}
+        onReset={handleReset}
+        show={dirty}
+        isSaving={isSaving}
+      />
     </div>
   )
 }
