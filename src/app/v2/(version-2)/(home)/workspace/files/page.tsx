@@ -291,7 +291,7 @@ function FilesHubContent() {
                     <div className="col-span-3 sm:col-span-2 flex items-center gap-2 text-muted-foreground truncate">
                       <Avatar className="size-5 shrink-0">
                         <AvatarFallback className="text-[9px] bg-primary/10 text-primary font-bold">
-                          {file.uploaderName.charAt(0)}
+                          {(file.uploaderName || file.uploadedBy || "?").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <span className="truncate">{file.uploaderName}</span>

@@ -123,7 +123,7 @@ export default function ProfileCard({
                 <AvatarImage src={member.avatar} alt={member.displayName} />
               ) : null}
               <AvatarFallback className="bg-primary/10 text-lg font-bold text-primary">
-                {member.displayName.charAt(0).toUpperCase()}
+                {(member.displayName || member.username || "?").charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <span
@@ -237,7 +237,7 @@ export default function ProfileCard({
                         />
                       ) : null}
                       <AvatarFallback className="bg-muted text-[10px] font-medium">
-                        {manager.displayName.charAt(0).toUpperCase()}
+                        {(manager.displayName || manager.username || "?").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">

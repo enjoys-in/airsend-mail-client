@@ -42,7 +42,7 @@ export default function MentionPopover({
             className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent transition-colors"
           >
             <span className="relative flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-              {member.displayName.charAt(0)}
+              {(member.displayName || member.username || "?").charAt(0).toUpperCase()}
               <span
                 className={cn(
                   "absolute -bottom-0 -right-0 size-2 rounded-full border border-popover",

@@ -53,7 +53,7 @@ export const getChipDisplay = (raw: string) => parseEmailChip(raw).name || raw;
 
 export const getChipInitial = (raw: string) => {
   const { name, address } = parseEmailChip(raw);
-  return (name || address).charAt(0).toUpperCase();
+  return (name || address || "?").charAt(0).toUpperCase();
 };
 
 /** Stable avatar colour per address so the same person always looks the same */

@@ -48,7 +48,7 @@ export default function CustomUserAvatar({ email, name, size = 40 }: Props) {
     <div style={{ position: "relative", display: "inline-block" }}>
       <Avatar style={{ width: size, height: size }}>
         {bimiUrl && <AvatarImage src={bimiUrl} alt={name} />}
-        <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
+        <AvatarFallback>{(name || email || "?").charAt(0).toUpperCase()}</AvatarFallback>
       </Avatar>
 
       {/* Shimmer overlay only while loading */}

@@ -35,7 +35,10 @@ async function applyActionResult(response: any, mailId: string, currentFolder: s
 export function safeDecrypt(value: string | undefined | null): string {
     if (!value) return "";
     if (!value.includes(":")) return value;
+    const colonIdx = value.indexOf(":");
+    const isCipher = colonIdx === 24 && value.slice(0, 24).endsWith("==");
     const result = s.decryptAES(value);
+    if (isCipher) return result;
     return result || value;
 }
 

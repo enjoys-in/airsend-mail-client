@@ -189,7 +189,7 @@ function ThreadMessage({
         <div className={cn("flex gap-3 py-2 rounded-lg px-2 hover:bg-accent/20 transition-colors", isParent && "pb-3")}>
           <Avatar className="mt-0.5 size-7 shrink-0">
             <AvatarFallback className="text-xs bg-primary/10 text-primary">
-              {authorName.charAt(0).toUpperCase()}
+              {(authorName || "?").charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">

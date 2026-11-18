@@ -664,7 +664,7 @@ function MessageBubble({
             <button className="mt-0.5 shrink-0">
               <Avatar className="size-8">
                 <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                  {message.authorName.charAt(0).toUpperCase()}
+                  {(message.authorName || "?").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             </button>
@@ -672,7 +672,7 @@ function MessageBubble({
         ) : (
           <Avatar className="mt-0.5 size-8 shrink-0">
             <AvatarFallback className="text-xs bg-primary/10 text-primary">
-              {message.authorName.charAt(0).toUpperCase()}
+              {(message.authorName || "?").charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         )}

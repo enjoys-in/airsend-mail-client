@@ -40,18 +40,19 @@ export default function LiveMeetingCard({ meeting, compact = false, onJoin }: Li
   const [copied, setCopied] = useState(false);
   const [isRSVPing, setIsRSVPing] = useState(false);
 
-  const isLive = meeting.status === "live";
-  const isOrganizer = meeting.organizerId === currentUserId;
+  const isLive = meeting?.status === "live";
+  const isOrganizer = meeting?.organizerId === currentUserId;
 
-  const myAttendee = meeting.attendees?.find(
-    (a) => a.email === currentUserId || a.id === currentUserId
+  const myAttendee = (meeting?.attendees || []).find(
+    (a) => a && (a.email === currentUserId || a.id === currentUserId)
   );
   const myStatus = myAttendee?.status;
 
   const handleCopy = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const url = typeof window !== "undefined" ? `${window.location.origin}${meeting.meetingUrl}` : meeting.meetingUrl;
+    const meetUrl = meeting?.meetingUrl || "";
+    const url = typeof window !== "undefined" ? `${window.location.origin}${meetUrl}` : meetUrl;
     navigator.clipboard?.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -60,7 +61,7 @@ export default function LiveMeetingCard({ meeting, compact = false, onJoin }: Li
   const handleRSVP = async (status: "accepted" | "declined" | "tentative", e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!currentUserId || isRSVPing) return;
+    if (!currentUserId || isRSVPing || !meeting?.id) return;
     setIsRSVPing(true);
     try {
       await workspaceApi.respondMeeting(meeting.id, status, currentUserId);
@@ -69,8 +70,8 @@ export default function LiveMeetingCard({ meeting, compact = false, onJoin }: Li
           if (m.id !== meeting.id) return m;
           return {
             ...m,
-            attendees: m.attendees.map((a) =>
-              a.email === currentUserId ? { ...a, status } : a
+            attendees: (m.attendees || []).map((a) =>
+              a && a.email === currentUserId ? { ...a, status } : a
             ),
           };
         }),
@@ -85,23 +86,27 @@ export default function LiveMeetingCard({ meeting, compact = false, onJoin }: Li
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    deleteMeeting(meeting.id);
+    if (meeting?.id) {
+      deleteMeeting(meeting.id);
+    }
   };
 
-  const targetCallUrl = meeting.meetingUrl.startsWith("/v2/workspace/calls/")
+  const targetCallUrl = meeting?.meetingUrl?.startsWith("/v2/workspace/calls/")
     ? meeting.meetingUrl
-    : `/v2/workspace/calls/${meeting.id}`;
+    : `/v2/workspace/calls/${meeting?.id || ""}`;
 
-  const formatMeetingTime = (start: string, end: string) => {
+  const formatMeetingTime = (start?: string, end?: string) => {
     try {
+      if (!start || !end) return "";
       const s = new Date(start);
       const e = new Date(end);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return `${start || ""} - ${end || ""}`;
       return `${s.toLocaleDateString([], { month: "short", day: "numeric" })} • ${s.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       })} - ${e.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
     } catch {
-      return `${start} - ${end}`;
+      return `${start || ""} - ${end || ""}`;
     }
   };
 
@@ -235,21 +240,24 @@ export default function LiveMeetingCard({ meeting, compact = false, onJoin }: Li
         <div className="flex items-center justify-between border-t border-border/40 pt-3 mb-3">
           <div className="flex items-center gap-2">
             <div className="flex -space-x-1.5 overflow-hidden">
-              {(meeting.attendees || []).slice(0, 4).map((att) => (
-                <Avatar key={att.id || att.email} className="size-6 border-2 border-background">
-                  <AvatarFallback className="bg-primary/20 text-[10px] text-primary font-bold">
-                    {att.name?.charAt(0) || att.email.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
+              {(meeting?.attendees || []).slice(0, 4).map((att, idx) => {
+                const initial = (att?.name || att?.email || "?").charAt(0).toUpperCase();
+                return (
+                  <Avatar key={att?.id || att?.email || idx} className="size-6 border-2 border-background">
+                    <AvatarFallback className="bg-primary/20 text-[10px] text-primary font-bold">
+                      {initial}
+                    </AvatarFallback>
+                  </Avatar>
+                );
+              })}
             </div>
             <span className="text-[11px] text-muted-foreground">
-              {meeting.attendees?.length || 1} participant{meeting.attendees?.length === 1 ? "" : "s"}
+              {meeting?.attendees?.length || 1} participant{meeting?.attendees?.length === 1 ? "" : "s"}
             </span>
           </div>
 
           <span className="text-[11px] text-muted-foreground">
-            Host: <strong className="text-foreground font-medium">{meeting.organizerName}</strong>
+            Host: <strong className="text-foreground font-medium">{meeting?.organizerName || "Organizer"}</strong>
           </span>
         </div>
       </div>

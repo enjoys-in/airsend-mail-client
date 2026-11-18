@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Mail, CalendarDays, Layers, Bell } from "lucide-react";
+import { Mail, CalendarDays, Layers, Bell, CheckSquare } from "lucide-react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
@@ -35,6 +35,13 @@ const tabs: TabItem[] = [
     icon: Layers,
     href: "/v2/workspace",
     matchPath: "/v2/workspace",
+    featureKey: "canAccessWorkspace",
+  },
+  {
+    label: "Tasks",
+    icon: CheckSquare,
+    href: "/v2/tasks",
+    matchPath: "/v2/tasks",
     featureKey: "canAccessWorkspace",
   },
   {

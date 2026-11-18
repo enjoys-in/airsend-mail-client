@@ -140,7 +140,7 @@ export default function MobileWorkspaceSidebar({
                     )}
                   >
                     <span className="flex size-5 shrink-0 items-center justify-center rounded bg-primary/10 text-[10px] font-bold text-primary">
-                      {t.name.charAt(0)}
+                      {(t.name || "?").charAt(0).toUpperCase()}
                     </span>
                     {t.name}
                   </DropdownMenuItem>
@@ -237,7 +237,7 @@ export default function MobileWorkspaceSidebar({
                       )}
                     >
                       <span className="relative flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-medium">
-                        {other.displayName.charAt(0)}
+                        {(other.displayName || other.username || "?").charAt(0).toUpperCase()}
                         <span
                           className={cn(
                             "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-background",

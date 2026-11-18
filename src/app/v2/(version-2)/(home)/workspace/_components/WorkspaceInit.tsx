@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { useChatStore } from "../_lib/chat-store";
 import { useWorkspaceWS } from "../_lib/use-workspace-ws";
-import { getWorkspaceApiUrl } from "../_lib/api";
+import { getWorkspaceApiUrl, isValidUUID } from "../_lib/api";
 
 // ---------------------------------------------------------------------------
 // WorkspaceInit — fetches workspace data from the Go API on mount
@@ -24,7 +24,6 @@ export default function WorkspaceInit() {
     fetchMessages,
     fetchDMs,
     fetchMeetings,
-    fetchTasks,
     fetchFiles,
     fetchCalls,
     fetchNotifications,
@@ -57,20 +56,19 @@ export default function WorkspaceInit() {
     fetchMeetings().catch(() => {});
   }, [email, fetchTeams, fetchDMs, fetchNotifications, fetchCalls, fetchMeetings]);
 
-  // When activeTeamId changes, fetch channels + members + team tasks + files + team meetings
+  // When activeTeamId changes, fetch channels + members + files + team meetings
   useEffect(() => {
-    if (!email || !activeTeamId) return;
+    if (!email || !activeTeamId || !isValidUUID(activeTeamId)) return;
 
     fetchChannels(activeTeamId, email).catch(() => {});
     fetchMembers(activeTeamId, email).catch(() => {});
-    fetchTasks(activeTeamId).catch(() => {});
     fetchFiles(activeTeamId).catch(() => {});
     fetchMeetings(activeTeamId).catch(() => {});
-  }, [email, activeTeamId, fetchChannels, fetchMembers, fetchTasks, fetchFiles, fetchMeetings]);
+  }, [email, activeTeamId, fetchChannels, fetchMembers, fetchFiles, fetchMeetings]);
 
   // When activeChannelId changes, fetch messages for that channel
   useEffect(() => {
-    if (!email || !activeChannelId) return;
+    if (!email || !activeChannelId || !isValidUUID(activeChannelId)) return;
     fetchMessages(activeChannelId, email).catch(() => {});
   }, [email, activeChannelId, fetchMessages]);
 

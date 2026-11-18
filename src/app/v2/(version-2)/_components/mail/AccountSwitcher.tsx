@@ -82,7 +82,7 @@ export function AccountSwitcherV2() {
           {accounts.length > 0 ? (
             accounts.map((account) => {
               const isActive = currAccount?.email === account.email
-              const accInitials = account.name ? formatNameInParts(account.name) : account.email.charAt(0).toUpperCase()
+              const accInitials = account.name ? formatNameInParts(account.name) : (account.email || "?").charAt(0).toUpperCase()
               return (
                 <DropdownMenuItem
                   key={account.email}

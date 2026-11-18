@@ -41,6 +41,7 @@ import {
 } from "./mock-data";
 import {
   workspaceApi,
+  isValidUUID,
   toTeam,
   toChannel,
   toMember,
@@ -273,8 +274,8 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   setWS: (ws) => set({ _ws: ws }),
 
   // Selection
-  activeTeamId: "t-1",
-  activeChannelId: "ch-1",
+  activeTeamId: null,
+  activeChannelId: null,
   activeDmId: null,
   activeThreadMessageId: null,
   sidePanelView: null,
@@ -388,48 +389,50 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     const parentId = get().replyingTo?.id;
 
     // Send via WebSocket (preferred) or fallback to HTTP
-    if (_ws && _ws.readyState === WebSocket.OPEN) {
-      _ws.send(
-        JSON.stringify({
-          type: "message.send",
-          payload: {
-            channel_id: activeChannelId,
-            content: content.trim(),
-            type: "text",
-            priority,
-            parent_id: parentId ?? null,
-            mentions,
-            temp_id: tempId,
-          },
-        }),
-      );
-      // message.ack from server will replace the temp message
-    } else {
-      // Fallback: HTTP POST
-      workspaceApi
-        .sendMessage(
-          activeChannelId,
-          {
-            content: content.trim(),
-            type: "text",
-            priority,
-            parent_id: parentId,
-            mentions,
-          },
-          currentUserId,
-        )
-        .then((serverMsg) => {
-          const real = toMessage(serverMsg);
-          set((s) => ({
-            messages: s.messages.map((m) => (m.id === tempId ? real : m)),
-          }));
-        })
-        .catch(() => {
-          set((s) => ({
-            messages: s.messages.filter((m) => m.id !== tempId),
-            apiError: "Failed to send message",
-          }));
-        });
+    if (activeChannelId && isValidUUID(activeChannelId)) {
+      if (_ws && _ws.readyState === WebSocket.OPEN) {
+        _ws.send(
+          JSON.stringify({
+            type: "message.send",
+            payload: {
+              channel_id: activeChannelId,
+              content: content.trim(),
+              type: "text",
+              priority,
+              parent_id: parentId ?? null,
+              mentions,
+              temp_id: tempId,
+            },
+          }),
+        );
+        // message.ack from server will replace the temp message
+      } else {
+        // Fallback: HTTP POST
+        workspaceApi
+          .sendMessage(
+            activeChannelId,
+            {
+              content: content.trim(),
+              type: "text",
+              priority,
+              parent_id: parentId,
+              mentions,
+            },
+            currentUserId,
+          )
+          .then((serverMsg) => {
+            const real = toMessage(serverMsg);
+            set((s) => ({
+              messages: s.messages.map((m) => (m.id === tempId ? real : m)),
+            }));
+          })
+          .catch(() => {
+            set((s) => ({
+              messages: s.messages.filter((m) => m.id !== tempId),
+              apiError: "Failed to send message",
+            }));
+          });
+      }
     }
   },
 
@@ -758,50 +761,16 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       createdAt: new Date().toISOString(),
     };
     set((s) => ({ tasks: [newTask, ...s.tasks] }));
-
-    const email = get().currentUserId || "alex@airsend.io";
-    workspaceApi
-      .createTask(
-        taskInput.teamId || null,
-        {
-          title: taskInput.title,
-          description: taskInput.description,
-          channel_id: taskInput.channelId,
-          assignee_email: taskInput.assigneeId,
-          status: taskInput.status,
-          priority: taskInput.priority,
-          due_date: taskInput.dueDate,
-        },
-        email
-      )
-      .then((serverTask) => {
-        set((s) => ({
-          tasks: s.tasks.map((t) => (t.id === tempId ? toChatTask(serverTask) : t)),
-        }));
-      })
-      .catch((err) => {
-        console.warn("[Workspace] Task creation fallback to local:", err);
-      });
   },
 
   updateTaskStatus: (taskId, status) => {
     set((s) => ({
       tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, status } : t)),
     }));
-
-    const email = get().currentUserId || "alex@airsend.io";
-    workspaceApi.updateTaskStatus(taskId, status, email).catch((err) => {
-      console.warn("[Workspace] Task status update fallback to local:", err);
-    });
   },
 
   deleteTask: (taskId) => {
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== taskId) }));
-
-    const email = get().currentUserId || "alex@airsend.io";
-    workspaceApi.deleteTask(taskId, email).catch((err) => {
-      console.warn("[Workspace] Task delete fallback to local:", err);
-    });
   },
 
   addMeeting: (meetingInput) => {
@@ -1006,39 +975,61 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   // -----------------------------------------------------------------------
 
   fetchTeams: async (email) => {
+    if (!email) return;
     set({ isLoading: true, isLoadingTeams: true, apiError: null, currentUserId: email });
     try {
       const serverTeams = await workspaceApi.listTeams(email);
       const teams = serverTeams.map(toTeam);
-      set((s) => ({
-        teams: teams.length > 0 ? teams : s.teams,
-        activeTeamId: teams[0]?.id ?? s.activeTeamId,
-        isLoading: false,
-        isLoadingTeams: false,
-      }));
+      set((s) => {
+        const nextActiveTeamId = teams.length > 0
+          ? (teams.some((t) => t.id === s.activeTeamId) ? s.activeTeamId : teams[0].id)
+          : (isValidUUID(s.activeTeamId) ? s.activeTeamId : null);
+        return {
+          teams: teams.length > 0 ? teams : s.teams,
+          activeTeamId: nextActiveTeamId,
+          isLoading: false,
+          isLoadingTeams: false,
+        };
+      });
     } catch (err) {
       set({ isLoading: false, isLoadingTeams: false, apiError: (err as Error).message });
     }
   },
 
   fetchChannels: async (teamId, email) => {
+    if (!isValidUUID(teamId)) {
+      set({ isLoadingChannels: false });
+      return;
+    }
     set({ isLoadingChannels: true });
     try {
       const serverChannels = await workspaceApi.listChannels(teamId, email);
       const channels = serverChannels.map(toChannel);
-      set((s) => ({
-        channels: [
-          ...s.channels.filter((c) => c.teamId !== teamId),
-          ...channels,
-        ],
-        isLoadingChannels: false,
-      }));
+      set((s) => {
+        const currentActiveChannelId = s.activeChannelId;
+        const channelBelongsToTeam = channels.some((c) => c.id === currentActiveChannelId);
+        let nextActiveChannelId = currentActiveChannelId;
+        if ((!channelBelongsToTeam || !isValidUUID(currentActiveChannelId)) && channels.length > 0) {
+          const defaultChannel = channels.find((c) => c.isDefault) || channels[0];
+          nextActiveChannelId = defaultChannel?.id || null;
+        }
+
+        return {
+          channels: [
+            ...s.channels.filter((c) => c.teamId !== teamId),
+            ...channels,
+          ],
+          activeChannelId: nextActiveChannelId,
+          isLoadingChannels: false,
+        };
+      });
     } catch {
       set({ isLoadingChannels: false });
     }
   },
 
   fetchMembers: async (teamId, email) => {
+    if (!isValidUUID(teamId)) return;
     try {
       const serverMembers = await workspaceApi.listMembers(teamId, email);
       const members = serverMembers.map(toMember);
@@ -1054,6 +1045,10 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   fetchMessages: async (channelId, email) => {
+    if (!isValidUUID(channelId)) {
+      set({ isLoadingMessages: false });
+      return;
+    }
     set({ isLoadingMessages: true });
     try {
       const res = await workspaceApi.listMessages(channelId, email, 100);
@@ -1073,6 +1068,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   fetchOlderMessages: async (channelId, email) => {
+    if (!isValidUUID(channelId)) return;
     const { messageCursors, messageHasMore, isLoadingOlder } = get();
     if (isLoadingOlder) return;
     if (!messageHasMore[channelId]) return;
@@ -1101,6 +1097,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   fetchDMs: async (email) => {
+    if (!email) return;
     try {
       const serverDMs = await workspaceApi.listDMs(email);
       const dms = serverDMs.map(toDM);
@@ -1113,7 +1110,9 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   fetchMeetings: async (teamId) => {
-    const email = get().currentUserId || "alex@airsend.io";
+    const email = get().currentUserId;
+    if (!email) return;
+    if (teamId && !isValidUUID(teamId)) return;
     try {
       const res = teamId
         ? await workspaceApi.listTeamMeetings(teamId, email)
@@ -1127,24 +1126,15 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     }
   },
 
-  fetchTasks: async (teamId) => {
-    const email = get().currentUserId || "alex@airsend.io";
-    try {
-      const res = teamId
-        ? await workspaceApi.listTeamTasks(teamId, email)
-        : await workspaceApi.listMyTasks(email);
-      const tasks = res.map(toChatTask);
-      if (tasks.length > 0) {
-        set({ tasks });
-      }
-    } catch {
-      // Fallback kept
-    }
+  fetchTasks: async (_teamId) => {
+    // Tasks are handled in a dedicated tasks service/repo; workspace backend calls decoupled
   },
 
   fetchFiles: async (teamId) => {
-    const targetTeam = teamId || get().activeTeamId || "team-1";
-    const email = get().currentUserId || "alex@airsend.io";
+    const targetTeam = teamId || get().activeTeamId;
+    if (!targetTeam || !isValidUUID(targetTeam)) return;
+    const email = get().currentUserId;
+    if (!email) return;
     try {
       const res = await workspaceApi.listTeamFiles(targetTeam, email);
       const files = res.map(toWorkspaceFile);
@@ -1157,7 +1147,8 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   fetchCalls: async () => {
-    const email = get().currentUserId || "alex@airsend.io";
+    const email = get().currentUserId;
+    if (!email) return;
     try {
       const res = await workspaceApi.listCallHistory(email);
       const callRecords = res.map(toCallRecord);
@@ -1170,7 +1161,8 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   fetchNotifications: async () => {
-    const email = get().currentUserId || "alex@airsend.io";
+    const email = get().currentUserId;
+    if (!email) return;
     try {
       const res = await workspaceApi.listNotifications(email);
       if (res.length > 0) {
@@ -1197,8 +1189,10 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   // -----------------------------------------------------------------------
 
   fetchWorkflows: async (teamId) => {
-    const tId = teamId || get().activeTeamId || "t-1";
-    const email = get().currentUserId || "alex@airsend.io";
+    const tId = teamId || get().activeTeamId;
+    if (!tId || !isValidUUID(tId)) return;
+    const email = get().currentUserId;
+    if (!email) return;
     try {
       const res = await workspaceApi.listWorkflows(tId, email);
       if (Array.isArray(res) && res.length > 0) {

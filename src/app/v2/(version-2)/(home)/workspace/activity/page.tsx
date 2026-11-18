@@ -219,7 +219,7 @@ function ActivityFeedContent() {
                   <div className="relative shrink-0 ml-1">
                     <Avatar className="size-10 shadow-sm">
                       <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                        {n.fromUserName.charAt(0)}
+                        {(n.fromUserName || "?").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-background border border-border/40 shadow-sm">

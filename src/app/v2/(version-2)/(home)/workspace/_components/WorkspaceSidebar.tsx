@@ -182,7 +182,7 @@ export default function WorkspaceSidebar() {
                   )}
                 >
                   <span className="flex size-5 shrink-0 items-center justify-center rounded bg-primary/10 text-[10px] font-bold text-primary">
-                    {t.name.charAt(0)}
+                    {(t.name || "?").charAt(0).toUpperCase()}
                   </span>
                   {t.name}
                 </DropdownMenuItem>
@@ -279,10 +279,10 @@ export default function WorkspaceSidebar() {
                       <span>Calls</span>
                     </Link>
                     <Link
-                      href="/v2/workspace/tasks"
+                      href="/v2/tasks"
                       className={cn(
                         "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
-                        pathname === "/v2/workspace/tasks"
+                        pathname === "/v2/tasks" || pathname === "/v2/workspace/tasks"
                           ? "bg-accent text-accent-foreground font-semibold"
                           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                       )}
@@ -414,7 +414,7 @@ export default function WorkspaceSidebar() {
                           )}
                         >
                           <span className="relative flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
-                            {other.displayName.charAt(0)}
+                            {(other.displayName || other.username || "?").charAt(0).toUpperCase()}
                             <UserPresenceBadge
                               status={other.status}
                               className="absolute -bottom-0.5 -right-0.5"

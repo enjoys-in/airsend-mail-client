@@ -165,7 +165,7 @@ function WorkspaceDashboardContent() {
           { title: "Channels", count: teamChannels.length, href: defaultChannel ? `/v2/workspace/c/${defaultChannel.id}` : "/v2/workspace", icon: Hash, color: "text-blue-500 bg-blue-500/10" },
           { title: "Meetings", count: meetings.length, href: "/v2/workspace/meetings", icon: Calendar, color: "text-emerald-500 bg-emerald-500/10" },
           { title: "Calls", count: "HD Voice", href: "/v2/workspace/calls", icon: Video, color: "text-purple-500 bg-purple-500/10" },
-          { title: "Tasks", count: `${pendingTasks.length} open`, href: "/v2/workspace/tasks", icon: CheckSquare, color: "text-amber-500 bg-amber-500/10" },
+          { title: "Tasks", count: `${pendingTasks.length} open`, href: "/v2/tasks", icon: CheckSquare, color: "text-amber-500 bg-amber-500/10" },
           { title: "Files", count: `${files.length} items`, href: "/v2/workspace/files", icon: FolderOpen, color: "text-indigo-500 bg-indigo-500/10" },
           { title: "Activity", count: `${unreadActivity.length} unread`, href: "/v2/workspace/activity", icon: Bell, color: "text-rose-500 bg-rose-500/10" },
         ].map((item) => {
@@ -242,7 +242,7 @@ function WorkspaceDashboardContent() {
               </CardTitle>
               <CardDescription className="text-xs">Your assigned action items</CardDescription>
             </div>
-            <Link href="/v2/workspace/tasks">
+            <Link href="/v2/tasks">
               <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
                 Board <ArrowRight className="size-3" />
               </Button>
@@ -286,7 +286,7 @@ function WorkspaceDashboardContent() {
                 </div>
               ))
             )}
-            <Link href="/v2/workspace/tasks" className="block pt-1">
+            <Link href="/v2/tasks" className="block pt-1">
               <Button variant="outline" size="sm" className="w-full text-xs h-8 gap-1.5 border-dashed">
                 <Plus className="size-3.5" />
                 Add New Task
@@ -325,7 +325,7 @@ function WorkspaceDashboardContent() {
                 >
                   <Avatar className="size-7 shrink-0 mt-0.5">
                     <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
-                      {notif.fromUserName.charAt(0)}
+                      {(notif.fromUserName || "?").charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">

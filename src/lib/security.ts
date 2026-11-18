@@ -140,17 +140,33 @@ export class Security {
     };
     
     encryptAES(plaintext: string, secret?: string): string {
-        const key = CryptoJS.enc.Utf8.parse(secret || getEncryptionKey());
-        const iv = CryptoJS.lib.WordArray.random(16);
-        const encrypted = CryptoJS.AES.encrypt(plaintext, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-        return `${CryptoJS.enc.Base64.stringify(iv)}:${encrypted.ciphertext.toString(CryptoJS.enc.Base64)}`;
+        if (!plaintext) return "";
+        try {
+            const rawKey = secret || getEncryptionKey() || getAppSecret();
+            if (!rawKey) return plaintext;
+            const key = CryptoJS.enc.Utf8.parse(rawKey);
+            const iv = CryptoJS.lib.WordArray.random(16);
+            const encrypted = CryptoJS.AES.encrypt(plaintext, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
+            return `${CryptoJS.enc.Base64.stringify(iv)}:${encrypted.ciphertext.toString(CryptoJS.enc.Base64)}`;
+        } catch (e) {
+            console.error("[Security] encryptAES failed:", e);
+            return plaintext;
+        }
     }
 
     decryptAES(ciphertextB64: string, secret?: string): string {
         if (!ciphertextB64) return "";
         try {
-            const [ivB64, cipherB64] = ciphertextB64.split(":");
-            const key = CryptoJS.enc.Utf8.parse(secret || getEncryptionKey());
+            const colonIdx = ciphertextB64.indexOf(":");
+            if (colonIdx === -1) return ciphertextB64;
+            const ivB64 = ciphertextB64.slice(0, colonIdx);
+            const cipherB64 = ciphertextB64.slice(colonIdx + 1);
+            if (!ivB64 || !cipherB64) return ciphertextB64;
+
+            const rawKey = secret || getEncryptionKey() || getAppSecret();
+            if (!rawKey) return ciphertextB64;
+
+            const key = CryptoJS.enc.Utf8.parse(rawKey);
             const decrypted = CryptoJS.AES.decrypt(
                 { ciphertext: CryptoJS.enc.Base64.parse(cipherB64) } as any,
                 key,

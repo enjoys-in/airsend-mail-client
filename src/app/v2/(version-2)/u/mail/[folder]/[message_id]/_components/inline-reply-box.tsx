@@ -63,7 +63,7 @@ function getChipDisplay(raw: string): string {
 
 function getChipInitial(raw: string): string {
     const { name, address } = parseEmailChip(raw);
-    return (name || address).charAt(0).toUpperCase();
+    return (name || address || "?").charAt(0).toUpperCase();
 }
 
 function ChipInput({

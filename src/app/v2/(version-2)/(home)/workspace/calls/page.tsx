@@ -342,7 +342,7 @@ function CallsHubContent() {
                       <div className="relative shrink-0">
                         <Avatar className="size-8">
                           <AvatarFallback className="text-[11px] bg-primary/10 text-primary font-bold">
-                            {member.displayName.charAt(0)}
+                            {(member.displayName || member.username || member.email || "?").charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <span
@@ -568,7 +568,7 @@ function CallsHubContent() {
                 <div className="flex items-center gap-2.5 min-w-0 pr-2">
                   <Avatar className="size-8">
                     <AvatarFallback className="text-xs font-bold text-primary bg-primary/10">
-                      {member.displayName.charAt(0)}
+                      {(member.displayName || member.username || member.email || "?").charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">

@@ -88,8 +88,9 @@ function MeetingsHubContent() {
   const now = new Date();
   const todayStr = now.toISOString().split("T")[0];
 
-  const filteredMeetings = meetings.filter((m) => {
-    const mDate = m.startTime.split("T")[0];
+  const filteredMeetings = (meetings || []).filter((m) => {
+    if (!m) return false;
+    const mDate = m.startTime ? m.startTime.split("T")[0] : "";
     if (activeTab === "today") return mDate === todayStr || m.status === "live";
     if (activeTab === "upcoming") return mDate > todayStr && m.status !== "completed";
     if (activeTab === "past") return m.status === "completed" || mDate < todayStr;
@@ -177,10 +178,10 @@ function MeetingsHubContent() {
           status: "accepted",
           isOrganizer: true,
         },
-        ...members.slice(0, 3).map((m) => ({
-          id: m.userId,
-          name: m.displayName,
-          email: m.email,
+        ...(members || []).slice(0, 3).map((m) => ({
+          id: m.userId || m.id || "",
+          name: m.displayName || m.username || m.email || "Member",
+          email: m.email || "",
           status: "accepted" as const,
         })),
       ],
@@ -192,7 +193,8 @@ function MeetingsHubContent() {
   };
 
   const handleCopyLink = (meet: Meeting) => {
-    const url = typeof window !== "undefined" ? `${window.location.origin}${meet.meetingUrl}` : meet.meetingUrl;
+    const meetUrl = meet?.meetingUrl || "";
+    const url = typeof window !== "undefined" ? `${window.location.origin}${meetUrl}` : meetUrl;
     navigator.clipboard?.writeText(url);
     setCopiedId(meet.id);
     setTimeout(() => setCopiedId(null), 2000);

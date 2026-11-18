@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Activity, ArchiveX, CalendarDays, File, Mail, Send, Settings, Layers } from "lucide-react"
+import { Activity, ArchiveX, CalendarDays, File, Mail, Send, Settings, Layers, CheckSquare } from "lucide-react"
 
 import {
     Sidebar,
@@ -25,6 +25,7 @@ import { usePathname } from "next/navigation"
 import SidebarCalendar from "../(home)/calender/_components/sidebar-calendar"
 import ChannelList from "../(home)/workspace/_components/ChannelList"
 import WorkspaceSidebar from "../(home)/workspace/_components/WorkspaceSidebar"
+import { TasksSidebar } from "../(home)/tasks/_components/TasksSidebar"
 import { SettingsMenuSidebar } from "./mail/settingsSidebar"
 import { cn } from "@/lib/utils"
 import { useFeatureAccess } from "@/hooks/use-feature-access"
@@ -70,6 +71,13 @@ const navMain: NavItem[] = [
         url: "/v2/workspace",
         icon: Layers,
         matchPath: "/v2/workspace",
+        featureKey: "canAccessWorkspace",
+    },
+    {
+        title: "Tasks",
+        url: "/v2/tasks",
+        icon: CheckSquare,
+        matchPath: "/v2/tasks",
         featureKey: "canAccessWorkspace",
     },
     // {
@@ -130,6 +138,7 @@ const SidebarSecondaryPanel = React.memo(({ pathname }: { pathname: string }) =>
     if (pathname === "/v2/calender") return <SidebarCalendar />
     // Workspace nested sidebar — team switcher + channels + DMs
     if (pathname.startsWith("/v2/workspace")) return <WorkspaceSidebar />
+    if (pathname.startsWith("/v2/tasks")) return <TasksSidebar />
     if (pathname === "/v2/chats" || pathname === "/v2/files") return <ChannelList />
     return null
 })

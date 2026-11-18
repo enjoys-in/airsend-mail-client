@@ -81,6 +81,7 @@ export function EmailComposer({
     discard: discardDraft,
   } = useDraftAutoSave({
     initialData: {
+      from: explicitAccount?.email || initialCurrAccount?.email,
       to: initialData?.to,
       cc: initialData?.cc,
       bcc: initialData?.bcc,
@@ -230,6 +231,7 @@ export function EmailComposer({
     if (draftUpdateTimer.current) clearTimeout(draftUpdateTimer.current);
     draftUpdateTimer.current = setTimeout(() => {
       updateDraft({
+        from: selectedAccount?.email,
         to: toChips.map((c) => c.email),
         cc: ccChips.map((c) => c.email),
         bcc: bccChips.map((c) => c.email),
@@ -240,7 +242,7 @@ export function EmailComposer({
     return () => {
       if (draftUpdateTimer.current) clearTimeout(draftUpdateTimer.current);
     };
-  }, [toChips, ccChips, bccChips, subject, body, updateDraft]);
+  }, [toChips, ccChips, bccChips, subject, body, selectedAccount?.email, updateDraft]);
 
   const fromInitial = (selectedAccount.name || selectedAccount.email || "U").charAt(0).toUpperCase();
 
@@ -339,7 +341,7 @@ export function EmailComposer({
                             avatarColor(account.email)
                           )}
                         >
-                          {(account.name || account.email).charAt(0).toUpperCase()}
+                          {(account.name || account.email || "?").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex min-w-0 flex-1 flex-col">

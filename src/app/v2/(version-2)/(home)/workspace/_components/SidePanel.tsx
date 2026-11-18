@@ -305,7 +305,7 @@ function MemberGroup({
             className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent/50 transition-colors"
           >
             <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-              {member.displayName.charAt(0)}
+              {(member.displayName || member.username || "?").charAt(0).toUpperCase()}
               <span
                 className={cn(
                   "absolute -bottom-0 -right-0 size-2.5 rounded-full border-2 border-background",
