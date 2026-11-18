@@ -1,10 +1,8 @@
 "use client";
 
-import type React from "react";
-
+import React, { useState, useCallback, type KeyboardEvent, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,14 +10,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ArrowLeft, Check, ChevronDown } from "lucide-react";
-import { useState, useCallback, type KeyboardEvent, useEffect, useRef } from "react";
 import { HtmlEditor } from "./plain-editor/htmlEditor";
-
 import ComposeFooter from "./ComposeFooter";
-import RecipientChips from "./RecipientChips";
+import RecipientChips, { avatarColor } from "./RecipientChips";
 import { useAppSelector } from "@/store/hooks";
 import { airsendDB } from "@/db";
 import { useDraftAutoSave } from "@/lib/event-bridge/useDraftAutoSave";
+import { useSettingsStore } from "@/store/settings";
+import { cn } from "@/lib/utils";
 
 interface EmailChip {
   id: string;
@@ -38,11 +36,50 @@ export interface ComposeInitialData {
   thread_id?: string;
 }
 
-export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?: boolean; tabId?: number; initialData?: ComposeInitialData }) {
-  const { currAccount, accounts } = useAppSelector((state) => state.accounts);
+export interface EmailComposerProps {
+  showHeader?: boolean;
+  tabId?: number;
+  initialData?: ComposeInitialData;
+  className?: string;
+  account?: { email: string; name: string };
+  accountsList?: Array<{ email: string; name: string }>;
+  onSend?: (payload: any) => Promise<void> | void;
+  onDiscard?: () => Promise<void> | void;
+  onClose?: () => void;
+  defaultFont?: string;
+  defaultFontSize?: string;
+  footer?: React.ReactNode;
+}
+
+export function EmailComposer({
+  showHeader,
+  tabId,
+  initialData,
+  className,
+  account: explicitAccount,
+  accountsList: explicitAccountsList,
+  onSend,
+  onDiscard,
+  onClose,
+  defaultFont: explicitDefaultFont,
+  defaultFontSize: explicitDefaultFontSize,
+  footer,
+}: EmailComposerProps) {
+  // Redux account fallback
+  const reduxAccounts = useAppSelector((state) => state.accounts);
+  const accounts = explicitAccountsList ?? reduxAccounts.accounts;
+  const initialCurrAccount = explicitAccount ?? reduxAccounts.currAccount;
+
+  // Settings font preferences
+  const settingsComposing = useSettingsStore((s) => s.settings?.composing);
+  const resolvedFont = explicitDefaultFont || settingsComposing?.default_font || "Inter";
+  const resolvedFontSize = explicitDefaultFontSize || (settingsComposing?.default_font_size ? `${settingsComposing.default_font_size}px` : "14px");
 
   // ─── Draft Auto-Save ───
-  const { update: updateDraft, flush: flushDraft, discard: discardDraft, status: draftStatus } = useDraftAutoSave({
+  const {
+    update: updateDraft,
+    discard: discardDraft,
+  } = useDraftAutoSave({
     initialData: {
       to: initialData?.to,
       cc: initialData?.cc,
@@ -53,12 +90,26 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
   });
 
   const [selectedAccount, setSelectedAccount] = useState({
-    email: currAccount?.email || "",
-    name: currAccount?.name || "",
+    email: initialCurrAccount?.email || "",
+    name: initialCurrAccount?.name || "",
   });
 
+  // Keep selectedAccount in sync if initialCurrAccount changes
+  useEffect(() => {
+    if (initialCurrAccount?.email && !selectedAccount.email) {
+      setSelectedAccount({
+        email: initialCurrAccount.email,
+        name: initialCurrAccount.name || "",
+      });
+    }
+  }, [initialCurrAccount, selectedAccount.email]);
+
   const makeChips = (emails: string[] | undefined): EmailChip[] =>
-    (emails || []).map((e, i) => ({ id: `init-${Date.now()}-${i}`, email: e, isValid: validateEmail(e) }));
+    (emails || []).map((e, i) => ({
+      id: `init-${Date.now()}-${i}-${Math.random()}`,
+      email: e,
+      isValid: validateEmail(e),
+    }));
 
   const [toChips, setToChips] = useState<EmailChip[]>(() => makeChips(initialData?.to));
   const [ccChips, setCcChips] = useState<EmailChip[]>(() => makeChips(initialData?.cc));
@@ -74,9 +125,9 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
   const [showCc, setShowCc] = useState((initialData?.cc?.length ?? 0) > 0);
   const [showBcc, setShowBcc] = useState((initialData?.bcc?.length ?? 0) > 0);
   const [attachments, setAttachments] = useState<any[]>([]);
+
   function validateEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    // Support "Name <email>" format
     const namedEmailRegex = /^.+<([^\s@]+@[^\s@]+\.[^\s@]+)>$/;
     return emailRegex.test(email) || namedEmailRegex.test(email);
   }
@@ -85,7 +136,7 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
     if (!email.trim()) return;
 
     const newChip: EmailChip = {
-      id: `${type}-${Date.now()}-${Math.random()}`,
+      id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       email: email.trim(),
       isValid: validateEmail(email.trim()),
     };
@@ -106,22 +157,19 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
     }
   }, []);
 
-  const removeChip = useCallback(
-    (chipId: string, type: "to" | "cc" | "bcc") => {
-      switch (type) {
-        case "to":
-          setToChips((prev) => prev.filter((chip) => chip.id !== chipId));
-          break;
-        case "cc":
-          setCcChips((prev) => prev.filter((chip) => chip.id !== chipId));
-          break;
-        case "bcc":
-          setBccChips((prev) => prev.filter((chip) => chip.id !== chipId));
-          break;
-      }
-    },
-    []
-  );
+  const removeChip = useCallback((chipId: string, type: "to" | "cc" | "bcc") => {
+    switch (type) {
+      case "to":
+        setToChips((prev) => prev.filter((chip) => chip.id !== chipId));
+        break;
+      case "cc":
+        setCcChips((prev) => prev.filter((chip) => chip.id !== chipId));
+        break;
+      case "bcc":
+        setBccChips((prev) => prev.filter((chip) => chip.id !== chipId));
+        break;
+    }
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>, type: "to" | "cc" | "bcc") => {
@@ -133,22 +181,15 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
           addChip(input, type);
         }
       } else if (e.key === "Backspace" && !input) {
-        // Remove last chip when backspacing on empty input
         switch (type) {
           case "to":
-            if (toChips.length > 0) {
-              setToChips((prev) => prev.slice(0, -1));
-            }
+            if (toChips.length > 0) setToChips((prev) => prev.slice(0, -1));
             break;
           case "cc":
-            if (ccChips.length > 0) {
-              setCcChips((prev) => prev.slice(0, -1));
-            }
+            if (ccChips.length > 0) setCcChips((prev) => prev.slice(0, -1));
             break;
           case "bcc":
-            if (bccChips.length > 0) {
-              setBccChips((prev) => prev.slice(0, -1));
-            }
+            if (bccChips.length > 0) setBccChips((prev) => prev.slice(0, -1));
             break;
         }
       }
@@ -164,24 +205,28 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
     },
     [addChip]
   );
+
   useEffect(() => {
     if (!selectedAccount?.email) return;
-    airsendDB.getMultiNestedItem("settings", selectedAccount?.email as string,
-      ["settings.user.display_name"]).then(res => {
+    airsendDB
+      .getMultiNestedItem("settings", selectedAccount.email, ["settings.user.display_name"])
+      .then((res) => {
         if (res.value?.settings) {
-
-          setSelectedAccount({
-            email: selectedAccount.email,
-            name: (res.value?.settings as any)?.user?.display_name || selectedAccount?.name || ""
-          })
+          setSelectedAccount((prev) => ({
+            email: prev.email,
+            name:
+              (res.value?.settings as any)?.user?.display_name ||
+              prev.name ||
+              "",
+          }));
         }
       })
+      .catch((e) => console.warn("Could not fetch user display name:", e));
   }, [selectedAccount?.email]);
 
   // ─── Push field changes to draft auto-save ───
   const draftUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    // Debounce slightly to avoid excessive calls during rapid typing
     if (draftUpdateTimer.current) clearTimeout(draftUpdateTimer.current);
     draftUpdateTimer.current = setTimeout(() => {
       updateDraft({
@@ -191,50 +236,79 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
         subject,
         html: body,
       });
-    }, 500);
+    }, 400);
     return () => {
       if (draftUpdateTimer.current) clearTimeout(draftUpdateTimer.current);
     };
   }, [toChips, ccChips, bccChips, subject, body, updateDraft]);
 
+  const fromInitial = (selectedAccount.name || selectedAccount.email || "U").charAt(0).toUpperCase();
+
   const fromPill = (
-    <span className="flex min-w-0 items-center gap-2 rounded-full border border-border bg-muted/60 py-0.5 pl-0.5 pr-3 text-xs font-medium">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[10px] font-semibold text-white">
-        {(selectedAccount.name || selectedAccount.email).charAt(0).toUpperCase()}
+    <span className="flex min-w-0 items-center gap-2 rounded-full border border-border/80 bg-muted/50 py-0.5 pl-0.5 pr-2.5 text-xs font-medium transition-colors hover:bg-muted/80 shadow-xs">
+      <span
+        className={cn(
+          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white shadow-xs",
+          avatarColor(selectedAccount.email || "default")
+        )}
+      >
+        {fromInitial}
       </span>
-      <span className="truncate">
-        {selectedAccount.name}{" "}
-        <span className="text-muted-foreground">{`<${selectedAccount.email}>`}</span>
+      <span className="truncate max-w-[200px] text-foreground font-medium">
+        {selectedAccount.name || selectedAccount.email}
       </span>
+      {selectedAccount.name && selectedAccount.email && (
+        <span className="truncate text-muted-foreground/75 text-[11px] hidden sm:inline">
+          {`<${selectedAccount.email}>`}
+        </span>
+      )}
     </span>
   );
 
   const toggleClass = (active: boolean) =>
-    `h-6 rounded-md px-2 text-xs font-medium ${
+    cn(
+      "h-6 rounded-md px-2 text-xs font-medium transition-all duration-150",
       active
-        ? "bg-violet-100 text-violet-700 hover:bg-violet-100 dark:bg-violet-500/20 dark:text-violet-200 dark:hover:bg-violet-500/20"
-        : "text-muted-foreground hover:text-foreground"
-    }`;
+        ? "bg-primary/15 text-primary border border-primary/25 font-semibold"
+        : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/60"
+    );
+
+  const handleDiscardDraft = async () => {
+    await discardDraft();
+    if (onDiscard) await onDiscard();
+  };
 
   return (
-    <div className="w-full h-full flex flex-col bg-background text-foreground transition-colors">
+    <div
+      className={cn(
+        "w-full h-full flex flex-col bg-background text-foreground transition-colors overflow-hidden",
+        className
+      )}
+    >
       {showHeader && (
-        <div className="flex items-center justify-between px-3 py-2.5 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/70 shrink-0 bg-card/60 backdrop-blur-xs">
           <div className="flex items-center gap-3">
-            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-            <h1 className="text-base font-semibold tracking-tight">
-              New Email
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+              onClick={onClose}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <h1 className="text-sm font-semibold tracking-tight text-foreground">
+              New Message
             </h1>
           </div>
         </div>
       )}
 
-      <div className={`${showHeader ? "container" : ""} shrink-0 px-2 pt-2`}>
-        {/* Email Details */}
-        <div className="overflow-hidden rounded-xl border border-border bg-card/40 shadow-sm">
+      {/* Recipient and Subject Fields */}
+      <div className="shrink-0 px-2 pt-2">
+        <div className="overflow-hidden rounded-xl border border-border/80 bg-card/40 shadow-xs">
           {/* From Field */}
-          <div className="flex items-center gap-3 px-4 py-2 border-b border-border/60">
-            <span className="w-14 shrink-0 text-xs font-medium text-muted-foreground select-none">
+          <div className="flex items-center gap-3 px-3.5 py-1.5 border-b border-border/50">
+            <span className="w-12 shrink-0 text-xs font-medium text-muted-foreground/80 select-none tracking-tight">
               From
             </span>
 
@@ -244,35 +318,40 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-full p-0 shadow-none hover:bg-transparent focus-visible:ring-0"
+                    className="h-auto min-w-0 flex-1 justify-start gap-1.5 rounded-full p-0 shadow-none hover:bg-transparent focus-visible:ring-0"
                   >
                     {fromPill}
-                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
                   </Button>
                 </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="start" className="w-72">
+                <DropdownMenuContent align="start" className="w-72 p-1.5 rounded-xl shadow-lg border-border">
                   {accounts.map((account) => (
                     <DropdownMenuItem
                       key={account.email}
                       onClick={() => setSelectedAccount(account)}
-                      className="flex cursor-pointer items-center gap-2"
+                      className="flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-xs"
                     >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="text-sm">
-                          {account.name.charAt(0)}
+                      <Avatar className="h-7 w-7">
+                        <AvatarFallback
+                          className={cn(
+                            "text-xs font-semibold text-white",
+                            avatarColor(account.email)
+                          )}
+                        >
+                          {(account.name || account.email).charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm font-medium">
-                          {account.name}
+                        <span className="truncate text-xs font-medium text-foreground">
+                          {account.name || account.email}
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
+                        <span className="truncate text-[11px] text-muted-foreground">
                           {account.email}
                         </span>
                       </div>
                       {account.email === selectedAccount.email && (
-                        <Check className="h-4 w-4 shrink-0 text-violet-500" />
+                        <Check className="h-4 w-4 shrink-0 text-primary" />
                       )}
                     </DropdownMenuItem>
                   ))}
@@ -304,6 +383,7 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
             </div>
           </div>
 
+          {/* To Field */}
           <RecipientChips
             label="To"
             type="to"
@@ -317,6 +397,7 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
             handleBlur={handleBlur}
           />
 
+          {/* Cc Field */}
           {showCc && (
             <RecipientChips
               label="Cc"
@@ -331,6 +412,7 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
             />
           )}
 
+          {/* Bcc Field */}
           {showBcc && (
             <RecipientChips
               label="Bcc"
@@ -345,11 +427,11 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
             />
           )}
 
-          {/* Subject */}
-          <div className="flex items-center gap-3 px-4 py-1.5 transition-colors focus-within:bg-muted/30">
+          {/* Subject Field */}
+          <div className="flex items-center gap-3 px-3.5 py-1.5 transition-colors focus-within:bg-muted/20">
             <label
               htmlFor="subject-input"
-              className="w-14 shrink-0 text-xs font-medium text-muted-foreground select-none"
+              className="w-12 shrink-0 text-xs font-medium text-muted-foreground/80 select-none tracking-tight"
             >
               Subject
             </label>
@@ -359,34 +441,44 @@ export function EmailComposer({ showHeader, tabId, initialData }: { showHeader?:
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="What is this email about?"
-              className="h-8 flex-1 min-w-0 bg-transparent text-sm font-medium text-foreground placeholder:font-normal placeholder:text-muted-foreground/70 outline-none"
+              className="h-7 flex-1 min-w-0 bg-transparent text-xs sm:text-sm font-medium text-foreground placeholder:font-normal placeholder:text-muted-foreground/60 outline-none"
             />
           </div>
         </div>
       </div>
 
+      {/* Rich Text Editor Body */}
       <div className="flex-1 min-h-0 flex flex-col px-2 pb-2 pt-2">
         <HtmlEditor
+          fontFamily={resolvedFont}
+          fontSize={resolvedFontSize}
+          accountEmail={selectedAccount.email}
           attachments={attachments}
           setAttachments={setAttachments}
           onChange={(html) => setBody(html)}
           tabId={tabId}
-          footerElement={<ComposeFooter
-            onDiscardDraft={discardDraft}
-            data={{
-              from: `${selectedAccount?.name} <${selectedAccount.email}>`,
-              to: toChips.map((chip) => chip.email),
-              cc: ccChips.map((chip) => chip.email),
-              bcc: bccChips.map((chip) => chip.email),
-              subject,
-              html: body,
-              attachments,
-              ...(initialData?.inReplyTo ? { inReplyTo: initialData.inReplyTo } : {}),
-              ...(initialData?.references ? { references: initialData.references } : {}),
-              ...(initialData?.thread_id ? { thread_id: initialData.thread_id } : {}),
-            }}
-          />}
-          defaultValue={initialData?.body || ``}
+          footerElement={
+            footer ?? (
+              <ComposeFooter
+                accountEmail={selectedAccount.email}
+                onDiscardDraft={handleDiscardDraft}
+                onSendCustom={onSend}
+                data={{
+                  from: `${selectedAccount?.name} <${selectedAccount.email}>`,
+                  to: toChips.map((chip) => chip.email),
+                  cc: ccChips.map((chip) => chip.email),
+                  bcc: bccChips.map((chip) => chip.email),
+                  subject,
+                  html: body,
+                  attachments,
+                  ...(initialData?.inReplyTo ? { inReplyTo: initialData.inReplyTo } : {}),
+                  ...(initialData?.references ? { references: initialData.references } : {}),
+                  ...(initialData?.thread_id ? { thread_id: initialData.thread_id } : {}),
+                }}
+              />
+            )
+          }
+          defaultValue={initialData?.body || ""}
         />
       </div>
     </div>

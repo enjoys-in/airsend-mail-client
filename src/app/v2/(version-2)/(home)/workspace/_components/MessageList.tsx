@@ -38,6 +38,7 @@ import MobileWorkspaceSidebar from "./MobileWorkspaceSidebar";
 import { PollCard } from "./PollCard";
 import AnnouncementBanner from "./AnnouncementBanner";
 import ChannelSettingsDialog from "./ChannelSettingsDialog";
+import { MessageContextMenu, WorkspaceContextMenu } from "./MessageContextMenu";
 import type { ChatMessage, TeamMember } from "../_lib/chat-types";
 
 // ---------------------------------------------------------------------------
@@ -217,6 +218,23 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
     });
   }, [messages.length]);
 
+  const scrollToBottom = useCallback(() => {
+    const viewport = scrollAreaRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null;
+    if (viewport) {
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+    } else {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, []);
+
+  const focusInput = useCallback(() => {
+    const input = document.getElementById("workspace-message-input") as HTMLTextAreaElement | null;
+    input?.focus();
+    scrollToBottom();
+  }, [scrollToBottom]);
+
   // Fetch polls for the active channel — only when channel changes
   const fetchPollsRef = useRef(fetchPolls);
   fetchPollsRef.current = fetchPolls;
@@ -277,24 +295,26 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
             </Button>
           </div>
         </div>
-        <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
-          <div className="space-y-0.5 py-4">
-            <div className="mb-6 text-center">
-              <Avatar className="mx-auto size-16">
-                <AvatarFallback className="bg-primary/10 text-xl font-bold text-primary">
-                  {(other?.displayName ?? "?").charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <h2 className="mt-2 text-lg font-bold">
-                {other?.displayName ?? "Direct Message"}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                This is the beginning of your conversation.
-              </p>
+        <WorkspaceContextMenu dm={dm} onScrollToBottom={scrollToBottom} onFocusInput={focusInput}>
+          <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
+            <div className="space-y-0.5 py-4 min-h-full">
+              <div className="mb-6 text-center">
+                <Avatar className="mx-auto size-16">
+                  <AvatarFallback className="bg-primary/10 text-xl font-bold text-primary">
+                    {(other?.displayName ?? "?").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <h2 className="mt-2 text-lg font-bold">
+                  {other?.displayName ?? "Direct Message"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  This is the beginning of your conversation.
+                </p>
+              </div>
+              <div ref={endRef} />
             </div>
-            <div ref={endRef} />
-          </div>
-        </ScrollArea>
+          </ScrollArea>
+        </WorkspaceContextMenu>
       </div>
     );
   }
@@ -480,68 +500,75 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
       )}
 
       {/* Messages */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
-        <div className="space-y-0.5 py-4">
-          {/* Infinite scroll sentinel — triggers loading older messages */}
-          <div ref={topSentinelRef} className="h-1" />
-          {isLoadingOlder && (
-            <div className="flex items-center justify-center py-3">
-              <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <span className="ml-2 text-xs text-muted-foreground">Loading older messages...</span>
-            </div>
-          )}
+      <WorkspaceContextMenu
+        channel={channel}
+        onScrollToBottom={scrollToBottom}
+        onFocusInput={focusInput}
+        onOpenSettings={() => setChannelSettingsOpen(true)}
+      >
+        <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
+          <div className="space-y-0.5 py-4 min-h-full">
+            {/* Infinite scroll sentinel — triggers loading older messages */}
+            <div ref={topSentinelRef} className="h-1" />
+            {isLoadingOlder && (
+              <div className="flex items-center justify-center py-3">
+                <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <span className="ml-2 text-xs text-muted-foreground">Loading older messages...</span>
+              </div>
+            )}
 
-          {/* Channel welcome — only shown when no more older messages */}
-          {!hasMore && (
-          <div className="mb-6">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-accent">
-              <ChannelIcon className="size-6 text-muted-foreground" />
+            {/* Channel welcome — only shown when no more older messages */}
+            {!hasMore && (
+            <div className="mb-6">
+              <div className="flex size-12 items-center justify-center rounded-xl bg-accent">
+                <ChannelIcon className="size-6 text-muted-foreground" />
+              </div>
+              <h2 className="mt-2 text-lg font-bold">
+                Welcome to #{channel.name}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {channel.description ||
+                  `This is the start of the #${channel.name} channel.`}
+              </p>
             </div>
-            <h2 className="mt-2 text-lg font-bold">
-              Welcome to #{channel.name}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {channel.description ||
-                `This is the start of the #${channel.name} channel.`}
-            </p>
+            )}
+
+            {/* Active polls */}
+            {channelPolls.length > 0 && (
+              <div className="mb-4 space-y-3">
+                {channelPolls.filter((p:any) => !p.isClosed).map((poll:any) => (
+                  <PollCard key={poll.id} poll={poll} email={currentUserId} />
+                ))}
+              </div>
+            )}
+
+            {grouped.map((group) => (
+              <React.Fragment key={group.label}>
+                <TimeSeparator label={group.label} />
+
+                {group.messages.map((msg, idx) => {
+                  const prevMsg = idx > 0 ? group.messages[idx - 1] : null;
+                  const isCompact = shouldCompact(msg, prevMsg);
+
+                  return (
+                    <MessageBubble
+                      key={msg.id}
+                      message={msg}
+                      isCompact={isCompact}
+                      members={members}
+                      currentUserId={currentUserId}
+                      onOpenThread={openThread}
+                      onReact={addReaction}
+                      onUnreact={removeReaction}
+                    />
+                  );
+                })}
+              </React.Fragment>
+            ))}
+            <div ref={endRef} />
           </div>
-          )}
-
-          {/* Active polls */}
-          {channelPolls.length > 0 && (
-            <div className="mb-4 space-y-3">
-              {channelPolls.filter((p:any) => !p.isClosed).map((poll:any) => (
-                <PollCard key={poll.id} poll={poll} email={currentUserId} />
-              ))}
-            </div>
-          )}
-
-          {grouped.map((group) => (
-            <React.Fragment key={group.label}>
-              <TimeSeparator label={group.label} />
-
-              {group.messages.map((msg, idx) => {
-                const prevMsg = idx > 0 ? group.messages[idx - 1] : null;
-                const isCompact = shouldCompact(msg, prevMsg);
-
-                return (
-                  <MessageBubble
-                    key={msg.id}
-                    message={msg}
-                    isCompact={isCompact}
-                    members={members}
-                    currentUserId={currentUserId}
-                    onOpenThread={openThread}
-                    onReact={addReaction}
-                    onUnreact={removeReaction}
-                  />
-                );
-              })}
-            </React.Fragment>
-          ))}
-          <div ref={endRef} />
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      </WorkspaceContextMenu>
     </div>
   );
 }
@@ -594,18 +621,20 @@ function MessageBubble({
   );
 
   return (
-    <div
-      className={cn(
-        "group relative rounded-md px-2 transition-colors hover:bg-accent/30",
-        isMentioned && "bg-yellow-500/10 border-l-2 border-yellow-500 dark:bg-yellow-500/15",
-        message.priority === "urgent" && "bg-red-500/5 border-l-2 border-red-500",
-        message.priority === "priority" && "bg-orange-500/5 border-l-2 border-orange-500",
-        message.priority === "everyone" && "bg-blue-500/5 border-l-2 border-blue-500",
-        isCompact ? "py-0.5" : "py-2 mt-1",
-      )}
-    >
-      {/* Hover actions */}
-      <MessageActions message={message} />
+    <MessageContextMenu message={message}>
+      <div
+        id={`msg-${message.id}`}
+        className={cn(
+          "group relative rounded-md px-2 transition-colors hover:bg-accent/30",
+          isMentioned && "bg-yellow-500/10 border-l-2 border-yellow-500 dark:bg-yellow-500/15",
+          message.priority === "urgent" && "bg-red-500/5 border-l-2 border-red-500",
+          message.priority === "priority" && "bg-orange-500/5 border-l-2 border-orange-500",
+          message.priority === "everyone" && "bg-blue-500/5 border-l-2 border-blue-500",
+          isCompact ? "py-0.5" : "py-2 mt-1",
+        )}
+      >
+        {/* Hover actions */}
+        <MessageActions message={message} />
 
       {/* Reply reference */}
       {message.replyTo && (
@@ -790,6 +819,7 @@ function MessageBubble({
         </div>
       </div>
     </div>
+    </MessageContextMenu>
   );
 }
 

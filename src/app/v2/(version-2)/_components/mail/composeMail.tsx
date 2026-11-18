@@ -62,10 +62,11 @@ export default function MultiTabSystem() {
                             key={`min-${tabId}`}
                             variant="secondary"
                             size="sm"
-                            className="pointer-events-auto truncate max-w-[140px] h-8 rounded-t-lg rounded-b-none text-xs shadow-md border border-b-0"
+                            className="pointer-events-auto truncate max-w-[160px] h-9 rounded-t-xl rounded-b-none text-xs font-medium shadow-md border border-b-0 bg-card hover:bg-muted/80 text-foreground flex items-center gap-1.5 px-3"
                             onClick={() => restoreTab(tabId)}
                         >
-                            {tab.title}
+                            <span className="size-1.5 rounded-full bg-primary/70 shrink-0" />
+                            <span className="truncate">{tab.title || "New message"}</span>
                         </Button>
                     );
                 })}
@@ -78,23 +79,29 @@ export default function MultiTabSystem() {
                         <Card
                             key={tab.id}
                             className={cn(
-                                "flex flex-col shadow-2xl transition-all duration-200 overflow-hidden pointer-events-auto",
+                                "flex flex-col shadow-2xl transition-all duration-200 overflow-hidden pointer-events-auto bg-background border border-border/80 ring-1 ring-black/5 dark:ring-white/5",
                                 isFullscreen
-                                    ? "fixed inset-4 z-[60] mt-14 rounded-xl border"
+                                    ? "fixed inset-2 sm:inset-4 z-[60] mt-12 sm:mt-14 rounded-2xl border"
                                     : isModalCentered
-                                        ? "w-full max-w-3xl h-[80vh] max-h-[720px] rounded-2xl border shadow-2xl bg-card"
-                                        : "w-[620px] h-[75vh] min-h-[480px] rounded-t-xl rounded-b-none border-b-0"
+                                        ? "w-full max-w-3xl h-[85vh] max-h-[780px] rounded-2xl border shadow-2xl"
+                                        : "w-full sm:w-[620px] md:w-[680px] h-[80vh] min-h-[500px] max-h-[760px] rounded-t-2xl rounded-b-none border-b-0"
                             )}
                         >
                             {/* Tab Header */}
-                            <div className="bg-foreground text-background flex justify-between items-center rounded-t-xl h-9 px-3 shrink-0">
-                                <span className="text-sm font-medium truncate flex-1">{tab.title}</span>
-                                <div className="flex items-center gap-0.5 ml-2">
+                            <div className="bg-card/95 backdrop-blur-md border-b border-border/70 flex justify-between items-center h-10 px-3.5 shrink-0 select-none text-foreground">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className="size-2 rounded-full bg-primary/70 shrink-0" />
+                                    <span className="text-xs sm:text-sm font-semibold tracking-tight truncate text-foreground">
+                                        {tab.title || "New message"}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0 ml-2">
                                     <Button
                                         size="icon"
                                         variant="ghost"
                                         onClick={() => toggleFullscreen(tab.id)}
-                                        className="h-6 w-6 text-background/60 hover:text-background hover:bg-white/10 rounded-md transition-colors duration-150"
+                                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-lg transition-colors"
+                                        title={isFullscreen ? "Restore window" : "Maximize"}
                                     >
                                         {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                                     </Button>
@@ -102,7 +109,8 @@ export default function MultiTabSystem() {
                                         size="icon"
                                         variant="ghost"
                                         onClick={() => minimizeTab(tab.id)}
-                                        className="h-6 w-6 text-background/60 hover:text-background hover:bg-white/10 rounded-md transition-colors duration-150"
+                                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-lg transition-colors"
+                                        title="Minimize"
                                     >
                                         <Minus className="w-3.5 h-3.5" />
                                     </Button>
@@ -110,7 +118,8 @@ export default function MultiTabSystem() {
                                         size="icon"
                                         variant="ghost"
                                         onClick={() => closeTab(tab.id)}
-                                        className="h-6 w-6 text-background/60 hover:text-background hover:bg-white/10 rounded-md transition-colors duration-150"
+                                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                        title="Close"
                                     >
                                         <X className="w-3.5 h-3.5" />
                                     </Button>
@@ -120,8 +129,8 @@ export default function MultiTabSystem() {
                             {/* Tab Content */}
                             <CardContent
                                 className={cn(
-                                    "p-0 flex-1 overflow-auto",
-                                    isFullscreen ? "h-full" : "h-[calc(100%-36px)]"
+                                    "p-0 flex-1 overflow-auto flex flex-col min-h-0",
+                                    isFullscreen ? "h-full" : "h-[calc(100%-40px)]"
                                 )}
                                 onFocus={() => setFocusedTab(tab.id)}
                             >

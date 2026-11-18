@@ -6,10 +6,18 @@ import {
   X,
   Send,
   MessageSquare,
+  Copy,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { toast } from "sonner";
 import { useChatStore } from "../_lib/chat-store";
 
 // ---------------------------------------------------------------------------
@@ -170,29 +178,44 @@ function ThreadMessage({
     minute: "2-digit",
   });
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(content);
+    toast.success("Thread message copied");
+  };
+
   return (
-    <div className={cn("flex gap-3 py-2", isParent && "pb-3")}>
-      <Avatar className="mt-0.5 size-7 shrink-0">
-        <AvatarFallback className="text-xs bg-primary/10 text-primary">
-          {authorName.charAt(0).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <span
-            className={cn(
-              "text-sm font-semibold",
-              authorId === currentUserId
-                ? "text-primary"
-                : "text-foreground",
-            )}
-          >
-            {authorName}
-          </span>
-          <span className="text-[11px] text-muted-foreground">{time}</span>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className={cn("flex gap-3 py-2 rounded-lg px-2 hover:bg-accent/20 transition-colors", isParent && "pb-3")}>
+          <Avatar className="mt-0.5 size-7 shrink-0">
+            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+              {authorName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-2">
+              <span
+                className={cn(
+                  "text-sm font-semibold",
+                  authorId === currentUserId
+                    ? "text-primary"
+                    : "text-foreground",
+                )}
+              >
+                {authorName}
+              </span>
+              <span className="text-[11px] text-muted-foreground">{time}</span>
+            </div>
+            <p className="text-sm leading-relaxed">{content}</p>
+          </div>
         </div>
-        <p className="text-sm leading-relaxed">{content}</p>
-      </div>
-    </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48 rounded-xl shadow-lg border-border/80">
+        <ContextMenuItem onClick={handleCopy} className="gap-2 text-xs py-1.5 cursor-pointer">
+          <Copy className="size-3.5 text-muted-foreground" />
+          <span>Copy Text</span>
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

@@ -333,6 +333,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
 
         <div className="rounded-lg border border-border/60 bg-accent/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
           <textarea
+            id="workspace-message-input"
             ref={textareaRef}
             value={content}
             onChange={handleChange}

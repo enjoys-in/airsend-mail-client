@@ -1,466 +1,468 @@
 import React, { useRef, useCallback, useState } from "react";
 import {
-    Bold,
-    Italic,
-    Underline,
-    Strikethrough,
-    List,
-    AlignLeft,
-    AlignCenter,
-    AlignRight,
-    ImageIcon,
-    Paperclip,
-    Type,
-    Palette,
-    File,
-    FileText,
-    FileImage,
-    Archive,
-    Mail,
-    FileIcon,
-    ChevronDown,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  List,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  ImageIcon,
+  Paperclip,
+  Type,
+  Palette,
+  File,
+  FileText,
+  FileImage,
+  Archive,
+  Mail,
+  FileIcon,
+  ChevronDown,
+  RemoveFormatting,
 } from "lucide-react";
 
-// shadcn/ui components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-    DropdownMenu,
-    DropdownMenuTrigger,
-    DropdownMenuContent,
-    DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { useHtmlEditor } from "./htmlEditor";
 
-interface ToolbarProps {
-    className?: string;
+export interface PlainTextEditorToolbarProps {
+  className?: string;
+  hideFontSelector?: boolean;
+  hideColors?: boolean;
+  hideAttachments?: boolean;
+  fonts?: string[];
 }
+
 export const textColors = [
-    "#000000",
-    "#333333",
-    "#666666",
-    "#999999",
-    "#CCCCCC",
-    "#FFFFFF",
-    "#FF0000",
-    "#FF6B6B",
-    "#FF9999",
-    "#FFCCCC",
-    "#00FF00",
-    "#4ECDC4",
-    "#45B7D1",
-    "#96CEB4",
-    "#0000FF",
-    "#6C5CE7",
-    "#A29BFE",
-    "#DDA0DD",
-    "#FFFF00",
-    "#FDCB6E",
-    "#F39C12",
-    "#E17055",
-    "#FF00FF",
-    "#E84393",
-    "#FD79A8",
-    "#FDCB6E",
-    "#00FFFF",
-    "#00B894",
-    "#00CEC9",
-    "#81ECEC",
-    "#FFA500",
-    "#E17055",
-    "#D63031",
-    "#74B9FF",
+  "#000000",
+  "#333333",
+  "#666666",
+  "#999999",
+  "#CCCCCC",
+  "#FFFFFF",
+  "#EF4444",
+  "#F97316",
+  "#F59E0B",
+  "#10B981",
+  "#06B6D4",
+  "#3B82F6",
+  "#6366F1",
+  "#8B5CF6",
+  "#EC4899",
+  "#64748B",
 ];
 
 export const backgroundColors = [
-    "#FFFFFF",
-    "#F8F9FA",
-    "#E9ECEF",
-    "#DEE2E6",
-    "#CED4DA",
-    "#ADB5BD",
-    "#FFE6E6",
-    "#FFE6CC",
-    "#FFFFCC",
-    "#E6FFE6",
-    "#E6F3FF",
-    "#F0E6FF",
-    "#FFB3B3",
-    "#FFD1B3",
-    "#FFFF99",
-    "#B3FFB3",
-    "#B3D9FF",
-    "#D9B3FF",
-    "#FF9999",
-    "#FFCC99",
-    "#FFFF66",
-    "#99FF99",
-    "#99CCFF",
-    "#CC99FF",
-    "#FF6666",
-    "#FFB366",
-    "#FFFF33",
-    "#66FF66",
-    "#66B3FF",
-    "#B366FF",
-    "#FF3333",
-    "#FF9933",
-    "#FFFF00",
-    "#33FF33",
-    "#3399FF",
-    "#9933FF",
-    "#FF0000",
-    "#FF6600",
-    "#CCCC00",
-    "#00CC00",
-    "#0066CC",
-    "#6600CC",
+  "#FFFFFF",
+  "#F8FAFC",
+  "#F1F5F9",
+  "#E2E8F0",
+  "#FEE2E2",
+  "#FFEDD5",
+  "#FEF3C7",
+  "#D1FAE5",
+  "#CFFAFE",
+  "#DBEAFE",
+  "#E0E7FF",
+  "#EDE9FE",
+  "#FCE7F3",
 ];
-export const PlainTextEditorToolbar: React.FC<ToolbarProps> = () => {
-    const {
-        formatText,
-        editorRef,
-        insertAdvancedList,
-        handleFileUpload,
-        attachments,
-    } = useHtmlEditor();
-    const [selectedFont, setSelectedFont] = useState<string>("Inter");
-    const [selectedColor, setSelectedColor] = useState<string>("#000000");
-    const [alignment, setAlignment] = useState<"left" | "center" | "right">(
-        "left"
-    );
-    const imageInputRef = useRef<HTMLInputElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleAlignment = (alignType: "left" | "center" | "right") => {
-        setAlignment(alignType);
-        const cmd = `justify${alignType.charAt(0).toUpperCase()}${alignType.slice(
-            1
-        )}`;
-        formatText(cmd);
-    };
+const DEFAULT_FONTS = [
+  "Inter",
+  "Roboto",
+  "Segoe UI",
+  "Arial",
+  "Helvetica",
+  "Times New Roman",
+  "Georgia",
+  "Courier New",
+];
 
-    const handleFontChange = (font: string) => {
-        setSelectedFont(font);
-        formatText("fontName", font);
-    };
+export const PlainTextEditorToolbar: React.FC<PlainTextEditorToolbarProps> = ({
+  className,
+  hideFontSelector = false,
+  hideColors = false,
+  hideAttachments = false,
+  fonts = DEFAULT_FONTS,
+}) => {
+  const {
+    formatText,
+    editorRef,
+    insertAdvancedList,
+    handleFileUpload,
+    attachments,
+  } = useHtmlEditor();
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file && file.type.startsWith("image/")) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const result = ev.target?.result as string;
-                const img = `<img src="${result}" style="max-width: 100%; height: auto; margin: 10px 0;" alt="${file.name}" />`;
-                editorRef.current?.focus();
-                document.execCommand("insertHTML", false, img);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+  const [selectedFont, setSelectedFont] = useState<string>("Inter");
+  const [selectedColor, setSelectedColor] = useState<string>("#000000");
+  const [alignment, setAlignment] = useState<"left" | "center" | "right" | "justify">("left");
 
-    const getFileIcon = useCallback((fileName: string) => {
-        const extension = fileName.split(".").pop()?.toLowerCase();
-        switch (extension) {
-            case "pdf":
-                return <File className="w-4 h-4 text-orange-500" />;
-            case "doc":
-            case "docx":
-                return <FileText className="w-4 h-4 text-orange-500" />;
-            case "xls":
-            case "xlsx":
-                return <FileText className="w-4 h-4 text-orange-500" />;
-            case "zip":
-            case "rar":
-                return <Archive className="w-4 h-4 text-orange-500" />;
-            case "eml":
-                return <Mail className="w-4 h-4 text-orange-500" />;
-            case "jpg":
-            case "jpeg":
-            case "png":
-            case "gif":
-                return <FileImage className="w-4 h-4 text-orange-500" />;
-            default:
-                return <FileIcon className="w-4 h-4 text-orange-500" />;
-        }
-    }, []);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    return (
-        <div className="flex items-center gap-0.5 border-b border-border bg-muted/40 px-2 py-1.5 overflow-x-auto">
-            <ToolbarButton
-                label="Bold"
-                active={document.queryCommandState("bold")}
-                onClick={() => formatText("bold")}
-            >
-                <Bold className="w-4 h-4" />
-            </ToolbarButton>
-            <ToolbarButton
-                label="Italic"
-                active={document.queryCommandState("italic")}
-                onClick={() => formatText("italic")}
-            >
-                <Italic className="w-4 h-4" />
-            </ToolbarButton>
-            <ToolbarButton
-                label="Underline"
-                active={document.queryCommandState("underline")}
-                onClick={() => formatText("underline")}
-            >
-                <Underline className="w-4 h-4" />
-            </ToolbarButton>
-            <ToolbarButton
-                label="Strikethrough"
-                active={document.queryCommandState("strikeThrough")}
-                onClick={() => formatText("strikeThrough")}
-            >
-                <Strikethrough className="w-4 h-4" />
-            </ToolbarButton>
+  const handleAlignment = (alignType: "left" | "center" | "right" | "justify") => {
+    setAlignment(alignType);
+    const cmd = `justify${alignType.charAt(0).toUpperCase()}${alignType.slice(1)}`;
+    formatText(cmd);
+  };
 
-            <Separator orientation="vertical" className="mx-1.5 h-5" />
+  const handleFontChange = (font: string) => {
+    setSelectedFont(font);
+    formatText("fontName", font);
+  };
 
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        title="Lists"
-                        aria-label="Lists"
-                        className="h-8 gap-0.5 rounded-md px-2"
-                    >
-                        <List className="w-4 h-4" />
-                        <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="max-h-60 overflow-y-auto">
-                    <DropdownMenuItem onClick={() => formatText("insertUnorderedList")}>
-                        • Bullet List
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => formatText("insertOrderedList")}>
-                        1. Numbered List
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => insertAdvancedList("alphabetList")}>
-                        a. Alphabet List
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => insertAdvancedList("nestedBullet")}>
-                        ⤷ Nested Bullet
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => insertAdvancedList("nestedNumber")}>
-                        1.1. Nested Number
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                        onClick={() => insertAdvancedList("nestedAlphabet")}
-                    >
-                        1.a. Mixed Number/Alpha
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => insertAdvancedList("deepNested")}>
-                        1.1.1 Deep Nested
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        const img = `<img src="${result}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0;" alt="${file.name}" />`;
+        editorRef.current?.focus();
+        document.execCommand("insertHTML", false, img);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-            <div className="flex items-center rounded-md">
-                <ToolbarButton
-                    label="Align left"
-                    active={alignment === "left"}
-                    onClick={() => handleAlignment("left")}
-                >
-                    <AlignLeft className="w-4 h-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    label="Align center"
-                    active={alignment === "center"}
-                    onClick={() => handleAlignment("center")}
-                >
-                    <AlignCenter className="w-4 h-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    label="Align right"
-                    active={alignment === "right"}
-                    onClick={() => handleAlignment("right")}
-                >
-                    <AlignRight className="w-4 h-4" />
-                </ToolbarButton>
-            </div>
+  const getFileIcon = useCallback((fileName: string) => {
+    const extension = fileName.split(".").pop()?.toLowerCase();
+    switch (extension) {
+      case "pdf":
+        return <File className="w-3.5 h-3.5 text-orange-500" />;
+      case "doc":
+      case "docx":
+      case "xls":
+      case "xlsx":
+        return <FileText className="w-3.5 h-3.5 text-blue-500" />;
+      case "zip":
+      case "rar":
+        return <Archive className="w-3.5 h-3.5 text-amber-500" />;
+      case "eml":
+        return <Mail className="w-3.5 h-3.5 text-violet-500" />;
+      case "jpg":
+      case "jpeg":
+      case "png":
+      case "gif":
+      case "webp":
+        return <FileImage className="w-3.5 h-3.5 text-emerald-500" />;
+      default:
+        return <FileIcon className="w-3.5 h-3.5 text-muted-foreground" />;
+    }
+  }, []);
 
-            <Separator orientation="vertical" className="mx-1.5 h-5" />
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1 border-b border-border/60 bg-muted/30 px-3 py-1.5 overflow-x-auto text-muted-foreground select-none scrollbar-none",
+        className
+      )}
+    >
+      {/* Inline Formatting */}
+      <div className="flex items-center gap-0.5">
+        <ToolbarButton
+          label="Bold (Ctrl+B)"
+          active={typeof document !== "undefined" && document.queryCommandState("bold")}
+          onClick={() => formatText("bold")}
+        >
+          <Bold className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Italic (Ctrl+I)"
+          active={typeof document !== "undefined" && document.queryCommandState("italic")}
+          onClick={() => formatText("italic")}
+        >
+          <Italic className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Underline (Ctrl+U)"
+          active={typeof document !== "undefined" && document.queryCommandState("underline")}
+          onClick={() => formatText("underline")}
+        >
+          <Underline className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Strikethrough"
+          active={typeof document !== "undefined" && document.queryCommandState("strikeThrough")}
+          onClick={() => formatText("strikeThrough")}
+        >
+          <Strikethrough className="w-4 h-4" />
+        </ToolbarButton>
+      </div>
 
-            <ToolbarButton
-                label="Insert image"
-                onClick={() => imageInputRef.current?.click()}
-            >
-                <ImageIcon className="w-4 h-4" />
-            </ToolbarButton>
-            <ToolbarButton
-                label="Attach files"
-                onClick={() => fileInputRef.current?.click()}
-            >
-                <Paperclip className="w-4 h-4" />
-            </ToolbarButton>
+      <Separator orientation="vertical" className="mx-1 h-4 bg-border/60" />
 
-            {/* Hidden inputs */}
-            <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                multiple
-                max={10 - attachments.length}
+      {/* Lists Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            title="Lists"
+            aria-label="Lists"
+            className="h-7.5 gap-1 rounded-md px-2 text-muted-foreground hover:text-foreground hover:bg-muted/70"
+          >
+            <List className="w-4 h-4" />
+            <ChevronDown className="w-3 h-3 text-muted-foreground/70" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground uppercase">List Types</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => formatText("insertUnorderedList")}>
+            • Bullet List
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => formatText("insertOrderedList")}>
+            1. Numbered List
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => insertAdvancedList("alphabetList")}>
+            a. Alphabet List
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => insertAdvancedList("nestedBullet")}>
+            ⤷ Nested Bullet
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => insertAdvancedList("nestedNumber")}>
+            1.1. Nested Number
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => insertAdvancedList("nestedAlphabet")}>
+            1.a. Mixed Alpha
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-                onChange={handleImageUpload}
-            />
-            <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                multiple
-                max={10 - attachments.length}
-                onChange={handleFileUpload}
-            />
+      {/* Alignment */}
+      <div className="flex items-center gap-0.5">
+        <ToolbarButton
+          label="Align left"
+          active={alignment === "left"}
+          onClick={() => handleAlignment("left")}
+        >
+          <AlignLeft className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Align center"
+          active={alignment === "center"}
+          onClick={() => handleAlignment("center")}
+        >
+          <AlignCenter className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Align right"
+          active={alignment === "right"}
+          onClick={() => handleAlignment("right")}
+        >
+          <AlignRight className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Justify"
+          active={alignment === "justify"}
+          onClick={() => handleAlignment("justify")}
+        >
+          <AlignJustify className="w-4 h-4" />
+        </ToolbarButton>
+      </div>
 
-            {attachments.length > 0 && (
-                <div className="ml-2 flex items-center gap-2 max-w-xs overflow-x-auto rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 dark:border-orange-500/30 dark:bg-orange-500/10">
-                    <span className="text-xs font-medium text-orange-700 dark:text-orange-200 whitespace-nowrap">
-                        {attachments.length} file{attachments.length > 1 ? "s" : ""}
-                    </span>
-                    {attachments.slice(0, 3).map((attachment) => (
-                        <div key={attachment.id} className="flex items-center gap-1">
-                            {getFileIcon(attachment.file.name)}
-                            {attachment.progress < 100 && (
-                                <div className="w-6 h-1.5 bg-orange-200 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-orange-500"
-                                        style={{ width: `${attachment.progress}%` }}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                    {attachments.length > 3 && (
-                        <span className="text-xs text-muted-foreground">
-                            +{attachments.length - 3}
-                        </span>
-                    )}
+      <Separator orientation="vertical" className="mx-1 h-4 bg-border/60" />
+
+      {/* Media & Attachments */}
+      {!hideAttachments && (
+        <div className="flex items-center gap-0.5">
+          <ToolbarButton
+            label="Insert image"
+            onClick={() => imageInputRef.current?.click()}
+          >
+            <ImageIcon className="w-4 h-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Attach files"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Paperclip className="w-4 h-4" />
+          </ToolbarButton>
+
+          {/* Hidden inputs */}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            multiple
+            max={10 - (attachments?.length || 0)}
+            onChange={handleImageUpload}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            max={10 - (attachments?.length || 0)}
+            onChange={handleFileUpload}
+          />
+
+          {attachments && attachments.length > 0 && (
+            <div className="ml-1.5 flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5">
+              <span className="text-[11px] font-semibold text-primary whitespace-nowrap">
+                {attachments.length} {attachments.length === 1 ? "file" : "files"}
+              </span>
+              {attachments.slice(0, 2).map((attachment) => (
+                <div key={attachment.id} className="flex items-center gap-1">
+                  {getFileIcon(attachment.file.name)}
                 </div>
-            )}
-
-            <div className="ml-auto flex items-center gap-0.5 pl-2">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            title="Font"
-                            className="h-8 gap-1.5 rounded-md px-2 text-xs font-medium"
-                        >
-                            <Type className="w-4 h-4 text-muted-foreground" />
-                            {selectedFont}
-                            <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        {["Inter", "Arial", "Helvetica", "Times New Roman", "Georgia"].map(
-                            (font) => (
-                                <DropdownMenuItem
-                                    key={font}
-                                    onClick={() => handleFontChange(font)}
-                                >
-                                    <span style={{ fontFamily: font }}>{font}</span>
-                                </DropdownMenuItem>
-                            )
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            title="Text & background color"
-                            aria-label="Text and background color"
-                            className="h-8 gap-0.5 rounded-md px-2"
-                        >
-                            <Palette className="w-4 h-4" />
-                            <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-80">
-                        <div className="p-3 space-y-4">
-                            <div>
-                                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Text Color</h4>
-                                <div className="grid grid-cols-8 gap-1.5 mb-2">
-                                    {textColors.map((color, i) => (
-                                        <button
-                                            key={`text-${color}-${i}`}
-                                            type="button"
-                                            className="w-6 h-6 rounded-md border hover:scale-110 transition-transform"
-                                            style={{ backgroundColor: color }}
-                                            onClick={() => formatText("foreColor", color)}
-                                            title={`Text color: ${color}`}
-                                        />
-                                    ))}
-                                </div>
-                                <Input
-                                    type="color"
-                                    value={selectedColor}
-                                    onChange={(e) => {
-                                        setSelectedColor(e.target.value);
-                                        formatText("foreColor", e.target.value);
-                                    }}
-                                    className="h-8"
-                                />
-                            </div>
-
-                            <div>
-                                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Background Color</h4>
-                                <div className="grid grid-cols-8 gap-1.5 mb-2">
-                                    {backgroundColors.map((color, i) => (
-                                        <button
-                                            key={`bg-${color}-${i}`}
-                                            type="button"
-                                            className="w-6 h-6 rounded-md border hover:scale-110 transition-transform"
-                                            style={{ backgroundColor: color }}
-                                            onClick={() => formatText("hiliteColor", color)}
-                                            title={`Background color: ${color}`}
-                                        />
-                                    ))}
-                                </div>
-                                <Input
-                                    type="color"
-                                    onChange={(e) => formatText("hiliteColor", e.target.value)}
-                                    className="h-8"
-                                />
-                            </div>
-                        </div>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+              ))}
+              {attachments.length > 2 && (
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  +{attachments.length - 2}
+                </span>
+              )}
             </div>
+          )}
         </div>
-    );
+      )}
+
+      {/* Clear Formatting */}
+      <ToolbarButton
+        label="Clear formatting"
+        onClick={() => formatText("removeFormat")}
+      >
+        <RemoveFormatting className="w-4 h-4" />
+      </ToolbarButton>
+
+      {/* Right-aligned Font & Color Pickers */}
+      <div className="ml-auto flex items-center gap-1 pl-2">
+        {!hideFontSelector && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                title="Font"
+                className="h-7.5 gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70"
+              >
+                <Type className="w-3.5 h-3.5 text-muted-foreground/70" />
+                <span className="truncate max-w-[80px]">{selectedFont}</span>
+                <ChevronDown className="w-3 h-3 text-muted-foreground/70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground uppercase">Font Family</DropdownMenuLabel>
+              {fonts.map((font) => (
+                <DropdownMenuItem
+                  key={font}
+                  onClick={() => handleFontChange(font)}
+                  className="text-xs"
+                >
+                  <span style={{ fontFamily: font }}>{font}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {!hideColors && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                title="Color palette"
+                aria-label="Text and background color"
+                className="h-7.5 w-7.5 p-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70"
+              >
+                <Palette className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72 p-3 space-y-3">
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Text Color
+                </h4>
+                <div className="grid grid-cols-8 gap-1.5 mb-2">
+                  {textColors.map((color, i) => (
+                    <button
+                      key={`text-${color}-${i}`}
+                      type="button"
+                      className="w-5 h-5 rounded-md border border-border/60 hover:scale-115 transition-transform shadow-xs"
+                      style={{ backgroundColor: color }}
+                      onClick={() => formatText("foreColor", color)}
+                      title={`Text: ${color}`}
+                    />
+                  ))}
+                </div>
+                <Input
+                  type="color"
+                  value={selectedColor}
+                  onChange={(e) => {
+                    setSelectedColor(e.target.value);
+                    formatText("foreColor", e.target.value);
+                  }}
+                  className="h-7 cursor-pointer"
+                />
+              </div>
+
+              <DropdownMenuSeparator />
+
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Highlight Background
+                </h4>
+                <div className="grid grid-cols-8 gap-1.5">
+                  {backgroundColors.map((color, i) => (
+                    <button
+                      key={`bg-${color}-${i}`}
+                      type="button"
+                      className="w-5 h-5 rounded-md border border-border/60 hover:scale-115 transition-transform shadow-xs"
+                      style={{ backgroundColor: color }}
+                      onClick={() => formatText("hiliteColor", color)}
+                      title={`Highlight: ${color}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    </div>
+  );
 };
 
-/** Small icon button used across the toolbar — keeps size/active styling in one place */
 const ToolbarButton: React.FC<{
-    label: string;
-    active?: boolean;
-    onClick: () => void;
-    children: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
 }> = ({ label, active, onClick, children }) => (
-    <Button
-        type="button"
-        variant={active ? "secondary" : "ghost"}
-        size="sm"
-        title={label}
-        aria-label={label}
-        aria-pressed={active}
-        onClick={onClick}
-        className="h-8 w-8 rounded-md p-0"
-    >
-        {children}
-    </Button>
+  <Button
+    type="button"
+    variant="ghost"
+    size="sm"
+    title={label}
+    aria-label={label}
+    aria-pressed={active}
+    onClick={onClick}
+    className={cn(
+      "h-7.5 w-7.5 rounded-md p-0 transition-all duration-150",
+      active
+        ? "bg-primary/15 text-primary border border-primary/25 font-semibold"
+        : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
+    )}
+  >
+    {children}
+  </Button>
 );
