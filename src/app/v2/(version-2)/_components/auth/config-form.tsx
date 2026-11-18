@@ -77,7 +77,8 @@ const stepFields = {
 
 export function ConfigForm() {
   const { setConfig } = useMailStore()
-  const form = useForm<z.infer<typeof formSchema>>({
+  // zod 4: z.coerce / .default() make the schema input differ from its output.
+  const form = useForm<z.input<typeof formSchema>, unknown, z.output<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues,
     mode: "onChange",
@@ -182,7 +183,7 @@ export function ConfigForm() {
                 <FormItem className="flex-1">
                   <FormLabel>IMAP Port</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="993" {...field} />
+                    <Input type="number" placeholder="993" {...field} value={(field.value as number | string | undefined) ?? ""} />
                   </FormControl>
                   <FormDescription>Default port for IMAP is 993 (with SSL/TLS)</FormDescription>
                   <FormMessage />
@@ -279,7 +280,7 @@ export function ConfigForm() {
                 <FormItem>
                   <FormLabel>SMTP Port</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="587" {...field} />
+                    <Input type="number" placeholder="587" {...field} value={(field.value as number | string | undefined) ?? ""} />
                   </FormControl>
                   <FormDescription>Common ports: 587 (TLS) or 465 (SSL)</FormDescription>
                   <FormMessage />

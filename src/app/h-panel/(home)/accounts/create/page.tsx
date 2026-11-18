@@ -37,7 +37,9 @@ const userSchema = z.object({
     forward_to: z.string().email("Invalid forward-to email address").or(z.literal("")).optional(),
 })
 
-type UserFormData = z.infer<typeof userSchema>
+// zod 4: defaults make input and output differ, so the form is typed with both.
+type UserFormInput = z.input<typeof userSchema>
+type UserFormData = z.output<typeof userSchema>
 const sizes = ["MB", "GB"]
 
 const Page = () => {
@@ -46,7 +48,7 @@ const Page = () => {
     const [myDomains, setMyDomains] = useState<any[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [selectedSize, setSelectedSize] = useState("MB")
-    const form = useForm<UserFormData>({
+    const form = useForm<UserFormInput, unknown, UserFormData>({
         resolver: zodResolver(userSchema),
         defaultValues: {
             name: "",

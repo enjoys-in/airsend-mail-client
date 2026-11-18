@@ -57,7 +57,6 @@ import {
   Table,
   Text,
   Trash,
-  Twitter,
   Underline,
   Ungroup,
   WrapText,

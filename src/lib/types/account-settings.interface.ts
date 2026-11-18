@@ -70,7 +70,7 @@ export interface AccountSettings {
     email_privacy: {
         autoShowImages: boolean;
         block_email_tracking: boolean;
-        show_sender_favicon: boolean;
+        show_sender_favicon?: boolean;
     };
 
     imap_config: {

@@ -38,14 +38,12 @@ const formSchema = z.object({
     }),
     enable_tracing: z.boolean().default(false).optional(),
     selected_emails: z.array(optionSchema, {
-        required_error: "Please select at least one email.",
-        invalid_type_error: "Please select at least one email.",
         message: "Please select at least one email.",
     }).min(1, {
         message: "Please select at least one email.",
     }).max(3),
     domain: z.string({
-        required_error: "Please select a domain.",
+        error: "Please select a domain.",
     }),
 })
 

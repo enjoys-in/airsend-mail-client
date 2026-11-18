@@ -19,7 +19,8 @@ interface WizardFormProps<T extends z.ZodType> {
   onSubmit: (values: z.infer<T>) => void
   children: React.ReactNode
   className?: string
-  form: UseFormReturn<z.infer<T>>
+  // Accepts forms whose input and output types differ (zod 4 coerce/default).
+  form: UseFormReturn<any, any, any>
   stepFields?: { [key: number]: string[] }
   persistenceKey?: string
   persistForm?: boolean,

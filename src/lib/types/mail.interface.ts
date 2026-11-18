@@ -54,6 +54,7 @@ export interface DomainVerificationResponse {
     status: DOMAIN_STATUS;
     records: DNSRecords[];
     created_at: string | Date;
+    workspace_enabled?: boolean;
 }
 
 export type ExpectedDNSRecordType = {

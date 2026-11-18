@@ -156,6 +156,7 @@ export type EmailSettings = {
 interface EmailPrivacy {
     autoShowImages: boolean
     block_email_tracking: boolean
+    show_sender_favicon?: boolean
 }
 
 interface ImapConfig {
