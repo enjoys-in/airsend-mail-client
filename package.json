@@ -6,7 +6,7 @@
     "dev": "next dev -p 9500",
     "build": "next build && npm run cache",
     "start": "next start -p 9500",
-    "cache": "npx workbox generateSW",
+    "cache": "npx workbox-cli generateSW workbox-config.js",
     "lint": "next lint"
   },
   "engines": {
