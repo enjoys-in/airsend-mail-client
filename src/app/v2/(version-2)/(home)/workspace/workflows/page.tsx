@@ -413,7 +413,7 @@ function WorkflowsContent() {
                 {activeFlows.map((flow) => (
                   <div
                     key={flow.id}
-                    className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 shadow-2xs hover:border-border transition-all space-y-4"
+                    className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 shadow-sm hover:border-border transition-all space-y-4"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -526,7 +526,7 @@ function WorkflowsContent() {
                 return (
                   <div
                     key={tpl.id}
-                    className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 shadow-2xs hover:border-border transition-all space-y-4"
+                    className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 shadow-sm hover:border-border transition-all space-y-4"
                   >
                     <div className="space-y-3">
                       <div className="flex size-10 items-center justify-center rounded-xl border" style={{}}>
@@ -569,7 +569,7 @@ function WorkflowsContent() {
 
           {/* ── Tab: Run History ── */}
           <TabsContent value="history" className="m-0 space-y-4">
-            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/40 shadow-2xs">
+            <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/40 shadow-sm">
               {workflowRuns.length === 0 ? (
                 <div className="p-12 text-center text-xs text-muted-foreground space-y-2">
                   <Clock className="size-8 mx-auto opacity-40" />

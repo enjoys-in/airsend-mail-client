@@ -295,7 +295,7 @@ function CallsHubContent() {
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Speed Dial / Contacts */}
           <div className="space-y-4">
-            <div className="rounded-xl border border-border/40 bg-card p-4 shadow-2xs">
+            <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Users className="size-3.5 text-primary" />
@@ -398,7 +398,7 @@ function CallsHubContent() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/40 bg-card overflow-hidden shadow-2xs divide-y divide-border/30">
+            <div className="rounded-xl border border-border/40 bg-card overflow-hidden shadow-sm divide-y divide-border/30">
               {filteredRecords.length === 0 ? (
                 <div className="p-8 text-center text-xs text-muted-foreground space-y-2">
                   <Clock className="size-6 mx-auto opacity-40" />

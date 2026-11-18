@@ -282,7 +282,7 @@ function TasksPlannerContent() {
                     className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
                       isDone
                         ? "border-border/30 bg-muted/10 opacity-70"
-                        : "border-border/40 bg-card hover:border-border hover:shadow-xs"
+                        : "border-border/40 bg-card hover:border-border hover:shadow-sm"
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0 pr-3">
@@ -454,7 +454,7 @@ function TaskColumn({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col rounded-xl border border-border/40 bg-card p-3 shadow-2xs min-h-[300px]">
+    <div className="flex flex-col rounded-xl border border-border/40 bg-card p-3 shadow-sm min-h-[300px]">
       <div className="flex items-center justify-between pb-3 border-b border-border/30 mb-3">
         <div className="flex items-center gap-2">
           <span className={`text-xs font-bold uppercase tracking-wider ${color}`}>

@@ -53,14 +53,14 @@ const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
       <WorkspaceInit />
 
       {/* Main content column with Teams Navigation Bar */}
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="flex flex-1 flex-col min-h-0 overflow-hidden">
         {/* Render Teams Header Bar (except when full-screen call room is active) */}
         {!isLiveCallRoom && <TeamsNavBar />}
 
         {/* Route content with Error Boundary and Suspense Skeleton */}
         <WorkspaceErrorBoundary fallbackTitle="Workspace Section Unavailable">
           <Suspense fallback={<WorkspaceHomeSkeleton />}>
-            <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
               {children}
             </div>
           </Suspense>

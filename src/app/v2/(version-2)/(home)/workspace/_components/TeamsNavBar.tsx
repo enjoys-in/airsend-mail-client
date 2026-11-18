@@ -207,7 +207,7 @@ export default function TeamsNavBar() {
                   className={cn(
                     "relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-150 whitespace-nowrap",
                     item.isActive
-                      ? "bg-accent text-accent-foreground font-semibold shadow-xs"
+                      ? "bg-accent text-accent-foreground font-semibold shadow-sm"
                       : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                   )}
                 >
@@ -248,7 +248,7 @@ export default function TeamsNavBar() {
             size="sm"
             variant="default"
             onClick={() => setInstantMeetingOpen(true)}
-            className="h-8 gap-1.5 text-xs px-2.5 sm:px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xs"
+            className="h-8 gap-1.5 text-xs px-2.5 sm:px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm"
           >
             <Video className="size-3.5" />
             <span className="hidden sm:inline">Meet Now</span>

@@ -82,13 +82,13 @@ function WorkspaceDashboardContent() {
   };
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto bg-background/50 p-4 md:p-6 space-y-6">
+    <div className="flex-1 overflow-y-auto min-h-0 bg-background/50 p-4 md:p-6 space-y-6">
       {/* ── Welcome Hero Banner ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 p-6 shadow-xs">
+      <div className="relative shrink-0 overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 p-5 md:p-6 shadow-sm">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-xs">
+              <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-sm">
                 {activeTeam?.name?.charAt(0) || "W"}
               </span>
               <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
@@ -107,14 +107,14 @@ function WorkspaceDashboardContent() {
           <div className="flex flex-wrap items-center gap-2.5">
             <Button
               onClick={handleInstantMeeting}
-              className="gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs hover:from-blue-700 hover:to-indigo-700"
+              className="gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:from-blue-700 hover:to-indigo-700"
             >
               <Video className="size-4" />
               Meet Now
             </Button>
             {defaultChannel && (
               <Link href={`/v2/workspace/c/${defaultChannel.id}`}>
-                <Button variant="outline" className="gap-1.5">
+                <Button variant="outline" className="gap-1.5 shadow-sm">
                   <MessageSquare className="size-4" />
                   Jump to #{defaultChannel.name}
                 </Button>
@@ -129,10 +129,10 @@ function WorkspaceDashboardContent() {
 
       {/* ── Live Calls / Meetings Alert (if any) ── */}
       {liveMeetings.length > 0 && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+        <div className="rounded-xl shrink-0 border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-xs animate-pulse">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-sm animate-pulse">
                 <Radio className="size-5" />
               </div>
               <div>
@@ -150,7 +150,7 @@ function WorkspaceDashboardContent() {
             <Button
               size="sm"
               onClick={() => handleJoinCall(liveMeetings[0].id, liveMeetings[0].title)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shrink-0"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shrink-0 shadow-sm"
             >
               <Video className="size-3.5" />
               Join Live Meeting
@@ -174,7 +174,7 @@ function WorkspaceDashboardContent() {
             <Link
               key={item.title}
               href={item.href}
-              className="group flex flex-col items-center justify-center p-3.5 rounded-xl border border-border/40 bg-card hover:bg-accent/40 transition-all duration-150 text-center shadow-2xs hover:shadow-xs"
+              className="group flex flex-col items-center justify-center p-3.5 rounded-xl border border-border/40 bg-card hover:bg-accent/40 transition-all duration-150 text-center shadow-sm hover:shadow"
             >
               <div className={`flex size-10 items-center justify-center rounded-xl mb-2 ${item.color} group-hover:scale-110 transition-transform`}>
                 <Icon className="size-5" />
@@ -193,7 +193,7 @@ function WorkspaceDashboardContent() {
       {/* ── Main Dashboard Grid ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 1. Upcoming Meetings & Agenda */}
-        <Card className="border-border/40 shadow-xs flex flex-col">
+        <Card className="border-border/40 shadow-sm flex flex-col">
           <CardHeader className="pb-3 flex-row items-center justify-between">
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -233,7 +233,7 @@ function WorkspaceDashboardContent() {
         </Card>
 
         {/* 2. My Tasks / Planner */}
-        <Card className="border-border/40 shadow-xs flex flex-col">
+        <Card className="border-border/40 shadow-sm flex flex-col">
           <CardHeader className="pb-3 flex-row items-center justify-between">
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -296,7 +296,7 @@ function WorkspaceDashboardContent() {
         </Card>
 
         {/* 3. Recent Activity & Mentions */}
-        <Card className="border-border/40 shadow-xs flex flex-col">
+        <Card className="border-border/40 shadow-sm flex flex-col">
           <CardHeader className="pb-3 flex-row items-center justify-between">
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -351,7 +351,7 @@ function WorkspaceDashboardContent() {
       {/* ── Team Documents & Channel Shortcuts ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Files */}
-        <Card className="border-border/40 shadow-xs">
+        <Card className="border-border/40 shadow-sm">
           <CardHeader className="pb-3 flex-row items-center justify-between">
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -394,7 +394,7 @@ function WorkspaceDashboardContent() {
         </Card>
 
         {/* Channels Quick Access */}
-        <Card className="border-border/40 shadow-xs">
+        <Card className="border-border/40 shadow-sm">
           <CardHeader className="pb-3 flex-row items-center justify-between">
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">

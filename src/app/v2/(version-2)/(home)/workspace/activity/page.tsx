@@ -206,7 +206,7 @@ function ActivityFeedContent() {
                   onClick={() => handleNotificationClick(n)}
                   className={`group relative flex items-start gap-3.5 p-4 rounded-xl border transition-all duration-150 cursor-pointer ${
                     !n.isRead
-                      ? "border-primary/30 bg-primary/5 hover:bg-primary/10 shadow-2xs"
+                      ? "border-primary/30 bg-primary/5 hover:bg-primary/10 shadow-sm"
                       : "border-border/40 bg-card hover:bg-accent/40"
                   }`}
                 >
@@ -217,12 +217,12 @@ function ActivityFeedContent() {
 
                   {/* Sender Avatar */}
                   <div className="relative shrink-0 ml-1">
-                    <Avatar className="size-10 shadow-xs">
+                    <Avatar className="size-10 shadow-sm">
                       <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
                         {n.fromUserName.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-background border border-border/40 shadow-xs">
+                    <span className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-background border border-border/40 shadow-sm">
                       {getTypeIcon(n.type)}
                     </span>
                   </div>
