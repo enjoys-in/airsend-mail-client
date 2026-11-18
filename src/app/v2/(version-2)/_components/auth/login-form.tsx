@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { API } from "@/lib/api/handler"
 import { LogoImage } from "@/components/logo-image"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { setCurrAccount } from "@/store/slices/account"
 import { useAppDispatch } from "@/store/hooks"
@@ -19,6 +19,7 @@ import { Security } from "@/lib/security"
 const s = new Security()
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const { toast } = useToast()
     const dispatch = useAppDispatch()
     const [email, setEmail] = useState("")
@@ -66,6 +67,21 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                 description: "You have been logged in successfully", duration: 2000
             })
             
+            const redirectParam = searchParams.get("redirect") || searchParams.get("return_to")
+            if (redirectParam) {
+                try {
+                    const redirectUrl = new URL(redirectParam, window.location.origin)
+                    if (data.result?.token && !redirectUrl.searchParams.has("token")) {
+                        redirectUrl.searchParams.set("token", data.result.token)
+                    }
+                    window.location.href = redirectUrl.toString()
+                    return
+                } catch {
+                    window.location.href = redirectParam
+                    return
+                }
+            }
+
             router.push("/v2/u/mail/inbox")
         } catch (error) {
             setIsLoading(false);
