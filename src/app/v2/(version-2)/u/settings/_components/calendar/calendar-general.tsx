@@ -189,9 +189,10 @@ function CalendarGeneral({ local, onChange, onSave }: CalendarGeneralProps) {
           label="Background sync interval"
           description="How often events are synced between your local cache and the CalDAV server"
           tooltip="How often to sync calendar events with the server"
-          value={String(local.calender_sync_interval)}
+          value={String(local.calender_sync_interval || 15)}
           onValueChange={(v) => onChange("calender_sync_interval", Number(v))}
           options={[...SYNC_INTERVAL_OPTIONS]}
+          placeholder="Every 15 minutes"
           disabled={!isEffectivelyEnabled}
           triggerClassName="sm:w-[190px]"
         />

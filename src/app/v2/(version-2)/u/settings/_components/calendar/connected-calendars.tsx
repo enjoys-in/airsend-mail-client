@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback, useEffect } from "react";
+import { memo, useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Trash2, RefreshCw, Loader2, Calendar, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -160,6 +160,11 @@ function ConnectedCalendars({ disabled, onConfigSync }: ConnectedCalendarsProps)
   const [loading, setLoading] = useState(false);
   const [accountId, setAccountId] = useState("");
 
+  const onConfigSyncRef = useRef(onConfigSync);
+  useEffect(() => {
+    onConfigSyncRef.current = onConfigSync;
+  }, [onConfigSync]);
+
   /* ---- fetch calendars + subscriptions from CalDev ---- */
   const fetchData = useCallback(async () => {
     if (disabled) return;
@@ -175,13 +180,12 @@ function ConnectedCalendars({ disabled, onConfigSync }: ConnectedCalendarsProps)
       ]);
       setCalendars(cals);
       setSubscriptions(subs);
-      onConfigSync?.(buildBackendConfigArray(cals));
     } catch (err) {
       console.error("[ConnectedCalendars] fetch error:", err);
     } finally {
       setLoading(false);
     }
-  }, [disabled, onConfigSync]);
+  }, [disabled]);
 
   useEffect(() => {
     fetchData();
@@ -194,12 +198,12 @@ function ConnectedCalendars({ disabled, onConfigSync }: ConnectedCalendarsProps)
       await deleteCalendar(accountId, calId);
       const updated = calendars.filter((c) => c.id !== calId);
       setCalendars(updated);
-      onConfigSync?.(buildBackendConfigArray(updated));
+      onConfigSyncRef.current?.(buildBackendConfigArray(updated));
       toast.success("Calendar deleted.");
     } catch {
       toast.error("Failed to delete calendar.");
     }
-  }, [accountId, calendars, onConfigSync]);
+  }, [accountId, calendars]);
 
   /* ---- add a subscription ---- */
   const handleAddSubscription = useCallback(async (sourceUrl: string, displayName: string) => {

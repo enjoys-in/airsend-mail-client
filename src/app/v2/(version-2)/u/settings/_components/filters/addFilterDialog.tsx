@@ -209,9 +209,10 @@ export function AddFilterDialog({ onClose }: { onClose?: () => void }) {
                         name={`conditions.${index}.field`}
                         control={control}
                         render={({ field }) => (
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <SelectTrigger className="h-9 text-xs">
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <SelectTrigger className="h-9 text-xs flex items-center justify-between">
                               <SelectValue placeholder="Select field" />
+                              <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0 ml-1.5" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="The subject">Subject</SelectItem>
@@ -225,9 +226,10 @@ export function AddFilterDialog({ onClose }: { onClose?: () => void }) {
                         name={`conditions.${index}.operator`}
                         control={control}
                         render={({ field }) => (
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <SelectTrigger className="h-9 text-xs">
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <SelectTrigger className="h-9 text-xs flex items-center justify-between">
                               <SelectValue placeholder="Select operator" />
+                              <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0 ml-1.5" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="contains">contains</SelectItem>
@@ -302,9 +304,10 @@ export function AddFilterDialog({ onClose }: { onClose?: () => void }) {
                 name="actions.moveToFolder"
                 control={control}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger className="h-9 text-xs sm:text-sm bg-background">
+                  <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <SelectTrigger className="h-9 text-xs sm:text-sm bg-background flex items-center justify-between">
                       <SelectValue placeholder="Select folder" />
+                      <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0 ml-1.5" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Inbox">Inbox (Default)</SelectItem>

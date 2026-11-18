@@ -19,9 +19,43 @@ const DEFAULT_COMPOSING: IComposingSettings = {
   composer_mode: "normal",
   conversations_per_page: 50,
   text_direction: "ltr",
-  default_font: "arial",
+  default_font: "Arial",
   default_font_size: 14,
 };
+
+const FONT_OPTIONS = [
+  { value: "Arial", label: "Arial" },
+  { value: "Times New Roman", label: "Times New Roman" },
+  { value: "Calibri", label: "Calibri" },
+  { value: "Georgia", label: "Georgia" },
+  { value: "Helvetica", label: "Helvetica" },
+  { value: "Verdana", label: "Verdana" },
+];
+
+const FONT_SIZE_OPTIONS = [
+  { value: "12", label: "12 px" },
+  { value: "14", label: "14 px" },
+  { value: "16", label: "16 px" },
+  { value: "18", label: "18 px" },
+  { value: "20", label: "20 px" },
+];
+
+const CONVERSATION_OPTIONS = [
+  { value: "25", label: "25 conversations" },
+  { value: "50", label: "50 conversations" },
+  { value: "100", label: "100 conversations" },
+];
+
+const DIRECTION_OPTIONS = [
+  { value: "ltr", label: "Left to Right (LTR)" },
+  { value: "rtl", label: "Right to Left (RTL)" },
+];
+
+const COMPOSER_MODE_OPTIONS = [
+  { value: "normal", label: "Normal (Standard)" },
+  { value: "rich", label: "Rich Text (Full formatting)" },
+  { value: "plain", label: "Plain Text (Markdown friendly)" },
+];
 
 export default function MailAppearance({ email }: { email: string }) {
   const { settings, saveMultiple, isSaving } = useSettingsPersist(email);
@@ -34,10 +68,18 @@ export default function MailAppearance({ email }: { email: string }) {
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
   const [dirty, setDirty] = useState(false);
 
-  /* sync from store once */
+  /* sync from store with safe fallbacks */
   useEffect(() => {
     if (!settings) return;
-    if (settings.composing) setComposing(settings.composing);
+    if (settings.composing) {
+      setComposing({
+        composer_mode: settings.composing.composer_mode || DEFAULT_COMPOSING.composer_mode,
+        conversations_per_page: Number(settings.composing.conversations_per_page) || DEFAULT_COMPOSING.conversations_per_page,
+        text_direction: settings.composing.text_direction || DEFAULT_COMPOSING.text_direction,
+        default_font: settings.composing.default_font || DEFAULT_COMPOSING.default_font,
+        default_font_size: Number(settings.composing.default_font_size) || DEFAULT_COMPOSING.default_font_size,
+      });
+    }
     setInboxLayout(settings.display?.showRightSidebar ? "column" : "row");
     setDailyEmails(settings.personalization?.theme === "dark");
   }, [settings]);
@@ -80,15 +122,19 @@ export default function MailAppearance({ email }: { email: string }) {
   };
 
   const handleReset = () => {
-    if (settings) {
-      if (settings.composing) setComposing(settings.composing);
-      setInboxLayout(settings.display?.showRightSidebar ? "column" : "row");
-      setDailyEmails(settings.personalization?.theme === "dark");
+    if (settings?.composing) {
+      setComposing({
+        composer_mode: settings.composing.composer_mode || DEFAULT_COMPOSING.composer_mode,
+        conversations_per_page: Number(settings.composing.conversations_per_page) || DEFAULT_COMPOSING.conversations_per_page,
+        text_direction: settings.composing.text_direction || DEFAULT_COMPOSING.text_direction,
+        default_font: settings.composing.default_font || DEFAULT_COMPOSING.default_font,
+        default_font_size: Number(settings.composing.default_font_size) || DEFAULT_COMPOSING.default_font_size,
+      });
     } else {
       setComposing(DEFAULT_COMPOSING);
-      setInboxLayout("column");
-      setDailyEmails(true);
     }
+    setInboxLayout(settings?.display?.showRightSidebar ? "column" : "row");
+    setDailyEmails(settings?.personalization?.theme === "dark");
     setDirty(false);
   };
 
@@ -125,36 +171,28 @@ export default function MailAppearance({ email }: { email: string }) {
         <SettingSelectRow
           label="Composer editor mode"
           description="Standard rich text or lightweight markdown-style editor"
-          value={composing.composer_mode}
+          value={composing.composer_mode || DEFAULT_COMPOSING.composer_mode}
           onValueChange={(v) => updateComposing("composer_mode", v as IComposingSettings["composer_mode"])}
-          options={[
-            { value: "normal", label: "Normal (Standard)" },
-            { value: "rich", label: "Rich Text (Full formatting)" },
-            { value: "plain", label: "Plain Text (Markdown friendly)" },
-          ]}
+          placeholder="Normal (Standard)"
+          options={COMPOSER_MODE_OPTIONS}
         />
         <SettingSelectRow
           label="Conversations per page"
           description="How many threads to show per mailbox page"
-          value={String(composing.conversations_per_page)}
+          value={String(composing.conversations_per_page || DEFAULT_COMPOSING.conversations_per_page)}
           onValueChange={(v) => updateComposing("conversations_per_page", Number(v))}
-          options={[
-            { value: "25", label: "25 conversations" },
-            { value: "50", label: "50 conversations" },
-            { value: "100", label: "100 conversations" },
-          ]}
-          triggerClassName="sm:w-[160px]"
+          placeholder="50 conversations"
+          options={CONVERSATION_OPTIONS}
+          triggerClassName="sm:w-[170px]"
         />
         <SettingSelectRow
           label="Reading & text direction"
           description="Default direction for message viewing and typing"
-          value={composing.text_direction}
+          value={composing.text_direction || DEFAULT_COMPOSING.text_direction}
           onValueChange={(v) => updateComposing("text_direction", v as "ltr" | "rtl")}
-          options={[
-            { value: "ltr", label: "Left to Right (LTR)" },
-            { value: "rtl", label: "Right to Left (RTL)" },
-          ]}
-          triggerClassName="sm:w-[160px]"
+          placeholder="Left to Right (LTR)"
+          options={DIRECTION_OPTIONS}
+          triggerClassName="sm:w-[170px]"
         />
 
         {/* Font family & Font size */}
@@ -170,31 +208,20 @@ export default function MailAppearance({ email }: { email: string }) {
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="flex-1 sm:flex-none">
               <SettingSelectRow
-                label=""
-                value={composing.default_font}
+                value={composing.default_font || DEFAULT_COMPOSING.default_font}
                 onValueChange={(v) => updateComposing("default_font", v)}
-                options={[
-                  { value: "arial", label: "Arial" },
-                  { value: "times", label: "Times New Roman" },
-                  { value: "calibri", label: "Calibri" },
-                ]}
-                triggerClassName="w-full sm:w-[130px]"
-                className="py-0 px-0 hover:bg-transparent"
+                placeholder="Arial"
+                options={FONT_OPTIONS}
+                triggerClassName="w-full sm:w-[140px]"
               />
             </div>
-            <div className="w-24 sm:w-[80px]">
+            <div className="w-24 sm:w-[95px]">
               <SettingSelectRow
-                label=""
-                value={String(composing.default_font_size)}
+                value={String(composing.default_font_size || DEFAULT_COMPOSING.default_font_size)}
                 onValueChange={(v) => updateComposing("default_font_size", Number(v))}
-                options={[
-                  { value: "12", label: "12 px" },
-                  { value: "14", label: "14 px" },
-                  { value: "16", label: "16 px" },
-                  { value: "18", label: "18 px" },
-                ]}
-                triggerClassName="w-full sm:w-[80px]"
-                className="py-0 px-0 hover:bg-transparent"
+                placeholder="14 px"
+                options={FONT_SIZE_OPTIONS}
+                triggerClassName="w-full sm:w-[95px]"
               />
             </div>
           </div>

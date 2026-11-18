@@ -7,6 +7,7 @@ import { SettingsPageHeader, SaveSettingsBar } from "./shared";
 import CalendarGeneral from "./calendar/calendar-general";
 import ConnectedCalendars from "./calendar/connected-calendars";
 import { useUserConfigStore } from "@/store/settings/user-config";
+import { useSettingsStore } from "@/store/settings";
 import { Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -27,10 +28,10 @@ function CalendarSettings({ email }: { email: string }) {
 
   /* ---- hydrate from store once ---- */
   useEffect(() => {
-    if (settings?.calender_config) {
+    if (settings?.calender_config && !dirty) {
       setLocal(settings.calender_config);
     }
-  }, [settings?.calender_config]);
+  }, [settings?.calender_config, dirty]);
 
   /* ---- field-level updater ---- */
   const handleChange = useCallback(
@@ -54,32 +55,43 @@ function CalendarSettings({ email }: { email: string }) {
   /* ---- persist & re-hydrate ---- */
   const handleSaveAndHydrate = useCallback(async (config: ICalenderConfig) => {
     await save("calender_config", config);
-    if (settings) {
-      useUserConfigStore.getState().hydrate({ ...settings, calender_config: config });
+    const currentSettings = useSettingsStore.getState().settings;
+    if (currentSettings) {
+      useUserConfigStore.getState().hydrate({ ...currentSettings, calender_config: config });
     }
     setDirty(false);
-  }, [save, settings]);
+  }, [save]);
 
   /* ---- sync config array from CalDev calendars to backend ---- */
   const handleConfigSync = useCallback(
     (configArray: ICalenderConfig["config"]) => {
       setLocal((prev) => {
+        const prevList = prev.config || [];
+        const nextList = configArray || [];
+        const prevKey = prevList.map((c) => `${c.calendar_id}:${c.calendar_name}`).sort().join("|");
+        const nextKey = nextList.map((c) => `${c.calendar_id}:${c.calendar_name}`).sort().join("|");
+        if (prevKey === nextKey) {
+          return prev;
+        }
+
         const next = { ...prev, config: configArray };
         save("calender_config", next);
-        if (settings) {
-          useUserConfigStore.getState().hydrate({ ...settings, calender_config: next });
+        const currentSettings = useSettingsStore.getState().settings;
+        if (currentSettings) {
+          useUserConfigStore.getState().hydrate({ ...currentSettings, calender_config: next });
         }
         return next;
       });
     },
-    [save, settings],
+    [save],
   );
 
   /* ---- persist ---- */
   const handleSave = async () => {
     await save("calender_config", local);
-    if (settings) {
-      useUserConfigStore.getState().hydrate({ ...settings, calender_config: local });
+    const currentSettings = useSettingsStore.getState().settings;
+    if (currentSettings) {
+      useUserConfigStore.getState().hydrate({ ...currentSettings, calender_config: local });
     }
     setDirty(false);
   };

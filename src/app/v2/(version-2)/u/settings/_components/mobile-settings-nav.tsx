@@ -14,7 +14,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { accountItems, mailItems } from "@/app/v2/(version-2)/_components/mail/settingsMenu"
-import { SlidersHorizontal } from "lucide-react"
+import { SlidersHorizontal, ChevronDown } from "lucide-react"
 
 export function MobileSettingsNav() {
     const activeItem = useSettingsStore((s) => s.activeItem)
@@ -51,6 +51,8 @@ export function MobileSettingsNav() {
         }
     }, [activeItem])
 
+    const currentItem = allSettingsItems.find((i) => i.key === activeItem)
+
     return (
         <div className="md:hidden w-full mb-6 space-y-3">
             {/* Quick dropdown for fast jumping */}
@@ -60,8 +62,11 @@ export function MobileSettingsNav() {
                     <span>Tab:</span>
                 </div>
                 <Select value={activeItem} onValueChange={handleSelect}>
-                    <SelectTrigger className="w-full h-9 text-xs sm:text-sm bg-card/80 border-border/80 rounded-xl shadow-2xs font-medium">
-                        <SelectValue placeholder="Select tab" />
+                    <SelectTrigger className="w-full h-9 text-xs sm:text-sm bg-card/80 border-border/80 rounded-xl shadow-2xs font-medium flex items-center justify-between">
+                        <SelectValue placeholder="Select tab">
+                            {currentItem?.label}
+                        </SelectValue>
+                        <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0 ml-1.5" />
                     </SelectTrigger>
                     <SelectContent className="max-h-80">
                         <SelectGroup>

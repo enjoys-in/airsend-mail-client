@@ -85,6 +85,7 @@ function MessageToggles({ local, onChange }: MessageTogglesProps) {
                     tooltip="How to handle unsubscribe requests from mailing lists"
                     value="ask"
                     onValueChange={() => { }}
+                    placeholder="Ask each time"
                     options={[
                         { value: "ask", label: "Ask each time" },
                         { value: "always", label: "Always unsubscribe" },

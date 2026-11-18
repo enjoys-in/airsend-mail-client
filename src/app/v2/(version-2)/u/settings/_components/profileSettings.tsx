@@ -23,7 +23,7 @@ import {
 } from "./shared";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { User, HardDrive, ShieldCheck, Mail, Sparkles } from "lucide-react";
+import { User, HardDrive, ShieldCheck, Mail, Sparkles, ChevronDown } from "lucide-react";
 
 export default function ProfileSettings({ email }: { email: string }) {
   const { currAccount, accounts } = useAppSelector((state) => state.accounts);
@@ -174,11 +174,14 @@ export default function ProfileSettings({ email }: { email: string }) {
                     className="w-full text-xs sm:text-sm bg-muted/40 font-mono"
                   />
                 ) : (
-                  <Select value={selectedEmail} onValueChange={setSelectedEmail}>
-                    <SelectTrigger className="w-full text-xs sm:text-sm bg-background/80 border-border/80 rounded-xl shadow-2xs">
+                  <Select value={selectedEmail || currAccount?.email || email || undefined} onValueChange={setSelectedEmail}>
+                    <SelectTrigger className="w-full text-xs sm:text-sm bg-background/80 border-border/80 rounded-xl shadow-2xs flex items-center justify-between">
                       <SelectValue
                         placeholder={currAccount?.email || email || "Select email"}
-                      />
+                      >
+                        {selectedAccount?.email || currAccount?.email || email}
+                      </SelectValue>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0 ml-1.5" />
                     </SelectTrigger>
                     <SelectContent>
                       {accounts.map((acc) => (

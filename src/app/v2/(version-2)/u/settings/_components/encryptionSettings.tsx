@@ -117,8 +117,9 @@ function EncryptionSettings({ email }: { email: string }) {
             label="Default PGP encoding format"
             description="PGP/MIME is the modern standard for multipart attachments; PGP/INLINE is for legacy clients"
             tooltip="Choose the default PGP encryption scheme"
-            value={local.default_pgp_scheme}
+            value={local.default_pgp_scheme || "PGP/MIME"}
             onValueChange={(v) => update("default_pgp_scheme", v as IEncryptionSettings["default_pgp_scheme"])}
+            placeholder="PGP/MIME (Modern standard)"
             options={[
               { value: "PGP/MIME", label: "PGP/MIME (Modern standard)" },
               { value: "PGP/INLINE", label: "PGP/INLINE (Legacy)" },
