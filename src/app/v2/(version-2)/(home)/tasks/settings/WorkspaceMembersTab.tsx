@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Users, Shield, User } from "lucide-react";
+import { Shield, User } from "lucide-react";
 import { useTasks } from "../_lib/tasks-context";
 import { type TaskMember } from "../_lib/tasks-types";
 import * as api from "../_lib/tasks-api";

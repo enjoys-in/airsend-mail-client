@@ -3,15 +3,16 @@
 import React, { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { TasksProvider, useTasks } from "./_lib/tasks-context";
-import { TasksHeader } from "./_components/TasksHeader";
-import { TasksBoardView } from "./_components/TasksBoardView";
-import { TasksListView } from "./_components/TasksListView";
-import { TasksMyTasksView } from "./_components/TasksMyTasksView";
-import { TasksCalendarView } from "./_components/TasksCalendarView";
-import { TaskDetailDialog } from "./_components/TaskDetailDialog";
-import { TaskCreateDialog } from "./_components/TaskCreateDialog";
-import { ProjectCreateDialog } from "./_components/ProjectCreateDialog";
-import { TasksSettingsDialog } from "./_components/TasksSettingsDialog";
+import { TasksHeader } from "./navigation/TasksHeader";
+import { BoardView } from "./board/BoardView";
+import { ListView } from "./list/ListView";
+import { MyTasksView } from "./my-tasks/MyTasksView";
+import { CalendarView } from "./calendar/CalendarView";
+import { GanttView } from "./gantt/GanttView";
+import { TaskDetailDialog } from "./task/TaskDetailDialog";
+import { TaskCreateDialog } from "./task/TaskCreateDialog";
+import { ProjectCreateDialog } from "./project/ProjectCreateDialog";
+import { TasksSettingsDialog } from "./settings/TasksSettingsDialog";
 
 function TasksMainContent() {
   const { viewMode, isLoading } = useTasks();
@@ -24,13 +25,15 @@ function TasksMainContent() {
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       ) : viewMode === "board" ? (
-        <TasksBoardView />
+        <BoardView />
       ) : viewMode === "list" ? (
-        <TasksListView />
+        <ListView />
       ) : viewMode === "my-tasks" ? (
-        <TasksMyTasksView />
+        <MyTasksView />
+      ) : viewMode === "calendar" ? (
+        <CalendarView />
       ) : (
-        <TasksCalendarView />
+        <GanttView />
       )}
 
       <TaskDetailDialog />

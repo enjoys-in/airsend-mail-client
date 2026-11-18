@@ -4,18 +4,18 @@ import React, { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react";
 import { useTasks } from "../_lib/tasks-context";
 import { type TaskItem } from "../_lib/tasks-types";
+import { CalendarTaskBar } from "./CalendarTaskBar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export function TasksCalendarView() {
+export function CalendarView() {
   const { filteredTasks, setSelectedTask, setIsCreateOpen } = useTasks();
   const [currentDate, setCurrentDate] = useState(() => new Date());
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-
   const monthName = currentDate.toLocaleString("default", { month: "long" });
 
   const { daysInMonth, startDayIndex } = useMemo(() => {
@@ -50,7 +50,6 @@ export function TasksCalendarView() {
 
   return (
     <div className="flex h-full flex-col p-4 md:p-6 overflow-hidden">
-      {/* Month Navigation */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-3">
           <CalendarIcon className="size-5 text-primary" />
@@ -72,14 +71,12 @@ export function TasksCalendarView() {
         </div>
       </div>
 
-      {/* Calendar Grid Header */}
       <div className="grid grid-cols-7 border-b border-border/50 text-center text-xs font-semibold text-muted-foreground pb-2 shrink-0">
         {DAYS.map((d) => (
           <div key={d}>{d}</div>
         ))}
       </div>
 
-      {/* Calendar Days */}
       <div className="grid grid-cols-7 grid-rows-5 gap-px bg-border/40 flex-1 rounded-xl overflow-hidden border border-border/40 mt-2">
         {Array.from({ length: startDayIndex }).map((_, i) => (
           <div key={`empty-${i}`} className="bg-muted/10 p-2 min-h-20" />
@@ -116,31 +113,13 @@ export function TasksCalendarView() {
                 </button>
               </div>
 
-              {/* Task Chips */}
               <div className="flex flex-col gap-1 mt-1 overflow-y-auto max-h-20">
                 {dayTasks.map((t) => (
-                  <button
+                  <CalendarTaskBar
                     key={t.id}
-                    onClick={() => setSelectedTask(t)}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-[11px] truncate transition-colors",
-                      t.status === "done"
-                        ? "bg-muted/40 text-muted-foreground line-through"
-                        : "bg-primary/10 text-foreground hover:bg-primary/20"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "size-1.5 rounded-full shrink-0",
-                        t.priority === "urgent" && "bg-red-500",
-                        t.priority === "high" && "bg-orange-500",
-                        t.priority === "medium" && "bg-amber-500",
-                        t.priority === "low" && "bg-blue-500",
-                        t.priority === "none" && "bg-muted-foreground"
-                      )}
-                    />
-                    <span className="truncate">{t.title}</span>
-                  </button>
+                    task={t}
+                    onSelect={() => setSelectedTask(t)}
+                  />
                 ))}
               </div>
             </div>

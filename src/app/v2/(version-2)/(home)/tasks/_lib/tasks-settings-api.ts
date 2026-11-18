@@ -31,7 +31,10 @@ export async function createProject(input: CreateProjectInput): Promise<TaskProj
   }
 }
 
-export async function updateProject(id: string, data: Partial<CreateProjectInput>): Promise<boolean> {
+export async function updateProject(
+  id: string,
+  data: Partial<CreateProjectInput & { isPublic?: boolean }>
+): Promise<boolean> {
   try {
     const res = await fetch(`${BASE_URL}/project/${id}`, {
       method: "PUT",

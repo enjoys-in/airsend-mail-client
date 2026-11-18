@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Calendar, CheckCircle2, Circle, MoreVertical, Trash2 } from "lucide-react";
 import { type TaskItem, type TaskStatus } from "../_lib/tasks-types";
-import { TaskPriorityBadge } from "./TaskPriorityBadge";
+import { TaskPriorityBadge } from "../task/TaskPriorityBadge";
 import { useTasks } from "../_lib/tasks-context";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,16 +14,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface TaskListItemProps {
-  task: TaskItem;
-}
-
-export function TaskListItem({ task }: TaskListItemProps) {
+export function TaskListItem({ task }: { task: TaskItem }) {
   const { setSelectedTask, handleMoveTaskStatus, handleDeleteTask, columns } = useTasks();
 
   const isDone = task.status === "done";
 
-  const formattedDue = React.useMemo(() => {
+  const formattedDue = useMemo(() => {
     if (!task.dueDate) return null;
     return new Date(task.dueDate).toLocaleDateString(undefined, {
       month: "short",
@@ -40,7 +36,6 @@ export function TaskListItem({ task }: TaskListItemProps) {
         isDone && "bg-muted/10 opacity-70"
       )}
     >
-      {/* Left: Checkbox & Title */}
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <button
           type="button"
@@ -71,7 +66,6 @@ export function TaskListItem({ task }: TaskListItemProps) {
         </span>
       </div>
 
-      {/* Right: Metadata & Actions */}
       <div className="flex items-center gap-3 shrink-0">
         <TaskPriorityBadge priority={task.priority} />
 

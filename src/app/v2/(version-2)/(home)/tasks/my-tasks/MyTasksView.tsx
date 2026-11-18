@@ -4,14 +4,14 @@ import React, { useMemo, useState } from "react";
 import { CheckCircle2, Circle, Calendar, FolderKanban } from "lucide-react";
 import { useTasks } from "../_lib/tasks-context";
 import { type MyTasksGroupBy, type TaskItem } from "../_lib/tasks-types";
-import { groupTasksByDueDate, groupTasksByProject } from "../_lib/my-tasks-grouper";
-import { TaskPriorityBadge } from "./TaskPriorityBadge";
-import { TasksEmptyState } from "./TasksEmptyState";
+import { groupTasksByDueDate, groupTasksByProject } from "./MyTasksGrouper";
+import { TaskPriorityBadge } from "../task/TaskPriorityBadge";
+import { TasksEmptyState } from "../navigation/TasksEmptyState";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function TasksMyTasksView() {
-  const { filteredTasks, setSelectedTask, handleMoveTaskStatus, setIsCreateOpen } = useTasks();
+export function MyTasksView() {
+  const { filteredTasks, setSelectedTask, handleMoveTaskStatus } = useTasks();
   const [groupBy, setGroupBy] = useState<MyTasksGroupBy>("dueDate");
 
   const groups = useMemo(() => {
@@ -32,7 +32,6 @@ export function TasksMyTasksView() {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto p-4 md:p-6 space-y-6">
-      {/* Grouping switch */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground font-medium">Group by:</span>
@@ -58,7 +57,6 @@ export function TasksMyTasksView() {
         <span className="text-xs text-muted-foreground">{filteredTasks.length} assigned</span>
       </div>
 
-      {/* Task Groups */}
       <div className="space-y-6">
         {groups.map((group) => (
           <div key={group.id} className="space-y-2">

@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Trash2, Tag } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useTasks } from "../_lib/tasks-context";
 import * as api from "../_lib/tasks-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
-const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280"];
+const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280", "#06b6d4"];
 
 export function WorkspaceLabelsTab() {
   const { labels, currentProject, refreshTasks } = useTasks();

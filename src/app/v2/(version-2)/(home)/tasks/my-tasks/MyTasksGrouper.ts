@@ -1,4 +1,4 @@
-import { type DueBucket, type TaskItem } from "./tasks-types";
+import { type DueBucket, type TaskItem } from "../_lib/tasks-types";
 
 export interface TaskGroup {
   id: string;

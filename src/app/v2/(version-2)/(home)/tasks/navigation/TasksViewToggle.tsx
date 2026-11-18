@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { LayoutGrid, List, CheckSquare, Calendar as CalendarIcon } from "lucide-react";
+import { LayoutGrid, List, CheckSquare, Calendar as CalendarIcon, GitCommitHorizontal } from "lucide-react";
 import { useTasks } from "../_lib/tasks-context";
 import { type TasksViewMode } from "../_lib/tasks-types";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ export function TasksViewToggle() {
     { mode: "list", label: "List", icon: <List className="size-3.5" /> },
     { mode: "my-tasks", label: "My Tasks", icon: <CheckSquare className="size-3.5" /> },
     { mode: "calendar", label: "Calendar", icon: <CalendarIcon className="size-3.5" /> },
+    { mode: "gantt", label: "Timeline", icon: <GitCommitHorizontal className="size-3.5" /> },
   ];
 
   return (

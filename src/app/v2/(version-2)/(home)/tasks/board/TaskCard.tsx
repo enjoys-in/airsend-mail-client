@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
-import { Calendar, Check, MoreVertical, Trash2 } from "lucide-react";
+import React, { useMemo } from "react";
+import { Calendar, Check, CheckSquare, MoreVertical, Trash2 } from "lucide-react";
 import { type TaskItem, type TaskStatus } from "../_lib/tasks-types";
-import { TaskPriorityBadge } from "./TaskPriorityBadge";
+import { TaskPriorityBadge } from "../task/TaskPriorityBadge";
 import { useTasks } from "../_lib/tasks-context";
 import { cn } from "@/lib/utils";
 import {
@@ -14,23 +14,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-interface TaskCardProps {
-  task: TaskItem;
-}
-
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task }: { task: TaskItem }) {
   const { setSelectedTask, handleMoveTaskStatus, handleDeleteTask, columns } = useTasks();
 
-  const isOverdue = React.useMemo(() => {
+  const isOverdue = useMemo(() => {
     if (!task.dueDate) return false;
     return new Date(task.dueDate).getTime() < Date.now() && task.status !== "done";
   }, [task.dueDate, task.status]);
 
-  const formattedDue = React.useMemo(() => {
+  const formattedDue = useMemo(() => {
     if (!task.dueDate) return null;
-    const d = new Date(task.dueDate);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }, [task.dueDate]);
+
+  const completedSubtasks = (task.subtasks || []).filter((s) => s.completed).length;
+  const totalSubtasks = (task.subtasks || []).length;
 
   return (
     <div
@@ -100,10 +98,23 @@ export function TaskCard({ task }: TaskCardProps) {
         {task.title}
       </h4>
 
-      {task.description && (
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {task.description}
-        </p>
+      {task.labels && task.labels.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {task.labels.map((lbl) => (
+            <span
+              key={lbl.id}
+              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium border"
+              style={{
+                borderColor: `${lbl.color}40`,
+                backgroundColor: `${lbl.color}15`,
+                color: lbl.color,
+              }}
+            >
+              <span className="size-1.5 rounded-full" style={{ backgroundColor: lbl.color }} />
+              {lbl.name}
+            </span>
+          ))}
+        </div>
       )}
 
       <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
@@ -119,6 +130,12 @@ export function TaskCard({ task }: TaskCardProps) {
             >
               <Calendar className="size-3" />
               {formattedDue}
+            </span>
+          )}
+          {totalSubtasks > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-mono">
+              <CheckSquare className="size-3" />
+              {completedSubtasks}/{totalSubtasks}
             </span>
           )}
         </div>

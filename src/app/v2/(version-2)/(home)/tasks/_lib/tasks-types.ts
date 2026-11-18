@@ -9,7 +9,7 @@ export type TaskStatus =
   | "canceled"
   | "archived";
 
-export type TasksViewMode = "board" | "list" | "my-tasks" | "calendar";
+export type TasksViewMode = "board" | "list" | "my-tasks" | "calendar" | "gantt";
 
 export type MyTasksGroupBy = "dueDate" | "project";
 
@@ -45,6 +45,53 @@ export interface TaskColumn {
   isFinal?: boolean;
 }
 
+export interface TaskSubtask {
+  id: string;
+  title: string;
+  completed: boolean;
+  assigneeId?: string | null;
+  assigneeName?: string | null;
+  dueDate?: string | null;
+}
+
+export interface TaskTimeEntry {
+  id: string;
+  taskId: string;
+  userId: string;
+  userName?: string;
+  duration: number;
+  startedAt: string;
+  endedAt?: string | null;
+  description?: string;
+}
+
+export interface TaskActivityItem {
+  id: string;
+  taskId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  type: "comment" | "status_change" | "created" | "assigned";
+  content: string;
+  createdAt: string;
+}
+
+export interface TaskCustomField {
+  id: string;
+  name: string;
+  type: "text" | "number" | "select" | "date" | "checkbox";
+  value?: string | number | boolean | null;
+  options?: string[];
+}
+
+export interface TaskApiKey {
+  id: string;
+  name: string;
+  keyPreview: string;
+  createdAt: string;
+  expiresAt?: string | null;
+}
+
 export interface TaskItem {
   id: string;
   projectId: string;
@@ -60,11 +107,14 @@ export interface TaskItem {
   statusIcon?: string;
   priority: TaskPriority;
   dueDate?: string | null;
+  startDate?: string | null;
   assigneeId?: string | null;
   assigneeName?: string | null;
   assigneeEmail?: string | null;
   assigneeAvatar?: string | null;
   labels: TaskLabel[];
+  subtasks?: TaskSubtask[];
+  timeSpent?: number;
   position?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -98,6 +148,7 @@ export interface CreateTaskInput {
   priority?: TaskPriority;
   status?: TaskStatus;
   dueDate?: string | null;
+  startDate?: string | null;
   assigneeId?: string | null;
   labels?: string[];
 }
@@ -108,6 +159,7 @@ export interface UpdateTaskInput {
   priority?: TaskPriority;
   status?: TaskStatus;
   dueDate?: string | null;
+  startDate?: string | null;
   assigneeId?: string | null;
   projectId?: string;
   labels?: string[];

@@ -2,17 +2,16 @@
 
 import React from "react";
 import { TaskListItem } from "./TaskListItem";
-import { TasksEmptyState } from "./TasksEmptyState";
+import { TasksEmptyState } from "../navigation/TasksEmptyState";
 import { useTasks } from "../_lib/tasks-context";
 
-export function TasksListView() {
+export function ListView() {
   const { filteredTasks, columns } = useTasks();
 
   if (filteredTasks.length === 0) {
     return <TasksEmptyState />;
   }
 
-  // If columns are available, group by column
   const hasColumns = columns.length > 0;
 
   return (

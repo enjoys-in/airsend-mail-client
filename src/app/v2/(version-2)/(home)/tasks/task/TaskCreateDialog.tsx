@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { type TaskPriority, type TaskStatus } from "../_lib/tasks-types";
 import { useTasks } from "../_lib/tasks-context";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export function TaskCreateDialog() {
   const [dueDate, setDueDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedProjectId) setProjectId(selectedProjectId);
     if (createDefaultStatus) setStatus(createDefaultStatus);
   }, [selectedProjectId, createDefaultStatus]);
