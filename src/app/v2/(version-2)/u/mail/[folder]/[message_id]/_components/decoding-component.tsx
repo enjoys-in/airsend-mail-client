@@ -10,6 +10,7 @@ import FileAttachment from '../../../_components/file-attachment'
 import { Separator } from '@/components/ui/separator'
 import { findCalendarPart } from '@/lib/calendar/ics-invite'
 import InviteCard from './invite-card'
+import { detectOtp, notifyOtpDiscovered } from '@/lib/mail/otp-detector'
 const DecodingComponent = ({ message_id, data }: { message_id: string, data: EncodedMessageResponse }) => {
     // Selectors only — subscribing to the whole store re-rendered the mail
     // iframe on every unrelated mail-store update (list sync, checkboxes, ...).
@@ -25,16 +26,20 @@ const DecodingComponent = ({ message_id, data }: { message_id: string, data: Enc
 
             if (rawData[message_id]) {
                 const email = await PostalMime.parse(rawData[message_id]);
-                setAttachments(email.attachments)
-                return setHtml(email.html! || "No HTML content")
+                setAttachments(email.attachments);
+                const detected = detectOtp(email.subject, email.text, email.html, email.from?.address);
+                if (detected) notifyOtpDiscovered(message_id, detected);
+                return setHtml(email.html! || "No HTML content");
             }
 
 
-            const decrypted = await decryptEncodedMail(message_id, data)
+            const decrypted = await decryptEncodedMail(message_id, data);
             const email = await PostalMime.parse(decrypted);
-            setAttachments(email.attachments)
+            setAttachments(email.attachments);
+            const detected = detectOtp(email.subject, email.text, email.html, email.from?.address);
+            if (detected) notifyOtpDiscovered(message_id, detected);
 
-            return setHtml(email.html! || "No HTML content")
+            return setHtml(email.html! || "No HTML content");
         } catch (e) {
             return setHtml("Message could not be decrypted")
         }

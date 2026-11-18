@@ -36,6 +36,18 @@ const IdbSyncHookApi = () => {
                         continue
                     }
 
+                    // Guard: verify that at least one field in settingsDelta actually differs from oldObj
+                    const oldSettings = (e as any)?.oldObj?.settings || {};
+                    const hasRealChange = Object.keys(settingsDelta).some((k) => {
+                        const oldVal = oldSettings[k];
+                        const newVal = settingsDelta[k];
+                        return JSON.stringify(oldVal) !== JSON.stringify(newVal);
+                    });
+
+                    if (!hasRealChange) {
+                        continue;
+                    }
+
                     /* Backend-first: push only changed fields to API, rollback on failure */
                     toast.promise(
                         API.handleUpdateMailUserSetting({
