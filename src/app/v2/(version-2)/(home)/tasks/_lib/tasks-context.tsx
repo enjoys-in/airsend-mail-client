@@ -58,6 +58,9 @@ interface TasksContextValue {
 const TasksContext = createContext<TasksContextValue | null>(null);
 
 export function TasksProvider({ children }: { children: React.ReactNode }) {
+  const existing = useContext(TasksContext);
+  if (existing) return <>{children}</>;
+
   const [projects, setProjects] = useState<TaskProject[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [columns, setColumns] = useState<TaskColumn[]>([]);
