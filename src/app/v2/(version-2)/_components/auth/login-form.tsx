@@ -16,6 +16,7 @@ import { setCurrAccount } from "@/store/slices/account"
 import { useAppDispatch } from "@/store/hooks"
 import Link from "next/link"
 import { Security } from "@/lib/security"
+import { resolveSafeRedirect, withToken } from "@/lib/safe-redirect"
 const s = new Security()
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
     const router = useRouter()
@@ -68,18 +69,10 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             })
             
             const redirectParam = searchParams.get("redirect") || searchParams.get("return_to")
-            if (redirectParam) {
-                try {
-                    const redirectUrl = new URL(redirectParam, window.location.origin)
-                    if (data.result?.token && !redirectUrl.searchParams.has("token")) {
-                        redirectUrl.searchParams.set("token", data.result.token)
-                    }
-                    window.location.href = redirectUrl.toString()
-                    return
-                } catch {
-                    window.location.href = redirectParam
-                    return
-                }
+            const target = resolveSafeRedirect(redirectParam, window.location.origin)
+            if (target) {
+                window.location.href = withToken(target, data.result?.token).toString()
+                return
             }
 
             router.push("/v2/u/mail/inbox")

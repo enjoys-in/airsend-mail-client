@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { jwtDecode, JwtPayload } from 'jwt-decode'
 import { IUser, ROLE } from './lib/types/user.interface';
 import { validateTokenExpiry } from './lib/utils';
+import { resolveSafeRedirect, withToken } from './lib/safe-redirect';
 
 const regex = /^\/u\/(.+)/;
 const hPanelRegex = /^\/h-panel\/(.+)/;
@@ -17,6 +18,15 @@ export async function proxy(request: NextRequest) {
 
     // Case 1: Logged in user with VALID token accessing login page — redirect to dashboard
     if (isValidToken && isLoginPage) {
+        // Another AirSend product sent the user here to sign in (?redirect= / ?return_to=). Already
+        // signed in, so go straight back to it instead of opening the mailbox.
+        const target = resolveSafeRedirect(
+            request.nextUrl.searchParams.get('redirect') || request.nextUrl.searchParams.get('return_to'),
+            request.nextUrl.origin,
+        );
+        if (target) {
+            return NextResponse.redirect(withToken(target, access_token));
+        }
         return NextResponse.redirect(new URL('/v2/u/mail', request.url));
     }
 
