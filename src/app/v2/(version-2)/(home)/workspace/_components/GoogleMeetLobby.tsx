@@ -15,6 +15,7 @@ import {
   Check,
   ArrowLeft,
   Users,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,6 +111,15 @@ export default function GoogleMeetLobby({
             {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
             <span>{copied ? "Copied" : "Copy link"}</span>
           </Button>
+          <a
+            href={meetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-slate-700 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            <ExternalLink className="size-3.5" />
+            <span className="hidden sm:inline">Open in meet.airsend.in</span>
+          </a>
         </div>
       </header>
 

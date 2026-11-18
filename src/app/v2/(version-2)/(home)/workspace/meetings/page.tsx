@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useChatStore } from "../_lib/chat-store";
+import { meetingApi, generateMeetCode, formatMeetUrl } from "../_lib/api";
 import WorkspaceErrorBoundary from "../_components/WorkspaceErrorBoundary";
 import LiveMeetingCard from "../_components/LiveMeetingCard";
 import type { Meeting } from "../_lib/chat-types";
@@ -100,9 +101,18 @@ function MeetingsHubContent() {
     router.push(`/v2/workspace/calls/${meet.id}`);
   };
 
-  const handleMeetNow = () => {
-    const callId = `meet-${Date.now().toString(36)}`;
+  const handleMeetNow = async () => {
+    let callId = generateMeetCode();
     const newTitle = `${activeTeam?.name || "Team"} Instant Sync`;
+    try {
+      const res = await meetingApi.createRoom(newTitle, undefined, currentUserId || "alex@airsend.io");
+      if (res.roomId) {
+        callId = res.roomId;
+      }
+    } catch (e) {
+      console.warn("[MeetingsHub] Meeting server offline, using generated code:", e);
+    }
+
     startCall(callId, newTitle);
     addMeeting({
       title: newTitle,
@@ -115,13 +125,13 @@ function MeetingsHubContent() {
       startTime: new Date().toISOString(),
       endTime: new Date(Date.now() + 30 * 60000).toISOString(),
       isOnline: true,
-      meetingUrl: `/v2/workspace/calls/${callId}`,
+      meetingUrl: formatMeetUrl(callId),
       status: "live",
       attendees: [
         {
           id: currentUserId || "u-self",
           name: "You",
-          email: "you@airsend.io",
+          email: currentUserId || "you@airsend.io",
           status: "accepted",
           isOrganizer: true,
         },
@@ -130,9 +140,18 @@ function MeetingsHubContent() {
     router.push(`/v2/workspace/calls/${callId}`);
   };
 
-  const handleScheduleSubmit = () => {
+  const handleScheduleSubmit = async () => {
     if (!title.trim()) return;
-    const callId = `meet-${Date.now().toString(36)}`;
+    let callId = generateMeetCode();
+    try {
+      const res = await meetingApi.createRoom(title.trim(), undefined, currentUserId || "alex@airsend.io");
+      if (res.roomId) {
+        callId = res.roomId;
+      }
+    } catch (e) {
+      console.warn("[MeetingsHub] Meeting server offline, using generated code:", e);
+    }
+
     const startIso = `${meetingDate}T${startTime}:00Z`;
     const endIso = `${meetingDate}T${endTime}:00Z`;
     const chosenChannel = channels.find((c) => c.id === selectedChannelId);
@@ -148,13 +167,13 @@ function MeetingsHubContent() {
       startTime: startIso,
       endTime: endIso,
       isOnline: true,
-      meetingUrl: `/v2/workspace/calls/${callId}`,
+      meetingUrl: formatMeetUrl(callId),
       status: "scheduled",
       attendees: [
         {
           id: currentUserId || "u-self",
           name: "You",
-          email: "you@airsend.io",
+          email: currentUserId || "you@airsend.io",
           status: "accepted",
           isOrganizer: true,
         },

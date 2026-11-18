@@ -35,43 +35,51 @@ export function useWorkspaceWS(email: string | undefined) {
     if (!email || !mountedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const url = `${getWorkspaceWsUrl()}/ws?email=${encodeURIComponent(email)}`;
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
+    try {
+      const baseWs = getWorkspaceWsUrl().replace(/\/+$/, "");
+      const url = `${baseWs}/ws?email=${encodeURIComponent(email)}`;
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
 
-    ws.onopen = () => {
-      // Store WS ref in Zustand so sendMessage can use it
-      useChatStore.getState().setWS(ws);
+      ws.onopen = () => {
+        // Store WS ref in Zustand so sendMessage can use it
+        useChatStore.getState().setWS(ws);
 
-      // Subscribe to all teams and channels the user has
-      const { teams, channels } = useChatStore.getState();
-      teams.forEach((t) => {
-        ws.send(JSON.stringify({ type: "subscribe.team", payload: { team_id: t.id } }));
-      });
-      channels.forEach((c) => {
-        ws.send(JSON.stringify({ type: "subscribe.channel", payload: { channel_id: c.id } }));
-      });
-    };
+        // Subscribe to all teams and channels the user has
+        const { teams, channels } = useChatStore.getState();
+        teams.forEach((t) => {
+          ws.send(JSON.stringify({ type: "subscribe.team", payload: { team_id: t.id } }));
+        });
+        channels.forEach((c) => {
+          ws.send(JSON.stringify({ type: "subscribe.channel", payload: { channel_id: c.id } }));
+        });
+      };
 
-    ws.onmessage = (ev) => {
-      try {
-        const msg: WSIncoming = JSON.parse(ev.data);
-        handleWSEvent(msg);
-      } catch {
-        // ignore non-JSON
-      }
-    };
+      ws.onmessage = (ev) => {
+        try {
+          const msg: WSIncoming = JSON.parse(ev.data);
+          handleWSEvent(msg);
+        } catch {
+          // ignore non-JSON
+        }
+      };
 
-    ws.onclose = () => {
-      useChatStore.getState().setWS(null);
+      ws.onclose = () => {
+        useChatStore.getState().setWS(null);
+        if (mountedRef.current) {
+          reconnectRef.current = setTimeout(connect, 3000);
+        }
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    } catch (err) {
+      console.error("[Workspace WS] Connection error:", err);
       if (mountedRef.current) {
-        reconnectRef.current = setTimeout(connect, 3000);
+        reconnectRef.current = setTimeout(connect, 5000);
       }
-    };
-
-    ws.onerror = () => {
-      ws.close();
-    };
+    }
   }, [email]);
 
   // Subscribe to new channels when they change

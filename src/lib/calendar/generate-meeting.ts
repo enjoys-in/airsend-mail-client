@@ -5,29 +5,45 @@
 // ============================================================================
 
 export function getMeetApiUrl(): string {
+  let url = "";
   if (typeof window !== "undefined") {
     if ((window as any).__RUNTIME_CONFIG__?.MEET_API_URL) {
-      return (window as any).__RUNTIME_CONFIG__.MEET_API_URL;
+      url = (window as any).__RUNTIME_CONFIG__.MEET_API_URL;
     }
   }
-  return (
-    process.env.NEXT_PUBLIC_MEET_API_URL ||
-    process.env.MEET_API_URL ||
-    "https://meet.airsend.in"
-  );
+  if (!url) {
+    url = process.env.MEET_API_URL || "http://localhost:8085";
+  }
+  url = url.trim().replace(/\/+$/, "");
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    if (url.startsWith("http://")) {
+      url = url.replace(/^http:\/\//, "https://");
+    } else if (url.startsWith("//")) {
+      url = `https:${url}`;
+    }
+  }
+  return url;
 }
 
 export function getMeetBaseUrl(): string {
+  let url = "";
   if (typeof window !== "undefined") {
     if ((window as any).__RUNTIME_CONFIG__?.MEET_URL) {
       return (window as any).__RUNTIME_CONFIG__.MEET_URL;
     }
   }
-  return (
-    process.env.NEXT_PUBLIC_MEET_URL ||
-    process.env.MEET_URL ||
-    "https://meet.airsend.in"
-  );
+  if (!url) {
+    url = process.env.MEET_URL || "https://meet.airsend.in";
+  }
+  url = url.trim().replace(/\/+$/, "");
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    if (url.startsWith("http://")) {
+      url = url.replace(/^http:\/\//, "https://");
+    } else if (url.startsWith("//")) {
+      url = `https:${url}`;
+    }
+  }
+  return url;
 }
 
 /** Generates standard Google Meet style code: xxx-yyyy-zzz */

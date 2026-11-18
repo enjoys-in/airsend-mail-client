@@ -31,12 +31,15 @@ export default function WorkspaceInit() {
   } = useChatStore();
   const didInit = useRef(false);
 
-  // Set runtime config if window is available
-  if (typeof window !== "undefined" && !(window as any).__RUNTIME_CONFIG__?.WORKSPACE_API_URL) {
-    (window as any).__RUNTIME_CONFIG__ = {
-      ...(window as any).__RUNTIME_CONFIG__,
-      WORKSPACE_API_URL: getWorkspaceApiUrl(),
-    };
+  // Normalize and set runtime config if window is available
+  if (typeof window !== "undefined") {
+    const cleanUrl = getWorkspaceApiUrl();
+    if ((window as any).__RUNTIME_CONFIG__?.WORKSPACE_API_URL !== cleanUrl) {
+      (window as any).__RUNTIME_CONFIG__ = {
+        ...(window as any).__RUNTIME_CONFIG__,
+        WORKSPACE_API_URL: cleanUrl,
+      };
+    }
   }
 
   // WebSocket connection for real-time

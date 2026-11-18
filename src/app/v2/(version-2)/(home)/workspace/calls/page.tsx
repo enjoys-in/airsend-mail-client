@@ -46,7 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
-import { generateMeetCode, formatMeetUrl, parseMeetInput } from "../_lib/api";
+import { generateMeetCode, formatMeetUrl, parseMeetInput, meetingApi } from "../_lib/api";
 import WorkspaceErrorBoundary from "../_components/WorkspaceErrorBoundary";
 import type { CallRecord } from "../_lib/chat-types";
 
@@ -93,8 +93,21 @@ function CallsHubContent() {
     return true;
   });
 
-  const handleStartCall = (memberId: string, memberName: string, type: "video" | "audio") => {
-    const meetCode = generateMeetCode();
+  const handleStartCall = async (memberId: string, memberName: string, type: "video" | "audio") => {
+    let meetCode = generateMeetCode();
+    try {
+      const room = await meetingApi.createRoom(
+        `${type === "video" ? "Video Call with" : "Call with"} ${memberName}`,
+        undefined,
+        currentUserId || "alex@airsend.io"
+      );
+      if (room.roomId) {
+        meetCode = room.roomId;
+      }
+    } catch {
+      // offline fallback
+    }
+
     startCall(meetCode, `${type === "video" ? "Video Call with" : "Call with"} ${memberName}`);
 
     // Add to call records
@@ -113,17 +126,30 @@ function CallsHubContent() {
     router.push(`/v2/workspace/calls/${meetCode}`);
   };
 
-  const handleInstantMeeting = () => {
-    const meetCode = generateMeetCode();
-    startCall(meetCode, "Instant Meeting");
-    router.push(`/v2/workspace/calls/${meetCode}`);
+  const handleInstantMeeting = async () => {
+    try {
+      const room = await meetingApi.createRoom("Instant Meeting", undefined, currentUserId || "alex@airsend.io");
+      startCall(room.roomId, "Instant Meeting");
+      router.push(`/v2/workspace/calls/${room.roomId}`);
+    } catch {
+      const meetCode = generateMeetCode();
+      startCall(meetCode, "Instant Meeting");
+      router.push(`/v2/workspace/calls/${meetCode}`);
+    }
   };
 
-  const handleCreateMeetingForLater = () => {
-    const meetCode = generateMeetCode();
-    const url = formatMeetUrl(meetCode);
-    setCreatedLaterLink(url);
-    setCopiedLater(false);
+  const handleCreateMeetingForLater = async () => {
+    try {
+      const room = await meetingApi.createRoom("AirSend Meeting", undefined, currentUserId || "alex@airsend.io");
+      const url = formatMeetUrl(room.roomId);
+      setCreatedLaterLink(url);
+      setCopiedLater(false);
+    } catch {
+      const meetCode = generateMeetCode();
+      const url = formatMeetUrl(meetCode);
+      setCreatedLaterLink(url);
+      setCopiedLater(false);
+    }
   };
 
   const handleJoinByCode = (e?: React.FormEvent) => {

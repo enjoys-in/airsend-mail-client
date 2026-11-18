@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Copy, Check, Link2, Phone, Paperclip, FileText } from "lucide-react";
+import { X, Copy, Check, Link2, Phone, Paperclip, FileText, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatMeetUrl } from "../_lib/api";
 
@@ -125,6 +125,16 @@ export default function MeetDetailsDrawer({
               {copiedAll ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
               <span>{copiedAll ? "Copied joining info" : "Copy joining info"}</span>
             </Button>
+
+            <a
+              href={meetUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center w-full h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-xs gap-2 shadow-sm transition-opacity"
+            >
+              <ExternalLink className="size-3.5" />
+              <span>Open in meet.airsend.in</span>
+            </a>
           </>
         ) : (
           <div className="space-y-3">

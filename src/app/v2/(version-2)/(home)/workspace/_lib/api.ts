@@ -18,30 +18,55 @@ import type {
 } from "./chat-types"
 
 export function getWorkspaceApiUrl(): string {
+  let url = "";
   if (typeof window !== "undefined") {
     if ((window as any).__RUNTIME_CONFIG__?.WORKSPACE_API_URL) {
-      return (window as any).__RUNTIME_CONFIG__.WORKSPACE_API_URL;
+      url = (window as any).__RUNTIME_CONFIG__.WORKSPACE_API_URL;
     }
   }
-  return (
-    process.env.NEXT_PUBLIC_WORKSPACE_API_URL ||
-    process.env.WORKSPACE_API_URL ||
-    "http://localhost:8090"
-  );
+  if (!url) {
+    url =
+      process.env.NEXT_PUBLIC_WORKSPACE_API_URL ||
+      process.env.WORKSPACE_API_URL ||
+      "http://localhost:8090";
+  }
+
+  // Normalize: remove trailing slash
+  url = url.trim().replace(/\/+$/, "");
+
+  // In browser: if the page is loaded over HTTPS, upgrade any http:// or // to https://
+  // to prevent Mixed Content security blocking.
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    if (url.startsWith("http://")) {
+      url = url.replace(/^http:\/\//, "https://");
+    } else if (url.startsWith("//")) {
+      url = `https:${url}`;
+    }
+  }
+
+  return url;
 }
 
 export function getWorkspaceWsUrl(): string {
   const apiUrl = getWorkspaceApiUrl();
-  if (apiUrl.startsWith("https://")) {
-    return apiUrl.replace(/^https:\/\//, "wss://");
+  const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+
+  let wsUrl = apiUrl.trim().replace(/\/+$/, "");
+
+  if (wsUrl.startsWith("https://")) {
+    wsUrl = wsUrl.replace(/^https:\/\//, "wss://");
+  } else if (wsUrl.startsWith("http://")) {
+    // Insecure WebSockets (ws://) are strictly blocked from HTTPS pages by modern browsers
+    wsUrl = wsUrl.replace(/^http:\/\//, isHttps ? "wss://" : "ws://");
+  } else if (wsUrl.startsWith("ws://") && isHttps) {
+    wsUrl = wsUrl.replace(/^ws:\/\//, "wss://");
+  } else if (wsUrl.startsWith("//")) {
+    wsUrl = `${isHttps ? "wss:" : "ws:"}${wsUrl}`;
+  } else if (!wsUrl.startsWith("ws://") && !wsUrl.startsWith("wss://")) {
+    wsUrl = `${isHttps ? "wss://" : "ws://"}${wsUrl}`;
   }
-  if (apiUrl.startsWith("http://")) {
-    return apiUrl.replace(/^http:\/\//, "ws://");
-  }
-  if (apiUrl.startsWith("wss://") || apiUrl.startsWith("ws://")) {
-    return apiUrl;
-  }
-  return "ws://localhost:8090";
+
+  return wsUrl.replace(/\/+$/, "");
 }
 
 // ── Types mirroring Go models.PaginatedResponse ──
@@ -304,7 +329,9 @@ export interface ServerNotification {
 async function apiFetch<T>(path: string, init?: RequestInit & { email?: string }): Promise<T> {
   const email = init?.email ?? ""
   const { email: _, ...fetchInit } = init ?? {}
-  const res = await fetch(`${getWorkspaceApiUrl()}${path}`, {
+  const baseUrl = getWorkspaceApiUrl()
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  const res = await fetch(`${baseUrl}${normalizedPath}`, {
     ...fetchInit,
     headers: {
       "Content-Type": "application/json",
@@ -1005,6 +1032,113 @@ export const workspaceApi = {
     }),
 }
 
+// ── Dedicated Meeting Backend Service (../meeting, meet.airsend.in) ──
+
+export function getMeetApiUrl(): string {
+  let url = "";
+  if (typeof window !== "undefined") {
+    if ((window as any).__RUNTIME_CONFIG__?.MEET_API_URL) {
+      url = (window as any).__RUNTIME_CONFIG__.MEET_API_URL;
+    }
+  }
+  if (!url) {
+    url = process.env.MEET_API_URL || "http://localhost:8085";
+  }
+  url = url.trim().replace(/\/+$/, "");
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    if (url.startsWith("http://")) {
+      url = url.replace(/^http:\/\//, "https://");
+    } else if (url.startsWith("//")) {
+      url = `https:${url}`;
+    }
+  }
+  return url;
+}
+
+export function getMeetBaseUrl(): string {
+  let url = "";
+  if (typeof window !== "undefined") {
+    if ((window as any).__RUNTIME_CONFIG__?.MEET_URL) {
+      return (window as any).__RUNTIME_CONFIG__.MEET_URL;
+    }
+  }
+  if (!url) {
+    url = process.env.MEET_URL || "https://meet.airsend.in";
+  }
+  url = url.trim().replace(/\/+$/, "");
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    if (url.startsWith("http://")) {
+      url = url.replace(/^http:\/\//, "https://");
+    } else if (url.startsWith("//")) {
+      url = `https:${url}`;
+    }
+  }
+  return url;
+}
+
+export const meetingApi = {
+  /** Creates room in meeting backend (../meeting server POST /api/rooms) */
+  createRoom: async (title?: string, customRoomId?: string, email?: string): Promise<{ roomId: string; hostGrant: string }> => {
+    const apiUrl = getMeetApiUrl().replace(/\/+$/, "");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (email) {
+      headers["X-User-Email"] = email;
+    }
+    const res = await fetch(`${apiUrl}/api/rooms`, {
+      method: "POST",
+      headers,
+      credentials: "include",
+      body: JSON.stringify({
+        title: title || "AirSend Meeting",
+        customRoomId,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to create meeting room");
+    }
+    return res.json();
+  },
+
+  /** Gets room metadata from meeting backend */
+  getRoomInfo: async (roomId: string): Promise<{ roomId: string; title?: string; status: string; hostEmail?: string }> => {
+    const apiUrl = getMeetApiUrl().replace(/\/+$/, "");
+    const res = await fetch(`${apiUrl}/api/rooms/${roomId}`, {
+      credentials: "include",
+    });
+    if (!res.ok) {
+      throw new Error("Failed to get meeting room info");
+    }
+    return res.json();
+  },
+
+  /** Mints VideoSDK / WebRTC meeting token with host or guest role */
+  mintToken: async (
+    roomId: string,
+    participantId?: string,
+    hostGrant?: string,
+    name?: string
+  ): Promise<{ token: string; role: "host" | "guest" }> => {
+    const apiUrl = getMeetApiUrl().replace(/\/+$/, "");
+    const res = await fetch(`${apiUrl}/api/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        roomId,
+        participantId,
+        hostGrant,
+        name,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to mint meeting token");
+    }
+    return res.json();
+  },
+};
+
 // ── Google Meet Link & Code Helpers (meet.airsend.in) ──
 
 export function generateMeetCode(): string {
@@ -1015,7 +1149,8 @@ export function generateMeetCode(): string {
 
 export function formatMeetUrl(code: string): string {
   const clean = code.trim().replace(/^https?:\/\//i, "").replace(/^meet\.airsend\.in\//i, "").replace(/^airsend\.in\/v2\/workspace\/calls\//i, "")
-  return `https://meet.airsend.in/${clean}`
+  const baseUrl = getMeetBaseUrl().replace(/\/+$/, "")
+  return `${baseUrl}/${clean}`
 }
 
 export function parseMeetInput(input: string): string {

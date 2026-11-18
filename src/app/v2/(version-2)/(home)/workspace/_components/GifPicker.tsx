@@ -166,7 +166,7 @@ export default function GifPicker({ onSelect, trigger }: GifPickerProps) {
                   GIF search not configured
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground/70">
-                  Add NEXT_PUBLIC_TENOR_API_KEY to your environment
+                  Add TENOR_API_KEY to your environment
                 </p>
               </div>
             </div>

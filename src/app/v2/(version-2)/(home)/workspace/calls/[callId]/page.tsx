@@ -24,6 +24,7 @@ import {
   ClosedCaption,
   Edit3,
   LayoutGrid,
+  Smile,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +33,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatStore } from "../../_lib/chat-store";
 import { useWebRTCCall } from "../../_lib/use-webrtc-call";
-import { formatMeetUrl } from "../../_lib/api";
+import { formatMeetUrl, meetingApi } from "../../_lib/api";
 import LiveCallTile from "../../_components/LiveCallTile";
 import WorkspaceErrorBoundary from "../../_components/WorkspaceErrorBoundary";
 import GoogleMeetLobby from "../../_components/GoogleMeetLobby";
@@ -107,6 +108,33 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
     }, 1000);
     return () => clearInterval(timer);
   }, [isLobbyJoined]);
+
+  // Mint or verify token from dedicated meeting backend (../meeting, meet.airsend.in)
+  useEffect(() => {
+    meetingApi
+      .mintToken(callId, currentUserId || "u-self", undefined, "Alex Chen")
+      .then((res) => {
+        console.log("[MeetBackend] Token minted from meet.airsend.in:", res.role);
+      })
+      .catch((err) => {
+        console.warn("[MeetBackend] Dedicated meet server offline, peer fallback active:", err.message);
+      });
+  }, [callId, currentUserId]);
+
+  // Reactions state & animation
+  const REACTION_EMOJIS = ["👍", "🎉", "❤️", "😂", "😮", "😢", "🙏", "👏"] as const;
+  const [floatingReactions, setFloatingReactions] = useState<{ id: string; emoji: string; left: number }[]>([]);
+  const [showReactionsMenu, setShowReactionsMenu] = useState(false);
+
+  const handleTriggerReaction = (emoji: string) => {
+    const id = `react-${Date.now()}-${Math.random()}`;
+    const left = Math.floor(Math.random() * 60) + 20;
+    setFloatingReactions((prev) => [...prev, { id, emoji, left }]);
+    setTimeout(() => {
+      setFloatingReactions((prev) => prev.filter((r) => r.id !== id));
+    }, 2400);
+    setShowReactionsMenu(false);
+  };
 
   const formatTimer = (totalSeconds: number) => {
     const hrs = Math.floor(totalSeconds / 3600);
@@ -369,6 +397,22 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
           )}
         </div>
 
+        {/* ── Floating Emojis Overlay ── */}
+        <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
+          {floatingReactions.map((r) => (
+            <div
+              key={r.id}
+              className="absolute bottom-16 text-3xl sm:text-4xl select-none transition-all"
+              style={{
+                left: `${r.left}%`,
+                animation: "floatUpAndFade 2.2s forwards ease-in-out",
+              }}
+            >
+              {r.emoji}
+            </div>
+          ))}
+        </div>
+
         {/* ── Live Captions Overlay ── */}
         {showCaptions && (
           <MeetCaptionsOverlay onClose={() => setShowCaptions(false)} />
@@ -589,6 +633,38 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
             <Hand className="size-4" />
           </Button>
 
+          {/* Emoji Reactions Button & Menu */}
+          <div className="relative">
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => setShowReactionsMenu(!showReactionsMenu)}
+              className={`size-10 rounded-full border transition-all ${
+                showReactionsMenu
+                  ? "bg-blue-600 border-blue-500 text-white"
+                  : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
+              }`}
+              title="Send a reaction (Emoji)"
+            >
+              <Smile className="size-4" />
+            </Button>
+
+            {showReactionsMenu && (
+              <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1.5 rounded-full bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-md z-50">
+                {REACTION_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleTriggerReaction(emoji)}
+                    className="size-8 flex items-center justify-center text-lg hover:scale-125 hover:bg-slate-800 rounded-full transition-all duration-150"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Whiteboard / Notes Button */}
           <Button
             size="icon"
@@ -666,6 +742,27 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
           <span>Encrypted</span>
         </div>
       </div>
+
+      <style jsx global>{`
+        @keyframes floatUpAndFade {
+          0% {
+            transform: translateY(0) scale(0.6);
+            opacity: 0;
+          }
+          15% {
+            opacity: 1;
+            transform: translateY(-20px) scale(1.2);
+          }
+          80% {
+            opacity: 0.9;
+            transform: translateY(-160px) scale(1);
+          }
+          100% {
+            transform: translateY(-220px) scale(0.8);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }
