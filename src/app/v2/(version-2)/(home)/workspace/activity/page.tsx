@@ -15,6 +15,10 @@ import {
   Radio,
   ArrowRight,
   Sparkles,
+  Calendar,
+  PhoneMissed,
+  CheckSquare,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +78,14 @@ function ActivityFeedContent() {
     } else if (n.type === "dm") {
       const dm = directMessages.find((d) => d.id === n.messageId) || directMessages[0];
       if (dm) router.push(`/v2/workspace/dm/${dm.id}`);
+    } else if (n.type === "meeting_invite") {
+      router.push("/v2/workspace/meetings");
+    } else if (n.type === "call_missed") {
+      router.push("/v2/workspace/calls");
+    } else if (n.type === "task_assigned") {
+      router.push("/v2/workspace/tasks");
+    } else if (n.type === "file_shared") {
+      router.push("/v2/workspace/files");
     }
   };
 
@@ -87,6 +99,14 @@ function ActivityFeedContent() {
         return <Heart className="size-3.5 text-rose-500" />;
       case "dm":
         return <User className="size-3.5 text-purple-500" />;
+      case "meeting_invite":
+        return <Calendar className="size-3.5 text-blue-500" />;
+      case "call_missed":
+        return <PhoneMissed className="size-3.5 text-red-500" />;
+      case "task_assigned":
+        return <CheckSquare className="size-3.5 text-amber-500" />;
+      case "file_shared":
+        return <FolderOpen className="size-3.5 text-indigo-500" />;
       default:
         return <Bell className="size-3.5 text-amber-500" />;
     }

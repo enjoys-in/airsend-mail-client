@@ -7,11 +7,18 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useChatStore } from "./chat-store";
 import { useVoiceStore } from "./voice-store";
-import { toMessage } from "./api";
+import {
+  getWorkspaceWsUrl,
+  toMessage,
+  toTeam,
+  toChannel,
+  toMeeting,
+  toCallRecord,
+  toLiveCallParticipant,
+  toWorkspaceFile,
+  toChatTask,
+} from "./api";
 import type { ServerMessage } from "./api";
-
-const WS_BASE =
-  (typeof window !== "undefined" && (window as any).__RUNTIME_CONFIG__?.WORKSPACE_API_URL) || "ws://localhost:8090";
 
 interface WSIncoming {
   event: string;
@@ -28,7 +35,7 @@ export function useWorkspaceWS(email: string | undefined) {
     if (!email || !mountedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const url = `${WS_BASE}/ws?email=${encodeURIComponent(email)}`;
+    const url = `${getWorkspaceWsUrl()}/ws?email=${encodeURIComponent(email)}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
@@ -109,7 +116,6 @@ function handleWSEvent(msg: WSIncoming) {
 
   switch (msg.event) {
     case "message.ack": {
-      // Server confirmed our message — replace temp with real
       const data = msg.data as { temp_id: string; message: ServerMessage };
       if (!data.message || !data.temp_id) break;
       const real = toMessage(data.message);
@@ -120,7 +126,6 @@ function handleWSEvent(msg: WSIncoming) {
     }
 
     case "message.error": {
-      // Server rejected our message — remove temp
       const data = msg.data as { temp_id: string; error: string };
       if (data.temp_id) {
         useChatStore.setState((s) => ({
@@ -135,9 +140,7 @@ function handleWSEvent(msg: WSIncoming) {
       const data = msg.data as { message: ServerMessage; channel_id: string };
       if (!data.message) break;
       const newMsg = toMessage(data.message);
-      // Skip if we already have it (optimistic send or ack already handled)
       if (store.messages.some((m) => m.id === newMsg.id)) break;
-      // Skip if it's from current user (already added optimistically)
       if (newMsg.authorId === store.currentUserId) break;
       useChatStore.setState((s) => ({
         messages: [...s.messages, newMsg],
@@ -181,7 +184,6 @@ function handleWSEvent(msg: WSIncoming) {
     case "channel.created": {
       const data = msg.data as { channel: any };
       if (data.channel) {
-        const { toChannel } = require("./api");
         const ch = toChannel(data.channel);
         useChatStore.setState((s) => {
           if (s.channels.some((c) => c.id === ch.id)) return s;
@@ -194,7 +196,6 @@ function handleWSEvent(msg: WSIncoming) {
     case "channel.updated": {
       const data = msg.data as { channel: any };
       if (data.channel) {
-        const { toChannel } = require("./api");
         const ch = toChannel(data.channel);
         useChatStore.setState((s) => ({
           channels: s.channels.map((c) => (c.id === ch.id ? ch : c)),
@@ -214,7 +215,6 @@ function handleWSEvent(msg: WSIncoming) {
     case "team.updated": {
       const data = msg.data as { team: any };
       if (data.team) {
-        const { toTeam } = require("./api");
         const team = toTeam(data.team);
         useChatStore.setState((s) => ({
           teams: s.teams.map((t) => (t.id === team.id ? team : t)),
@@ -244,11 +244,327 @@ function handleWSEvent(msg: WSIncoming) {
       break;
     }
 
-    case "notification.mention": {
-      // Could show a toast or increment unread
+    // ── Member Status & Presence ──
+    case "member.status_changed": {
+      const data = msg.data as { email: string; status: string; custom_status?: string };
+      if (data.email) {
+        useChatStore.setState((s) => ({
+          members: s.members.map((m) =>
+            m.email === data.email || m.userId === data.email
+              ? {
+                  ...m,
+                  status: (data.status as any) || m.status,
+                  customStatus: data.custom_status ?? m.customStatus,
+                }
+              : m
+          ),
+        }));
+      }
       break;
     }
 
+    // ── Calls & Video Conferencing ──
+    case "call.joined": {
+      const data = msg.data as { call_id: string; participant: any };
+      if (data.participant) {
+        const p = toLiveCallParticipant(data.participant);
+        useChatStore.setState((s) => {
+          const exists = s.callParticipants.some(
+            (existing) => existing.id === p.id || existing.email === p.email
+          );
+          if (exists) {
+            return {
+              callParticipants: s.callParticipants.map((existing) =>
+                existing.id === p.id || existing.email === p.email ? p : existing
+              ),
+            };
+          }
+          return { callParticipants: [...s.callParticipants, p] };
+        });
+      }
+      break;
+    }
+
+    case "call.left": {
+      const data = msg.data as { call_id: string; user_email: string };
+      if (data.user_email) {
+        useChatStore.setState((s) => ({
+          callParticipants: s.callParticipants.filter((p) => p.email !== data.user_email),
+        }));
+      }
+      break;
+    }
+
+    case "call.state_changed": {
+      const data = msg.data as { call_id: string; user_email: string; state: any };
+      if (data.user_email) {
+        useChatStore.setState((s) => ({
+          callParticipants: s.callParticipants.map((p) => {
+            if (p.email !== data.user_email) return p;
+            return {
+              ...p,
+              isAudioMuted: data.state?.is_muted !== undefined ? data.state.is_muted : p.isAudioMuted,
+              isVideoOff: data.state?.is_camera_off !== undefined ? data.state.is_camera_off : p.isVideoOff,
+              isScreenSharing:
+                data.state?.is_screen_sharing !== undefined ? data.state.is_screen_sharing : p.isScreenSharing,
+              isHandRaised:
+                data.state?.is_hand_raised !== undefined ? data.state.is_hand_raised : p.isHandRaised,
+            };
+          }),
+        }));
+      }
+      break;
+    }
+
+    case "call.signal": {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("airsend:call-signal", { detail: msg.data }));
+      }
+      break;
+    }
+
+    case "call.missed": {
+      const data = msg.data as { call: any };
+      if (data.call) {
+        const rec = toCallRecord(data.call);
+        useChatStore.setState((s) => ({
+          callRecords: [rec, ...s.callRecords],
+          notifications: [
+            {
+              id: `notif-${Date.now()}`,
+              type: "call_missed",
+              teamId: rec.teamId || "team-1",
+              fromUserId: rec.callerId,
+              fromUserName: rec.callerName,
+              content: `Missed call from ${rec.callerName}`,
+              isRead: false,
+              createdAt: new Date().toISOString(),
+            },
+            ...s.notifications,
+          ],
+        }));
+      }
+      break;
+    }
+
+    // ── Meetings & Calendar ──
+    case "meeting.created":
+    case "meeting.channel_live":
+    case "meeting.invited": {
+      const data = msg.data as { meeting: any };
+      if (data.meeting) {
+        const m = toMeeting(data.meeting);
+        useChatStore.setState((s) => {
+          const exists = s.meetings.some((item) => item.id === m.id);
+          const updated = exists
+            ? s.meetings.map((item) => (item.id === m.id ? m : item))
+            : [m, ...s.meetings];
+          return { meetings: updated };
+        });
+      }
+      break;
+    }
+
+    case "meeting.updated": {
+      const data = msg.data as { meeting: any };
+      if (data.meeting) {
+        const m = toMeeting(data.meeting);
+        useChatStore.setState((s) => ({
+          meetings: s.meetings.map((item) => (item.id === m.id ? m : item)),
+        }));
+      }
+      break;
+    }
+
+    case "meeting.deleted": {
+      const data = msg.data as { meeting_id: string };
+      if (data.meeting_id) {
+        useChatStore.setState((s) => ({
+          meetings: s.meetings.filter((m) => m.id !== data.meeting_id),
+        }));
+      }
+      break;
+    }
+
+    // ── Tasks & Planner ──
+    case "task.created":
+    case "task.assigned": {
+      const data = msg.data as { task: any };
+      if (data.task) {
+        const t = toChatTask(data.task);
+        useChatStore.setState((s) => {
+          if (s.tasks.some((item) => item.id === t.id)) return s;
+          return { tasks: [t, ...s.tasks] };
+        });
+      }
+      break;
+    }
+
+    case "task.updated": {
+      const data = msg.data as { task: any };
+      if (data.task) {
+        const t = toChatTask(data.task);
+        useChatStore.setState((s) => ({
+          tasks: s.tasks.map((item) => (item.id === t.id ? t : item)),
+        }));
+      }
+      break;
+    }
+
+    case "task.deleted": {
+      const data = msg.data as { task_id: string };
+      if (data.task_id) {
+        useChatStore.setState((s) => ({
+          tasks: s.tasks.filter((t) => t.id !== data.task_id),
+        }));
+      }
+      break;
+    }
+
+    // ── Files & Cloud Storage ──
+    case "file.uploaded": {
+      const data = msg.data as { file: any };
+      if (data.file) {
+        const f = toWorkspaceFile(data.file);
+        useChatStore.setState((s) => {
+          if (s.files.some((item) => item.id === f.id)) return s;
+          return { files: [f, ...s.files] };
+        });
+      }
+      break;
+    }
+
+    case "file.deleted": {
+      const data = msg.data as { file_id: string };
+      if (data.file_id) {
+        useChatStore.setState((s) => ({
+          files: s.files.filter((f) => f.id !== data.file_id),
+        }));
+      }
+      break;
+    }
+
+    // ── Activity Feed Notifications ──
+    case "notification.new": {
+      const data = msg.data as { notification: any };
+      if (data.notification) {
+        const n = data.notification;
+        useChatStore.setState((s) => ({
+          notifications: [
+            {
+              id: n.id || `notif-${Date.now()}`,
+              type: (n.type === "meeting.invite"
+                ? "meeting_invite"
+                : n.type === "call.missed"
+                  ? "call_missed"
+                  : n.type === "task.assigned"
+                    ? "task_assigned"
+                    : "system") as any,
+              teamId: s.activeTeamId || "team-1",
+              fromUserId: n.recipient_email,
+              fromUserName: n.title,
+              content: n.body || n.title,
+              isRead: false,
+              createdAt: n.created_at || new Date().toISOString(),
+            },
+            ...s.notifications,
+          ],
+        }));
+      }
+      break;
+    }
+
+    // ── Workflows & Automations ──
+    case "workflow.created": {
+      const data = msg.data as { workflow: any };
+      if (data?.workflow) {
+        const wf = data.workflow;
+        useChatStore.setState((s) => {
+          if (s.workflows.some((w) => w.id === wf.id)) return s;
+          return {
+            workflows: [
+              {
+                id: wf.id,
+                teamId: wf.team_id,
+                name: wf.name,
+                description: wf.description,
+                triggerType: wf.trigger_type,
+                triggerConfig: wf.trigger_config || {},
+                actions: wf.actions || [],
+                isActive: wf.is_active,
+                webhookToken: wf.webhook_token,
+                runCount: wf.run_count || 0,
+                lastRunAt: wf.last_run_at,
+                createdBy: wf.created_by,
+                createdAt: wf.created_at,
+                updatedAt: wf.updated_at,
+              },
+              ...s.workflows,
+            ],
+          };
+        });
+      }
+      break;
+    }
+
+    case "workflow.updated": {
+      const data = msg.data as { workflow: any };
+      if (data?.workflow) {
+        const wf = data.workflow;
+        useChatStore.setState((s) => ({
+          workflows: s.workflows.map((item) =>
+            item.id === wf.id
+              ? {
+                  ...item,
+                  name: wf.name,
+                  description: wf.description,
+                  triggerType: wf.trigger_type,
+                  triggerConfig: wf.trigger_config || {},
+                  actions: wf.actions || [],
+                  isActive: wf.is_active,
+                  webhookToken: wf.webhook_token,
+                  runCount: wf.run_count ?? item.runCount,
+                  lastRunAt: wf.last_run_at ?? item.lastRunAt,
+                  updatedAt: wf.updated_at,
+                }
+              : item
+          ),
+        }));
+      }
+      break;
+    }
+
+    case "workflow.deleted": {
+      const data = msg.data as { workflow_id: string };
+      if (data?.workflow_id) {
+        useChatStore.setState((s) => ({
+          workflows: s.workflows.filter((w) => w.id !== data.workflow_id),
+        }));
+      }
+      break;
+    }
+
+    case "workflow.run": {
+      const data = msg.data as { run: any };
+      if (data?.run) {
+        const r = data.run;
+        useChatStore.getState().addWorkflowRun({
+          id: r.id,
+          workflowId: r.workflow_id,
+          teamId: r.team_id,
+          triggerType: r.trigger_type,
+          triggerPayload: r.trigger_payload || {},
+          status: r.status,
+          actionsExecuted: r.actions_executed || [],
+          logs: r.logs || "",
+          durationMs: r.duration_ms || 0,
+          executedAt: r.executed_at,
+        });
+      }
+      break;
+    }
+
+    // ── Voice channels ──
     case "voice.joined": {
       const data = msg.data as { channel_id: string; user_email: string; session: any };
       const voiceState = useVoiceStore.getState();

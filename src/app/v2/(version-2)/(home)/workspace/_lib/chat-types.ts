@@ -21,11 +21,14 @@ export interface Channel {
   teamId: string;
   name: string;
   description: string;
+  topic?: string;
   type: "text" | "voice" | "announcement";
   visibility: "public" | "private";
+  postingPermission?: "everyone" | "admins_only";
   isPinned: boolean;
   isDefault: boolean;
   isLocked: boolean;
+  isArchived?: boolean;
   createdAt: string;
   updatedAt: string;
   unreadCount: number;
@@ -85,7 +88,7 @@ export interface ChatMessage {
   isDeleted: boolean;
 }
 
-export type MessageType = "text" | "system" | "join" | "leave" | "pin" | "file";
+export type MessageType = "text" | "system" | "join" | "leave" | "pin" | "file" | "announcement";
 
 export interface ReplyReference {
   messageId: string;
@@ -147,6 +150,10 @@ export type NotificationType =
   | "dm"
   | "channel_invite"
   | "team_invite"
+  | "meeting_invite"
+  | "call_missed"
+  | "task_assigned"
+  | "file_shared"
   | "system";
 
 // ---------------------------------------------------------------------------
@@ -316,5 +323,63 @@ export interface WorkspaceFile {
   createdAt: string;
   updatedAt: string;
   downloadCount: number;
+}
+
+// ---------------------------------------------------------------------------
+// Workflows & Automations Engine (Parent of Webhooks)
+// ---------------------------------------------------------------------------
+
+export type WorkflowTriggerType =
+  | "on_mail_received"
+  | "on_calendar_event"
+  | "on_file_uploaded"
+  | "on_message_sent"
+  | "webhook_received"
+  | "task_status_changed";
+
+export type WorkflowActionType =
+  | "send_message"
+  | "create_task"
+  | "post_webhook"
+  | "send_email";
+
+export interface WorkflowAction {
+  type: WorkflowActionType;
+  config: Record<string, any>;
+}
+
+export interface Workflow {
+  id: string;
+  teamId: string;
+  name: string;
+  description?: string;
+  triggerType: WorkflowTriggerType;
+  triggerConfig: Record<string, any>;
+  actions: WorkflowAction[];
+  isActive: boolean;
+  webhookToken?: string;
+  runCount: number;
+  lastRunAt?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowRun {
+  id: string;
+  workflowId: string;
+  teamId: string;
+  triggerType: WorkflowTriggerType;
+  triggerPayload: Record<string, any>;
+  status: "success" | "failed" | "partial" | "running";
+  actionsExecuted: Array<{
+    index: number;
+    type: string;
+    status: "success" | "failed";
+    error?: string;
+  }>;
+  logs: string;
+  durationMs: number;
+  executedAt: string;
 }
 

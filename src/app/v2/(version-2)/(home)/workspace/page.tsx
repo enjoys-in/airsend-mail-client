@@ -30,6 +30,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatStore } from "./_lib/chat-store";
 import { WorkspaceHomeSkeleton } from "./_components/WorkspaceSkeletons";
 import WorkspaceErrorBoundary from "./_components/WorkspaceErrorBoundary";
+import LiveMeetingCard from "./_components/LiveMeetingCard";
 
 export default function WorkspacePage() {
   return (
@@ -214,29 +215,12 @@ function WorkspaceDashboardContent() {
               </div>
             ) : (
               upcomingMeetings.map((meet) => (
-                <div
+                <LiveMeetingCard
                   key={meet.id}
-                  className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-accent/10 hover:bg-accent/30 transition-colors"
-                >
-                  <div className="space-y-1 min-w-0 pr-2">
-                    <p className="text-xs font-semibold text-foreground truncate">{meet.title}</p>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <Clock className="size-3 shrink-0" />
-                      <span>{new Date(meet.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                      <span>•</span>
-                      <span className="truncate">By {meet.organizerName}</span>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleJoinCall(meet.id, meet.title)}
-                    className="h-7 text-xs shrink-0 gap-1 hover:bg-primary hover:text-primary-foreground"
-                  >
-                    <Video className="size-3" />
-                    Join
-                  </Button>
-                </div>
+                  meeting={meet}
+                  compact={true}
+                  onJoin={() => handleJoinCall(meet.id, meet.title)}
+                />
               ))
             )}
             <Link href="/v2/workspace/meetings" className="block pt-1">

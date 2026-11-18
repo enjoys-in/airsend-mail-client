@@ -24,6 +24,7 @@ import {
   Phone,
   FolderOpen,
   Home,
+  Workflow,
 } from "lucide-react";
 import {
   Sidebar,
@@ -64,6 +65,7 @@ import ChannelCreateEditDialog from "./ChannelCreateEditDialog";
 import InviteMemberDialog from "./InviteMemberDialog";
 import TeamCreateDialog from "./TeamCreateDialog";
 import StatusCard from "./StatusCard";
+import UserPresenceBadge from "./UserPresenceBadge";
 
 // ==========================================================================
 // WorkspaceSidebar — nested secondary panel following the Mailboxes pattern
@@ -186,6 +188,10 @@ export default function WorkspaceSidebar() {
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2" onClick={() => setSettingsOpen(true)}>
+                <Settings className="size-3.5" />
+                Team Settings
+              </DropdownMenuItem>
               <DropdownMenuItem className="gap-2" onClick={() => setCreateTeamOpen(true)}>
                 <Plus className="size-3.5" />
                 Create Team
@@ -303,6 +309,18 @@ export default function WorkspaceSidebar() {
                       <FolderOpen className="size-3.5 shrink-0 text-indigo-500" />
                       <span>Files</span>
                     </Link>
+                    <Link
+                      href="/v2/workspace/workflows"
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
+                        pathname === "/v2/workspace/workflows"
+                          ? "bg-accent text-accent-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <Workflow className="size-3.5 shrink-0 text-cyan-500" />
+                      <span>Workflows</span>
+                    </Link>
                   </div>
 
                   <div className="mx-1 my-1">
@@ -397,14 +415,9 @@ export default function WorkspaceSidebar() {
                         >
                           <span className="relative flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
                             {other.displayName.charAt(0)}
-                            <span
-                              className={cn(
-                                "absolute -bottom-0.5 -right-0.5 size-2 rounded-full border border-background",
-                                other.status === "online" && "bg-emerald-500",
-                                other.status === "idle" && "bg-yellow-500",
-                                other.status === "dnd" && "bg-red-500",
-                                other.status === "offline" && "bg-gray-400",
-                              )}
+                            <UserPresenceBadge
+                              status={other.status}
+                              className="absolute -bottom-0.5 -right-0.5"
                             />
                           </span>
                           <span className="truncate text-xs">

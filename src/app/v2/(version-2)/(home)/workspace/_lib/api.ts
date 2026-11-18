@@ -10,9 +10,39 @@ import type {
   DirectMessage,
   Poll,
   PollOption,
+  Meeting,
+  CallRecord,
+  LiveCallParticipant,
+  WorkspaceFile,
+  ChatTask,
 } from "./chat-types"
 
-const BASE = (typeof window !== 'undefined' && (window as any).__RUNTIME_CONFIG__?.WORKSPACE_API_URL) || process.env.WORKSPACE_API_URL || "http://localhost:8090"
+export function getWorkspaceApiUrl(): string {
+  if (typeof window !== "undefined") {
+    if ((window as any).__RUNTIME_CONFIG__?.WORKSPACE_API_URL) {
+      return (window as any).__RUNTIME_CONFIG__.WORKSPACE_API_URL;
+    }
+  }
+  return (
+    process.env.NEXT_PUBLIC_WORKSPACE_API_URL ||
+    process.env.WORKSPACE_API_URL ||
+    "http://localhost:8090"
+  );
+}
+
+export function getWorkspaceWsUrl(): string {
+  const apiUrl = getWorkspaceApiUrl();
+  if (apiUrl.startsWith("https://")) {
+    return apiUrl.replace(/^https:\/\//, "wss://");
+  }
+  if (apiUrl.startsWith("http://")) {
+    return apiUrl.replace(/^http:\/\//, "ws://");
+  }
+  if (apiUrl.startsWith("wss://") || apiUrl.startsWith("ws://")) {
+    return apiUrl;
+  }
+  return "ws://localhost:8090";
+}
 
 // ── Types mirroring Go models.PaginatedResponse ──
 
@@ -165,12 +195,116 @@ export interface ServerVoiceSession {
   display_name?: string
 }
 
+export interface ServerMeetingAttendee {
+  id: string
+  meeting_id: string
+  user_email: string
+  display_name?: string
+  status: "accepted" | "declined" | "tentative" | "pending"
+  is_organizer: boolean
+  responded_at?: string
+}
+
+export interface ServerMeeting {
+  id: string
+  title: string
+  description?: string
+  team_id: string
+  channel_id?: string
+  channel_name?: string
+  organizer_email: string
+  organizer_name?: string
+  start_time: string
+  end_time: string
+  is_online: boolean
+  meeting_url: string
+  passcode?: string
+  status: "scheduled" | "live" | "completed" | "cancelled"
+  attendees?: ServerMeetingAttendee[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ServerCallRecord {
+  id: string
+  caller_email: string
+  caller_name?: string
+  receiver_email: string
+  receiver_name?: string
+  call_type: "video" | "audio"
+  direction: "incoming" | "outgoing" | "missed"
+  duration_seconds: number
+  team_id?: string
+  created_at: string
+}
+
+export interface ServerCallRoomParticipant {
+  id: string
+  call_id: string
+  user_email: string
+  display_name: string
+  is_muted: boolean
+  is_camera_off: boolean
+  is_screen_sharing: boolean
+  is_hand_raised: boolean
+  role: "host" | "presenter" | "attendee"
+  joined_at: string
+  left_at?: string
+}
+
+export interface ServerTask {
+  id: string
+  team_id: string
+  channel_id?: string
+  channel_name?: string
+  title: string
+  description?: string
+  assignee_email?: string
+  assignee_name?: string
+  status: "todo" | "in-progress" | "done"
+  priority: "low" | "medium" | "high" | "urgent"
+  due_date?: string
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ServerWorkspaceFile {
+  id: string
+  name: string
+  size: number
+  mime_type: string
+  extension: string
+  category: "document" | "spreadsheet" | "presentation" | "media" | "code" | "archive" | "other"
+  uploader_email: string
+  uploader_name?: string
+  team_id: string
+  channel_id?: string
+  channel_name?: string
+  url: string
+  download_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ServerNotification {
+  id: string
+  recipient_email: string
+  type: string
+  title: string
+  body?: string
+  source_id?: string
+  source_type?: string
+  is_read: boolean
+  created_at: string
+}
+
 // ── Generic fetch helper ──
 
 async function apiFetch<T>(path: string, init?: RequestInit & { email?: string }): Promise<T> {
   const email = init?.email ?? ""
   const { email: _, ...fetchInit } = init ?? {}
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${getWorkspaceApiUrl()}${path}`, {
     ...fetchInit,
     headers: {
       "Content-Type": "application/json",
@@ -296,6 +430,96 @@ export function toPoll(s: ServerPoll): Poll {
       position: o.position,
     })),
     totalVotes: s.total_votes,
+  }
+}
+
+export function toMeeting(s: ServerMeeting): Meeting {
+  return {
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    teamId: s.team_id,
+    channelId: s.channel_id,
+    channelName: s.channel_name,
+    organizerId: s.organizer_email,
+    organizerName: s.organizer_name ?? s.organizer_email,
+    startTime: s.start_time,
+    endTime: s.end_time,
+    isOnline: s.is_online,
+    meetingUrl: s.meeting_url,
+    passcode: s.passcode,
+    status: s.status,
+    attendees: (s.attendees ?? []).map((a) => ({
+      id: a.id,
+      name: a.display_name ?? a.user_email,
+      email: a.user_email,
+      status: a.status,
+      isOrganizer: a.is_organizer,
+    })),
+  }
+}
+
+export function toCallRecord(s: ServerCallRecord): CallRecord {
+  return {
+    id: s.id,
+    callerId: s.caller_email,
+    callerName: s.caller_name ?? s.caller_email,
+    receiverId: s.receiver_email,
+    receiverName: s.receiver_name ?? s.receiver_email,
+    type: s.call_type,
+    direction: s.direction,
+    duration: s.duration_seconds,
+    timestamp: s.created_at,
+    teamId: s.team_id,
+  }
+}
+
+export function toLiveCallParticipant(s: ServerCallRoomParticipant): LiveCallParticipant {
+  return {
+    id: s.id,
+    name: s.display_name,
+    email: s.user_email,
+    isAudioMuted: s.is_muted,
+    isVideoOff: s.is_camera_off,
+    isScreenSharing: s.is_screen_sharing,
+    isHandRaised: s.is_hand_raised,
+    isSpeaking: false,
+    role: s.role,
+  }
+}
+
+export function toWorkspaceFile(s: ServerWorkspaceFile): WorkspaceFile {
+  return {
+    id: s.id,
+    name: s.name,
+    size: s.size,
+    mimeType: s.mime_type,
+    extension: s.extension,
+    category: s.category,
+    uploadedBy: s.uploader_email,
+    uploaderName: s.uploader_name ?? s.uploader_email,
+    teamId: s.team_id,
+    channelId: s.channel_id,
+    channelName: s.channel_name,
+    url: s.url,
+    downloadCount: s.download_count,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+  }
+}
+
+export function toChatTask(s: ServerTask): ChatTask {
+  return {
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    assigneeId: s.assignee_email ?? "",
+    teamId: s.team_id,
+    channelId: s.channel_id,
+    status: s.status,
+    priority: s.priority,
+    dueDate: s.due_date,
+    createdAt: s.created_at,
   }
 }
 
@@ -468,7 +692,7 @@ export const workspaceApi = {
   uploadAttachment: (messageId: string, file: File, email: string) => {
     const formData = new FormData()
     formData.append("file", file)
-    return fetch(`${BASE}/api/v1/messages/${messageId}/attachments`, {
+    return fetch(`${getWorkspaceApiUrl()}/api/v1/messages/${messageId}/attachments`, {
       method: "POST",
       headers: { "X-User-Email": email },
       body: formData,
@@ -487,7 +711,7 @@ export const workspaceApi = {
     }),
 
   getAttachmentUrl: (attachmentId: string) =>
-    `${BASE}/api/v1/attachments/${attachmentId}`,
+    `${getWorkspaceApiUrl()}/api/v1/attachments/${attachmentId}`,
 
   // ── Voice Channels ──
   joinVoice: (channelId: string, email: string) =>
@@ -512,6 +736,297 @@ export const workspaceApi = {
       body: JSON.stringify({ is_muted: isMuted, is_deafened: isDeafened }),
       email,
     }),
+
+  // ── Meetings & Calendar ──
+  listTeamMeetings: (teamId: string, email: string) =>
+    apiFetch<ServerMeeting[]>(`/api/v1/teams/${teamId}/meetings`, { email }),
+
+  listMyMeetings: (email: string) =>
+    apiFetch<ServerMeeting[]>("/api/v1/meetings/my", { email }),
+
+  createMeeting: (
+    teamId: string | null,
+    data: {
+      title: string
+      description?: string
+      channel_id?: string
+      start_time: string
+      end_time: string
+      is_online?: boolean
+      meeting_url?: string
+      passcode?: string
+      attendee_emails?: string[]
+    },
+    email: string
+  ) =>
+    teamId
+      ? apiFetch<ServerMeeting>(`/api/v1/teams/${teamId}/meetings`, {
+          method: "POST",
+          body: JSON.stringify(data),
+          email,
+        })
+      : apiFetch<ServerMeeting>("/api/v1/meetings", {
+          method: "POST",
+          body: JSON.stringify(data),
+          email,
+        }),
+
+  getMeeting: (meetingId: string, email: string) =>
+    apiFetch<ServerMeeting>(`/api/v1/meetings/${meetingId}`, { email }),
+
+  updateMeetingStatus: (meetingId: string, status: string, email: string) =>
+    apiFetch<ServerMeeting>(`/api/v1/meetings/${meetingId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+      email,
+    }),
+
+  respondMeeting: (meetingId: string, status: string, email: string) =>
+    apiFetch<{ status: string }>(`/api/v1/meetings/${meetingId}/respond`, {
+      method: "POST",
+      body: JSON.stringify({ status }),
+      email,
+    }),
+
+  deleteMeeting: (meetingId: string, email: string) =>
+    apiFetch<{ deleted: boolean }>(`/api/v1/meetings/${meetingId}`, { method: "DELETE", email }),
+
+  // ── Calls & WebRTC Signaling ──
+  listCallHistory: (email: string, direction?: string) =>
+    apiFetch<ServerCallRecord[]>(`/api/v1/calls/history${direction ? `?direction=${direction}` : ""}`, { email }),
+
+  logCall: (
+    data: {
+      receiver_email: string
+      call_type: string
+      direction: string
+      duration_seconds?: number
+      team_id?: string
+    },
+    email: string
+  ) =>
+    apiFetch<ServerCallRecord>("/api/v1/calls/log", {
+      method: "POST",
+      body: JSON.stringify(data),
+      email,
+    }),
+
+  joinCallRoom: (callId: string, displayName: string, role: string, email: string) =>
+    apiFetch<{ session: ServerCallRoomParticipant; participants: ServerCallRoomParticipant[] }>(
+      `/api/v1/calls/${callId}/join`,
+      {
+        method: "POST",
+        body: JSON.stringify({ display_name: displayName, role }),
+        email,
+      }
+    ),
+
+  leaveCallRoom: (callId: string, email: string) =>
+    apiFetch<{ left: boolean }>(`/api/v1/calls/${callId}/leave`, { method: "POST", email }),
+
+  getCallParticipants: (callId: string, email: string) =>
+    apiFetch<ServerCallRoomParticipant[]>(`/api/v1/calls/${callId}/participants`, { email }),
+
+  updateCallState: (
+    callId: string,
+    state: { is_muted?: boolean; is_camera_off?: boolean; is_screen_sharing?: boolean; is_hand_raised?: boolean },
+    email: string
+  ) =>
+    apiFetch<{ updated: boolean }>(`/api/v1/calls/${callId}/state`, {
+      method: "PUT",
+      body: JSON.stringify(state),
+      email,
+    }),
+
+  sendCallSignal: (callId: string, toEmail: string, signalType: string, payload: unknown, email: string) =>
+    apiFetch<{ signaled: boolean }>(`/api/v1/calls/${callId}/signal`, {
+      method: "POST",
+      body: JSON.stringify({ to_email: toEmail, signal_type: signalType, payload }),
+      email,
+    }),
+
+  // ── Tasks & Planner ──
+  listTeamTasks: (teamId: string, email: string, status?: string) =>
+    apiFetch<ServerTask[]>(`/api/v1/teams/${teamId}/tasks${status ? `?status=${status}` : ""}`, { email }),
+
+  listMyTasks: (email: string, status?: string) =>
+    apiFetch<ServerTask[]>(`/api/v1/tasks/my${status ? `?status=${status}` : ""}`, { email }),
+
+  createTask: (
+    teamId: string | null,
+    data: {
+      title: string
+      description?: string
+      channel_id?: string
+      assignee_email?: string
+      status?: string
+      priority?: string
+      due_date?: string
+    },
+    email: string
+  ) =>
+    teamId
+      ? apiFetch<ServerTask>(`/api/v1/teams/${teamId}/tasks`, {
+          method: "POST",
+          body: JSON.stringify(data),
+          email,
+        })
+      : apiFetch<ServerTask>("/api/v1/tasks", {
+          method: "POST",
+          body: JSON.stringify(data),
+          email,
+        }),
+
+  getTask: (taskId: string, email: string) =>
+    apiFetch<ServerTask>(`/api/v1/tasks/${taskId}`, { email }),
+
+  updateTask: (
+    taskId: string,
+    data: Partial<{
+      title: string
+      description: string
+      assignee_email: string
+      status: string
+      priority: string
+      due_date: string
+    }>,
+    email: string
+  ) =>
+    apiFetch<ServerTask>(`/api/v1/tasks/${taskId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+      email,
+    }),
+
+  updateTaskStatus: (taskId: string, status: string, email: string) =>
+    apiFetch<ServerTask>(`/api/v1/tasks/${taskId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+      email,
+    }),
+
+  deleteTask: (taskId: string, email: string) =>
+    apiFetch<{ deleted: boolean }>(`/api/v1/tasks/${taskId}`, { method: "DELETE", email }),
+
+  // ── Files & Cloud Storage ──
+  listTeamFiles: (teamId: string, email: string, category?: string, channelId?: string) => {
+    const q = new URLSearchParams()
+    if (category) q.set("category", category)
+    if (channelId) q.set("channel_id", channelId)
+    const qs = q.toString() ? `?${q.toString()}` : ""
+    return apiFetch<ServerWorkspaceFile[]>(`/api/v1/teams/${teamId}/files${qs}`, { email })
+  },
+
+  uploadFile: (teamId: string, file: File, email: string, category?: string, channelId?: string) => {
+    const formData = new FormData()
+    formData.append("file", file)
+    if (category) formData.append("category", category)
+    if (channelId) formData.append("channel_id", channelId)
+    return fetch(`${getWorkspaceApiUrl()}/api/v1/teams/${teamId}/files`, {
+      method: "POST",
+      headers: { "X-User-Email": email },
+      body: formData,
+    }).then(async (res) => {
+      const json: APIResponse<ServerWorkspaceFile> = await res.json()
+      if (!json.success) throw new Error(json.error ?? json.message)
+      return json.result!
+    })
+  },
+
+  getFileStats: (teamId: string, email: string) =>
+    apiFetch<{ total_size: number; total_count: number; categories: Record<string, number> }>(
+      `/api/v1/teams/${teamId}/files/stats`,
+      { email }
+    ),
+
+  deleteFile: (fileId: string, email: string) =>
+    apiFetch<{ deleted: boolean }>(`/api/v1/files/${fileId}`, { method: "DELETE", email }),
+
+  getFileDownloadUrl: (fileId: string) =>
+    `${getWorkspaceApiUrl()}/api/v1/files/${fileId}/download`,
+
+  // ── Notifications & Activity ──
+  listNotifications: (email: string, unreadOnly?: boolean) =>
+    apiFetch<ServerNotification[]>(`/api/v1/notifications${unreadOnly ? "?unread=true" : ""}`, { email }),
+
+  getUnreadNotificationCount: (email: string) =>
+    apiFetch<{ unread_count: number }>("/api/v1/notifications/unread-count", { email }),
+
+  markNotificationRead: (notificationId: string, email: string) =>
+    apiFetch<{ read: boolean }>(`/api/v1/notifications/${notificationId}/read`, { method: "PUT", email }),
+
+  markAllNotificationsRead: (email: string) =>
+    apiFetch<{ all_read: boolean }>("/api/v1/notifications/read-all", { method: "PUT", email }),
+
+  // ── Workflows Engine (Parent of Webhooks) ──
+  listWorkflows: (teamId: string, email: string) =>
+    apiFetch<any[]>(`/api/v1/teams/${teamId}/workflows`, { email }),
+
+  getWorkflow: (workflowId: string, email: string) =>
+    apiFetch<any>(`/api/v1/workflows/${workflowId}`, { email }),
+
+  createWorkflow: (teamId: string, data: any, email: string) =>
+    apiFetch<any>(`/api/v1/teams/${teamId}/workflows`, {
+      method: "POST",
+      body: JSON.stringify(data),
+      email,
+    }),
+
+  updateWorkflow: (workflowId: string, teamId: string, data: any, email: string) =>
+    apiFetch<any>(`/api/v1/workflows/${workflowId}?teamId=${teamId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+      email,
+    }),
+
+  deleteWorkflow: (workflowId: string, teamId: string, email: string) =>
+    apiFetch<{ message: string }>(`/api/v1/workflows/${workflowId}?teamId=${teamId}`, {
+      method: "DELETE",
+      email,
+    }),
+
+  toggleWorkflow: (workflowId: string, teamId: string, email: string) =>
+    apiFetch<any>(`/api/v1/workflows/${workflowId}/toggle?teamId=${teamId}`, {
+      method: "PUT",
+      email,
+    }),
+
+  listWorkflowRuns: (workflowId: string, teamId: string, email: string, limit?: number) =>
+    apiFetch<any[]>(`/api/v1/workflows/${workflowId}/runs?teamId=${teamId}&limit=${limit || 50}`, { email }),
+
+  listTeamWorkflowRuns: (teamId: string, email: string, limit?: number) =>
+    apiFetch<any[]>(`/api/v1/teams/${teamId}/workflows/runs?limit=${limit || 50}`, { email }),
+
+  triggerWorkflow: (teamId: string, triggerType: string, data: Record<string, any>, email: string) =>
+    apiFetch<any[]>(`/api/v1/teams/${teamId}/workflows/trigger`, {
+      method: "POST",
+      body: JSON.stringify({ trigger_type: triggerType, data }),
+      email,
+    }),
+}
+
+// ── Google Meet Link & Code Helpers (meet.airsend.in) ──
+
+export function generateMeetCode(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz"
+  const rand = (n: number) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
+  return `${rand(3)}-${rand(4)}-${rand(3)}`
+}
+
+export function formatMeetUrl(code: string): string {
+  const clean = code.trim().replace(/^https?:\/\//i, "").replace(/^meet\.airsend\.in\//i, "").replace(/^airsend\.in\/v2\/workspace\/calls\//i, "")
+  return `https://meet.airsend.in/${clean}`
+}
+
+export function parseMeetInput(input: string): string {
+  const clean = input.trim()
+  if (!clean) return ""
+  // Handle https://meet.airsend.in/xxx-yyyy-zzz or meet.airsend.in/xxx-yyyy-zzz
+  const meetMatch = clean.match(/(?:meet\.airsend\.in|airsend\.in\/v2\/workspace\/calls)\/([a-zA-Z0-9_-]+)/i)
+  if (meetMatch && meetMatch[1]) {
+    return meetMatch[1]
+  }
+  return clean.replace(/^\/+|\/+$/g, "")
 }
 
 export default workspaceApi

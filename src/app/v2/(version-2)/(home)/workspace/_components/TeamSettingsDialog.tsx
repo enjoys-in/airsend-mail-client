@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
   X,
@@ -10,6 +11,7 @@ import {
   Bell,
   Link as LinkIcon,
   Webhook,
+  Workflow,
   Palette,
   Trash2,
   ChevronRight,
@@ -434,14 +436,22 @@ function NotificationsSettings() {
 function IntegrationsSettings() {
   const integrations = [
     {
+      name: "Workflows & Automations",
+      description: "Parent orchestration engine powering automated triggers, tasks, and incoming/outgoing webhooks",
+      icon: Workflow,
+      connected: true,
+      href: "/v2/workspace/workflows",
+    },
+    {
       name: "Webhooks",
-      description: "Send notifications to external services",
+      description: "Send notifications to external services & configure channel hooks",
       icon: Webhook,
-      connected: false,
+      connected: true,
+      href: "/v2/workspace/workflows",
     },
     {
       name: "API Access",
-      description: "Manage API keys for this team",
+      description: "Manage API keys and developer integration tokens for this team",
       icon: LinkIcon,
       connected: true,
     },
@@ -450,14 +460,14 @@ function IntegrationsSettings() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">Integrations</h2>
+        <h2 className="text-lg font-semibold">Integrations & Workflows</h2>
         <p className="text-sm text-muted-foreground">
-          Connect with external services.
+          Connect with external services and configure Power Automate-style workflows.
         </p>
       </div>
 
       <div className="space-y-3">
-        {integrations.map((int:any) => (
+        {integrations.map((int: any) => (
           <div
             key={int.name}
             className="flex items-center gap-3 rounded-lg border border-border/40 p-4"
@@ -471,13 +481,19 @@ function IntegrationsSettings() {
                 {int.description}
               </p>
             </div>
-            <Button
-              variant={int.connected ? "outline" : "default"}
-              size="sm"
-              className="text-xs h-7"
-            >
-              {int.connected ? "Configure" : "Connect"}
-            </Button>
+            {int.href ? (
+              <Button asChild variant="outline" size="sm" className="text-xs h-7">
+                <Link href={int.href}>Configure</Link>
+              </Button>
+            ) : (
+              <Button
+                variant={int.connected ? "outline" : "default"}
+                size="sm"
+                className="text-xs h-7"
+              >
+                {int.connected ? "Configure" : "Connect"}
+              </Button>
+            )}
           </div>
         ))}
       </div>

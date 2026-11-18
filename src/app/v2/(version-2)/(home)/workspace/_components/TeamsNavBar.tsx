@@ -17,6 +17,7 @@ import {
   Search,
   Sparkles,
   Radio,
+  Workflow,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useChatStore } from "../_lib/chat-store";
+import { generateMeetCode, formatMeetUrl } from "../_lib/api";
 import MobileWorkspaceSidebar from "./MobileWorkspaceSidebar";
 
 export default function TeamsNavBar() {
@@ -130,12 +132,18 @@ export default function TeamsNavBar() {
       icon: FolderOpen,
       isActive: pathname === "/v2/workspace/files",
     },
+    {
+      title: "Workflows",
+      href: "/v2/workspace/workflows",
+      icon: Workflow,
+      isActive: pathname.startsWith("/v2/workspace/workflows"),
+    },
   ];
 
   const handleStartInstantMeeting = () => {
-    const callId = `meet-${Date.now().toString(36)}`;
+    const meetCode = generateMeetCode();
     const title = meetingTitle.trim() || `${activeTeam?.name || "Workspace"} Quick Sync`;
-    startCall(callId, title);
+    startCall(meetCode, title);
     addMeeting({
       title,
       description: "Instant meeting started via Teams Bar",
@@ -147,7 +155,7 @@ export default function TeamsNavBar() {
       startTime: new Date().toISOString(),
       endTime: new Date(Date.now() + 30 * 60000).toISOString(),
       isOnline: true,
-      meetingUrl: `/v2/workspace/calls/${callId}`,
+      meetingUrl: formatMeetUrl(meetCode),
       status: "live",
       attendees: [
         {
@@ -161,7 +169,7 @@ export default function TeamsNavBar() {
     });
     setInstantMeetingOpen(false);
     setMeetingTitle("");
-    router.push(`/v2/workspace/calls/${callId}`);
+    router.push(`/v2/workspace/calls/${meetCode}`);
   };
 
   const handleCreateQuickTask = () => {

@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { useChatStore } from "../_lib/chat-store";
 import WorkspaceErrorBoundary from "../_components/WorkspaceErrorBoundary";
+import LiveMeetingCard from "../_components/LiveMeetingCard";
 import type { Meeting } from "../_lib/chat-types";
 
 export default function MeetingsPage() {
@@ -271,120 +272,9 @@ function MeetingsHubContent() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredMeetings.map((meet) => {
-                const isLive = meet.status === "live";
-                const isCompleted = meet.status === "completed";
-                const startDate = new Date(meet.startTime);
-                const endDate = new Date(meet.endTime);
-
-                return (
-                  <div
-                    key={meet.id}
-                    className={`flex flex-col justify-between rounded-xl border p-5 transition-all duration-150 ${
-                      isLive
-                        ? "border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/20 shadow-xs"
-                        : "border-border/40 bg-card hover:border-border hover:shadow-xs"
-                    }`}
-                  >
-                    <div>
-                      {/* Top Bar: Status + Time */}
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        {isLive ? (
-                          <Badge className="bg-emerald-600 text-white gap-1 text-[11px] font-semibold animate-pulse">
-                            <Radio className="size-3" />
-                            Live Now
-                          </Badge>
-                        ) : isCompleted ? (
-                          <Badge variant="secondary" className="text-[11px]">
-                            Completed
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-border/60 text-muted-foreground text-[11px]">
-                            Scheduled
-                          </Badge>
-                        )}
-
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Clock className="size-3" />
-                          <span>
-                            {startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -{" "}
-                            {endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Title & Description */}
-                      <h3 className="font-semibold text-sm text-foreground mb-1 leading-snug">
-                        {meet.title}
-                      </h3>
-                      {meet.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
-                          {meet.description}
-                        </p>
-                      )}
-
-                      {/* Associated Channel */}
-                      {meet.channelName && (
-                        <div className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md mb-3">
-                          <Hash className="size-3" />
-                          <span>{meet.channelName}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Bottom: Attendees + Action Buttons */}
-                    <div className="pt-4 mt-3 border-t border-border/40 flex items-center justify-between gap-3">
-                      {/* Attendee Avatars */}
-                      <div className="flex items-center -space-x-2">
-                        {meet.attendees.slice(0, 4).map((att) => (
-                          <Avatar key={att.id} className="size-7 border-2 border-background shadow-2xs" title={att.name}>
-                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
-                              {att.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                        {meet.attendees.length > 4 && (
-                          <div className="flex size-7 items-center justify-center rounded-full bg-muted border-2 border-background text-[10px] font-medium text-muted-foreground">
-                            +{meet.attendees.length - 4}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Join / Copy Actions */}
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleCopyLink(meet)}
-                          className="size-8"
-                          title="Copy meeting link"
-                        >
-                          {copiedId === meet.id ? (
-                            <Check className="size-3.5 text-emerald-500" />
-                          ) : (
-                            <Copy className="size-3.5" />
-                          )}
-                        </Button>
-
-                        {!isCompleted && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleJoinCall(meet)}
-                            className={`gap-1.5 text-xs h-8 ${
-                              isLive
-                                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                : "bg-primary text-primary-foreground"
-                            }`}
-                          >
-                            <Video className="size-3.5" />
-                            {isLive ? "Join Now" : "Start"}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {filteredMeetings.map((meet) => (
+                <LiveMeetingCard key={meet.id} meeting={meet} onJoin={handleJoinCall} />
+              ))}
             </div>
           )}
         </div>

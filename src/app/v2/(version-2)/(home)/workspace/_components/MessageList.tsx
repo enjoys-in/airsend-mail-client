@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
   Hash,
@@ -17,11 +18,15 @@ import {
   Phone,
   FolderOpen,
   CheckSquare,
+  Radio,
+  Sparkles,
+  Settings,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { useAppSelector } from "@/store/hooks";
 import { useChatStore } from "../_lib/chat-store";
 import MessageActions from "./MessageActions";
@@ -31,6 +36,8 @@ import TimeSeparator, { getDateLabel } from "./TimeSeparator";
 import { renderContentWithMentions } from "./MentionHighlight";
 import MobileWorkspaceSidebar from "./MobileWorkspaceSidebar";
 import { PollCard } from "./PollCard";
+import AnnouncementBanner from "./AnnouncementBanner";
+import ChannelSettingsDialog from "./ChannelSettingsDialog";
 import type { ChatMessage, TeamMember } from "../_lib/chat-types";
 
 // ---------------------------------------------------------------------------
@@ -79,15 +86,52 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
     router.push(`/v2/workspace/calls/${callId}`);
   };
 
-  const handleStartChannelMeeting = (channelName: string) => {
+  const handleStartChannelMeeting = (channelName: string, channelId?: string) => {
     const callId = `meet-${Date.now().toString(36)}`;
-    startCall(callId, `#${channelName} Channel Meeting`);
+    const title = `#${channelName} Channel Meeting`;
+    startCall(callId, title);
+
+    const { addMeeting, activeTeamId } = useChatStore.getState();
+    addMeeting({
+      title,
+      description: `Live video conference started in #${channelName}`,
+      teamId: activeTeamId || "t-1",
+      channelId: channelId,
+      channelName: channelName,
+      organizerId: currentUserId || "u-self",
+      organizerName: "You",
+      startTime: new Date().toISOString(),
+      endTime: new Date(Date.now() + 3600000).toISOString(),
+      isOnline: true,
+      meetingUrl: `/v2/workspace/calls/${callId}`,
+      status: "live",
+      attendees: [
+        {
+          id: currentUserId || "u-self",
+          name: "You",
+          email: currentUserId || "you@airsend.io",
+          status: "accepted",
+          isOrganizer: true,
+        },
+      ],
+    });
+
     router.push(`/v2/workspace/calls/${callId}`);
   };
 
   // Props from URL take priority, fallback to store
   const effectiveChannelId = channelId ?? activeChannelId;
   const effectiveDmId = dmId ?? activeDmId;
+
+  const [channelSettingsOpen, setChannelSettingsOpen] = useState(false);
+
+  const liveChannelMeeting = useChatStore((s) =>
+    effectiveChannelId
+      ? s.meetings.find(
+          (m) => m.channelId === effectiveChannelId && (m.status === "live" || m.status === "scheduled")
+        )
+      : null
+  );
 
   const channel = useChatStore((s) =>
     effectiveChannelId ? s.channels.find((c: any) => c.id === effectiveChannelId) : null,
@@ -328,7 +372,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
             size="sm"
             variant="outline"
             className="h-7 text-xs px-2 gap-1 text-blue-600 border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-            onClick={() => handleStartChannelMeeting(channel.name)}
+            onClick={() => handleStartChannelMeeting(channel.name, channel.id)}
             title="Start channel meeting"
           >
             <Video className="size-3" />
@@ -379,8 +423,61 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
           >
             <Search className="size-3.5" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => setChannelSettingsOpen(true)}
+            title="Channel settings"
+          >
+            <Settings className="size-3.5" />
+          </Button>
         </div>
       </div>
+
+      {channel && (
+        <ChannelSettingsDialog
+          channel={channel}
+          open={channelSettingsOpen}
+          onOpenChange={setChannelSettingsOpen}
+        />
+      )}
+
+      {/* Active channel meeting indicator */}
+      {liveChannelMeeting && (
+        <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent border-b border-red-500/20">
+          <div className="flex items-center gap-2">
+            <Radio className="size-3.5 text-red-500 animate-pulse" />
+            <span className="text-xs font-semibold text-red-600 dark:text-red-400">
+              Live Meeting in Progress: {liveChannelMeeting.title}
+            </span>
+            <span className="text-[11px] text-muted-foreground hidden sm:inline">
+              • Started by {liveChannelMeeting.organizerName}
+            </span>
+          </div>
+          <Button size="sm" asChild className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white gap-1 shadow-sm">
+            <Link href={liveChannelMeeting.meetingUrl}>
+              <Video className="size-3" />
+              Join Call
+            </Link>
+          </Button>
+        </div>
+      )}
+
+      {/* Announcement Channel Intro Banner */}
+      {channel.type === "announcement" && (
+        <div className="mx-4 mt-3 mb-1 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+            <Bell className="size-4 animate-bounce" />
+          </div>
+          <div className="min-w-0">
+            <h4 className="text-xs font-semibold text-foreground">Announcement Channel</h4>
+            <p className="text-[11px] text-muted-foreground">
+              Official company & team announcements. Only workspace organizers and administrators can post broadcasts here.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
@@ -599,7 +696,16 @@ function MessageBubble({
           )}
 
           {/* Content */}
-          {gifMatch ? (
+          {message.type === "announcement" || message.priority === "urgent" ? (
+            <AnnouncementBanner
+              title="Channel Announcement"
+              authorName={message.authorName}
+              content={message.content}
+              timestamp={time}
+              priority={message.priority === "urgent" ? "urgent" : "announcement"}
+              isPinned={message.isPinned}
+            />
+          ) : gifMatch ? (
             <div className="mt-1 max-w-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img

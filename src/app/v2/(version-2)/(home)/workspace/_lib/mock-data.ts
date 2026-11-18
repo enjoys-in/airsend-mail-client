@@ -14,6 +14,8 @@ import type {
   CallRecord,
   LiveCallParticipant,
   WorkspaceFile,
+  Workflow,
+  WorkflowRun,
 } from "./chat-types";
 
 // ---------------------------------------------------------------------------
@@ -770,7 +772,7 @@ export const MOCK_MEETINGS: Meeting[] = [
     startTime: `${today}T10:00:00Z`,
     endTime: `${today}T10:30:00Z`,
     isOnline: true,
-    meetingUrl: "/v2/workspace/calls/meet-101",
+    meetingUrl: "https://meet.airsend.in/eng-stnd-upd",
     status: "live",
     passcode: "ENG-STANDUP",
     attendees: [
@@ -793,7 +795,7 @@ export const MOCK_MEETINGS: Meeting[] = [
     startTime: `${today}T14:30:00Z`,
     endTime: `${today}T15:30:00Z`,
     isOnline: true,
-    meetingUrl: "/v2/workspace/calls/meet-102",
+    meetingUrl: "https://meet.airsend.in/des-crit-syn",
     status: "scheduled",
     passcode: "DESIGN-SYNC",
     attendees: [
@@ -814,7 +816,7 @@ export const MOCK_MEETINGS: Meeting[] = [
     startTime: `${today}T16:00:00Z`,
     endTime: `${today}T17:00:00Z`,
     isOnline: true,
-    meetingUrl: "/v2/workspace/calls/meet-103",
+    meetingUrl: "https://meet.airsend.in/arc-scal-snc",
     status: "scheduled",
     attendees: [
       { id: "u-self", name: "You", email: "you@airsend.io", status: "accepted" },
@@ -834,7 +836,7 @@ export const MOCK_MEETINGS: Meeting[] = [
     startTime: `${yesterday}T15:00:00Z`,
     endTime: `${yesterday}T16:00:00Z`,
     isOnline: true,
-    meetingUrl: "/v2/workspace/calls/meet-104",
+    meetingUrl: "https://meet.airsend.in/spr-demo-ret",
     status: "completed",
     attendees: [
       { id: "u-self", name: "You", email: "you@airsend.io", status: "accepted" },
@@ -1051,6 +1053,121 @@ export const MOCK_FILES: WorkspaceFile[] = [
     createdAt: `${yesterday}T10:10:00Z`,
     updatedAt: `${yesterday}T10:10:00Z`,
     downloadCount: 4,
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Workflows & Automations Engine Mock Data
+// ---------------------------------------------------------------------------
+
+export const MOCK_WORKFLOWS: Workflow[] = [
+  {
+    id: "wf-1",
+    teamId: "t-1",
+    name: "Email to Channel Broadcaster",
+    description: "Automatically post a notification card into #general whenever an email containing 'urgent' is received.",
+    triggerType: "on_mail_received",
+    triggerConfig: { subject_contains: "urgent" },
+    actions: [
+      {
+        type: "send_message",
+        config: { content: "📩 **Urgent Mail Received**: {{subject}} from {{from}}" },
+      },
+    ],
+    isActive: true,
+    runCount: 24,
+    lastRunAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    createdBy: "alex.chen@airsend.in",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
+  },
+  {
+    id: "wf-2",
+    teamId: "t-1",
+    name: "Meeting 15-Minute Countdown Reminder",
+    description: "Send calendar reminders and notify attendees before team standup starts.",
+    triggerType: "on_calendar_event",
+    triggerConfig: { event_type: "reminder_15m" },
+    actions: [
+      {
+        type: "send_message",
+        config: { content: "⏰ Meeting starts in 15 minutes! Join live at {{meeting_url}}" },
+      },
+    ],
+    isActive: true,
+    runCount: 52,
+    lastRunAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    createdBy: "sarah.connor@airsend.in",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
+  },
+  {
+    id: "wf-3",
+    teamId: "t-1",
+    name: "GitHub PR / CI/CD Webhook Trigger",
+    description: "Incoming webhook endpoint for GitHub Actions deployment and build alerts.",
+    triggerType: "webhook_received",
+    triggerConfig: {},
+    actions: [
+      {
+        type: "send_message",
+        config: { content: "🚀 **Deployment Successful**: {{commit_message}} deployed to production." },
+      },
+    ],
+    isActive: true,
+    webhookToken: "wh_tok_8492048f029147cb90",
+    runCount: 110,
+    lastRunAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    createdBy: "alex.chen@airsend.in",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15).toISOString(),
+  },
+  {
+    id: "wf-4",
+    teamId: "t-1",
+    name: "Auto-Create Task on #todo Tag",
+    description: "Scan new messages for #todo keyword and automatically create a channel task.",
+    triggerType: "on_message_sent",
+    triggerConfig: { keyword: "#todo" },
+    actions: [
+      {
+        type: "create_task",
+        config: { title: "Todo: {{content}}", priority: "high" },
+      },
+    ],
+    isActive: false,
+    runCount: 18,
+    lastRunAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    createdBy: "alex.chen@airsend.in",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString(),
+  },
+];
+
+export const MOCK_WORKFLOW_RUNS: WorkflowRun[] = [
+  {
+    id: "run-1",
+    workflowId: "wf-1",
+    teamId: "t-1",
+    triggerType: "on_mail_received",
+    triggerPayload: { subject: "urgent: Q4 Investor Deck Review", from: "investors@acme.com" },
+    status: "success",
+    actionsExecuted: [{ index: 0, type: "send_message", status: "success" }],
+    logs: "[2026-11-18T16:00:00Z] Workflow 'Email to Channel Broadcaster' triggered by 'on_mail_received'\nAction #1 (send_message) succeeded",
+    durationMs: 42,
+    executedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+  },
+  {
+    id: "run-2",
+    workflowId: "wf-3",
+    teamId: "t-1",
+    triggerType: "webhook_received",
+    triggerPayload: { commit_message: "feat: add Teams clone routes & meet.airsend.in" },
+    status: "success",
+    actionsExecuted: [{ index: 0, type: "send_message", status: "success" }],
+    logs: "[2026-11-18T16:15:00Z] Incoming webhook received for workflow 'GitHub PR / CI/CD Webhook Trigger'\nAction #1 (send_message) succeeded",
+    durationMs: 35,
+    executedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
   },
 ];
 
