@@ -33,6 +33,13 @@ export interface Channel {
   isArchived?: boolean;
   permissions?: Partial<ChannelPermissions>;
   rolePermissions?: ChannelRolePermissionOverrides;
+  /**
+   * Server-resolved (OpenFGA) matrix of what each role can do in this channel
+   * right now, with lock / announcement / posting policy already applied.
+   * This is the source of truth for gating UI; `permissions` and
+   * `rolePermissions` above are the editable configuration.
+   */
+  effectivePermissions?: ChannelRolePermissionOverrides;
   createdAt: string;
   updatedAt: string;
   unreadCount: number;

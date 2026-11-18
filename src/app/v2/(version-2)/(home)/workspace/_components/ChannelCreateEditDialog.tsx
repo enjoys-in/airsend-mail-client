@@ -42,13 +42,13 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useAppSelector } from "@/store/hooks";
 import { useChatStore } from "../_lib/chat-store";
-import { workspaceApi } from "../_lib/api";
+import { workspaceApi, toChannel } from "../_lib/api";
 import type {
   Channel,
   ChannelPermissions,
   ChannelPostingPermission,
 } from "../_lib/chat-types";
-import { DEFAULT_CHANNEL_PERMISSIONS } from "../_lib/permissions";
+import { useChannelPermissionDefaults } from "../_lib/permission-catalog";
 
 // ---------------------------------------------------------------------------
 // ChannelCreateEditDialog — create or edit a channel with meet & lock controls
@@ -59,6 +59,23 @@ interface ChannelCreateEditDialogProps {
   onOpenChange: (open: boolean) => void;
   /** If provided, dialog enters edit mode */
   channel?: Channel | null;
+}
+
+
+// Permission-related fields the server resolves (OpenFGA tuples + channel policy).
+function serverPermissionFields(c: Channel): Partial<Channel> {
+  const fields: Partial<Channel> = {
+    permissions: c.permissions,
+    rolePermissions: c.rolePermissions,
+    effectivePermissions: c.effectivePermissions,
+    isLocked: c.isLocked,
+    postingPermission: c.postingPermission,
+  };
+  // An older server may not send everything — never clobber with undefined.
+  for (const k of Object.keys(fields) as (keyof Channel)[]) {
+    if (fields[k] === undefined) delete fields[k];
+  }
+  return fields;
 }
 
 export default function ChannelCreateEditDialog({
@@ -79,9 +96,11 @@ export default function ChannelCreateEditDialog({
   const [allowMeetings, setAllowMeetings] = useState(true);
   const [postingPermission, setPostingPermission] = useState<ChannelPostingPermission>("everyone");
   const [showAdvancedPerms, setShowAdvancedPerms] = useState(false);
-  const [permissions, setPermissions] = useState<ChannelPermissions>({
-    ...DEFAULT_CHANNEL_PERMISSIONS,
-  });
+  // Defaults come from the workspace server, not the client.
+  const defaults = useChannelPermissionDefaults();
+  const [permissions, setPermissions] = useState<ChannelPermissions>(
+    () => ({ ...defaults.everyone }) as ChannelPermissions,
+  );
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
@@ -102,9 +121,9 @@ export default function ChannelCreateEditDialog({
         setAllowMeetings(channel.permissions?.start_calls ?? true);
         setPostingPermission(channel.postingPermission ?? "everyone");
         setPermissions({
-          ...DEFAULT_CHANNEL_PERMISSIONS,
+          ...defaults.everyone,
           ...(channel.permissions || {}),
-        });
+        } as ChannelPermissions);
         setSelectedTeamId(channel.teamId || "");
       } else {
         setName("");
@@ -114,12 +133,12 @@ export default function ChannelCreateEditDialog({
         setIsLocked(false);
         setAllowMeetings(true);
         setPostingPermission("everyone");
-        setPermissions({ ...DEFAULT_CHANNEL_PERMISSIONS });
+        setPermissions({ ...defaults.everyone } as ChannelPermissions);
         setSelectedTeamId(activeTeamId || "");
       }
       setShowAdvancedPerms(false);
     }
-  }, [open, channel, activeTeamId]);
+  }, [open, channel, activeTeamId, defaults]);
 
   const handleTogglePerm = (key: keyof ChannelPermissions) => {
     setPermissions((prev) => ({
@@ -141,16 +160,17 @@ export default function ChannelCreateEditDialog({
 
     setLoading(true);
 
+    // Locked channels disable calls/voice on the server (policy), so only the
+    // user's own toggles are sent — no derived denies that would outlive an unlock.
     const effectivePerms: ChannelPermissions = {
       ...permissions,
-      start_calls: !isLocked && allowMeetings,
-      connect_voice: !isLocked && permissions.connect_voice,
+      start_calls: allowMeetings,
     };
 
     try {
       if (isEdit && channel) {
         // Update channel on server
-        await workspaceApi.updateChannel(
+        const saved = await workspaceApi.updateChannel(
           channel.id,
           {
             name: name.trim(),
@@ -173,6 +193,8 @@ export default function ChannelCreateEditDialog({
           isLocked,
           postingPermission,
           permissions: effectivePerms,
+          // Adopt what the server actually resolved (OpenFGA tuples + policy)
+          ...(saved ? serverPermissionFields(toChannel(saved)) : {}),
         });
 
         toast.success("Channel updated");
@@ -186,6 +208,7 @@ export default function ChannelCreateEditDialog({
             type,
             visibility: isPrivate ? "private" : "public",
             description: description.trim() || undefined,
+            posting_permission: postingPermission,
             is_locked: isLocked,
             permissions: effectivePerms,
           },
@@ -205,6 +228,7 @@ export default function ChannelCreateEditDialog({
           isLocked,
           postingPermission,
           permissions: effectivePerms,
+          ...(res ? serverPermissionFields(toChannel(res)) : {}),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           unreadCount: 0,

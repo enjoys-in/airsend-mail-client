@@ -140,6 +140,7 @@ export interface ServerChannel {
   is_archived?: boolean
   permissions?: any
   role_permissions?: any
+  effective_permissions?: any
   created_by?: string
   created_at: string
   updated_at: string
@@ -376,6 +377,33 @@ export function toTeam(s: ServerTeam): Team {
   }
 }
 
+// Channel fields the UI holds in camelCase but the server expects in snake_case.
+// `effectivePermissions` is server-computed and never sent back.
+const CHANNEL_FIELD_TO_SERVER: Record<string, string> = {
+  postingPermission: "posting_permission",
+  isLocked: "is_locked",
+  isArchived: "is_archived",
+  rolePermissions: "role_permissions",
+}
+
+export function toServerChannelFields(fields: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(fields)) {
+    if (key === "effectivePermissions" || value === undefined) continue
+    out[CHANNEL_FIELD_TO_SERVER[key] ?? key] = value
+  }
+  return out
+}
+
+export interface ServerPermissionCatalog {
+  roles: string[]
+  permissions: { key: string; relation: string; min_role: string }[]
+  defaults: {
+    everyone: Record<string, boolean>
+    roles: Record<string, Record<string, boolean>>
+  }
+}
+
 export function toChannel(s: ServerChannel): Channel {
   return {
     id: s.id,
@@ -392,6 +420,7 @@ export function toChannel(s: ServerChannel): Channel {
     isArchived: s.is_archived ?? false,
     permissions: s.permissions,
     rolePermissions: s.role_permissions,
+    effectivePermissions: s.effective_permissions,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
     unreadCount: s.unread_count ?? 0,
@@ -637,19 +666,22 @@ export const workspaceApi = {
     return apiFetch<ServerChannel[]>(`/api/v1/teams/${teamId}/channels`, { email })
   },
 
+  getChannelPermissionCatalog: (email: string) =>
+    apiFetch<ServerPermissionCatalog>(`/api/v1/channel-permissions/catalog`, { email }),
+
   getChannel: (channelId: string, email: string) => {
     if (!isValidUUID(channelId)) return Promise.reject(new Error("Invalid channel UUID"))
     return apiFetch<ServerChannel>(`/api/v1/channels/${channelId}`, { email })
   },
 
-  createChannel: (teamId: string, data: { name: string; type: string; visibility: string; description?: string; is_locked?: boolean; permissions?: any }, email: string) => {
+  createChannel: (teamId: string, data: { name: string; type: string; visibility: string; description?: string; posting_permission?: string; is_locked?: boolean; permissions?: any; role_permissions?: any }, email: string) => {
     if (!isValidUUID(teamId)) return Promise.reject(new Error("Invalid team UUID"))
-    return apiFetch<ServerChannel>(`/api/v1/teams/${teamId}/channels`, { method: "POST", body: JSON.stringify(data), email })
+    return apiFetch<ServerChannel>(`/api/v1/teams/${teamId}/channels`, { method: "POST", body: JSON.stringify(toServerChannelFields(data)), email })
   },
 
   updateChannel: (channelId: string, fields: Record<string, unknown>, email: string) => {
     if (!isValidUUID(channelId)) return Promise.reject(new Error("Invalid channel UUID"))
-    return apiFetch<ServerChannel>(`/api/v1/channels/${channelId}`, { method: "PUT", body: JSON.stringify(fields), email })
+    return apiFetch<ServerChannel>(`/api/v1/channels/${channelId}`, { method: "PUT", body: JSON.stringify(toServerChannelFields(fields)), email })
   },
 
   deleteChannel: (channelId: string, email: string) => {

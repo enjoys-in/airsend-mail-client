@@ -14,31 +14,13 @@ import type {
 } from "./chat-types";
 import { useChatStore } from "./chat-store";
 
-// ── Default permission values for @everyone ──
-
-export const DEFAULT_CHANNEL_PERMISSIONS: ChannelPermissions = {
-  send_messages: true,
-  send_media: true,
-  send_gifs: true,
-  create_polls: true,
-  add_reactions: true,
-  use_emojis: true,
-  reply_threads: true,
-  mention_everyone: false, // only moderators and admins by default
-  embed_links: true,
-  read_history: true,
-  connect_voice: true,
-  speak_voice: true,
-  start_calls: true,
-  share_screen: true,
-  video_camera: true,
-  mute_participants: false, // only moderators and admins
-  create_channels: true,
-  manage_channel: false,
-  manage_messages: false,
-  manage_integrations: false,
-  view_audit_logs: false,
-};
+// The workspace server (../workspace-server, internal/permissions/channel.go)
+// is the single source of truth: it stores the toggles users switch here as
+// OpenFGA tuples, applies the defaults (everything enabled for the roles
+// entitled to it), enforces them, and returns the resolved result on every
+// channel as `effectivePermissions`. This module holds UI metadata (labels)
+// and reads that result — it decides nothing itself. Defaults come from the
+// server catalog (see permission-catalog.ts).
 
 // ── OpenFGA Zanzibar Role Hierarchy ──
 // Higher roles implicitly inherit lower role capabilities
@@ -192,6 +174,15 @@ export const PERMISSION_METADATA: Record<
 
 // ── Check if user has permission in a channel ──
 
+/**
+ * Whether `userRole` may perform `permission` in `channel`.
+ *
+ * The answer is computed by the workspace server (OpenFGA tuples + lock /
+ * announcement / posting policy) and delivered as `channel.effectivePermissions`.
+ * The server also enforces every action, so when no server data is present
+ * yet (channel still loading) the UI stays permissive and the server has the
+ * final say.
+ */
 export function canUserPerformInChannel(
   channel: Channel | undefined | null,
   userEmail: string | undefined | null,
@@ -199,81 +190,8 @@ export function canUserPerformInChannel(
   permission: ChannelPermissionKey,
 ): boolean {
   if (!channel) return false;
-
-  // 1. Channel Locked: MEETINGS & CALLS are completely disabled in locked channels
-  if (
-    channel.isLocked &&
-    (permission === "start_calls" ||
-      permission === "connect_voice" ||
-      permission === "share_screen" ||
-      permission === "video_camera" ||
-      permission === "speak_voice")
-  ) {
-    return false;
-  }
-
-  // 2. Team Owners and Admins bypass other channel-level restrictions
-  if (userRole === "owner" || userRole === "admin") return true;
-
-  // 3. Channel Locked enforcement for other actions (messages, media, etc.)
-  if (channel.isLocked) {
-    // In locked channels, only owners, admins, and moderators can post / react / send media
-    if (userRole !== "moderator") {
-      return false;
-    }
-  }
-
-  // 4. Meeting permission explicitly checked (if start_calls is turned off for this channel)
-  if (permission === "start_calls") {
-    if (channel.permissions && channel.permissions.start_calls === false) {
-      return false;
-    }
-  }
-
-  // 5. Channel Posting Permission policy
-  if (channel.postingPermission === "admins_only" || channel.type === "announcement") {
-    if (
-      permission === "send_messages" ||
-      permission === "send_media" ||
-      permission === "send_gifs" ||
-      permission === "create_polls" ||
-      permission === "reply_threads"
-    ) {
-      if (userRole !== "moderator") {
-        return false;
-      }
-    }
-  }
-
-  // 4. Role-specific overrides in this channel (Discord-style role overrides)
-  if (channel.rolePermissions && channel.rolePermissions[userRole]) {
-    const roleOverride = channel.rolePermissions[userRole]![permission];
-    if (typeof roleOverride === "boolean") {
-      return roleOverride;
-    }
-  }
-
-  // 5. Channel-level default permissions (@everyone overrides)
-  if (channel.permissions && typeof channel.permissions[permission] === "boolean") {
-    return channel.permissions[permission]!;
-  }
-
-  // 6. Default fallbacks based on role
-  switch (permission) {
-    case "mention_everyone":
-    case "manage_channel":
-    case "manage_messages":
-    case "mute_participants":
-    case "manage_integrations":
-    case "view_audit_logs":
-      return userRole === "moderator";
-    case "create_channels":
-    case "share_screen":
-    case "video_camera":
-      return userRole !== "guest";
-    default:
-      return true; // regular members can send messages, media, gifs, polls, reactions, emojis, voice by default
-  }
+  const resolved = channel.effectivePermissions?.[userRole]?.[permission];
+  return typeof resolved === "boolean" ? resolved : true;
 }
 
 // ── Helper to resolve the user's role in a team ──

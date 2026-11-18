@@ -1392,7 +1392,28 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       channels: s.channels.map((c) => (c.id === channelId ? { ...c, ...updates } : c)),
     }));
     try {
-      await workspaceApi.updateChannel(channelId, updates, email);
+      const saved = await workspaceApi.updateChannel(channelId, updates, email);
+      if (saved) {
+        // Adopt what the server resolved (OpenFGA tuples + channel policy) so
+        // permission gating never runs on stale optimistic data.
+        const c = toChannel(saved);
+        set((s) => ({
+          channels: s.channels.map((ch) =>
+            ch.id === channelId
+              ? {
+                  ...ch,
+                  isLocked: c.isLocked,
+                  isArchived: c.isArchived,
+                  postingPermission: c.postingPermission,
+                  permissions: c.permissions ?? ch.permissions,
+                  rolePermissions: c.rolePermissions ?? ch.rolePermissions,
+                  effectivePermissions: c.effectivePermissions ?? ch.effectivePermissions,
+                  updatedAt: c.updatedAt,
+                }
+              : ch,
+          ),
+        }));
+      }
     } catch {
       // Keep optimistic
     }

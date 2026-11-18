@@ -39,10 +39,8 @@ import type {
   ChannelPermissions,
   ChannelRolePermissionOverrides,
 } from "../_lib/chat-types";
-import {
-  DEFAULT_CHANNEL_PERMISSIONS,
-  PERMISSION_METADATA,
-} from "../_lib/permissions";
+import { PERMISSION_METADATA } from "../_lib/permissions";
+import { useChannelPermissionDefaults } from "../_lib/permission-catalog";
 
 interface ChannelSettingsDialogProps {
   channel: Channel;
@@ -69,48 +67,16 @@ export default function ChannelSettingsDialog({
   const [isLocked, setIsLocked] = useState(channel.isLocked);
   const [isArchived, setIsArchived] = useState(channel.isArchived || false);
 
+  // Defaults come from the workspace server, not the client.
+  const defaults = useChannelPermissionDefaults();
+
   // Discord & OpenFGA-inspired permissions state
   const [permissions, setPermissions] = useState<Partial<ChannelPermissions>>(
-    channel.permissions || { ...DEFAULT_CHANNEL_PERMISSIONS }
+    channel.permissions || {}
   );
+  // The server sends the fully-resolved per-role matrix with every channel.
   const [rolePermissions, setRolePermissions] = useState<ChannelRolePermissionOverrides>(
-    channel.rolePermissions || {
-      owner: {
-        ...DEFAULT_CHANNEL_PERMISSIONS,
-        mention_everyone: true,
-        manage_channel: true,
-        manage_messages: true,
-        mute_participants: true,
-        manage_integrations: true,
-        view_audit_logs: true,
-      },
-      admin: {
-        ...DEFAULT_CHANNEL_PERMISSIONS,
-        mention_everyone: true,
-        manage_channel: true,
-        manage_messages: true,
-        mute_participants: true,
-        manage_integrations: true,
-        view_audit_logs: true,
-      },
-      moderator: {
-        ...DEFAULT_CHANNEL_PERMISSIONS,
-        mention_everyone: true,
-        manage_messages: true,
-        mute_participants: true,
-      },
-      member: { ...DEFAULT_CHANNEL_PERMISSIONS },
-      guest: {
-        ...DEFAULT_CHANNEL_PERMISSIONS,
-        send_media: false,
-        send_gifs: false,
-        create_polls: false,
-        start_calls: false,
-        share_screen: false,
-        video_camera: false,
-        create_channels: false,
-      },
-    }
+    channel.rolePermissions || {}
   );
   const [selectedRole, setSelectedRole] = useState<MemberRole | "@everyone">("@everyone");
 
@@ -475,10 +441,10 @@ export default function ChannelSettingsDialog({
                       const meta = PERMISSION_METADATA[key];
                       const currentValue =
                         selectedRole === "@everyone"
-                          ? permissions[key] ?? DEFAULT_CHANNEL_PERMISSIONS[key]
+                          ? permissions[key] ?? (defaults.everyone[key] ?? false)
                           : rolePermissions[selectedRole]?.[key] ??
                             permissions[key] ??
-                            DEFAULT_CHANNEL_PERMISSIONS[key];
+                            (defaults.everyone[key] ?? false);
 
                       return (
                         <div
@@ -546,10 +512,10 @@ export default function ChannelSettingsDialog({
                       const meta = PERMISSION_METADATA[key];
                       const currentValue =
                         selectedRole === "@everyone"
-                          ? permissions[key] ?? DEFAULT_CHANNEL_PERMISSIONS[key]
+                          ? permissions[key] ?? (defaults.everyone[key] ?? false)
                           : rolePermissions[selectedRole]?.[key] ??
                             permissions[key] ??
-                            DEFAULT_CHANNEL_PERMISSIONS[key];
+                            (defaults.everyone[key] ?? false);
 
                       return (
                         <div
@@ -616,10 +582,10 @@ export default function ChannelSettingsDialog({
                       const meta = PERMISSION_METADATA[key];
                       const currentValue =
                         selectedRole === "@everyone"
-                          ? permissions[key] ?? DEFAULT_CHANNEL_PERMISSIONS[key]
+                          ? permissions[key] ?? (defaults.everyone[key] ?? false)
                           : rolePermissions[selectedRole]?.[key] ??
                             permissions[key] ??
-                            DEFAULT_CHANNEL_PERMISSIONS[key];
+                            (defaults.everyone[key] ?? false);
 
                       return (
                         <div
