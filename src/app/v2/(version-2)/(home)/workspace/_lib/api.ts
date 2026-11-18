@@ -15,6 +15,13 @@ import type {
   LiveCallParticipant,
   WorkspaceFile,
   ChatTask,
+  Role,
+  TeamAccess,
+  ChannelOverwrite,
+  PermissionCatalog,
+  CatalogPermission,
+  PermissionKey,
+  MemberRole,
 } from "./chat-types"
 
 export function getWorkspaceApiUrl(): string {
@@ -141,6 +148,7 @@ export interface ServerChannel {
   permissions?: any
   role_permissions?: any
   effective_permissions?: any
+  my_permissions?: Record<string, boolean>
   created_by?: string
   created_at: string
   updated_at: string
@@ -157,6 +165,57 @@ export interface ServerMember {
   custom_status?: string
   joined_at: string
   account_name?: string
+  role_id?: string
+  role_name?: string
+  role_color?: string
+  role_position?: number
+  timed_out_until?: string
+}
+
+export interface ServerRole {
+  id: string
+  team_id: string
+  name: string
+  color?: string
+  position: number
+  system_key?: string
+  administrator: boolean
+  permissions: string[]
+  customized: boolean
+  member_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ServerTeamAccess {
+  team_id: string
+  mode: "legacy" | "shadow" | "enforce"
+  owner: boolean
+  role_id?: string
+  role: string
+  position: number
+  administrator: boolean
+  permissions: string[]
+  custom_roles: boolean
+  timed_out_until?: string
+}
+
+export interface ServerOverwrite {
+  id: string
+  channel_id: string
+  target_type: "everyone" | "role" | "user"
+  target_id: string
+  target_name?: string
+  allow: string[]
+  deny: string[]
+  source: "legacy" | "api"
+  updated_by?: string
+  updated_at: string
+}
+
+export interface ServerAuthzCatalog {
+  permissions: { key: string; category: string; scope: string; min_role: string }[]
+  system_roles: { name: string; position: number; administrator: boolean; permissions: string[] }[]
 }
 
 export interface ServerDMConversation {
@@ -337,30 +396,90 @@ export function isValidUUID(id?: string | null): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim())
 }
 
+// ── Authentication ──
+//
+// The workspace server verifies the HS256 session JWT issued at login. It is
+// read from the `access_token` cookie (sent automatically with
+// credentials: "include" on *.airsend.in) or from `Authorization: Bearer`,
+// which we add whenever the cookie is readable so cross-site setups work too.
+// Identity comes from the token only — never from a header we set.
+
+export function getAuthToken(): string {
+  if (typeof document === "undefined") return ""
+  const match = document.cookie.match(/(?:^|;\s*)access_token=([^;]+)/)
+  if (match) return decodeURIComponent(match[1])
+  try {
+    return window.localStorage.getItem("access_token") ?? ""
+  } catch {
+    return ""
+  }
+}
+
+/** Authorization header for requests that build their own headers (uploads). */
+export function authHeaders(): Record<string, string> {
+  const token = getAuthToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+/** Error from the workspace API, with the HTTP status and server code. */
+export class WorkspaceApiError extends Error {
+  status: number
+  code?: string
+  constructor(message: string, status: number, code?: string) {
+    super(message)
+    this.name = "WorkspaceApiError"
+    this.status = status
+    this.code = code
+  }
+  get isForbidden() {
+    return this.status === 403
+  }
+  get isUnauthorized() {
+    return this.status === 401
+  }
+}
+
 // ── Generic fetch helper ──
 
+// `email` is accepted for call-site compatibility but no longer sent: the
+// server derives the caller from the token.
 async function apiFetch<T>(path: string, init?: RequestInit & { email?: string }): Promise<T> {
-  const email = init?.email ?? ""
-  const { email: _, ...fetchInit } = init ?? {}
+  const { email: _email, ...fetchInit } = init ?? {}
   const baseUrl = getWorkspaceApiUrl()
   const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  const token = getAuthToken()
   const res = await fetch(`${baseUrl}${normalizedPath}`, {
     ...fetchInit,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(email ? { "X-User-Email": email } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(fetchInit?.headers ?? {}),
     },
   })
-  let json: APIResponse<T>
+  let json: APIResponse<T> & { code?: string }
   try {
     json = await res.json()
   } catch {
-    throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+    throw new WorkspaceApiError(`HTTP ${res.status}: ${res.statusText}`, res.status)
   }
-  if (!json.success) throw new Error(json.error ?? json.message ?? `HTTP ${res.status}`)
+  if (!res.ok || !json.success) {
+    throw new WorkspaceApiError(json.error ?? json.message ?? `HTTP ${res.status}`, res.status, json.code)
+  }
   return json.result as T
+}
+
+/** Human-readable message for a failed call (403s get a clear permission message). */
+export function apiErrorMessage(err: unknown, fallback = "Something went wrong"): string {
+  if (err instanceof WorkspaceApiError) {
+    if (err.status === 403) return "You don't have permission to do that."
+    if (err.status === 401) return "Your session has expired. Please sign in again."
+    if (err.status === 409 && /enforce/i.test(err.message)) {
+      return "Custom roles are not enabled on this server yet."
+    }
+    return err.message || fallback
+  }
+  return (err as Error)?.message || fallback
 }
 
 // ── Transformers: server shape → client shape ──
@@ -421,6 +540,7 @@ export function toChannel(s: ServerChannel): Channel {
     permissions: s.permissions,
     rolePermissions: s.role_permissions,
     effectivePermissions: s.effective_permissions,
+    myPermissions: s.my_permissions as Channel["myPermissions"],
     createdAt: s.created_at,
     updatedAt: s.updated_at,
     unreadCount: s.unread_count ?? 0,
@@ -436,9 +556,76 @@ export function toMember(s: ServerMember): TeamMember {
     displayName: s.display_name ?? s.account_name ?? s.email,
     email: s.email,
     role: s.role as TeamMember["role"],
+    roleId: s.role_id,
+    roleName: s.role_name,
+    roleColor: s.role_color,
+    rolePosition: s.role_position,
+    timedOutUntil: s.timed_out_until,
     status: (s.status ?? "offline") as TeamMember["status"],
     customStatus: s.custom_status ?? undefined,
     joinedAt: s.joined_at,
+  }
+}
+
+export function toRole(s: ServerRole): Role {
+  return {
+    id: s.id,
+    teamId: s.team_id,
+    name: s.name,
+    color: s.color ?? undefined,
+    position: s.position,
+    systemKey: (s.system_key as Role["systemKey"]) ?? undefined,
+    administrator: s.administrator,
+    permissions: (s.permissions ?? []) as PermissionKey[],
+    customized: s.customized,
+    memberCount: s.member_count ?? 0,
+  }
+}
+
+export function toTeamAccess(s: ServerTeamAccess): TeamAccess {
+  return {
+    teamId: s.team_id,
+    mode: s.mode,
+    owner: s.owner,
+    roleId: s.role_id,
+    role: s.role,
+    position: s.position,
+    administrator: s.administrator,
+    permissions: (s.permissions ?? []) as PermissionKey[],
+    customRoles: s.custom_roles,
+    timedOutUntil: s.timed_out_until,
+  }
+}
+
+export function toOverwrite(s: ServerOverwrite): ChannelOverwrite {
+  return {
+    id: s.id,
+    channelId: s.channel_id,
+    targetType: s.target_type,
+    targetId: s.target_id,
+    targetName: s.target_name ?? s.target_id,
+    allow: (s.allow ?? []) as PermissionKey[],
+    deny: (s.deny ?? []) as PermissionKey[],
+    source: s.source,
+    updatedBy: s.updated_by,
+    updatedAt: s.updated_at,
+  }
+}
+
+export function toPermissionCatalog(s: ServerAuthzCatalog): PermissionCatalog {
+  return {
+    permissions: s.permissions.map((p) => ({
+      key: p.key as PermissionKey,
+      category: p.category as CatalogPermission["category"],
+      scope: p.scope as CatalogPermission["scope"],
+      minRole: p.min_role as CatalogPermission["minRole"],
+    })),
+    systemRoles: s.system_roles.map((r) => ({
+      name: r.name as MemberRole,
+      position: r.position,
+      administrator: r.administrator,
+      permissions: (r.permissions ?? []) as PermissionKey[],
+    })),
   }
 }
 
@@ -765,6 +952,47 @@ export const workspaceApi = {
     return apiFetch<{ updated: boolean }>(`/api/v1/teams/${teamId}/members/${encodeURIComponent(memberEmail)}/role`, { method: "PUT", body: JSON.stringify({ role }), email: actorEmail })
   },
 
+  // ── Access, roles, timeouts, channel overrides (OpenFGA) ──
+  getMyTeamAccess: (teamId: string) => {
+    if (!isValidUUID(teamId)) return Promise.reject(new Error("Invalid team UUID"))
+    return apiFetch<ServerTeamAccess>(`/api/v1/teams/${teamId}/me/permissions`)
+  },
+
+  getAuthzCatalog: () => apiFetch<ServerAuthzCatalog>(`/api/v1/permissions/catalog`),
+
+  listRoles: (teamId: string) => {
+    if (!isValidUUID(teamId)) return Promise.resolve([] as ServerRole[])
+    return apiFetch<ServerRole[] | null>(`/api/v1/teams/${teamId}/roles`).then((r) => r ?? [])
+  },
+
+  createRole: (teamId: string, data: { name: string; color?: string; permissions?: string[]; position?: number }) =>
+    apiFetch<ServerRole>(`/api/v1/teams/${teamId}/roles`, { method: "POST", body: JSON.stringify(data) }),
+
+  updateRole: (teamId: string, roleId: string, data: { name?: string; color?: string; permissions?: string[]; position?: number; administrator?: boolean }) =>
+    apiFetch<ServerRole>(`/api/v1/teams/${teamId}/roles/${roleId}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deleteRole: (teamId: string, roleId: string) =>
+    apiFetch<{ deleted: boolean }>(`/api/v1/teams/${teamId}/roles/${roleId}`, { method: "DELETE" }),
+
+  assignRole: (teamId: string, memberEmail: string, roleId: string) =>
+    apiFetch<{ updated: boolean }>(`/api/v1/teams/${teamId}/members/${encodeURIComponent(memberEmail)}/role`, { method: "PUT", body: JSON.stringify({ role_id: roleId }) }),
+
+  /** minutes = 0 clears the timeout. */
+  timeoutMember: (teamId: string, memberEmail: string, minutes: number, reason?: string) =>
+    apiFetch<{ timed_out_until: string | null }>(`/api/v1/teams/${teamId}/members/${encodeURIComponent(memberEmail)}/timeout`, { method: "PUT", body: JSON.stringify({ minutes, reason: reason ?? "" }) }),
+
+  listOverwrites: (channelId: string) => {
+    if (!isValidUUID(channelId)) return Promise.resolve([] as ServerOverwrite[])
+    return apiFetch<ServerOverwrite[] | null>(`/api/v1/channels/${channelId}/overwrites`).then((r) => r ?? [])
+  },
+
+  /** Empty allow and deny remove the override. */
+  setOverwrite: (channelId: string, data: { target_type: string; target_id: string; allow: string[]; deny: string[] }) =>
+    apiFetch<{ updated: boolean }>(`/api/v1/channels/${channelId}/overwrites`, { method: "PUT", body: JSON.stringify(data) }),
+
+  deleteOverwrite: (channelId: string, targetType: string, targetId: string) =>
+    apiFetch<{ deleted: boolean }>(`/api/v1/channels/${channelId}/overwrites/${targetType}/${encodeURIComponent(targetId)}`, { method: "DELETE" }),
+
   removeMember: (teamId: string, memberEmail: string, actorEmail: string) => {
     if (!isValidUUID(teamId)) return Promise.reject(new Error("Invalid team UUID"))
     return apiFetch<{ removed: boolean }>(`/api/v1/teams/${teamId}/members/${encodeURIComponent(memberEmail)}`, { method: "DELETE", email: actorEmail })
@@ -896,7 +1124,8 @@ export const workspaceApi = {
     formData.append("file", file)
     return fetch(`${getWorkspaceApiUrl()}/api/v1/messages/${messageId}/attachments`, {
       method: "POST",
-      headers: { "X-User-Email": email },
+      credentials: "include",
+      headers: authHeaders(),
       body: formData,
     }).then(async (res) => {
       const json: APIResponse<ServerAttachment> = await res.json()
@@ -1170,7 +1399,8 @@ export const workspaceApi = {
     if (channelId && isValidUUID(channelId)) formData.append("channel_id", channelId)
     return fetch(`${getWorkspaceApiUrl()}/api/v1/teams/${teamId}/files`, {
       method: "POST",
-      headers: { "X-User-Email": email },
+      credentials: "include",
+      headers: authHeaders(),
       body: formData,
     }).then(async (res) => {
       const json: APIResponse<ServerWorkspaceFile> = await res.json()

@@ -12,6 +12,7 @@ import {
   ContextMenuSub,
   ContextMenuSubTrigger,
   ContextMenuSubContent,
+  ContextMenuLabel,
 } from "@/components/ui/context-menu";
 import {
   Reply,
@@ -29,11 +30,18 @@ import {
   Users,
   Settings,
   PenSquare,
-  Sparkles,
   Share2,
+  Hash,
+  ShieldAlert,
+  Clock,
+  TimerOff,
+  UserCog,
+  UserX,
 } from "lucide-react";
 import { useChatStore } from "../_lib/chat-store";
-import { canUserPerformInChannel, getUserRoleInTeam } from "../_lib/permissions";
+import { useChannelPermissions, settingsPath } from "../_lib/use-access";
+import { useMessageActions, formatUntil } from "../_lib/use-message-actions";
+import { TIMEOUT_PRESETS } from "../_lib/member-actions";
 import { toast } from "sonner";
 import type { ChatMessage, Channel, DirectMessage } from "../_lib/chat-types";
 
@@ -48,67 +56,27 @@ interface MessageContextMenuProps {
   children: React.ReactNode;
 }
 
+const itemCls = "gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg";
+const sepCls = "my-1 bg-border/60";
+
 export function MessageContextMenu({ message, children }: MessageContextMenuProps) {
-  const {
-    currentUserId,
-    setReplyingTo,
-    setEditingMessage,
-    deleteMessage,
-    pinMessage,
-    unpinMessage,
-    openThread,
-    addReaction,
-    channels,
-    activeChannelId,
-    activeTeamId,
-    members,
-  } = useChatStore();
-
-  const channel = channels.find(
-    (c) => c.id === message.channelId || c.id === activeChannelId
-  );
-  const userRole = getUserRoleInTeam(members, activeTeamId, currentUserId);
-
-  const canAddReactions = canUserPerformInChannel(channel, currentUserId, userRole, "add_reactions");
-  const canReplyThreads = canUserPerformInChannel(channel, currentUserId, userRole, "reply_threads");
-  const canManageMessages = canUserPerformInChannel(channel, currentUserId, userRole, "manage_messages");
-
-  const isMine = message.authorId === currentUserId;
-  const canDelete = isMine || canManageMessages;
-  const canPin = isMine || canManageMessages;
-
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(message.content);
-    toast.success("Message copied to clipboard");
-  };
-
-  const handleCopyLink = () => {
-    const url = new URL(window.location.href);
-    url.hash = `msg-${message.id}`;
-    navigator.clipboard.writeText(url.toString());
-    toast.success("Message link copied to clipboard");
-  };
-
-  const handleDelete = () => {
-    deleteMessage(message.id);
-    toast.success("Message deleted");
-  };
+  const a = useMessageActions(message);
+  const authorName = a.author?.displayName || message.authorName || message.authorId;
+  const canModerateAuthor = a.canTimeoutAuthor || a.canKickAuthor || a.canChangeAuthorRole;
+  const hasPrimary = a.canReply || a.canReplyThread;
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="w-60 rounded-xl shadow-xl border-border/80 bg-popover/95 backdrop-blur-md p-1.5 animate-in fade-in zoom-in-95 duration-100">
-        {/* Quick Reactions Bar */}
-        {canAddReactions && (
+        {/* Quick reactions */}
+        {a.canReact && (
           <div className="flex items-center justify-between gap-1 px-1.5 py-1 mb-1 rounded-lg bg-muted/50 border border-border/50">
             {QUICK_REACTIONS.map((emoji) => (
               <button
                 key={emoji}
                 type="button"
-                onClick={() => {
-                  addReaction(message.id, emoji);
-                  toast.success(`Reacted with ${emoji}`);
-                }}
+                onClick={() => a.react(emoji)}
                 className="flex size-6.5 items-center justify-center rounded-md text-sm hover:bg-background hover:scale-115 active:scale-95 transition-all"
                 title={`React with ${emoji}`}
               >
@@ -118,102 +86,131 @@ export function MessageContextMenu({ message, children }: MessageContextMenuProp
           </div>
         )}
 
-        {/* Reply in thread */}
-        {canReplyThreads && (
-          <ContextMenuItem
-            onClick={() => openThread(message.id)}
-            className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-          >
+        {a.canReply && (
+          <ContextMenuItem onClick={a.reply} className={itemCls}>
+            <Reply className="size-3.5 text-muted-foreground" />
+            <span>Reply</span>
+            <ContextMenuShortcut>R</ContextMenuShortcut>
+          </ContextMenuItem>
+        )}
+        {a.canReplyThread && (
+          <ContextMenuItem onClick={a.replyInThread} className={itemCls}>
             <MessageSquare className="size-3.5 text-muted-foreground" />
             <span>Reply in Thread</span>
             <ContextMenuShortcut>T</ContextMenuShortcut>
           </ContextMenuItem>
         )}
 
-        {/* Quote / reply in channel */}
-        {canReplyThreads && (
-          <ContextMenuItem
-            onClick={() => setReplyingTo(message)}
-            className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-          >
-            <Reply className="size-3.5 text-muted-foreground" />
-            <span>Reply in Channel</span>
-            <ContextMenuShortcut>R</ContextMenuShortcut>
-          </ContextMenuItem>
-        )}
-
-        <ContextMenuSeparator className="my-1 bg-border/60" />
-
-        {/* Copy text */}
-        <ContextMenuItem
-          onClick={handleCopyText}
-          className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-        >
-          <Copy className="size-3.5 text-muted-foreground" />
-          <span>Copy Text</span>
-        </ContextMenuItem>
-
-        {/* Copy link to message */}
-        <ContextMenuItem
-          onClick={handleCopyLink}
-          className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-        >
-          <LinkIcon className="size-3.5 text-muted-foreground" />
-          <span>Copy Message Link</span>
-        </ContextMenuItem>
-
-        {/* Pin / unpin */}
-        {canPin && (
-          message.isPinned ? (
-            <ContextMenuItem
-              onClick={() => {
-                unpinMessage(message.id);
-                toast.success("Message unpinned");
-              }}
-              className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-            >
-              <PinOff className="size-3.5 text-muted-foreground" />
-              <span>Unpin Message</span>
-            </ContextMenuItem>
-          ) : (
-            <ContextMenuItem
-              onClick={() => {
-                pinMessage(message.id, true);
-                toast.success("Message pinned");
-              }}
-              className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-            >
-              <Pin className="size-3.5 text-muted-foreground" />
-              <span>Pin to Channel</span>
-            </ContextMenuItem>
-          )
-        )}
-
-        {/* Edit for own messages */}
-        {isMine && (
+        {(a.canEdit || a.canPin) && (
           <>
-            <ContextMenuSeparator className="my-1 bg-border/60" />
-            <ContextMenuItem
-              onClick={() => setEditingMessage(message.id)}
-              className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-            >
-              <Pencil className="size-3.5 text-muted-foreground" />
-              <span>Edit Message</span>
-              <ContextMenuShortcut>E</ContextMenuShortcut>
-            </ContextMenuItem>
+            {hasPrimary && <ContextMenuSeparator className={sepCls} />}
+            {a.canEdit && (
+              <ContextMenuItem onClick={a.edit} className={itemCls}>
+                <Pencil className="size-3.5 text-muted-foreground" />
+                <span>Edit Message</span>
+                <ContextMenuShortcut>E</ContextMenuShortcut>
+              </ContextMenuItem>
+            )}
+            {a.canPin && (
+              <ContextMenuItem onClick={a.togglePin} className={itemCls}>
+                {message.isPinned ? (
+                  <PinOff className="size-3.5 text-muted-foreground" />
+                ) : (
+                  <Pin className="size-3.5 text-muted-foreground" />
+                )}
+                <span>{message.isPinned ? "Unpin Message" : "Pin Message"}</span>
+              </ContextMenuItem>
+            )}
           </>
         )}
 
-        {/* Delete for own or moderated messages */}
-        {canDelete && (
+        <ContextMenuSeparator className={sepCls} />
+        <ContextMenuItem onClick={a.copyText} className={itemCls}>
+          <Copy className="size-3.5 text-muted-foreground" />
+          <span>Copy Text</span>
+        </ContextMenuItem>
+        <ContextMenuItem onClick={a.copyLink} className={itemCls}>
+          <LinkIcon className="size-3.5 text-muted-foreground" />
+          <span>Copy Message Link</span>
+        </ContextMenuItem>
+        <ContextMenuItem onClick={a.copyId} className={itemCls}>
+          <Hash className="size-3.5 text-muted-foreground" />
+          <span>Copy Message ID</span>
+        </ContextMenuItem>
+
+        {/* Moderation of the author (only below your rank, never the owner) */}
+        {canModerateAuthor && (
           <>
-            {!isMine && <ContextMenuSeparator className="my-1 bg-border/60" />}
+            <ContextMenuSeparator className={sepCls} />
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className={itemCls}>
+                <ShieldAlert className="size-3.5 text-muted-foreground" />
+                <span className="truncate">Moderate {authorName}</span>
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-56 rounded-xl p-1.5">
+                {a.authorTimedOut && (
+                  <ContextMenuLabel className="text-[11px] font-normal text-amber-600 dark:text-amber-400">
+                    Timed out · {formatUntil(a.author?.timedOutUntil)} left
+                  </ContextMenuLabel>
+                )}
+                {a.canTimeoutAuthor && (
+                  <ContextMenuSub>
+                    <ContextMenuSubTrigger className={itemCls}>
+                      <Clock className="size-3.5 text-muted-foreground" />
+                      <span>{a.authorTimedOut ? "Change Timeout" : "Timeout"}</span>
+                    </ContextMenuSubTrigger>
+                    <ContextMenuSubContent className="w-40 rounded-xl p-1.5">
+                      {TIMEOUT_PRESETS.map((p) => (
+                        <ContextMenuItem
+                          key={p.minutes}
+                          onClick={() => a.timeoutAuthor(p.minutes, p.label)}
+                          className={itemCls}
+                        >
+                          {p.label}
+                        </ContextMenuItem>
+                      ))}
+                    </ContextMenuSubContent>
+                  </ContextMenuSub>
+                )}
+                {a.canTimeoutAuthor && a.authorTimedOut && (
+                  <ContextMenuItem onClick={a.clearAuthorTimeout} className={itemCls}>
+                    <TimerOff className="size-3.5 text-muted-foreground" />
+                    <span>Remove Timeout</span>
+                  </ContextMenuItem>
+                )}
+                {a.canChangeAuthorRole && (
+                  <ContextMenuItem onClick={a.manageAuthor} className={itemCls}>
+                    <UserCog className="size-3.5 text-muted-foreground" />
+                    <span>Manage Roles…</span>
+                  </ContextMenuItem>
+                )}
+                {a.canKickAuthor && (
+                  <>
+                    <ContextMenuSeparator className={sepCls} />
+                    <ContextMenuItem
+                      onClick={a.kickAuthor}
+                      className={`${itemCls} text-destructive focus:text-destructive focus:bg-destructive/10`}
+                    >
+                      <UserX className="size-3.5" />
+                      <span>Remove from Team</span>
+                    </ContextMenuItem>
+                  </>
+                )}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          </>
+        )}
+
+        {a.canDelete && (
+          <>
+            <ContextMenuSeparator className={sepCls} />
             <ContextMenuItem
-              onClick={handleDelete}
-              className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg text-destructive focus:text-destructive focus:bg-destructive/10"
+              onClick={a.remove}
+              className={`${itemCls} text-destructive focus:text-destructive focus:bg-destructive/10`}
             >
               <Trash2 className="size-3.5" />
               <span>Delete Message</span>
+              <ContextMenuShortcut className="text-destructive/70">Del</ContextMenuShortcut>
             </ContextMenuItem>
           </>
         )}
@@ -245,6 +242,14 @@ export function WorkspaceContextMenu({
 }: WorkspaceContextMenuProps) {
   const router = useRouter();
   const setSidePanelView = useChatStore((s) => s.setSidePanelView);
+  const chPerms = useChannelPermissions(channel);
+  const canWrite = !channel || chPerms.can("send_messages");
+  const canOpenChannelSettings = !!channel && (chPerms.canManage || chPerms.canEditOverrides);
+  const openSettings = () => {
+    if (!channel) return;
+    if (onOpenSettings) onOpenSettings();
+    else router.push(settingsPath.channel(channel.teamId, channel.id));
+  };
 
   const handleCopyWorkspaceLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -265,14 +270,16 @@ export function WorkspaceContextMenu({
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="w-56 rounded-xl shadow-xl border-border/80 bg-popover/95 backdrop-blur-md p-1.5 animate-in fade-in zoom-in-95 duration-100">
         {/* Write new message */}
-        <ContextMenuItem
-          onClick={handleNewMessage}
-          className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-        >
-          <PenSquare className="size-3.5 text-muted-foreground" />
-          <span>New Message</span>
-          <ContextMenuShortcut>N</ContextMenuShortcut>
-        </ContextMenuItem>
+        {canWrite && (
+          <ContextMenuItem
+            onClick={handleNewMessage}
+            className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
+          >
+            <PenSquare className="size-3.5 text-muted-foreground" />
+            <span>New Message</span>
+            <ContextMenuShortcut>N</ContextMenuShortcut>
+          </ContextMenuItem>
+        )}
 
         {/* Scroll to bottom */}
         {onScrollToBottom && (
@@ -327,10 +334,10 @@ export function WorkspaceContextMenu({
 
         <ContextMenuSeparator className="my-1 bg-border/60" />
 
-        {/* Channel settings */}
-        {channel && onOpenSettings && (
+        {/* Channel settings (manage_channel or manage_roles) */}
+        {canOpenChannelSettings && (
           <ContextMenuItem
-            onClick={onOpenSettings}
+            onClick={openSettings}
             className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
           >
             <Settings className="size-3.5 text-muted-foreground" />

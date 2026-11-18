@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Hash,
   Volume2,
@@ -44,7 +44,7 @@ import {
 import { useChatStore } from "../_lib/chat-store";
 import { getDMPartner } from "../_lib/permissions";
 import type { Channel } from "../_lib/chat-types";
-import TeamSettingsDialog from "./TeamSettingsDialog";
+import { settingsPath } from "../_lib/use-access";
 
 // ==========================================================================
 // MobileWorkspaceSidebar — sheet-based sidebar for mobile workspace
@@ -76,7 +76,7 @@ export default function MobileWorkspaceSidebar({
   const [textOpen, setTextOpen] = useState(true);
   const [voiceOpen, setVoiceOpen] = useState(true);
   const [dmOpen, setDmOpen] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const activeTeam = teams.find((t:any) => t.id === activeTeamId);
@@ -269,7 +269,7 @@ export default function MobileWorkspaceSidebar({
               className="w-full justify-start gap-2 text-xs"
               onClick={() => {
                 setSheetOpen(false);
-                setSettingsOpen(true);
+                if (activeTeamId) router.push(settingsPath.team(activeTeamId));
               }}
             >
               <Settings className="size-3.5" />
@@ -278,8 +278,6 @@ export default function MobileWorkspaceSidebar({
           </div>
         </SheetContent>
       </Sheet>
-
-      <TeamSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
 }

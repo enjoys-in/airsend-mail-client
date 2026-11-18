@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { useChatStore } from "../_lib/chat-store";
+import { useAccessStore } from "../_lib/access-store";
 import { useWorkspaceWS } from "../_lib/use-workspace-ws";
 import { getWorkspaceApiUrl, isValidUUID } from "../_lib/api";
 
@@ -71,6 +72,8 @@ export default function WorkspaceInit() {
 
     fetchChannels(activeTeamId, email).catch(() => {});
     fetchMembers(activeTeamId, email).catch(() => {});
+    // What I may do team-wide (gates menus, settings and the composer).
+    void useAccessStore.getState().fetchAccess(activeTeamId);
     fetchFiles(activeTeamId).catch(() => {});
     fetchMeetings(activeTeamId).catch(() => {});
   }, [email, activeTeamId, fetchChannels, fetchMembers, fetchFiles, fetchMeetings]);

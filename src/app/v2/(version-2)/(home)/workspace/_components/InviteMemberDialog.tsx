@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { UserPlus, Mail, Shield, ShieldCheck, Crown, Users } from "lucide-react";
+import { UserPlus, Mail, Shield, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,8 @@ import {
 import { toast } from "sonner";
 import { useAppSelector } from "@/store/hooks";
 import { useChatStore } from "../_lib/chat-store";
-import { workspaceApi } from "../_lib/api";
+import { workspaceApi, apiErrorMessage } from "../_lib/api";
+import { useTeamAccess } from "../_lib/use-access";
 import type { MemberRole } from "../_lib/chat-types";
 
 // ---------------------------------------------------------------------------
@@ -35,11 +36,11 @@ interface InviteMemberDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const roleOptions: { value: MemberRole; label: string; description: string; icon: React.ElementType }[] = [
-  { value: "member", label: "Member", description: "Can view and participate in channels", icon: Users },
-  { value: "moderator", label: "Moderator", description: "Can manage messages and moderate channels", icon: Shield },
-  { value: "admin", label: "Admin", description: "Can manage channels, members, and settings", icon: ShieldCheck },
-  { value: "owner", label: "Owner", description: "Full control over the team", icon: Crown },
+// Ownership is transferred, never handed out by invitation.
+const ALL_ROLE_OPTIONS: { value: MemberRole; label: string; description: string; icon: React.ElementType; position: number }[] = [
+  { value: "member", label: "Member", description: "Can view and participate in channels", icon: Users, position: 40 },
+  { value: "moderator", label: "Moderator", description: "Can manage messages and moderate channels", icon: Shield, position: 60 },
+  { value: "admin", label: "Admin", description: "Can manage channels, members, and settings", icon: ShieldCheck, position: 80 },
 ];
 
 export default function InviteMemberDialog({
@@ -50,6 +51,9 @@ export default function InviteMemberDialog({
   const email = currAccount?.email ?? "";
   const { activeTeamId, teams } = useChatStore();
   const activeTeam = teams.find((t:any) => t.id === activeTeamId);
+  // Only roles below your own rank can be given.
+  const { outranks } = useTeamAccess(activeTeamId);
+  const roleOptions = ALL_ROLE_OPTIONS.filter((o) => outranks(o.position));
 
   const [inviteeEmail, setInviteeEmail] = useState("");
   const [role, setRole] = useState<MemberRole>("member");
@@ -86,7 +90,7 @@ export default function InviteMemberDialog({
       setRole("member");
       onOpenChange(false);
     } catch (err) {
-      toast.error("Failed to send invitation");
+      toast.error(apiErrorMessage(err, "Failed to send invitation"));
     } finally {
       setLoading(false);
     }

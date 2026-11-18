@@ -30,6 +30,9 @@ import {
 import { useChatStore } from "../_lib/chat-store";
 import { workspaceApi } from "../_lib/api";
 import { canUserPerformInChannel, getUserRoleInTeam } from "../_lib/permissions";
+import { useAccessStore } from "../_lib/access-store";
+import { isTimedOut } from "../_lib/use-access";
+import { formatUntil } from "../_lib/member-actions";
 import MentionPopover from "./MentionPopover";
 import EmojiPicker from "./EmojiPicker";
 import GifPicker from "./GifPicker";
@@ -83,6 +86,10 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
   const dm = effectiveDmId
     ? directMessages.find((d:any) => d.id === effectiveDmId)
     : null;
+
+  // Timed-out members can read but not post (the server blocks it too).
+  const timedOutUntil = useAccessStore((s) => (channel ? s.access[channel.teamId]?.timedOutUntil : undefined));
+  const timedOut = !dm && isTimedOut(timedOutUntil);
 
   const placeholderText = channel
     ? `Message #${channel.name}`
@@ -269,7 +276,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
 
   const canSend = dm
     ? true
-    : canUserPerformInChannel(channel, currentUserId, userRole, "send_messages");
+    : !timedOut && canUserPerformInChannel(channel, currentUserId, userRole, "send_messages");
 
   const canAttach = dm
     ? true
@@ -292,7 +299,9 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     : canUserPerformInChannel(channel, currentUserId, userRole, "mention_everyone");
 
   const activePlaceholder = !canSend
-    ? isLocked
+    ? timedOut
+      ? `You're timed out for ${formatUntil(timedOutUntil)} — you can read but not post.`
+      : isLocked
       ? "This channel is locked — only admins and moderators can post."
       : isAnnouncement
         ? "Only admins and moderators can post in this announcement channel."
@@ -309,8 +318,18 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* ── Timed out ── */}
+      {timedOut && (
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="size-3.5 shrink-0" />
+          <span className="font-medium">
+            You&apos;re timed out for {formatUntil(timedOutUntil)}. You can read, but can&apos;t post, react or join calls until it ends.
+          </span>
+        </div>
+      )}
+
       {/* ── Channel Locked Warning ── */}
-      {isLocked && (
+      {!timedOut && isLocked && (
         <div className="mb-2 flex items-center gap-2 rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
           <Lock className="size-3.5 shrink-0" />
           <span className="font-medium">
@@ -320,7 +339,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
       )}
 
       {/* ── Announcement / Admins-Only Warning ── */}
-      {!isLocked && isAnnouncement && !canSend && (
+      {!timedOut && !isLocked && isAnnouncement && !canSend && (
         <div className="mb-2 flex items-center gap-2 rounded-md bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-xs text-blue-600 dark:text-blue-400">
           <Shield className="size-3.5 shrink-0" />
           <span className="font-medium">
@@ -330,7 +349,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
       )}
 
       {/* ── Granular OpenFGA Denied Warning ── */}
-      {!isLocked && !isAnnouncement && !canSend && (
+      {!timedOut && !isLocked && !isAnnouncement && !canSend && (
         <div className="mb-2 flex items-center gap-2 rounded-md bg-muted/60 border border-border/50 px-3 py-2 text-xs text-muted-foreground">
           <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
           <span className="font-medium">

@@ -37,9 +37,9 @@ import { renderContentWithMentions } from "./MentionHighlight";
 import MobileWorkspaceSidebar from "./MobileWorkspaceSidebar";
 import { PollCard } from "./PollCard";
 import AnnouncementBanner from "./AnnouncementBanner";
-import ChannelSettingsDialog from "./ChannelSettingsDialog";
 import { MessageContextMenu, WorkspaceContextMenu } from "./MessageContextMenu";
-import { canUserPerformInChannel, getUserRoleInTeam, getDMPartner } from "../_lib/permissions";
+import { getDMPartner } from "../_lib/permissions";
+import { useChannelPermissions, settingsPath } from "../_lib/use-access";
 import type { ChatMessage, TeamMember } from "../_lib/chat-types";
 
 // ---------------------------------------------------------------------------
@@ -125,7 +125,6 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
   const effectiveChannelId = channelId ?? activeChannelId;
   const effectiveDmId = dmId ?? activeDmId;
 
-  const [channelSettingsOpen, setChannelSettingsOpen] = useState(false);
 
   const liveChannelMeeting = useChatStore((s) =>
     effectiveChannelId
@@ -139,11 +138,11 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
     effectiveChannelId ? s.channels.find((c: any) => c.id === effectiveChannelId) : null,
   );
 
-  const userRole = getUserRoleInTeam(members, activeTeamId, currentUserId);
-  const canStartCalls =
-    !channel?.isLocked &&
-    canUserPerformInChannel(channel, currentUserId, userRole, "start_calls");
-  const canAddReactions = canUserPerformInChannel(channel, currentUserId, userRole, "add_reactions");
+  const chPerms = useChannelPermissions(channel);
+  const canStartCalls = !channel?.isLocked && chPerms.can("start_calls");
+  const canAddReactions = chPerms.can("add_reactions");
+  const canOpenChannelSettings = !!channel && (chPerms.canManage || chPerms.canEditOverrides);
+  const openChannelSettings = () => channel && router.push(settingsPath.channel(channel.teamId, channel.id));
 
   const dm = useChatStore((s) =>
     effectiveDmId ? s.directMessages.find((d: any) => d.id === effectiveDmId) : null,
@@ -452,25 +451,20 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
           >
             <Search className="size-3.5" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={() => setChannelSettingsOpen(true)}
-            title="Channel settings"
-          >
-            <Settings className="size-3.5" />
-          </Button>
+          {canOpenChannelSettings && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={openChannelSettings}
+              title="Channel settings"
+              aria-label="Channel settings"
+            >
+              <Settings className="size-3.5" />
+            </Button>
+          )}
         </div>
       </div>
-
-      {channel && (
-        <ChannelSettingsDialog
-          channel={channel}
-          open={channelSettingsOpen}
-          onOpenChange={setChannelSettingsOpen}
-        />
-      )}
 
       {/* Active channel meeting indicator */}
       {liveChannelMeeting && (
@@ -513,7 +507,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
         channel={channel}
         onScrollToBottom={scrollToBottom}
         onFocusInput={focusInput}
-        onOpenSettings={() => setChannelSettingsOpen(true)}
+        onOpenSettings={canOpenChannelSettings ? openChannelSettings : undefined}
       >
         <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
           <div className="space-y-0.5 py-4 min-h-full">

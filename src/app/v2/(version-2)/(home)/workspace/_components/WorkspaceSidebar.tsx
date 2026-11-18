@@ -59,9 +59,9 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useChatStore } from "../_lib/chat-store";
-import { getDMPartner, getUserRoleInTeam } from "../_lib/permissions";
+import { getDMPartner, getUserRoleInTeam, resolveChannelPermission } from "../_lib/permissions";
+import { useTeamAccess, settingsPath } from "../_lib/use-access";
 import type { Channel } from "../_lib/chat-types";
-import TeamSettingsDialog from "./TeamSettingsDialog";
 import ChannelCreateEditDialog from "./ChannelCreateEditDialog";
 import InviteMemberDialog from "./InviteMemberDialog";
 import TeamCreateDialog from "./TeamCreateDialog";
@@ -107,7 +107,6 @@ export default function WorkspaceSidebar() {
   const [textOpen, setTextOpen] = useState(true);
   const [voiceOpen, setVoiceOpen] = useState(true);
   const [dmOpen, setDmOpen] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -116,7 +115,12 @@ export default function WorkspaceSidebar() {
   const activeTeam = teams.find((t:any) => t.id === activeTeamId);
   const channels = activeTeamId ? getTeamChannels(activeTeamId) : [];
   const userRole = getUserRoleInTeam(members, activeTeamId, currentUserId);
-  const canCreateChannels = userRole !== "guest";
+  const teamAccess = useTeamAccess(activeTeamId);
+  const canCreateChannels = teamAccess.can("create_channels");
+  const canInvite = teamAccess.can("manage_members");
+  const openTeamSettings = () => activeTeamId && router.push(settingsPath.team(activeTeamId));
+  const canManageChannel = (ch: Channel) =>
+    resolveChannelPermission(ch, userRole, "manage_channel", teamAccess.access) || teamAccess.can("manage_roles");
 
   const textChannels = channels.filter(
     (c:any) => c.type === "text" || c.type === "announcement",
@@ -191,7 +195,7 @@ export default function WorkspaceSidebar() {
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2" onClick={() => setSettingsOpen(true)}>
+              <DropdownMenuItem className="gap-2" onClick={openTeamSettings}>
                 <Settings className="size-3.5" />
                 Team Settings
               </DropdownMenuItem>
@@ -360,10 +364,11 @@ export default function WorkspaceSidebar() {
                         channel={channel}
                         isActive={activeChannelId === channel.id}
                         href={`/v2/workspace/c/${channel.id}`}
-                        onEdit={(ch) => {
-                          setEditingChannel(ch);
-                          setChannelDialogOpen(true);
-                        }}
+                        onEdit={
+                          canManageChannel(channel)
+                            ? (ch) => router.push(settingsPath.channel(ch.teamId, ch.id))
+                            : undefined
+                        }
                         onTogglePin={(id) => toggleChannelPin(id)}
                       />
                     ))
@@ -384,10 +389,11 @@ export default function WorkspaceSidebar() {
                           isActive={activeChannelId === channel.id}
                           href={`/v2/workspace/c/${channel.id}`}
                           isVoice
-                          onEdit={(ch) => {
-                            setEditingChannel(ch);
-                            setChannelDialogOpen(true);
-                          }}
+                          onEdit={
+                            canManageChannel(channel)
+                              ? (ch) => router.push(settingsPath.channel(ch.teamId, ch.id))
+                              : undefined
+                          }
                           onTogglePin={(id) => toggleChannelPin(id)}
                         />
                       ))}
@@ -521,20 +527,25 @@ export default function WorkspaceSidebar() {
               </Button>
             </div>
             <div className="flex items-center gap-1">
+              {canInvite && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  onClick={() => setInviteDialogOpen(true)}
+                  title="Invite member"
+                  aria-label="Invite member"
+                >
+                  <UserPlus className="size-3.5" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-7"
-                onClick={() => setInviteDialogOpen(true)}
-                title="Invite member"
-              >
-                <UserPlus className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={() => setSettingsOpen(true)}
+                className={cn("size-7", pathname.includes("/settings") && "bg-accent text-accent-foreground")}
+                onClick={openTeamSettings}
+                title="Team settings"
+                aria-label="Team settings"
               >
                 <Settings className="size-3.5" />
               </Button>
@@ -543,10 +554,7 @@ export default function WorkspaceSidebar() {
         </SidebarFooter>
       </Sidebar>
 
-      {/* Team settings dialog */}
-      <TeamSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-
-      {/* Channel create/edit dialog */}
+      {/* Channel create dialog (editing is a routed settings page) */}
       <ChannelCreateEditDialog
         open={channelDialogOpen}
         onOpenChange={setChannelDialogOpen}
@@ -598,9 +606,11 @@ function ChannelSection({
             {title}
           </button>
         </CollapsibleTrigger>
-        <Button variant="ghost" size="icon" className="size-5" onClick={onAdd}>
-          <Plus className="size-3" />
-        </Button>
+        {onAdd && (
+          <Button variant="ghost" size="icon" className="size-5" onClick={onAdd} aria-label={`Add to ${title}`}>
+            <Plus className="size-3" />
+          </Button>
+        )}
       </div>
       <CollapsibleContent className="space-y-0.5">
         {children}
@@ -668,9 +678,20 @@ function ChannelItem({
           <Pin className="mr-2 size-3.5" />
           {channel.isPinned ? "Unpin Channel" : "Pin Channel"}
         </ContextMenuItem>
-        <ContextMenuItem onClick={() => onEdit?.(channel)}>
-          <Settings className="mr-2 size-3.5" />
-          Edit Channel
+        {onEdit && (
+          <ContextMenuItem onClick={() => onEdit(channel)}>
+            <Settings className="mr-2 size-3.5" />
+            Channel Settings
+          </ContextMenuItem>
+        )}
+        <ContextMenuItem
+          onClick={() => {
+            const url = new URL(`/v2/workspace/c/${channel.id}`, window.location.origin);
+            void navigator.clipboard.writeText(url.toString());
+          }}
+        >
+          <Hash className="mr-2 size-3.5" />
+          Copy Channel Link
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

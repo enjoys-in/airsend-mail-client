@@ -11,8 +11,10 @@ import type {
   OpenFGATuple,
   TeamMember,
   DirectMessage,
+  PermissionKey,
+  TeamAccess,
 } from "./chat-types";
-import { useChatStore } from "./chat-store";
+import { useAccessStore } from "./access-store";
 
 // The workspace server (../workspace-server, internal/permissions/channel.go)
 // is the single source of truth: it stores the toggles users switch here as
@@ -36,7 +38,7 @@ export const ROLE_HIERARCHY: Record<MemberRole, number> = {
 // ── Permission Metadata for Discord-Style UI ──
 
 export const PERMISSION_METADATA: Record<
-  ChannelPermissionKey,
+  PermissionKey,
   {
     name: string;
     description: string;
@@ -44,6 +46,30 @@ export const PERMISSION_METADATA: Record<
     fgaRelation: string;
   }
 > = {
+  view_channel: {
+    name: "View Channel",
+    description: "Allows seeing the channel. Private channels are hidden unless this is allowed.",
+    category: "text",
+    fgaRelation: "view_channel",
+  },
+  manage_members: {
+    name: "Manage Members",
+    description: "Allows inviting and removing members of lower rank.",
+    category: "management",
+    fgaRelation: "manage_members",
+  },
+  timeout_members: {
+    name: "Timeout Members",
+    description: "Allows temporarily blocking lower-ranked members from posting, reacting and speaking.",
+    category: "management",
+    fgaRelation: "timeout_members",
+  },
+  manage_roles: {
+    name: "Manage Roles",
+    description: "Allows creating and editing roles below your own, assigning them, and editing channel overrides.",
+    category: "management",
+    fgaRelation: "manage_roles",
+  },
   send_messages: {
     name: "Send Messages",
     description: "Allows members to send text messages in this channel.",
@@ -175,23 +201,48 @@ export const PERMISSION_METADATA: Record<
 // ── Check if user has permission in a channel ──
 
 /**
- * Whether `userRole` may perform `permission` in `channel`.
+ * Whether the current user may perform `permission` in `channel`.
  *
- * The answer is computed by the workspace server (OpenFGA tuples + lock /
- * announcement / posting policy) and delivered as `channel.effectivePermissions`.
- * The server also enforces every action, so when no server data is present
- * yet (channel still loading) the UI stays permissive and the server has the
- * final say.
+ * Every answer comes from the workspace server, in this order:
+ *  1. `channel.myPermissions` — OpenFGA's answer for this user (enforce mode),
+ *  2. `channel.effectivePermissions[role]` — the legacy per-role matrix,
+ *  3. the caller's team-wide access (GET /teams/:id/me/permissions).
+ * The server enforces every action; until any of these has loaded the UI
+ * hides management actions and keeps basic participation visible.
  */
-export function canUserPerformInChannel(
+export function resolveChannelPermission(
   channel: Channel | undefined | null,
-  userEmail: string | undefined | null,
-  userRole: MemberRole = "member",
-  permission: ChannelPermissionKey,
+  userRole: MemberRole | undefined,
+  permission: PermissionKey,
+  access?: TeamAccess | null,
 ): boolean {
   if (!channel) return false;
-  const resolved = channel.effectivePermissions?.[userRole]?.[permission];
-  return typeof resolved === "boolean" ? resolved : true;
+  const mine = channel.myPermissions?.[permission];
+  if (typeof mine === "boolean") return mine;
+  if (channel.myPermissions) return false; // enforce mode: absent = not granted
+  const resolved = userRole
+    ? channel.effectivePermissions?.[userRole]?.[permission as ChannelPermissionKey]
+    : undefined;
+  if (typeof resolved === "boolean") return resolved;
+  if (access) return access.owner || access.administrator || access.permissions.includes(permission);
+  return PERMISSION_METADATA[permission]?.category !== "management";
+}
+
+/** Back-compat wrapper used by older call sites. */
+export function canUserPerformInChannel(
+  channel: Channel | undefined | null,
+  _userEmail: string | undefined | null,
+  userRole: MemberRole = "member",
+  permission: PermissionKey,
+): boolean {
+  const access = channel ? useAccessStore.getState().access[channel.teamId] : null;
+  return resolveChannelPermission(channel, userRole, permission, access);
+}
+
+/** Team-wide check from the caller's access. */
+export function hasTeamPermission(access: TeamAccess | null | undefined, permission: PermissionKey): boolean {
+  if (!access) return false;
+  return access.owner || access.administrator || access.permissions.includes(permission);
 }
 
 // ── Helper to resolve the user's role in a team ──

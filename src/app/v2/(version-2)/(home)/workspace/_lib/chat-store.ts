@@ -145,9 +145,9 @@ interface ChatStore {
   // Actions — Messages
   sendMessage: (content: string, mentions?: string[], attachments?: ChatMessage["attachments"], priority?: MessagePriority) => void;
   editMessage: (messageId: string, newContent: string) => void;
-  deleteMessage: (messageId: string) => void;
-  pinMessage: (messageId: string, isPublic: boolean) => void;
-  unpinMessage: (messageId: string) => void;
+  deleteMessage: (messageId: string) => Promise<boolean>;
+  pinMessage: (messageId: string, isPublic: boolean) => Promise<boolean>;
+  unpinMessage: (messageId: string) => Promise<boolean>;
   addReaction: (messageId: string, emoji: string) => void;
   removeReaction: (messageId: string, emoji: string) => void;
   setReplyingTo: (message: ChatMessage | null) => void;
@@ -459,7 +459,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     });
   },
 
-  deleteMessage: (messageId) => {
+  deleteMessage: async (messageId) => {
     const { currentUserId } = get();
     const msg = get().messages.find((m) => m.id === messageId);
     // Optimistic
@@ -470,29 +470,46 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
           : m,
       ),
     }));
-    workspaceApi.deleteMessage(messageId, currentUserId).catch(() => {
-      if (msg?.channelId) get().fetchMessages(msg.channelId, currentUserId);
-    });
+    try {
+      await workspaceApi.deleteMessage(messageId, currentUserId);
+      return true;
+    } catch {
+      // Restore the original message (e.g. 403).
+      if (msg) set((s) => ({ messages: s.messages.map((m) => (m.id === messageId ? msg : m)) }));
+      return false;
+    }
   },
 
-  pinMessage: (messageId, isPublic) => {
+  pinMessage: async (messageId, isPublic) => {
     const { currentUserId } = get();
     set((s) => ({
       messages: s.messages.map((m) =>
         m.id === messageId ? { ...m, isPinned: true, isPinnedPublic: isPublic } : m,
       ),
     }));
-    workspaceApi.pinMessage(messageId, true, currentUserId).catch(() => {});
+    try {
+      await workspaceApi.pinMessage(messageId, true, currentUserId);
+      return true;
+    } catch {
+      set((s) => ({ messages: s.messages.map((m) => (m.id === messageId ? { ...m, isPinned: false } : m)) }));
+      return false;
+    }
   },
 
-  unpinMessage: (messageId) => {
+  unpinMessage: async (messageId) => {
     const { currentUserId } = get();
     set((s) => ({
       messages: s.messages.map((m) =>
         m.id === messageId ? { ...m, isPinned: false, isPinnedPublic: false } : m,
       ),
     }));
-    workspaceApi.pinMessage(messageId, false, currentUserId).catch(() => {});
+    try {
+      await workspaceApi.pinMessage(messageId, false, currentUserId);
+      return true;
+    } catch {
+      set((s) => ({ messages: s.messages.map((m) => (m.id === messageId ? { ...m, isPinned: true } : m)) }));
+      return false;
+    }
   },
 
   addReaction: (messageId, emoji) => {

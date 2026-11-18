@@ -40,6 +40,11 @@ export interface Channel {
    * `rolePermissions` above are the editable configuration.
    */
   effectivePermissions?: ChannelRolePermissionOverrides;
+  /**
+   * What the current user can do in this channel, resolved by OpenFGA
+   * (AUTHZ_MODE=enforce). When present it wins over everything above.
+   */
+  myPermissions?: Partial<Record<PermissionKey, boolean>>;
   createdAt: string;
   updatedAt: string;
   unreadCount: number;
@@ -99,6 +104,76 @@ export interface ChannelPermissions {
 
 export type ChannelRolePermissionOverrides = Partial<Record<MemberRole, Partial<ChannelPermissions>>>;
 
+// ---------------------------------------------------------------------------
+// Custom roles & channel overrides (workspace-server internal/authz catalog)
+// ---------------------------------------------------------------------------
+
+/** Every permission in the server catalog (channel- and team-scoped). */
+export type PermissionKey =
+  | ChannelPermissionKey
+  | "view_channel"
+  | "manage_members"
+  | "timeout_members"
+  | "manage_roles";
+
+export type PermissionScope = "channel" | "team";
+
+export interface CatalogPermission {
+  key: PermissionKey;
+  category: "text" | "voice" | "management";
+  scope: PermissionScope;
+  minRole: MemberRole;
+}
+
+export interface PermissionCatalog {
+  permissions: CatalogPermission[];
+  systemRoles: { name: MemberRole; position: number; administrator: boolean; permissions: PermissionKey[] }[];
+}
+
+/** A team role: one of the five system roles or a custom one. */
+export interface Role {
+  id: string;
+  teamId: string;
+  name: string;
+  color?: string;
+  position: number; // higher = more privileged
+  systemKey?: MemberRole;
+  administrator: boolean;
+  permissions: PermissionKey[];
+  customized: boolean;
+  memberCount: number;
+}
+
+/** The caller's team-wide access (GET /teams/:id/me/permissions). */
+export interface TeamAccess {
+  teamId: string;
+  mode: "legacy" | "shadow" | "enforce";
+  owner: boolean;
+  roleId?: string;
+  role: string;
+  position: number;
+  administrator: boolean;
+  permissions: PermissionKey[];
+  /** Custom roles and channel overrides are editable (enforce mode). */
+  customRoles: boolean;
+  timedOutUntil?: string;
+}
+
+export type OverwriteTargetType = "everyone" | "role" | "user";
+
+export interface ChannelOverwrite {
+  id: string;
+  channelId: string;
+  targetType: OverwriteTargetType;
+  targetId: string;
+  targetName: string;
+  allow: PermissionKey[];
+  deny: PermissionKey[];
+  source: "legacy" | "api";
+  updatedBy?: string;
+  updatedAt: string;
+}
+
 export interface OpenFGATuple {
   id?: string;
   objectType: "team" | "channel";
@@ -117,6 +192,13 @@ export interface TeamMember {
   email: string;
   avatar?: string;
   role: MemberRole;
+  /** Assigned role (custom or system); `role` stays the legacy system name. */
+  roleId?: string;
+  roleName?: string;
+  roleColor?: string;
+  rolePosition?: number;
+  /** Set while the member is timed out. */
+  timedOutUntil?: string;
   status: PresenceStatus;
   customStatus?: string;
   joinedAt: string;

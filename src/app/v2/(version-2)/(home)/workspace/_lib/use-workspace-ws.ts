@@ -7,8 +7,11 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useChatStore } from "./chat-store";
 import { useVoiceStore } from "./voice-store";
+import { useAccessStore } from "./access-store";
 import {
   getWorkspaceWsUrl,
+  getAuthToken,
+  isValidUUID,
   toMessage,
   toTeam,
   toChannel,
@@ -23,6 +26,7 @@ import type { ServerMessage } from "./api";
 interface WSIncoming {
   event: string;
   channel?: string;
+  team?: string; // set on team broadcasts
   data: any;
 }
 
@@ -36,8 +40,13 @@ export function useWorkspaceWS(email: string | undefined) {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     try {
+      // The server authenticates the upgrade with the access_token cookie;
+      // browsers can't set headers on WebSockets, so the token also goes in
+      // the query when it is readable (never the email — identity comes
+      // from the token).
       const baseWs = getWorkspaceWsUrl().replace(/\/+$/, "");
-      const url = `${baseWs}/ws?email=${encodeURIComponent(email)}`;
+      const token = getAuthToken();
+      const url = token ? `${baseWs}/ws?token=${encodeURIComponent(token)}` : `${baseWs}/ws`;
       const ws = new WebSocket(url);
       wsRef.current = ws;
 
@@ -45,14 +54,11 @@ export function useWorkspaceWS(email: string | undefined) {
         // Store WS ref in Zustand so sendMessage can use it
         useChatStore.getState().setWS(ws);
 
-        // Subscribe to all teams and channels the user has
+        // Subscribe to all teams and channels the user has (the server
+        // checks each one and answers subscribe.denied when not allowed).
         const { teams, channels } = useChatStore.getState();
-        teams.forEach((t) => {
-          ws.send(JSON.stringify({ type: "subscribe.team", payload: { team_id: t.id } }));
-        });
-        channels.forEach((c) => {
-          ws.send(JSON.stringify({ type: "subscribe.channel", payload: { channel_id: c.id } }));
-        });
+        subscribeAll(ws, "team", teams.map((t) => t.id));
+        subscribeAll(ws, "channel", channels.map((c) => c.id));
       };
 
       ws.onmessage = (ev) => {
@@ -64,10 +70,14 @@ export function useWorkspaceWS(email: string | undefined) {
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (ev) => {
         useChatStore.getState().setWS(null);
         if (mountedRef.current) {
-          reconnectRef.current = setTimeout(connect, 3000);
+          // 4001: the session token expired — reconnect right away with
+          // the refreshed cookie, and refetch what may have changed.
+          const expired = ev.code === 4001;
+          if (expired) refreshAfterReconnect();
+          reconnectRef.current = setTimeout(connect, expired ? 500 : 3000);
         }
       };
 
@@ -82,13 +92,11 @@ export function useWorkspaceWS(email: string | undefined) {
     }
   }, [email]);
 
-  // Subscribe to new channels when they change
-  const subscribeToChannels = useCallback((channelIds: string[]) => {
+  // Subscribe to new channels / teams when they change
+  const subscribeTo = useCallback((kind: "team" | "channel", ids: string[]) => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    channelIds.forEach((id) => {
-      ws.send(JSON.stringify({ type: "subscribe.channel", payload: { channel_id: id } }));
-    });
+    subscribeAll(ws, kind, ids);
   }, []);
 
   useEffect(() => {
@@ -101,21 +109,69 @@ export function useWorkspaceWS(email: string | undefined) {
     };
   }, [connect]);
 
-  // Re-subscribe when channels change
+  // Re-subscribe when channels or teams change (teams usually load after
+  // the socket opens, so team events would otherwise never arrive).
   useEffect(() => {
-    let prevIds = useChatStore.getState().channels.map((c) => c.id).join(",");
+    const initial = useChatStore.getState();
+    let prevChannels = initial.channels.map((c) => c.id).join(",");
+    let prevTeams = initial.teams.map((t) => t.id).join(",");
     const unsub = useChatStore.subscribe((state) => {
-      const ids = state.channels.map((c) => c.id).join(",");
-      if (ids !== prevIds) {
-        prevIds = ids;
-        subscribeToChannels(state.channels.map((c) => c.id));
+      const channelIds = state.channels.map((c) => c.id).join(",");
+      if (channelIds !== prevChannels) {
+        prevChannels = channelIds;
+        subscribeTo("channel", state.channels.map((c) => c.id));
+      }
+      const teamIds = state.teams.map((t) => t.id).join(",");
+      if (teamIds !== prevTeams) {
+        prevTeams = teamIds;
+        subscribeTo("team", state.teams.map((t) => t.id));
       }
     });
     return unsub;
-  }, [subscribeToChannels]);
+  }, [subscribeTo]);
 
   return wsRef;
 }
+
+function subscribeAll(ws: WebSocket, kind: "team" | "channel", ids: string[]) {
+  const key = kind === "team" ? "team_id" : "channel_id";
+  for (const id of ids) {
+    if (!isValidUUID(id)) continue; // mock data
+    ws.send(JSON.stringify({ type: `subscribe.${kind}`, payload: { [key]: id } }));
+  }
+}
+
+// ── Permission & membership changes ──
+//
+// The server broadcasts *that* something changed, never anyone's resolved
+// permissions; each client refetches its own. Refetches are debounced per
+// team so a burst of changes (e.g. editing a role) costs one round trip.
+
+const pendingTeamRefresh = new Map<string, ReturnType<typeof setTimeout>>();
+
+function refreshTeamAccess(teamId: string | undefined, opts: { members?: boolean; channels?: boolean } = {}) {
+  if (!teamId || !isValidUUID(teamId)) return;
+  clearTimeout(pendingTeamRefresh.get(teamId));
+  pendingTeamRefresh.set(
+    teamId,
+    setTimeout(() => {
+      pendingTeamRefresh.delete(teamId);
+      const chat = useChatStore.getState();
+      const email = chat.currentUserId;
+      useAccessStore.getState().invalidateTeam(teamId);
+      if (opts.members !== false) void chat.fetchMembers(teamId, email);
+      if (opts.channels !== false && teamId === chat.activeTeamId) void chat.fetchChannels(teamId, email);
+    }, 250 + Math.random() * 500), // jitter spreads the refetch load across clients
+  );
+}
+
+function refreshAfterReconnect() {
+  const { activeTeamId } = useChatStore.getState();
+  refreshTeamAccess(activeTeamId ?? undefined);
+}
+
+const isMe = (email?: string) =>
+  !!email && email.toLowerCase() === (useChatStore.getState().currentUserId || "").toLowerCase();
 
 // ── Handle incoming WebSocket events ──
 
@@ -190,7 +246,9 @@ function handleWSEvent(msg: WSIncoming) {
     }
 
     case "channel.created": {
-      const data = msg.data as { channel: any };
+      // Private channels arrive as an id only: refetch, the server lists
+      // them only for members who can see them.
+      const data = msg.data as { channel?: any; team_id?: string };
       if (data.channel) {
         const ch = toChannel(data.channel);
         useChatStore.setState((s) => {
@@ -198,19 +256,68 @@ function handleWSEvent(msg: WSIncoming) {
           return { channels: [...s.channels, ch] };
         });
       }
+      // My exact permissions in it come with the refetch.
+      refreshTeamAccess(data.team_id ?? msg.team, { members: false });
       break;
     }
 
     case "channel.updated": {
-      const data = msg.data as { channel: any };
+      // Lock / announcement / visibility changes alter what I may do there:
+      // keep my last known permissions until the refetch replaces them.
+      const data = msg.data as { channel?: any; team_id?: string };
       if (data.channel) {
         const ch = toChannel(data.channel);
         useChatStore.setState((s) => ({
-          channels: s.channels.map((c) => (c.id === ch.id ? ch : c)),
+          channels: s.channels.map((c) =>
+            c.id === ch.id ? { ...ch, myPermissions: c.myPermissions, isPinned: c.isPinned, unreadCount: c.unreadCount } : c,
+          ),
         }));
       }
+      refreshTeamAccess(data.team_id ?? msg.team, { members: false });
       break;
     }
+
+    case "channel.permissions_changed": {
+      const data = msg.data as { channel_id: string };
+      if (data.channel_id) useAccessStore.getState().invalidateChannel(data.channel_id);
+      refreshTeamAccess(msg.team, { members: false });
+      break;
+    }
+
+    // ── Roles, role assignments, timeouts ──
+    case "role.created":
+    case "role.updated":
+    case "role.deleted": {
+      // Anyone holding the role may have gained or lost permissions.
+      refreshTeamAccess(msg.team ?? msg.data?.team_id);
+      break;
+    }
+
+    case "member.role_changed":
+    case "member.role_assigned": {
+      const data = msg.data as { email?: string };
+      // Others' role changes only affect the member list; mine affect everything.
+      refreshTeamAccess(msg.team, { channels: isMe(data.email) });
+      break;
+    }
+
+    case "member.timeout_set":
+    case "member.timeout_cleared": {
+      // The member list carries timed_out_until; a timeout on me also
+      // changes what I may do in every channel.
+      const data = msg.data as { id?: string };
+      refreshTeamAccess(msg.team ?? msg.data?.team_id, { channels: isMe(data.id) });
+      break;
+    }
+
+    case "member.joined":
+    case "member.removed": {
+      refreshTeamAccess(msg.team, { channels: false });
+      break;
+    }
+
+    case "subscribe.denied":
+      break; // the server refused a stream we may not see; nothing to do
 
     case "channel.deleted": {
       const data = msg.data as { channel_id: string };

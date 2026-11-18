@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import ThreadPanel from "./_components/ThreadPanel";
 import SidePanel from "./_components/SidePanel";
 import WorkspaceInit from "./_components/WorkspaceInit";
+import ConfirmHost from "./_components/ConfirmHost";
 import TeamsNavBar from "./_components/TeamsNavBar";
 import WorkspaceErrorBoundary from "./_components/WorkspaceErrorBoundary";
 import { WorkspaceHomeSkeleton } from "./_components/WorkspaceSkeletons";
@@ -51,6 +52,8 @@ const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
     <div className="flex h-[calc(100svh-3.5rem)] md:h-[calc(100svh-3rem)] overflow-hidden">
       {/* Workspace data initializer & WebSocket connection */}
       <WorkspaceInit />
+      {/* Shared confirmation dialog (moderation, deletes) */}
+      <ConfirmHost />
 
       {/* Main content column with Teams Navigation Bar */}
       <main className="flex flex-1 flex-col min-h-0 overflow-hidden">

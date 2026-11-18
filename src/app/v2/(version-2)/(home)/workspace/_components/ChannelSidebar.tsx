@@ -40,7 +40,8 @@ import { useVoiceStore } from "../_lib/voice-store";
 import { getDMPartner } from "../_lib/permissions";
 import type { Channel } from "../_lib/chat-types";
 import type { Team } from "../_lib/chat-types";
-import TeamSettingsDialog from "./TeamSettingsDialog";
+import { useRouter } from "next/navigation";
+import { settingsPath } from "../_lib/use-access";
 
 // ---------------------------------------------------------------------------
 // Channel Sidebar — shows channels + DMs for the active team
@@ -65,7 +66,7 @@ export default function ChannelSidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [textOpen, setTextOpen] = useState(true);
   const [voiceOpen, setVoiceOpen] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const router = useRouter();
   const [dmOpen, setDmOpen] = useState(true);
 
   const activeTeam = teams.find((t: Team) => t.id === activeTeamId);
@@ -140,7 +141,8 @@ export default function ChannelSidebar() {
               variant="ghost"
               size="icon"
               className="size-7"
-              onClick={() => setSettingsOpen(true)}
+              aria-label="Team settings"
+              onClick={() => activeTeamId && router.push(settingsPath.team(activeTeamId))}
             >
               <Settings className="size-3.5" />
             </Button>
@@ -266,12 +268,6 @@ export default function ChannelSidebar() {
         {/* Voice status bar */}
         <VoiceStatusBar />
       </aside>
-
-      {/* Team settings dialog */}
-      <TeamSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-      />
     </>
   );
 }
