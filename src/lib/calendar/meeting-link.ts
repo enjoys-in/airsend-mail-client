@@ -7,6 +7,7 @@
 // ============================================================================
 
 export type MeetingProviderId =
+  | "airsend"
   | "meet"
   | "teams"
   | "zoom"
@@ -33,6 +34,8 @@ type KnownProvider = Exclude<MeetingProviderId, "other">;
  * given) against the path — e.g. g.co is only a meeting link under /meet.
  */
 const PROVIDERS: { id: KnownProvider; label: string; host: RegExp; path?: RegExp }[] = [
+  { id: "airsend", label: "AirSend Meet", host: /(^|\.)meet\.airsend\.in$/i },
+  { id: "airsend", label: "AirSend Meet", host: /(^|\.)airsend\.in$/i, path: /^\/(v2\/workspace\/calls|meet)\//i },
   { id: "meet", label: "Google Meet", host: /(^|\.)meet\.google\.com$/i },
   { id: "meet", label: "Google Meet", host: /^g\.co$/i, path: /^\/meet\//i },
   { id: "teams", label: "Microsoft Teams", host: /(^|\.)teams\.(microsoft|live)\.(com|us)$/i },

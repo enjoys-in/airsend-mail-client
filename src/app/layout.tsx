@@ -37,6 +37,8 @@ export default async function RootLayout({
     API_KEY: process.env.API_KEY || "",
     CALDEV_URL: process.env.CALDEV_URL || "",
     WORKSPACE_API_URL: process.env.WORKSPACE_API_URL || "",
+    MEET_API_URL: process.env.MEET_API_URL || process.env.NEXT_PUBLIC_MEET_API_URL || "https://meet.airsend.in",
+    MEET_URL: process.env.MEET_URL || process.env.NEXT_PUBLIC_MEET_URL || "https://meet.airsend.in",
     TENOR_API_KEY: process.env.TENOR_API_KEY || "",
   }).replace(/</g, "\\u003c")
 

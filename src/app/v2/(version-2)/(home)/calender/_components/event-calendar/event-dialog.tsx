@@ -580,7 +580,7 @@ export function EventDialog({
                 />
               </FieldRow>
               <FieldRow icon={<RiVideoOnLine size={16} />}>
-                <MeetingLinkField value={meetingLink} onChange={setMeetingLink} />
+                <MeetingLinkField value={meetingLink} onChange={setMeetingLink} eventTitle={title} />
               </FieldRow>
               {recurrenceRule && (
                 <FieldRow icon={<RiRepeatLine size={16} />}>

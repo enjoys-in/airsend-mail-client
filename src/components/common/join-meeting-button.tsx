@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { MeetingLink, MeetingProviderId } from "@/lib/calendar/meeting-link";
 
 const PROVIDER_STYLE: Record<MeetingProviderId, string> = {
+  airsend: "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700",
   meet: "bg-emerald-600 hover:bg-emerald-700",
   teams: "bg-indigo-600 hover:bg-indigo-700",
   zoom: "bg-blue-600 hover:bg-blue-700",
@@ -29,7 +30,9 @@ export function JoinMeetingButton({
   className?: string;
 }) {
   const text =
-    link.provider === "other"
+    link.provider === "airsend"
+      ? "Join AirSend Meet"
+      : link.provider === "other"
       ? "Join meeting"
       : `Join ${link.provider === "teams" ? "Teams" : link.label}`;
   return (
