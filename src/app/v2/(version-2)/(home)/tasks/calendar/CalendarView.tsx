@@ -1,131 +1,111 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react";
+import React, { useMemo, useState, useCallback } from "react";
+import { addMonths, startOfMonth, subMonths, parseISO } from "date-fns";
 import { useTasks } from "../_lib/tasks-context";
-import { type TaskItem } from "../_lib/tasks-types";
-import { CalendarTaskBar } from "./CalendarTaskBar";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { CalendarToolbar } from "./CalendarToolbar";
+import { MonthGrid } from "./MonthGrid";
+import { MonthAgenda } from "./MonthAgenda";
+import { buildMonthWeeks } from "./month-grid-model";
+import type { CalendarTask } from "./CalendarTaskBar";
+import type { TaskItem } from "../_lib/tasks-types";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function parseDateSafe(val?: string | null): Date | null {
+  if (!val) return null;
+  const d = parseISO(val);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 export function CalendarView() {
-  const { filteredTasks, setSelectedTask, setIsCreateOpen } = useTasks();
-  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const { filteredTasks, currentProject, setSelectedTask } = useTasks();
+  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const monthName = currentDate.toLocaleString("default", { month: "long" });
+  const handlePreviousMonth = useCallback(() => {
+    setVisibleMonth((current) => subMonths(current, 1));
+  }, []);
 
-  const { daysInMonth, startDayIndex } = useMemo(() => {
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    return {
-      daysInMonth: lastDay.getDate(),
-      startDayIndex: firstDay.getDay(),
-    };
-  }, [year, month]);
+  const handleNextMonth = useCallback(() => {
+    setVisibleMonth((current) => addMonths(current, 1));
+  }, []);
 
-  const tasksByDay = useMemo(() => {
-    const map = new Map<number, TaskItem[]>();
+  const handleToday = useCallback(() => {
+    setVisibleMonth(startOfMonth(new Date()));
+  }, []);
+
+  const scheduledTasks = useMemo<CalendarTask[]>(() => {
+    const list: CalendarTask[] = [];
+
     for (const t of filteredTasks) {
-      if (!t.dueDate) continue;
-      const d = new Date(t.dueDate);
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        const day = d.getDate();
-        if (!map.has(day)) map.set(day, []);
-        map.get(day)!.push(t);
-      }
+      const pStart = parseDateSafe(t.startDate) ?? parseDateSafe(t.dueDate);
+      const pEnd = parseDateSafe(t.dueDate) ?? parseDateSafe(t.startDate);
+
+      if (!pStart && !pEnd) continue;
+
+      const scheduleStart = pStart && pEnd && pStart > pEnd ? pEnd : (pStart ?? new Date());
+      const scheduleEnd = pStart && pEnd && pStart > pEnd ? pStart : (pEnd ?? scheduleStart);
+
+      list.push({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        originalTask: t,
+        scheduleStart,
+        scheduleEnd,
+        subtasks: t.subtasks?.map((s) => ({ id: s.id, title: s.title })),
+      });
     }
-    return map;
-  }, [filteredTasks, year, month]);
 
-  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
-  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
-  const goToday = () => setCurrentDate(new Date());
+    return list;
+  }, [filteredTasks]);
 
-  const today = new Date();
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const weeks = useMemo(() => buildMonthWeeks(visibleMonth, 0), [visibleMonth]);
+
+  const handleOpenTask = useCallback(
+    (taskId: string) => {
+      const task = scheduledTasks.find((t) => t.id === taskId);
+      if (task?.originalTask) {
+        setSelectedTask(task.originalTask);
+      }
+    },
+    [scheduledTasks, setSelectedTask]
+  );
 
   return (
-    <div className="flex h-full flex-col p-4 md:p-6 overflow-hidden">
-      <div className="flex items-center justify-between mb-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <CalendarIcon className="size-5 text-primary" />
-          <h2 className="text-base font-semibold text-foreground">
-            {monthName} {year}
-          </h2>
-          <Button variant="outline" size="sm" onClick={goToday} className="h-7 text-xs">
-            Today
-          </Button>
-        </div>
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
+      <CalendarToolbar
+        visibleMonth={visibleMonth}
+        onPreviousMonth={handlePreviousMonth}
+        onNextMonth={handleNextMonth}
+        onToday={handleToday}
+      />
 
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" onClick={prevMonth} className="size-8">
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={nextMonth} className="size-8">
-            <ChevronRight className="size-4" />
-          </Button>
+      {scheduledTasks.length === 0 ? (
+        <div className="border-b border-border/80 px-4 py-3 text-center bg-muted/10">
+          <p className="text-xs font-medium text-muted-foreground">
+            No scheduled tasks with start or due dates for this project
+          </p>
         </div>
+      ) : null}
+
+      <div className="hidden sm:flex flex-1 min-h-0 flex-col">
+        <MonthGrid
+          weeks={weeks}
+          tasks={scheduledTasks}
+          visibleMonth={visibleMonth}
+          projectSlug={currentProject?.slug}
+          onOpenTask={handleOpenTask}
+        />
       </div>
 
-      <div className="grid grid-cols-7 border-b border-border/50 text-center text-xs font-semibold text-muted-foreground pb-2 shrink-0">
-        {DAYS.map((d) => (
-          <div key={d}>{d}</div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 grid-rows-5 gap-px bg-border/40 flex-1 rounded-xl overflow-hidden border border-border/40 mt-2">
-        {Array.from({ length: startDayIndex }).map((_, i) => (
-          <div key={`empty-${i}`} className="bg-muted/10 p-2 min-h-20" />
-        ))}
-
-        {Array.from({ length: daysInMonth }).map((_, i) => {
-          const day = i + 1;
-          const isToday = isCurrentMonth && today.getDate() === day;
-          const dayTasks = tasksByDay.get(day) || [];
-
-          return (
-            <div
-              key={day}
-              className={cn(
-                "group relative bg-card p-2 min-h-20 flex flex-col justify-between hover:bg-muted/30 transition-colors overflow-hidden",
-                isToday && "bg-primary/5 ring-1 ring-primary/30"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <span
-                  className={cn(
-                    "size-5 flex items-center justify-center rounded-full text-xs font-medium",
-                    isToday ? "bg-primary text-primary-foreground font-bold" : "text-muted-foreground"
-                  )}
-                >
-                  {day}
-                </span>
-                <button
-                  onClick={() => setIsCreateOpen(true)}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground size-5 flex items-center justify-center rounded transition-opacity"
-                  title="Add task"
-                >
-                  <Plus className="size-3" />
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-1 mt-1 overflow-y-auto max-h-20">
-                {dayTasks.map((t) => (
-                  <CalendarTaskBar
-                    key={t.id}
-                    task={t}
-                    onSelect={() => setSelectedTask(t)}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex sm:hidden flex-1 min-h-0 flex-col">
+        <MonthAgenda
+          tasks={scheduledTasks}
+          visibleMonth={visibleMonth}
+          projectSlug={currentProject?.slug}
+          onOpenTask={handleOpenTask}
+        />
       </div>
     </div>
   );
 }
+export default CalendarView;
