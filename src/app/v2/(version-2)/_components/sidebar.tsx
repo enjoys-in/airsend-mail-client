@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Activity, ArchiveX, Calendar, File, Inbox, Send, Settings } from "lucide-react"
+import { Activity, ArchiveX, CalendarDays, File, Mail, Send, Settings, Layers } from "lucide-react"
 
 import {
     Sidebar,
@@ -22,7 +22,6 @@ import Link from "next/link"
 import { NavUserV2 } from "./mail/nav-user"
 import { Mailboxes } from "./mail/mailboxes"
 import { usePathname } from "next/navigation"
-import { StackIcon } from "@radix-ui/react-icons"
 import SidebarCalendar from "../(home)/calender/_components/sidebar-calendar"
 import ChannelList from "../(home)/workspace/_components/ChannelList"
 import WorkspaceSidebar from "../(home)/workspace/_components/WorkspaceSidebar"
@@ -44,13 +43,13 @@ const navMain: NavItem[] = [
     {
         title: "Mailbox",
         url: "/v2/u/mail/",
-        icon: Inbox,
+        icon: Mail,
         matchPath: "/v2/u/mail",
     },
     {
         title: "Calendar",
         url: "/v2/calender",
-        icon: Calendar,
+        icon: CalendarDays,
         matchPath: "/v2/calender",
         featureKey: "canAccessCalendar",
     },
@@ -69,7 +68,7 @@ const navMain: NavItem[] = [
     {
         title: "Workspace",
         url: "/v2/workspace",
-        icon: StackIcon,
+        icon: Layers,
         matchPath: "/v2/workspace",
         featureKey: "canAccessWorkspace",
     },
@@ -88,23 +87,31 @@ const navMain: NavItem[] = [
 ]
 
 /** Icon rail nav item — isolated so hover/active state doesn't re-render siblings */
-const NavIconItem = React.memo(({ item, isActive }: { item: NavItem; isActive: boolean }) => (
-    <SidebarMenuItem>
-        <Link href={item.url}>
-            <SidebarMenuButton
-                tooltip={{ children: item.title, hidden: false }}
-                isActive={isActive}
-                className={cn(
-                    "px-2.5 md:px-2 transition-colors duration-150",
-                    isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
-                )}
-            >
-                <item.icon className="size-4" />
-                <span>{item.title}</span>
-            </SidebarMenuButton>
-        </Link>
-    </SidebarMenuItem>
-))
+const NavIconItem = React.memo(({ item, isActive }: { item: NavItem; isActive: boolean }) => {
+    const Icon = item.icon
+    return (
+        <SidebarMenuItem>
+            <Link href={item.url}>
+                <SidebarMenuButton
+                    tooltip={{ children: item.title, hidden: false }}
+                    isActive={isActive}
+                    className={cn(
+                        "px-2.5 md:px-2 transition-all duration-200 group/rail-btn",
+                        isActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-xs"
+                            : "text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent/50"
+                    )}
+                >
+                    <Icon className={cn(
+                        "!size-[18px] stroke-[1.8] transition-all duration-200 group-hover/rail-btn:scale-110",
+                        isActive ? "stroke-[2.2] text-foreground" : "text-muted-foreground group-hover/rail-btn:text-foreground"
+                    )} />
+                    <span>{item.title}</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+    )
+})
 NavIconItem.displayName = "NavIconItem"
 
 /** Skeleton placeholder for a nav icon while feature access loads */
@@ -192,11 +199,16 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                                         tooltip={{ children: "Settings", hidden: false }}
                                         isActive={pathname.includes("/v2/u/settings")}
                                         className={cn(
-                                            "px-2.5 md:px-2 transition-colors duration-150",
-                                            pathname.includes("/v2/u/settings") && "bg-sidebar-accent text-sidebar-accent-foreground"
+                                            "px-2.5 md:px-2 transition-all duration-200 group/settings-btn",
+                                            pathname.includes("/v2/u/settings")
+                                                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-xs"
+                                                : "text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent/50"
                                         )}
                                     >
-                                        <Settings className="size-4" />
+                                        <Settings className={cn(
+                                            "!size-[18px] stroke-[1.8] transition-all duration-300 group-hover/settings-btn:rotate-45 group-hover/settings-btn:scale-110",
+                                            pathname.includes("/v2/u/settings") ? "stroke-[2.2] text-foreground" : "text-muted-foreground group-hover/settings-btn:text-foreground"
+                                        )} />
                                     </SidebarMenuButton>
                                 </Link>
                             </SidebarMenuItem>

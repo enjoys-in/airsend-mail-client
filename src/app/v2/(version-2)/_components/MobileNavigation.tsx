@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Inbox, Calendar, LayoutGrid, Bell } from "lucide-react";
+import { Mail, CalendarDays, Layers, Bell } from "lucide-react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
@@ -19,20 +19,20 @@ type TabItem = {
 const tabs: TabItem[] = [
   {
     label: "Mail",
-    icon: Inbox,
+    icon: Mail,
     href: "/v2/u/mail/inbox",
     matchPath: "/v2/u/mail",
   },
   {
     label: "Calendar",
-    icon: Calendar,
+    icon: CalendarDays,
     href: "/v2/calender",
     matchPath: "/v2/calender",
     featureKey: "canAccessCalendar",
   },
   {
     label: "Workspace",
-    icon: LayoutGrid,
+    icon: Layers,
     href: "/v2/workspace",
     matchPath: "/v2/workspace",
     featureKey: "canAccessWorkspace",
