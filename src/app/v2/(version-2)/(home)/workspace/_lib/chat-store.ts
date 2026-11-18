@@ -231,7 +231,6 @@ interface ChatStore {
   getChannelMessages: (channelId: string) => ChatMessage[];
   getTeamMembers: (teamId: string) => TeamMember[];
   getUnreadNotificationCount: () => number;
-  getPendingTaskCount: () => number;
 }
 
 // ---------------------------------------------------------------------------
@@ -1493,6 +1492,4 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   getUnreadNotificationCount: () =>
     get().notifications.filter((n) => !n.isRead).length,
 
-  getPendingTaskCount: () =>
-    get().tasks.filter((t) => t.status !== "done").length,
 }));

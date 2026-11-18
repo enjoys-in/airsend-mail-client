@@ -40,6 +40,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useChatStore } from "../_lib/chat-store";
+import { useMyPendingTaskCount } from "../../tasks/_lib/my-tasks-store";
 import { generateMeetCode, formatMeetUrl } from "../_lib/api";
 import MobileWorkspaceSidebar from "./MobileWorkspaceSidebar";
 
@@ -52,7 +53,6 @@ export default function TeamsNavBar() {
     activeTeamId,
     teams,
     getUnreadNotificationCount,
-    getPendingTaskCount,
     activeCallId,
     activeCallTitle,
     startCall,
@@ -67,7 +67,7 @@ export default function TeamsNavBar() {
   const [quickTaskTitle, setQuickTaskTitle] = useState("");
 
   const unreadCount = getUnreadNotificationCount();
-  const pendingTaskCount = getPendingTaskCount();
+  const pendingTaskCount = useMyPendingTaskCount();
   const activeTeam = teams.find((t) => t.id === activeTeamId);
 
   // Fallback default channel for Chat link

@@ -7,6 +7,8 @@ export enum CustomEventKey {
     RefreshView = 'refresh-view',
     UserLoggedIn = 'user-logged-in',
     MailEvents = 'mail-events',
+    /** Reload the current user's assigned tasks (badges, workspace tasks, hub). */
+    RefreshMyTasks = 'refresh-my-tasks',
 }
 
 type Callback<T> = (data: T) => void;

@@ -65,9 +65,9 @@ function MainLayout({ children }: { children: ReactNode }) {
   );
 
   // The tasks sidebar (rendered by the app sidebar) and the tasks page share
-  // one provider, so it has to sit above both. Scoped to /v2/tasks (and the
-  // workspace tasks tab) because it fetches on mount.
-  const needsTasks = pathname.startsWith("/v2/tasks") || pathname.startsWith("/v2/workspace/tasks");
+  // one provider, so it has to sit above both. Scoped to /v2/tasks because it
+  // fetches on mount. (/v2/workspace/tasks loads its own assigned-only list.)
+  const needsTasks = pathname.startsWith("/v2/tasks");
   return needsTasks ? <TasksProvider>{content}</TasksProvider> : content;
 }
 

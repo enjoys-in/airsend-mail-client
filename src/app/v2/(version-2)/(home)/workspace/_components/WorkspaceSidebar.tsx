@@ -59,6 +59,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useChatStore } from "../_lib/chat-store";
+import { useMyPendingTaskCount } from "../../tasks/_lib/my-tasks-store";
 import { getDMPartner, getUserRoleInTeam, resolveChannelPermission } from "../_lib/permissions";
 import { useTeamAccess, settingsPath } from "../_lib/use-access";
 import type { Channel } from "../_lib/chat-types";
@@ -89,7 +90,6 @@ export default function WorkspaceSidebar() {
     setActiveTeam,
     getTeamChannels,
     getUnreadNotificationCount,
-    getPendingTaskCount,
     setSidePanelView,
     sidePanelView,
     toggleChannelPin,
@@ -142,7 +142,7 @@ export default function WorkspaceSidebar() {
   ).sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
 
   const unreadCount = getUnreadNotificationCount();
-  const taskCount = getPendingTaskCount();
+  const taskCount = useMyPendingTaskCount();
 
   // Members with custom status (not standard statuses like away, idle, busy, dnd)
   const standardStatuses = ["online", "offline", "away", "idle", "busy", "dnd"];
@@ -286,10 +286,10 @@ export default function WorkspaceSidebar() {
                       <span>Calls</span>
                     </Link>
                     <Link
-                      href="/v2/tasks"
+                      href="/v2/workspace/tasks"
                       className={cn(
                         "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
-                        pathname === "/v2/tasks" || pathname === "/v2/workspace/tasks"
+                        pathname === "/v2/workspace/tasks"
                           ? "bg-accent text-accent-foreground font-semibold"
                           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                       )}

@@ -22,6 +22,7 @@ import {
   toChatTask,
 } from "./api";
 import type { ServerMessage } from "./api";
+import { refreshMyTasks } from "../../tasks/_lib/my-tasks-store";
 
 interface WSIncoming {
   event: string;
@@ -504,6 +505,7 @@ function handleWSEvent(msg: WSIncoming) {
     // ── Tasks & Planner ──
     case "task.created":
     case "task.assigned": {
+      refreshMyTasks();
       const data = msg.data as { task: any };
       if (data.task) {
         const t = toChatTask(data.task);
@@ -516,6 +518,7 @@ function handleWSEvent(msg: WSIncoming) {
     }
 
     case "task.updated": {
+      refreshMyTasks();
       const data = msg.data as { task: any };
       if (data.task) {
         const t = toChatTask(data.task);
@@ -527,6 +530,7 @@ function handleWSEvent(msg: WSIncoming) {
     }
 
     case "task.deleted": {
+      refreshMyTasks();
       const data = msg.data as { task_id: string };
       if (data.task_id) {
         useChatStore.setState((s) => ({

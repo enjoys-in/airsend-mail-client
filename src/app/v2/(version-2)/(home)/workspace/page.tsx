@@ -28,6 +28,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatStore } from "./_lib/chat-store";
+import { isOpenTask, useEnsureMyTasks, useMyTasksStore } from "../tasks/_lib/my-tasks-store";
 import { WorkspaceHomeSkeleton } from "./_components/WorkspaceSkeletons";
 import WorkspaceErrorBoundary from "./_components/WorkspaceErrorBoundary";
 import LiveMeetingCard from "./_components/LiveMeetingCard";
@@ -50,13 +51,15 @@ function WorkspaceDashboardContent() {
     channels,
     members,
     meetings,
-    tasks,
     files,
     notifications,
     startCall,
-    updateTaskStatus,
     myStatus,
   } = useChatStore();
+  useEnsureMyTasks();
+  const myTasks = useMyTasksStore((s) => s.tasks);
+  const setTaskStatus = useMyTasksStore((s) => s.setTaskStatus);
+  const openTasks = myTasks.filter(isOpenTask);
 
   const activeTeam = teams.find((t) => t.id === activeTeamId) || teams[0];
   const teamChannels = activeTeamId
@@ -64,7 +67,7 @@ function WorkspaceDashboardContent() {
     : channels;
   const liveMeetings = meetings.filter((m) => m.status === "live");
   const upcomingMeetings = meetings.filter((m) => m.status === "scheduled").slice(0, 3);
-  const pendingTasks = tasks.filter((t) => t.status !== "done").slice(0, 4);
+  const pendingTasks = openTasks.slice(0, 4);
   const recentFiles = files.slice(0, 4);
   const unreadActivity = notifications.filter((n) => !n.isRead).slice(0, 4);
   const defaultChannel =
@@ -165,7 +168,7 @@ function WorkspaceDashboardContent() {
           { title: "Channels", count: teamChannels.length, href: defaultChannel ? `/v2/workspace/c/${defaultChannel.id}` : "/v2/workspace", icon: Hash, color: "text-blue-500 bg-blue-500/10" },
           { title: "Meetings", count: meetings.length, href: "/v2/workspace/meetings", icon: Calendar, color: "text-emerald-500 bg-emerald-500/10" },
           { title: "Calls", count: "HD Voice", href: "/v2/workspace/calls", icon: Video, color: "text-purple-500 bg-purple-500/10" },
-          { title: "Tasks", count: `${pendingTasks.length} open`, href: "/v2/tasks", icon: CheckSquare, color: "text-amber-500 bg-amber-500/10" },
+          { title: "Tasks", count: `${openTasks.length} open`, href: "/v2/workspace/tasks", icon: CheckSquare, color: "text-amber-500 bg-amber-500/10" },
           { title: "Files", count: `${files.length} items`, href: "/v2/workspace/files", icon: FolderOpen, color: "text-indigo-500 bg-indigo-500/10" },
           { title: "Activity", count: `${unreadActivity.length} unread`, href: "/v2/workspace/activity", icon: Bell, color: "text-rose-500 bg-rose-500/10" },
         ].map((item) => {
@@ -260,7 +263,7 @@ function WorkspaceDashboardContent() {
                   className="flex items-start gap-2.5 p-2.5 rounded-lg border border-border/40 bg-accent/10 hover:bg-accent/20 transition-colors"
                 >
                   <button
-                    onClick={() => updateTaskStatus(t.id, "done")}
+                    onClick={() => setTaskStatus(t.id, "done")}
                     className="mt-0.5 text-muted-foreground hover:text-emerald-500 transition-colors"
                     title="Mark as done"
                   >

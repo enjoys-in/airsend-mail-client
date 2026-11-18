@@ -22,10 +22,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useChatStore } from "../_lib/chat-store";
+import { useEnsureMyTasks, useMyTasksStore } from "../../tasks/_lib/my-tasks-store";
+import type { TaskItem as MyTask } from "../../tasks/_lib/tasks-types";
 import type {
   SidePanelView,
   ChatNotification,
-  ChatTask,
   TeamMember,
   ChatMessage,
 } from "../_lib/chat-types";
@@ -175,12 +176,15 @@ function NotificationItem({
 // ---------------------------------------------------------------------------
 
 function TasksContent() {
-  const { tasks } = useChatStore();
+  useEnsureMyTasks();
+  const tasks = useMyTasksStore((s) => s.tasks);
 
   const grouped = {
     urgent: tasks.filter((t) => t.priority === "urgent" && t.status !== "done"),
-    "in-progress": tasks.filter((t) => t.status === "in-progress"),
-    todo: tasks.filter((t) => t.status === "todo" && t.priority !== "urgent"),
+    "in-progress": tasks.filter((t) => t.status === "in-progress" || t.status === "in-review"),
+    todo: tasks.filter(
+      (t) => (t.status === "todo" || t.status === "backlog") && t.priority !== "urgent",
+    ),
     done: tasks.filter((t) => t.status === "done"),
   };
 
@@ -212,15 +216,15 @@ function TasksContent() {
   );
 }
 
-function TaskItem({ task }: { task: ChatTask }) {
-  const priorityColors = {
+function TaskItem({ task }: { task: MyTask }) {
+  const priorityColors: Record<string, string> = {
     low: "text-gray-400",
     medium: "text-blue-400",
     high: "text-orange-400",
     urgent: "text-red-500",
   };
 
-  const statusIcons = {
+  const statusIcons: Record<string, React.ReactNode> = {
     todo: <Circle className="size-3.5" />,
     "in-progress": <Clock className="size-3.5 text-blue-400" />,
     done: <CheckSquare className="size-3.5 text-emerald-500" />,
@@ -235,7 +239,7 @@ function TaskItem({ task }: { task: ChatTask }) {
 
   return (
     <div className="flex items-start gap-2 rounded-md border border-border/40 px-3 py-2 hover:bg-accent/30 transition-colors">
-      <span className="mt-0.5">{statusIcons[task.status]}</span>
+      <span className="mt-0.5">{statusIcons[task.status] ?? statusIcons.todo}</span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium leading-tight">{task.title}</p>
         <div className="mt-1 flex items-center gap-2">

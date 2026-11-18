@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatStore } from "../_lib/chat-store";
+import { useMyPendingTaskCount } from "../../tasks/_lib/my-tasks-store";
 import ThreadPanel from "./ThreadPanel";
 import SidePanel from "./SidePanel";
 
@@ -36,11 +37,10 @@ export function MobileBottomActions() {
     activeThreadMessageId,
     setSidePanelView,
     getUnreadNotificationCount,
-    getPendingTaskCount,
   } = useChatStore();
 
   const unreadCount = getUnreadNotificationCount();
-  const taskCount = getPendingTaskCount();
+  const taskCount = useMyPendingTaskCount();
 
   return (
     <div className="flex h-12 shrink-0 items-center justify-around border-t border-border/40 bg-background md:hidden">

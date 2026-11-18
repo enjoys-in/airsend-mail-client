@@ -18,6 +18,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChatStore } from "../_lib/chat-store";
+import { useMyPendingTaskCount } from "../../tasks/_lib/my-tasks-store";
 import TeamCreateDialog from "./TeamCreateDialog";
 
 // ---------------------------------------------------------------------------
@@ -30,14 +31,13 @@ export default function TeamsRail() {
     activeTeamId,
     setActiveTeam,
     getUnreadNotificationCount,
-    getPendingTaskCount,
     setSidePanelView,
     sidePanelView,
     isLoadingTeams,
   } = useChatStore();
 
   const unreadCount = getUnreadNotificationCount();
-  const taskCount = getPendingTaskCount();
+  const taskCount = useMyPendingTaskCount();
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
 
   return (
