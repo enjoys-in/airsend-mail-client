@@ -2,10 +2,12 @@
 
 import React, { Suspense } from "react";
 import { Loader2 } from "lucide-react";
-import { useTasks } from "./_lib/tasks-context";
+import { TasksProvider, useTasks } from "./_lib/tasks-context";
 import { TasksHeader } from "./_components/TasksHeader";
 import { TasksBoardView } from "./_components/TasksBoardView";
 import { TasksListView } from "./_components/TasksListView";
+import { TaskDetailDialog } from "./_components/TaskDetailDialog";
+import { TaskCreateDialog } from "./_components/TaskCreateDialog";
 
 function TasksMainContent() {
   const { viewMode, isLoading } = useTasks();
@@ -22,12 +24,13 @@ function TasksMainContent() {
       ) : (
         <TasksListView />
       )}
+      <TaskDetailDialog />
+      <TaskCreateDialog />
     </div>
   );
 }
 
 export default function TasksPage() {
-  // TasksProvider lives in the v2 layout so the sidebar shares its state.
   return (
     <Suspense
       fallback={
@@ -36,7 +39,9 @@ export default function TasksPage() {
         </div>
       }
     >
-      <TasksMainContent />
+      <TasksProvider>
+        <TasksMainContent />
+      </TasksProvider>
     </Suspense>
   );
 }

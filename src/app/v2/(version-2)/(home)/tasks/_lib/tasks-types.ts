@@ -3,7 +3,6 @@ export type TaskPriority = "urgent" | "high" | "medium" | "low" | "none";
 export type TaskStatus =
   | "backlog"
   | "todo"
-  | "to-do"
   | "in-progress"
   | "in-review"
   | "done"
@@ -24,7 +23,7 @@ export function normalizeTaskStatus(status?: string | null): TaskStatus {
 }
 
 export function toBackendTaskStatus(status: TaskStatus | string): string {
-  if (status === "todo") return "to-do";
+  if (status === "todo") return "todo";
   return status;
 }
 
@@ -33,6 +32,15 @@ export interface TaskLabel {
   name: string;
   color: string;
   taskId?: string;
+}
+
+export interface TaskColumn {
+  id: string;
+  name: string;
+  slug: string;
+  position: number;
+  icon?: string;
+  isFinal?: boolean;
 }
 
 export interface TaskItem {
@@ -98,5 +106,5 @@ export interface UpdateTaskInput {
   dueDate?: string | null;
   assigneeId?: string | null;
   projectId?: string;
-  columnId?: string;
+  labels?: string[];
 }
