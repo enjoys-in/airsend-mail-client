@@ -36,6 +36,7 @@ type KnownProvider = Exclude<MeetingProviderId, "other">;
 const PROVIDERS: { id: KnownProvider; label: string; host: RegExp; path?: RegExp }[] = [
   { id: "airsend", label: "AirSend Meet", host: /(^|\.)meet\.airsend\.in$/i },
   { id: "airsend", label: "AirSend Meet", host: /(^|\.)airsend\.in$/i, path: /^\/(v2\/workspace\/calls|meet)\//i },
+  { id: "airsend", label: "AirSend Meet", host: /^(localhost|127\.0\.0\.1):5173$/i },
   { id: "meet", label: "Google Meet", host: /(^|\.)meet\.google\.com$/i },
   { id: "meet", label: "Google Meet", host: /^g\.co$/i, path: /^\/meet\//i },
   { id: "teams", label: "Microsoft Teams", host: /(^|\.)teams\.(microsoft|live)\.(com|us)$/i },

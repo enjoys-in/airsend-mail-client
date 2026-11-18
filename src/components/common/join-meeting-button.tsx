@@ -19,6 +19,17 @@ const PROVIDER_STYLE: Record<MeetingProviderId, string> = {
   other: "bg-primary hover:bg-primary/90",
 };
 
+function getAirsendToken(): string {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(/(?:^|;\s*)access_token=([^;]+)/);
+  if (match && match[1]) return decodeURIComponent(match[1]);
+  try {
+    return window.localStorage.getItem("access_token") ?? "";
+  } catch {
+    return "";
+  }
+}
+
 /** "Join Google Meet" / "Join Teams" / "Join meeting" — opens the link in a new tab. */
 export function JoinMeetingButton({
   link,
@@ -35,9 +46,26 @@ export function JoinMeetingButton({
       : link.provider === "other"
       ? "Join meeting"
       : `Join ${link.provider === "teams" ? "Teams" : link.label}`;
+
+  let targetHref = link.url;
+  if (link.provider === "airsend") {
+    try {
+      const token = getAirsendToken();
+      if (token) {
+        const u = new URL(link.url);
+        if (!u.searchParams.has("token") && !u.searchParams.has("access_token")) {
+          u.searchParams.set("token", token);
+          targetHref = u.toString();
+        }
+      }
+    } catch {
+      // Non-fatal
+    }
+  }
+
   return (
     <a
-      href={link.url}
+      href={targetHref}
       target="_blank"
       rel="noopener noreferrer"
       title={link.url}

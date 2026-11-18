@@ -1519,6 +1519,10 @@ export function getMeetApiUrl(): string {
     if ((window as any).__RUNTIME_CONFIG__?.MEET_API_URL) {
       url = (window as any).__RUNTIME_CONFIG__.MEET_API_URL;
     }
+    // Local dev: meeting server is on port 8085
+    if (!url && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+      return "http://localhost:8085";
+    }
   }
   if (!url) {
     url = process.env.MEET_API_URL || "http://localhost:8085";
@@ -1540,6 +1544,10 @@ export function getMeetBaseUrl(): string {
     if ((window as any).__RUNTIME_CONFIG__?.MEET_URL) {
       return (window as any).__RUNTIME_CONFIG__.MEET_URL;
     }
+    // Local dev: meeting app is on Vite dev port 5173
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return "http://localhost:5173";
+    }
   }
   if (!url) {
     url = process.env.MEET_URL || "https://meet.airsend.in";
@@ -1559,7 +1567,11 @@ export const meetingApi = {
   /** Creates room in meeting backend (../meeting server POST /api/rooms) */
   createRoom: async (title?: string, customRoomId?: string, email?: string): Promise<{ roomId: string; hostGrant: string }> => {
     const apiUrl = getMeetApiUrl().replace(/\/+$/, "");
+    const token = getAuthToken();
     const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
     if (email) {
       headers["X-User-Email"] = email;
     }
