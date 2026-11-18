@@ -112,6 +112,11 @@ export class API {
         return instance.put(adminRoutes(`/account-settings/${account}`), data)
     }
 
+    // MAIL EVENTS (logs)
+    static handleClearMailEvents() {
+        return instance.delete(adminRoutes('/mail-events'))
+    }
+
     // USER
     static handleAddUser(data: any) {
         return instance.post(adminRoutes(`/user`), data)

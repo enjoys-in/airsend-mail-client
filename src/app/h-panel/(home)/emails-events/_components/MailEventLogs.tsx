@@ -17,10 +17,12 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import React from 'react'
+import Link from 'next/link'
 import moment from 'moment'
 import { getEmailStatusColor } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
+import { ClearLogsButton } from './ClearLogsButton'
 
 interface MailEvents {
     id: string;
@@ -38,7 +40,18 @@ export function MailEventsLogs({ data }: { data: MailEvents[] | [] }) {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-200">Emails</h1>
+                    <ClearLogsButton disabled={data.length === 0} />
                 </div>
+
+                {/* Retention notice — keep MAIL_LOG_RETENTION_LIMIT in the API in sync */}
+                <p className="text-sm text-muted-foreground">
+                    We don&apos;t store more than 1,000 logs. Every night at midnight, anything over the
+                    latest 1,000 is cleared automatically. Need longer retention? Please{" "}
+                    <Link href="/about" className="underline underline-offset-2 hover:text-foreground">
+                        let us know
+                    </Link>
+                    .
+                </p>
 
                 {/* Filters */}
                 <div className="flex flex-col sm:flex-row gap-4">
