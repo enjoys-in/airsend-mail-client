@@ -2,7 +2,7 @@
 
 import React, { Suspense } from "react";
 import { Loader2 } from "lucide-react";
-import { TasksProvider, useTasks } from "./_lib/tasks-context";
+import { useTasks } from "./_lib/tasks-context";
 import { TasksHeader } from "./_components/TasksHeader";
 import { TasksBoardView } from "./_components/TasksBoardView";
 import { TasksListView } from "./_components/TasksListView";
@@ -27,17 +27,16 @@ function TasksMainContent() {
 }
 
 export default function TasksPage() {
+  // TasksProvider lives in the v2 layout so the sidebar shares its state.
   return (
-    <TasksProvider>
-      <Suspense
-        fallback={
-          <div className="flex h-screen items-center justify-center">
-            <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          </div>
-        }
-      >
-        <TasksMainContent />
-      </Suspense>
-    </TasksProvider>
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <TasksMainContent />
+    </Suspense>
   );
 }

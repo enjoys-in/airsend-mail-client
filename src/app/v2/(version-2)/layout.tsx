@@ -15,6 +15,8 @@ import { setMid, setEmail } from "@/lib/api/auth-state";
 import SentMailToast from "@/components/common/sent-mail";
 import CustomWidget from "@/components/common/custom-widget";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePathname } from "next/navigation";
+import { TasksProvider } from "./(home)/tasks/_lib/tasks-context";
 
 // NOTE: this must be a layout (not a template). A template remounts on every
 // navigation, which disconnected the socket, re-fetched the user/settings and
@@ -26,6 +28,7 @@ function MainLayout({ children }: { children: ReactNode }) {
   // calls, double Dexie queries and duplicate window event listeners.
   // Defaults to desktop before mount (same as the md breakpoint).
   const isMobile = useIsMobile()
+  const pathname = usePathname()
   const mid = useAppSelector((s) => s.accounts?.currAccount?.mid);
   const email = useAppSelector((s) => s.accounts?.currAccount?.email);
 
@@ -43,7 +46,7 @@ function MainLayout({ children }: { children: ReactNode }) {
   // Calendar data + live stream for the whole app (mailbox "Upcoming meetings",
   // calendar page). Declared after the auth-state effect so X-Tenant-ID is set first.
   useCalDevSync();
-  return (
+  const content = (
     <SocketContextProvider>
       <CustomWidget />
       <CalendarProvider>
@@ -60,6 +63,12 @@ function MainLayout({ children }: { children: ReactNode }) {
       </CalendarProvider>
     </SocketContextProvider>
   );
+
+  // The tasks sidebar (rendered by the app sidebar) and the tasks page share
+  // one provider, so it has to sit above both. Scoped to /v2/tasks (and the
+  // workspace tasks tab) because it fetches on mount.
+  const needsTasks = pathname.startsWith("/v2/tasks") || pathname.startsWith("/v2/workspace/tasks");
+  return needsTasks ? <TasksProvider>{content}</TasksProvider> : content;
 }
 
 export default MainLayout;
