@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import {
   type CreateProjectInput,
   type CreateTaskInput,
@@ -44,6 +44,10 @@ interface TasksContextValue {
   setIsProjectCreateOpen: (open: boolean) => void;
   isSettingsOpen: boolean;
   setIsSettingsOpen: (open: boolean) => void;
+  settingsSection: string;
+  setSettingsSection: (section: string) => void;
+  openSettings: (section?: string) => void;
+  closeSettings: () => void;
   createDefaultStatus: TaskStatus;
   setCreateDefaultStatus: (status: TaskStatus) => void;
   refreshTasks: () => Promise<void>;
@@ -75,7 +79,17 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isProjectCreateOpen, setIsProjectCreateOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState("workspace-general");
+  const isSettingsOpen = viewMode === "settings";
+  const setIsSettingsOpen = useCallback(
+    (open: boolean) => setViewMode(open ? "settings" : "board"),
+    []
+  );
+  const openSettings = useCallback((sec?: string) => {
+    if (sec) setSettingsSection(sec);
+    setViewMode("settings");
+  }, []);
+  const closeSettings = useCallback(() => setViewMode("board"), []);
   const [createDefaultStatus, setCreateDefaultStatus] = useState<TaskStatus>("todo");
 
   const refreshProjects = async () => {
@@ -135,36 +149,15 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
   return (
     <TasksContext.Provider
       value={{
-        projects,
-        selectedProjectId,
-        setSelectedProjectId,
-        currentProject,
-        columns,
-        tasks,
-        assignedTasks,
-        filteredTasks,
-        labels,
-        isLoading,
-        viewMode,
-        setViewMode,
-        searchQuery,
-        setSearchQuery,
-        statusFilter,
-        setStatusFilter,
-        priorityFilter,
-        setPriorityFilter,
-        selectedTask,
-        setSelectedTask,
-        isCreateOpen,
-        setIsCreateOpen,
-        isProjectCreateOpen,
-        setIsProjectCreateOpen,
-        isSettingsOpen,
-        setIsSettingsOpen,
-        createDefaultStatus,
-        setCreateDefaultStatus,
-        refreshTasks,
-        refreshAssignedTasks,
+        projects, selectedProjectId, setSelectedProjectId, currentProject,
+        columns, tasks, assignedTasks, filteredTasks, labels, isLoading,
+        viewMode, setViewMode, searchQuery, setSearchQuery,
+        statusFilter, setStatusFilter, priorityFilter, setPriorityFilter,
+        selectedTask, setSelectedTask, isCreateOpen, setIsCreateOpen,
+        isProjectCreateOpen, setIsProjectCreateOpen,
+        isSettingsOpen, setIsSettingsOpen, settingsSection, setSettingsSection,
+        openSettings, closeSettings, createDefaultStatus, setCreateDefaultStatus,
+        refreshTasks, refreshAssignedTasks,
         ...mutations,
       }}
     >

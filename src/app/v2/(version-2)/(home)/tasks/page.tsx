@@ -12,10 +12,18 @@ import { GanttView } from "./gantt/GanttView";
 import { TaskDetailDialog } from "./task/TaskDetailDialog";
 import { TaskCreateDialog } from "./task/TaskCreateDialog";
 import { ProjectCreateDialog } from "./project/ProjectCreateDialog";
-import { TasksSettingsDialog } from "./settings/TasksSettingsDialog";
+import { SettingsShell } from "./settings/SettingsShell";
 
 function TasksMainContent() {
   const { viewMode, isLoading } = useTasks();
+
+  if (viewMode === "settings") {
+    return (
+      <div className="flex flex-1 flex-col h-[calc(100svh-3.5rem)] md:h-[calc(100svh-3rem)] overflow-hidden bg-background">
+        <SettingsShell />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col h-[calc(100svh-3.5rem)] md:h-[calc(100svh-3rem)] overflow-hidden bg-background">
@@ -39,7 +47,6 @@ function TasksMainContent() {
       <TaskDetailDialog />
       <TaskCreateDialog />
       <ProjectCreateDialog />
-      <TasksSettingsDialog />
     </div>
   );
 }

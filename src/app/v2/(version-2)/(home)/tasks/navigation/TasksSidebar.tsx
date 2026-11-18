@@ -3,6 +3,7 @@
 import React from "react";
 import { FolderKanban, Plus, CheckSquare, Settings } from "lucide-react";
 import { useTasks } from "../_lib/tasks-context";
+import { SettingsSidebar } from "../settings/SettingsSidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -22,18 +23,22 @@ export function TasksSidebar() {
     viewMode,
     setViewMode,
     setIsProjectCreateOpen,
-    setIsSettingsOpen,
+    openSettings,
   } = useTasks();
+
+  if (viewMode === "settings") {
+    return <SettingsSidebar />;
+  }
 
   const isMyTasksActive = viewMode === "my-tasks";
 
   return (
-    <Sidebar collapsible="none" className="hidden flex-1 md:flex bg-background">
+    <Sidebar collapsible="none" className="hidden flex-1 md:flex bg-background border-r border-border/40 select-none">
       <SidebarHeader className="p-3 pb-2 border-b border-border/40">
         <button
           onClick={() => setViewMode("my-tasks")}
           className={cn(
-            "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors text-left",
+            "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors text-left cursor-pointer",
             isMyTasksActive
               ? "bg-primary/10 text-primary font-semibold"
               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -58,7 +63,7 @@ export function TasksSidebar() {
             variant="ghost"
             size="icon"
             onClick={() => setIsProjectCreateOpen(true)}
-            className="size-6 text-muted-foreground hover:text-foreground"
+            className="size-6 text-muted-foreground hover:text-foreground cursor-pointer"
             title="Create Team / Project"
           >
             <Plus className="size-3.5" />
@@ -78,7 +83,7 @@ export function TasksSidebar() {
                   if (viewMode === "my-tasks") setViewMode("board");
                 }}
                 className={cn(
-                  "flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors text-left",
+                  "flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors text-left cursor-pointer",
                   isSelected
                     ? "bg-primary/10 text-primary font-semibold"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -99,8 +104,8 @@ export function TasksSidebar() {
 
       <SidebarFooter className="border-t border-border/40 p-2">
         <button
-          onClick={() => setIsSettingsOpen(true)}
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+          onClick={() => openSettings()}
+          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors cursor-pointer"
         >
           <Settings className="size-4 text-muted-foreground" />
           <span>Settings</span>
@@ -109,3 +114,4 @@ export function TasksSidebar() {
     </Sidebar>
   );
 }
+export default TasksSidebar;
