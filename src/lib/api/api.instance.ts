@@ -25,6 +25,15 @@ instance.defaults.headers["common"] = {
 }
 
 instance.interceptors.request.use(async (config) => {
+    const isAdminRoute = (config.url as string)?.includes('/admin');
+    const adminToken = Cookies.get('admin_access_token') || (typeof window !== 'undefined' ? localStorage.getItem('admin_access_token') : null);
+    const userToken = Cookies.get('access_token') || (typeof window !== 'undefined' ? localStorage.getItem('access_token') : null);
+    const token = isAdminRoute ? (adminToken || userToken) : (userToken || adminToken);
+
+    if (token && !config.headers['Authorization']) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const signature = await security.GenerateSignature(
         (config.method as string).toUpperCase(),
         `${config.baseURL}${config.url}` as string,
@@ -50,7 +59,8 @@ instance.interceptors.response.use(
             document.cookie = 'admin_access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             document.cookie = 'shield_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            window.location.href = '/v2';
+            const isHPanel = typeof window !== 'undefined' && window.location.pathname.startsWith('/h-panel');
+            window.location.href = isHPanel ? '/h-panel' : '/v2';
         }
         return Promise.reject(error);
     }

@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Spinner } from "@/components/common/spinner"
 import { useAppDispatch } from "@/store/hooks"
 import { setLogin } from "@/store/slices/account/admin"
+import Cookies from "js-cookie"
 
 import Link from "next/link"
 import { FavIcon } from "@/components/logo-image"
@@ -79,6 +80,13 @@ function LoginContent() {
             API.handleGoogleCallback(searchParams.get("code")!).then(({ data }) => {
                 if (!data.success) {
                     throw new Error(data.message)
+                }
+
+                if (data.result?.admin_access_token) {
+                    Cookies.set("admin_access_token", data.result.admin_access_token, { expires: 90, path: "/" });
+                    if (typeof window !== "undefined") {
+                        localStorage.setItem("admin_access_token", data.result.admin_access_token);
+                    }
                 }
 
                 dispatch(setLogin({ user: data.result.user, token: data.result.admin_access_token }))

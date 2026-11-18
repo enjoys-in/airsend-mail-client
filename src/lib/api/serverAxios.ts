@@ -17,10 +17,24 @@ const serverAxios = axios.create({
 
 serverAxios.interceptors.request.use(async (config) => {
     const cookieStore = await cookies();
-    const toGet = (config.url as string).includes('/admin') ? 'admin_access_token' : 'access_token';
-    const token = cookieStore.get(toGet)?.value;
+    const isAdminRoute = (config.url as string)?.includes('/admin');
+    const adminToken = cookieStore.get('admin_access_token')?.value;
+    const userToken = cookieStore.get('access_token')?.value;
+    const token = isAdminRoute ? (adminToken || userToken) : (userToken || adminToken);
+
     if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Forward cookies so backend endpoints reading req.cookies directly have them
+    const cookiesToSend: string[] = [];
+    if (adminToken) cookiesToSend.push(`admin_access_token=${adminToken}`);
+    if (userToken) cookiesToSend.push(`access_token=${userToken}`);
+    if (cookiesToSend.length > 0) {
+        const existingCookie = (config.headers['Cookie'] as string) || '';
+        config.headers['Cookie'] = existingCookie
+            ? `${existingCookie}; ${cookiesToSend.join('; ')}`
+            : cookiesToSend.join('; ');
     }
 
     const shieldRaw = cookieStore.get('shield_user')?.value;
@@ -31,8 +45,9 @@ serverAxios.interceptors.request.use(async (config) => {
         } catch {}
     }
 
-    const signature = await security.GenerateSignature((config.method as string).toUpperCase(), config.baseURL as string, config.data)
-    config.headers['X-Signature'] = signature
+    const fullUrl = `${config.baseURL || ''}${config.url || ''}`;
+    const signature = await security.GenerateSignature((config.method as string).toUpperCase(), fullUrl, config.data);
+    config.headers['X-Signature'] = signature;
     return config;
 }, (error) => {
     return Promise.reject(error);
@@ -41,7 +56,8 @@ serverAxios.interceptors.response.use(async function (response) {
     return response;
 }, function (error) {
     if (error?.response?.status === 401) {
-        redirect('/v2');
+        const isAdminRoute = (error?.config?.url as string)?.includes('/admin');
+        redirect(isAdminRoute ? '/h-panel' : '/v2');
     }
     return Promise.reject(error);
 });
