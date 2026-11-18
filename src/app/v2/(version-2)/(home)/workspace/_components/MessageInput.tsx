@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Lock,
   BarChart3,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
 import { workspaceApi } from "../_lib/api";
+import { canUserPerformInChannel, getUserRoleInTeam } from "../_lib/permissions";
 import MentionPopover from "./MentionPopover";
 import EmojiPicker from "./EmojiPicker";
 import GifPicker from "./GifPicker";
@@ -257,7 +259,45 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
 
   if (!channel && !dm) return null;
 
+  const userRole = channel
+    ? getUserRoleInTeam(members, channel.teamId, currentUserId)
+    : "member";
+
   const isLocked = channel?.isLocked ?? false;
+  const isAnnouncement =
+    channel?.type === "announcement" || channel?.postingPermission === "admins_only";
+
+  const canSend = dm
+    ? true
+    : canUserPerformInChannel(channel, currentUserId, userRole, "send_messages");
+
+  const canAttach = dm
+    ? true
+    : canUserPerformInChannel(channel, currentUserId, userRole, "send_media");
+
+  const canGif = dm
+    ? true
+    : canUserPerformInChannel(channel, currentUserId, userRole, "send_gifs");
+
+  const canPoll = dm
+    ? false
+    : canUserPerformInChannel(channel, currentUserId, userRole, "create_polls");
+
+  const canEmoji = dm
+    ? true
+    : canUserPerformInChannel(channel, currentUserId, userRole, "use_emojis");
+
+  const canMentionEveryone = dm
+    ? false
+    : canUserPerformInChannel(channel, currentUserId, userRole, "mention_everyone");
+
+  const activePlaceholder = !canSend
+    ? isLocked
+      ? "This channel is locked — only admins and moderators can post."
+      : isAnnouncement
+        ? "Only admins and moderators can post in this announcement channel."
+        : "You do not have permission to send messages in this channel."
+    : placeholderText;
 
   return (
     <div
@@ -269,13 +309,36 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Channel locked indicator */}
+      {/* ── Channel Locked Warning ── */}
       {isLocked && (
-        <div className="mb-2 flex items-center gap-2 rounded-md bg-orange-500/10 px-3 py-1.5 text-xs text-orange-600 dark:text-orange-400">
-          <Lock className="size-3" />
-          <span className="font-medium">This channel is locked — only admins and moderators can post.</span>
+        <div className="mb-2 flex items-center gap-2 rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+          <Lock className="size-3.5 shrink-0" />
+          <span className="font-medium">
+            This channel is locked — only admins and moderators can post.
+          </span>
         </div>
       )}
+
+      {/* ── Announcement / Admins-Only Warning ── */}
+      {!isLocked && isAnnouncement && !canSend && (
+        <div className="mb-2 flex items-center gap-2 rounded-md bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-xs text-blue-600 dark:text-blue-400">
+          <Shield className="size-3.5 shrink-0" />
+          <span className="font-medium">
+            Only admins and moderators can post messages in this announcement channel.
+          </span>
+        </div>
+      )}
+
+      {/* ── Granular OpenFGA Denied Warning ── */}
+      {!isLocked && !isAnnouncement && !canSend && (
+        <div className="mb-2 flex items-center gap-2 rounded-md bg-muted/60 border border-border/50 px-3 py-2 text-xs text-muted-foreground">
+          <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
+          <span className="font-medium">
+            You do not have permission to send messages in this channel.
+          </span>
+        </div>
+      )}
+
       {/* Reply preview */}
       {replyingTo && (
         <div className="mb-2 flex items-center gap-2 rounded-md bg-accent/50 px-3 py-1.5 text-xs">
@@ -323,7 +386,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
       {/* Input area */}
       <div className="relative">
         {/* Mention popover */}
-        {showMentions && (
+        {showMentions && canSend && (
           <MentionPopover
             query={mentionQuery}
             onSelect={insertMention}
@@ -331,16 +394,20 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
           />
         )}
 
-        <div className="rounded-lg border border-border/60 bg-accent/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+        <div className={cn(
+          "rounded-lg border border-border/60 bg-accent/20 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all",
+          !canSend && "opacity-75 bg-muted/20 border-border/40 cursor-not-allowed"
+        )}>
           <textarea
             id="workspace-message-input"
             ref={textareaRef}
             value={content}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder={placeholderText}
+            placeholder={activePlaceholder}
+            disabled={!canSend}
             rows={1}
-            className="w-full resize-none bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+            className="w-full resize-none bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
           />
 
           {/* Toolbar */}
@@ -349,6 +416,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
               <ToolbarButton
                 icon={<Bold className="size-3.5" />}
                 tooltip="Bold"
+                disabled={!canSend}
                 onClick={() => {
                   const textarea = textareaRef.current;
                   if (!textarea) return;
@@ -363,6 +431,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
               <ToolbarButton
                 icon={<Italic className="size-3.5" />}
                 tooltip="Italic"
+                disabled={!canSend}
                 onClick={() => {
                   const textarea = textareaRef.current;
                   if (!textarea) return;
@@ -377,6 +446,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
               <ToolbarButton
                 icon={<Code className="size-3.5" />}
                 tooltip="Code"
+                disabled={!canSend}
                 onClick={() => {
                   const textarea = textareaRef.current;
                   if (!textarea) return;
@@ -396,6 +466,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
               <ToolbarButton
                 icon={<AtSign className="size-3.5" />}
                 tooltip="Mention"
+                disabled={!canSend}
                 onClick={() => {
                   setContent(content + "@");
                   setShowMentions(true);
@@ -413,13 +484,15 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
                   <ToolbarButton
                     icon={<Smile className="size-3.5" />}
                     tooltip="Emoji"
+                    disabled={!canSend || !canEmoji}
                     onClick={() => {}}
                   />
                 }
               />
               <ToolbarButton
                 icon={<Paperclip className="size-3.5" />}
-                tooltip="Attach file"
+                tooltip="Attach file, photo or video"
+                disabled={!canSend || !canAttach}
                 onClick={() => fileInputRef.current?.click()}
               />
               <input
@@ -427,17 +500,18 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
                 type="file"
                 multiple
                 className="hidden"
+                disabled={!canSend || !canAttach}
                 onChange={handleFileSelect}
               />
               <GifPicker
                 onSelect={(url) => {
-                  // Insert GIF as standalone URL message
                   sendMessage(url);
                 }}
                 trigger={
                   <ToolbarButton
                     icon={<Image className="size-3.5" />}
                     tooltip="GIF"
+                    disabled={!canSend || !canGif}
                     onClick={() => {}}
                   />
                 }
@@ -447,6 +521,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
                 <ToolbarButton
                   icon={<BarChart3 className="size-3.5" />}
                   tooltip="Create poll"
+                  disabled={!canSend || !canPoll}
                   onClick={() => setPollDialogOpen(true)}
                 />
               )}
@@ -455,12 +530,16 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
             <div className="flex-1" />
 
             {/* Priority selector */}
-            <PrioritySelector priority={priority} onChange={setPriority} />
+            <PrioritySelector
+              priority={priority}
+              onChange={setPriority}
+              canMentionEveryone={canMentionEveryone}
+            />
 
             <Button
               size="sm"
               className="h-7 px-3 text-xs"
-              disabled={!content.trim()}
+              disabled={!canSend || !content.trim()}
               onClick={handleSubmit}
             >
               <Send className="mr-1 size-3" />
@@ -491,16 +570,24 @@ function ToolbarButton({
   icon,
   tooltip,
   onClick,
+  disabled = false,
 }: {
   icon: React.ReactNode;
   tooltip: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
-      onClick={onClick}
-      title={tooltip}
-      className="flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      title={disabled ? `${tooltip} (disabled by channel policy)` : tooltip}
+      className={cn(
+        "flex size-7 items-center justify-center rounded text-muted-foreground transition-colors",
+        disabled
+          ? "opacity-35 cursor-not-allowed pointer-events-none"
+          : "hover:bg-accent hover:text-foreground",
+      )}
     >
       {icon}
     </button>
@@ -546,11 +633,18 @@ const PRIORITY_OPTIONS: {
 function PrioritySelector({
   priority,
   onChange,
+  canMentionEveryone = true,
 }: {
   priority: MessagePriority;
   onChange: (p: MessagePriority) => void;
+  canMentionEveryone?: boolean;
 }) {
-  const current = PRIORITY_OPTIONS.find((o) => o.value === priority) ?? PRIORITY_OPTIONS[0];
+  const availableOptions = canMentionEveryone
+    ? PRIORITY_OPTIONS
+    : PRIORITY_OPTIONS.filter((o) => o.value !== "everyone");
+
+  const current =
+    availableOptions.find((o) => o.value === priority) ?? availableOptions[0];
 
   return (
     <DropdownMenu>
@@ -568,7 +662,7 @@ function PrioritySelector({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" side="top" className="w-36">
-        {PRIORITY_OPTIONS.map((opt) => (
+        {availableOptions.map((opt) => (
           <DropdownMenuItem
             key={opt.value}
             onClick={() => onChange(opt.value)}

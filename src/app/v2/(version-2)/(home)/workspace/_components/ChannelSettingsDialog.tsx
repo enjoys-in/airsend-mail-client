@@ -32,7 +32,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useChatStore } from "../_lib/chat-store";
-import type { Channel } from "../_lib/chat-types";
+import type {
+  Channel,
+  MemberRole,
+  ChannelPermissionKey,
+  ChannelPermissions,
+  ChannelRolePermissionOverrides,
+} from "../_lib/chat-types";
+import {
+  DEFAULT_CHANNEL_PERMISSIONS,
+  PERMISSION_METADATA,
+} from "../_lib/permissions";
 
 interface ChannelSettingsDialogProps {
   channel: Channel;
@@ -58,6 +68,51 @@ export default function ChannelSettingsDialog({
   );
   const [isLocked, setIsLocked] = useState(channel.isLocked);
   const [isArchived, setIsArchived] = useState(channel.isArchived || false);
+
+  // Discord & OpenFGA-inspired permissions state
+  const [permissions, setPermissions] = useState<Partial<ChannelPermissions>>(
+    channel.permissions || { ...DEFAULT_CHANNEL_PERMISSIONS }
+  );
+  const [rolePermissions, setRolePermissions] = useState<ChannelRolePermissionOverrides>(
+    channel.rolePermissions || {
+      owner: {
+        ...DEFAULT_CHANNEL_PERMISSIONS,
+        mention_everyone: true,
+        manage_channel: true,
+        manage_messages: true,
+        mute_participants: true,
+        manage_integrations: true,
+        view_audit_logs: true,
+      },
+      admin: {
+        ...DEFAULT_CHANNEL_PERMISSIONS,
+        mention_everyone: true,
+        manage_channel: true,
+        manage_messages: true,
+        mute_participants: true,
+        manage_integrations: true,
+        view_audit_logs: true,
+      },
+      moderator: {
+        ...DEFAULT_CHANNEL_PERMISSIONS,
+        mention_everyone: true,
+        manage_messages: true,
+        mute_participants: true,
+      },
+      member: { ...DEFAULT_CHANNEL_PERMISSIONS },
+      guest: {
+        ...DEFAULT_CHANNEL_PERMISSIONS,
+        send_media: false,
+        send_gifs: false,
+        create_polls: false,
+        start_calls: false,
+        share_screen: false,
+        video_camera: false,
+        create_channels: false,
+      },
+    }
+  );
+  const [selectedRole, setSelectedRole] = useState<MemberRole | "@everyone">("@everyone");
 
   // Webhooks state
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -86,6 +141,8 @@ export default function ChannelSettingsDialog({
       postingPermission,
       isLocked,
       isArchived,
+      permissions,
+      rolePermissions,
     });
     setIsSaving(false);
     onOpenChange(false);
@@ -261,18 +318,17 @@ export default function ChannelSettingsDialog({
               </div>
             </TabsContent>
 
-            {/* ── Tab: Permissions ── */}
+            {/* ── Tab: Permissions (Discord & OpenFGA-inspired) ── */}
             <TabsContent value="permissions" className="m-0 space-y-4">
+              {/* 1. Who can post messages */}
               <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-semibold text-foreground block">
-                      Who can post messages
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      Restrict sending to admins and moderators for broadcast channels
-                    </span>
-                  </div>
+                <div className="space-y-0.5">
+                  <span className="text-xs font-semibold text-foreground block">
+                    Who can post messages
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Control default messaging access for this channel
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
@@ -303,27 +359,315 @@ export default function ChannelSettingsDialog({
                   >
                     <Shield className="size-4 shrink-0" />
                     <div>
-                      <span className="block font-medium">Admins Only</span>
-                      <span className="text-[10px] opacity-80">Moderators and owners only</span>
+                      <span className="block font-medium">Admins & Moderators Only</span>
+                      <span className="text-[10px] opacity-80">Announcement / broadcast mode</span>
                     </div>
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border/60 bg-card p-4 flex items-center justify-between">
-                <div className="space-y-0.5 pr-4">
-                  <span className="text-xs font-semibold text-foreground block">
-                    Lock Channel
+              {/* 2. Channel Lock Switch with Warning */}
+              <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5 pr-4">
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Lock className="size-3.5 text-amber-500" />
+                      Lock Channel
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Temporarily freeze all conversations and activity in #{channel.name}
+                    </span>
+                  </div>
+                  <Switch
+                    checked={isLocked}
+                    onCheckedChange={setIsLocked}
+                    className="data-[state=checked]:bg-amber-500"
+                  />
+                </div>
+
+                {isLocked && (
+                  <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                    <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-500" />
+                    <div>
+                      <p className="font-semibold text-amber-600 dark:text-amber-400">Channel is Currently Locked</p>
+                      <p className="text-[11px] opacity-90 mt-0.5">
+                        Only team owners, admins, and moderators can send messages. Video meetings and voice calls are disabled while locked. Regular members and guests will see the locked warning banner.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Discord-Style OpenFGA Granular Role Permissions */}
+              <div className="rounded-xl border border-border/60 bg-card p-4 space-y-4">
+                <div className="space-y-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Shield className="size-3.5 text-primary" />
+                      OpenFGA Role & Permission Overrides
+                    </span>
+                    <Badge variant="outline" className="text-[10px] uppercase font-mono tracking-wider border-primary/30 text-primary">
+                      Discord-Style RBAC
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Define granular capabilities for roles. Permissions are evaluated against OpenFGA Zanzibar relationship tuples.
+                  </p>
+                </div>
+
+                {/* Role Selector Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-muted/40 rounded-lg border border-border/40">
+                  {(["@everyone", "admin", "moderator", "member", "guest"] as const).map((r) => {
+                    const isSelected = selectedRole === r;
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setSelectedRole(r)}
+                        className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${
+                          isSelected
+                            ? "bg-background text-foreground shadow-sm font-semibold border border-border/60"
+                            : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+                        }`}
+                      >
+                        {r === "@everyone" ? "@everyone (Default)" : `@${r}`}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Role Note */}
+                <div className="px-3 py-2 bg-muted/20 border border-border/40 rounded-lg text-[11px] text-muted-foreground flex items-center justify-between">
+                  <span>
+                    Configuring permissions for{" "}
+                    <strong className="text-foreground">
+                      {selectedRole === "@everyone" ? "@everyone" : `@${selectedRole}`}
+                    </strong>
+                    {selectedRole === "admin" && " (Admins inherit all permissions by default)"}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    Prevent any new messages, reactions, or edits in this channel
+                  <span className="font-mono text-[10px] text-primary/80">
+                    tuple: (channel, #{channel.name}, *, {selectedRole === "@everyone" ? "@everyone" : `role:${selectedRole}`})
                   </span>
                 </div>
-                <Switch
-                  checked={isLocked}
-                  onCheckedChange={setIsLocked}
-                  className="data-[state=checked]:bg-primary"
-                />
+
+                {/* Granular Permissions List */}
+                <div className="space-y-4 divide-y divide-border/40 pt-1">
+                  {/* Category: Text & Media */}
+                  <div className="space-y-2.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Text & Media Permissions
+                    </span>
+
+                    {(
+                      [
+                        "send_messages",
+                        "send_media",
+                        "send_gifs",
+                        "create_polls",
+                        "add_reactions",
+                        "use_emojis",
+                        "reply_threads",
+                        "embed_links",
+                        "read_history",
+                        "mention_everyone",
+                      ] as ChannelPermissionKey[]
+                    ).map((key) => {
+                      const meta = PERMISSION_METADATA[key];
+                      const currentValue =
+                        selectedRole === "@everyone"
+                          ? permissions[key] ?? DEFAULT_CHANNEL_PERMISSIONS[key]
+                          : rolePermissions[selectedRole]?.[key] ??
+                            permissions[key] ??
+                            DEFAULT_CHANNEL_PERMISSIONS[key];
+
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between py-1.5 hover:bg-muted/20 px-2 rounded-lg transition-colors"
+                        >
+                          <div className="space-y-0.5 pr-4">
+                            <span className="text-xs font-medium text-foreground block">
+                              {meta.name}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block">
+                              {meta.description}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={`text-[9px] font-mono ${
+                                currentValue
+                                  ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5"
+                                  : "text-red-500 border-red-500/30 bg-red-500/5"
+                              }`}
+                            >
+                              {currentValue ? "ALLOW" : "DENY"}
+                            </Badge>
+                            <Switch
+                              checked={currentValue}
+                              onCheckedChange={(val) => {
+                                if (selectedRole === "@everyone") {
+                                  setPermissions((prev) => ({ ...prev, [key]: val }));
+                                } else {
+                                  setRolePermissions((prev) => ({
+                                    ...prev,
+                                    [selectedRole]: {
+                                      ...(prev[selectedRole] || {}),
+                                      [key]: val,
+                                    },
+                                  }));
+                                }
+                              }}
+                              className="data-[state=checked]:bg-primary"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Category: Voice & Calls */}
+                  <div className="space-y-2.5 pt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Voice & Call Permissions
+                    </span>
+
+                    {(
+                      [
+                        "connect_voice",
+                        "speak_voice",
+                        "start_calls",
+                        "share_screen",
+                        "video_camera",
+                        "mute_participants",
+                      ] as ChannelPermissionKey[]
+                    ).map((key) => {
+                      const meta = PERMISSION_METADATA[key];
+                      const currentValue =
+                        selectedRole === "@everyone"
+                          ? permissions[key] ?? DEFAULT_CHANNEL_PERMISSIONS[key]
+                          : rolePermissions[selectedRole]?.[key] ??
+                            permissions[key] ??
+                            DEFAULT_CHANNEL_PERMISSIONS[key];
+
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between py-1.5 hover:bg-muted/20 px-2 rounded-lg transition-colors"
+                        >
+                          <div className="space-y-0.5 pr-4">
+                            <span className="text-xs font-medium text-foreground block">
+                              {meta.name}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block">
+                              {meta.description}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={`text-[9px] font-mono ${
+                                currentValue
+                                  ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5"
+                                  : "text-red-500 border-red-500/30 bg-red-500/5"
+                              }`}
+                            >
+                              {currentValue ? "ALLOW" : "DENY"}
+                            </Badge>
+                            <Switch
+                              checked={currentValue}
+                              onCheckedChange={(val) => {
+                                if (selectedRole === "@everyone") {
+                                  setPermissions((prev) => ({ ...prev, [key]: val }));
+                                } else {
+                                  setRolePermissions((prev) => ({
+                                    ...prev,
+                                    [selectedRole]: {
+                                      ...(prev[selectedRole] || {}),
+                                      [key]: val,
+                                    },
+                                  }));
+                                }
+                              }}
+                              className="data-[state=checked]:bg-primary"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Category: Moderation & Management */}
+                  <div className="space-y-2.5 pt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Channel Management & Moderation
+                    </span>
+
+                    {(
+                      [
+                        "manage_channel",
+                        "manage_messages",
+                        "create_channels",
+                        "manage_integrations",
+                        "view_audit_logs",
+                      ] as ChannelPermissionKey[]
+                    ).map((key) => {
+                      const meta = PERMISSION_METADATA[key];
+                      const currentValue =
+                        selectedRole === "@everyone"
+                          ? permissions[key] ?? DEFAULT_CHANNEL_PERMISSIONS[key]
+                          : rolePermissions[selectedRole]?.[key] ??
+                            permissions[key] ??
+                            DEFAULT_CHANNEL_PERMISSIONS[key];
+
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between py-1.5 hover:bg-muted/20 px-2 rounded-lg transition-colors"
+                        >
+                          <div className="space-y-0.5 pr-4">
+                            <span className="text-xs font-medium text-foreground block">
+                              {meta.name}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block">
+                              {meta.description}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={`text-[9px] font-mono ${
+                                currentValue
+                                  ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5"
+                                  : "text-red-500 border-red-500/30 bg-red-500/5"
+                              }`}
+                            >
+                              {currentValue ? "ALLOW" : "DENY"}
+                            </Badge>
+                            <Switch
+                              checked={currentValue}
+                              onCheckedChange={(val) => {
+                                if (selectedRole === "@everyone") {
+                                  setPermissions((prev) => ({ ...prev, [key]: val }));
+                                } else {
+                                  setRolePermissions((prev) => ({
+                                    ...prev,
+                                    [selectedRole]: {
+                                      ...(prev[selectedRole] || {}),
+                                      [key]: val,
+                                    },
+                                  }));
+                                }
+                              }}
+                              className="data-[state=checked]:bg-primary"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </TabsContent>
 

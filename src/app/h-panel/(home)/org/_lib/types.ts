@@ -58,14 +58,38 @@ export interface IMember {
     id: string
     name: string
     email: string
+    external_email?: string | null
+    account_origin?: "internal" | "external"
     role: string
     organization: string
     org_id: string
     domain: string
+    scopes?: string[]
     status: MemberStatus
     avatar_url: string | null
     joined_at: string
     last_active: string
+}
+
+// ─── Invitation ──────────────────────────────────────────────────
+export type InvitationStatus = "pending" | "accepted" | "expired" | "revoked"
+
+export interface IInvitation {
+    id: string
+    email: string
+    name: string | null
+    org_id: string
+    org_name: string
+    domain_id: string
+    domain_name: string
+    role: string
+    scopes: string[]
+    status: InvitationStatus
+    accepted_email?: string | null
+    expires_at: string
+    created_at: string
+    updated_at: string
+    accept_url?: string
 }
 
 // ─── Role ───────────────────────────────────────────────────────
@@ -97,6 +121,22 @@ export const PERMISSION_CATEGORIES = {
     roles: {
         label: "Roles",
         permissions: ["roles_view", "roles_manage"],
+    },
+    mail: {
+        label: "Mail & Messaging",
+        permissions: ["mail_read", "mail_send", "mail_delete", "mail_manage_folders"],
+    },
+    calendar: {
+        label: "Calendar & Events",
+        permissions: ["calendar_view", "calendar_create", "calendar_edit", "calendar_delete"],
+    },
+    tasks: {
+        label: "Tasks & Projects",
+        permissions: ["tasks_view", "tasks_create", "tasks_edit", "tasks_delete"],
+    },
+    workspace: {
+        label: "Workspace & Collaboration",
+        permissions: ["workspace_view", "workspace_manage", "workspace_invite"],
     },
     settings_general: {
         label: "Settings — General",

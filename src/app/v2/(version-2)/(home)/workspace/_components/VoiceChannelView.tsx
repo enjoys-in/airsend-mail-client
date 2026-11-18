@@ -11,10 +11,13 @@ import {
   Phone,
   Volume2,
   Loader2,
+  Lock,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useChatStore } from "../_lib/chat-store";
 import { useVoiceStore } from "../_lib/voice-store";
+import { canUserPerformInChannel, getUserRoleInTeam } from "../_lib/permissions";
 import type { VoiceParticipant } from "../_lib/chat-types";
 
 // ---------------------------------------------------------------------------
@@ -26,7 +29,7 @@ interface VoiceChannelViewProps {
 }
 
 export default function VoiceChannelView({ channelId }: VoiceChannelViewProps) {
-  const { channels, currentUserId } = useChatStore();
+  const { channels, currentUserId, members, activeTeamId } = useChatStore();
   const {
     channelId: activeVoiceChannel,
     participants,
@@ -43,8 +46,13 @@ export default function VoiceChannelView({ channelId }: VoiceChannelViewProps) {
   const channel = channels.find((c) => c.id === channelId);
   const isInChannel = activeVoiceChannel === channelId;
 
+  const userRole = getUserRoleInTeam(members, activeTeamId, currentUserId);
+  const canConnectVoice = canUserPerformInChannel(channel, currentUserId, userRole, "connect_voice");
+  const canSpeak = canUserPerformInChannel(channel, currentUserId, userRole, "speak_voice");
+  const isLocked = channel?.isLocked ?? false;
+
   const handleJoin = async () => {
-    if (!currentUserId) return;
+    if (!currentUserId || !canConnectVoice) return;
     try {
       await join(channelId, currentUserId);
     } catch {
@@ -59,16 +67,42 @@ export default function VoiceChannelView({ channelId }: VoiceChannelViewProps) {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-      {/* Channel name */}
-      <div className="flex items-center gap-2 text-lg font-semibold">
-        <Volume2 className="size-5 text-muted-foreground" />
-        {channel?.name ?? "Voice Channel"}
+      {/* Channel name & Status */}
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex items-center gap-2 text-lg font-semibold">
+          <Volume2 className="size-5 text-muted-foreground" />
+          <span>{channel?.name ?? "Voice Channel"}</span>
+          {isLocked && (
+            <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500 font-normal">
+              <Lock className="size-3" />
+              Locked
+            </span>
+          )}
+        </div>
+        {channel?.description && (
+          <p className="text-xs text-muted-foreground">{channel.description}</p>
+        )}
       </div>
+
+      {/* Warning Banners */}
+      {isLocked && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-600 dark:text-amber-400 max-w-md text-center">
+          <Lock className="size-4 shrink-0" />
+          <span>This voice channel is locked — only administrators and moderators can join or speak.</span>
+        </div>
+      )}
+
+      {!isLocked && !canConnectVoice && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-600 dark:text-red-400 max-w-md text-center">
+          <AlertTriangle className="size-4 shrink-0" />
+          <span>You do not have permission to connect to this voice channel.</span>
+        </div>
+      )}
 
       {/* Participants grid */}
       <div className="flex flex-wrap items-center justify-center gap-4 max-w-lg">
         {participants.length === 0 && !isInChannel && (
-          <p className="text-sm text-muted-foreground">No one is in this channel</p>
+          <p className="text-sm text-muted-foreground">No one is in this voice space right now</p>
         )}
         {participants.map((p) => (
           <VoiceParticipantCard
@@ -85,12 +119,14 @@ export default function VoiceChannelView({ channelId }: VoiceChannelViewProps) {
         {isInChannel ? (
           <>
             <Button
-              variant={isMuted ? "destructive" : "secondary"}
+              variant={!canSpeak || isMuted ? "destructive" : "secondary"}
               size="icon"
               className="size-12 rounded-full"
-              onClick={() => toggleMute(currentUserId)}
+              disabled={!canSpeak}
+              title={!canSpeak ? "Speaking restricted (Listen-only mode)" : isMuted ? "Unmute" : "Mute"}
+              onClick={() => canSpeak && toggleMute(currentUserId)}
             >
-              {isMuted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+              {!canSpeak || isMuted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
             </Button>
 
             <Button
@@ -120,14 +156,18 @@ export default function VoiceChannelView({ channelId }: VoiceChannelViewProps) {
             size="lg"
             className="gap-2 rounded-full px-6"
             onClick={handleJoin}
-            disabled={isConnecting}
+            disabled={isConnecting || !canConnectVoice}
           >
             {isConnecting ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <Phone className="size-4" />
             )}
-            {isConnecting ? "Connecting..." : "Join Voice"}
+            {isConnecting
+              ? "Connecting..."
+              : !canConnectVoice
+                ? "Locked / Access Denied"
+                : "Join Voice"}
           </Button>
         )}
       </div>

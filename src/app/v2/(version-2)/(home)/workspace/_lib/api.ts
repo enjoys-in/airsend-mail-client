@@ -131,10 +131,15 @@ export interface ServerChannel {
   team_id: string
   name: string
   description?: string
+  topic?: string
   type: string
   visibility: string
+  posting_permission?: string
   is_default: boolean
   is_locked: boolean
+  is_archived?: boolean
+  permissions?: any
+  role_permissions?: any
   created_by?: string
   created_at: string
   updated_at: string
@@ -377,11 +382,16 @@ export function toChannel(s: ServerChannel): Channel {
     teamId: s.team_id,
     name: s.name,
     description: s.description ?? "",
+    topic: s.topic,
     type: s.type as Channel["type"],
     visibility: s.visibility as Channel["visibility"],
+    postingPermission: (s.posting_permission as any) ?? "everyone",
     isPinned: false,
     isDefault: s.is_default,
     isLocked: s.is_locked ?? false,
+    isArchived: s.is_archived ?? false,
+    permissions: s.permissions,
+    rolePermissions: s.role_permissions,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
     unreadCount: s.unread_count ?? 0,
@@ -632,7 +642,7 @@ export const workspaceApi = {
     return apiFetch<ServerChannel>(`/api/v1/channels/${channelId}`, { email })
   },
 
-  createChannel: (teamId: string, data: { name: string; type: string; visibility: string; description?: string }, email: string) => {
+  createChannel: (teamId: string, data: { name: string; type: string; visibility: string; description?: string; is_locked?: boolean; permissions?: any }, email: string) => {
     if (!isValidUUID(teamId)) return Promise.reject(new Error("Invalid team UUID"))
     return apiFetch<ServerChannel>(`/api/v1/teams/${teamId}/channels`, { method: "POST", body: JSON.stringify(data), email })
   },

@@ -33,6 +33,7 @@ import {
   Share2,
 } from "lucide-react";
 import { useChatStore } from "../_lib/chat-store";
+import { canUserPerformInChannel, getUserRoleInTeam } from "../_lib/permissions";
 import { toast } from "sonner";
 import type { ChatMessage, Channel, DirectMessage } from "../_lib/chat-types";
 
@@ -57,9 +58,24 @@ export function MessageContextMenu({ message, children }: MessageContextMenuProp
     unpinMessage,
     openThread,
     addReaction,
+    channels,
+    activeChannelId,
+    activeTeamId,
+    members,
   } = useChatStore();
 
+  const channel = channels.find(
+    (c) => c.id === message.channelId || c.id === activeChannelId
+  );
+  const userRole = getUserRoleInTeam(members, activeTeamId, currentUserId);
+
+  const canAddReactions = canUserPerformInChannel(channel, currentUserId, userRole, "add_reactions");
+  const canReplyThreads = canUserPerformInChannel(channel, currentUserId, userRole, "reply_threads");
+  const canManageMessages = canUserPerformInChannel(channel, currentUserId, userRole, "manage_messages");
+
   const isMine = message.authorId === currentUserId;
+  const canDelete = isMine || canManageMessages;
+  const canPin = isMine || canManageMessages;
 
   const handleCopyText = () => {
     navigator.clipboard.writeText(message.content);
@@ -83,42 +99,48 @@ export function MessageContextMenu({ message, children }: MessageContextMenuProp
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="w-60 rounded-xl shadow-xl border-border/80 bg-popover/95 backdrop-blur-md p-1.5 animate-in fade-in zoom-in-95 duration-100">
         {/* Quick Reactions Bar */}
-        <div className="flex items-center justify-between gap-1 px-1.5 py-1 mb-1 rounded-lg bg-muted/50 border border-border/50">
-          {QUICK_REACTIONS.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              onClick={() => {
-                addReaction(message.id, emoji);
-                toast.success(`Reacted with ${emoji}`);
-              }}
-              className="flex size-6.5 items-center justify-center rounded-md text-sm hover:bg-background hover:scale-115 active:scale-95 transition-all"
-              title={`React with ${emoji}`}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
+        {canAddReactions && (
+          <div className="flex items-center justify-between gap-1 px-1.5 py-1 mb-1 rounded-lg bg-muted/50 border border-border/50">
+            {QUICK_REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => {
+                  addReaction(message.id, emoji);
+                  toast.success(`Reacted with ${emoji}`);
+                }}
+                className="flex size-6.5 items-center justify-center rounded-md text-sm hover:bg-background hover:scale-115 active:scale-95 transition-all"
+                title={`React with ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Reply in thread */}
-        <ContextMenuItem
-          onClick={() => openThread(message.id)}
-          className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-        >
-          <MessageSquare className="size-3.5 text-muted-foreground" />
-          <span>Reply in Thread</span>
-          <ContextMenuShortcut>T</ContextMenuShortcut>
-        </ContextMenuItem>
+        {canReplyThreads && (
+          <ContextMenuItem
+            onClick={() => openThread(message.id)}
+            className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
+          >
+            <MessageSquare className="size-3.5 text-muted-foreground" />
+            <span>Reply in Thread</span>
+            <ContextMenuShortcut>T</ContextMenuShortcut>
+          </ContextMenuItem>
+        )}
 
         {/* Quote / reply in channel */}
-        <ContextMenuItem
-          onClick={() => setReplyingTo(message)}
-          className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-        >
-          <Reply className="size-3.5 text-muted-foreground" />
-          <span>Reply in Channel</span>
-          <ContextMenuShortcut>R</ContextMenuShortcut>
-        </ContextMenuItem>
+        {canReplyThreads && (
+          <ContextMenuItem
+            onClick={() => setReplyingTo(message)}
+            className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
+          >
+            <Reply className="size-3.5 text-muted-foreground" />
+            <span>Reply in Channel</span>
+            <ContextMenuShortcut>R</ContextMenuShortcut>
+          </ContextMenuItem>
+        )}
 
         <ContextMenuSeparator className="my-1 bg-border/60" />
 
@@ -141,35 +163,36 @@ export function MessageContextMenu({ message, children }: MessageContextMenuProp
         </ContextMenuItem>
 
         {/* Pin / unpin */}
-        {message.isPinned ? (
-          <ContextMenuItem
-            onClick={() => {
-              unpinMessage(message.id);
-              toast.success("Message unpinned");
-            }}
-            className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-          >
-            <PinOff className="size-3.5 text-muted-foreground" />
-            <span>Unpin Message</span>
-          </ContextMenuItem>
-        ) : (
-          <ContextMenuItem
-            onClick={() => {
-              pinMessage(message.id, true);
-              toast.success("Message pinned");
-            }}
-            className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
-          >
-            <Pin className="size-3.5 text-muted-foreground" />
-            <span>Pin to Channel</span>
-          </ContextMenuItem>
+        {canPin && (
+          message.isPinned ? (
+            <ContextMenuItem
+              onClick={() => {
+                unpinMessage(message.id);
+                toast.success("Message unpinned");
+              }}
+              className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
+            >
+              <PinOff className="size-3.5 text-muted-foreground" />
+              <span>Unpin Message</span>
+            </ContextMenuItem>
+          ) : (
+            <ContextMenuItem
+              onClick={() => {
+                pinMessage(message.id, true);
+                toast.success("Message pinned");
+              }}
+              className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
+            >
+              <Pin className="size-3.5 text-muted-foreground" />
+              <span>Pin to Channel</span>
+            </ContextMenuItem>
+          )
         )}
 
-        {/* Edit & Delete for own messages */}
+        {/* Edit for own messages */}
         {isMine && (
           <>
             <ContextMenuSeparator className="my-1 bg-border/60" />
-
             <ContextMenuItem
               onClick={() => setEditingMessage(message.id)}
               className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
@@ -178,7 +201,13 @@ export function MessageContextMenu({ message, children }: MessageContextMenuProp
               <span>Edit Message</span>
               <ContextMenuShortcut>E</ContextMenuShortcut>
             </ContextMenuItem>
+          </>
+        )}
 
+        {/* Delete for own or moderated messages */}
+        {canDelete && (
+          <>
+            {!isMine && <ContextMenuSeparator className="my-1 bg-border/60" />}
             <ContextMenuItem
               onClick={handleDelete}
               className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg text-destructive focus:text-destructive focus:bg-destructive/10"

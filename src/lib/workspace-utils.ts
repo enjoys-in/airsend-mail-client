@@ -7,9 +7,9 @@ import type { ScopeFeature, ScopePermission, WorkspaceInfo } from "@/lib/types/w
  * - 'rw': requires 'rw'
  */
 export function hasAccess(
-    workspace: Pick<WorkspaceInfo, "scopes"> | null | undefined,
+    workspace: { scopes?: string[] } | null | undefined,
     feature: ScopeFeature,
-    level: ScopePermission
+    level: ScopePermission = "ro"
 ): boolean {
     if (!workspace?.scopes) return false
     const scope = workspace.scopes.find(s => s.startsWith(feature + ":"))

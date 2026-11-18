@@ -59,6 +59,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useChatStore } from "../_lib/chat-store";
+import { getDMPartner, getUserRoleInTeam } from "../_lib/permissions";
 import type { Channel } from "../_lib/chat-types";
 import TeamSettingsDialog from "./TeamSettingsDialog";
 import ChannelCreateEditDialog from "./ChannelCreateEditDialog";
@@ -114,6 +115,8 @@ export default function WorkspaceSidebar() {
 
   const activeTeam = teams.find((t:any) => t.id === activeTeamId);
   const channels = activeTeamId ? getTeamChannels(activeTeamId) : [];
+  const userRole = getUserRoleInTeam(members, activeTeamId, currentUserId);
+  const canCreateChannels = userRole !== "guest";
 
   const textChannels = channels.filter(
     (c:any) => c.type === "text" || c.type === "announcement",
@@ -332,10 +335,14 @@ export default function WorkspaceSidebar() {
                     title="Channels"
                     isOpen={textOpen}
                     onToggle={() => setTextOpen(!textOpen)}
-                    onAdd={() => {
-                      setEditingChannel(null);
-                      setChannelDialogOpen(true);
-                    }}
+                    onAdd={
+                      canCreateChannels
+                        ? () => {
+                            setEditingChannel(null);
+                            setChannelDialogOpen(true);
+                          }
+                        : undefined
+                    }
                   >
                     {isLoadingChannels && filtered.length === 0 ? (
                       <div className="space-y-1 px-2">
@@ -398,10 +405,7 @@ export default function WorkspaceSidebar() {
                     onToggle={() => setDmOpen(!dmOpen)}
                   >
                     {directMessages.map((dm) => {
-                      const other = dm.participants.find(
-                        (p) => p.userId !== currentUserId,
-                      );
-                      if (!other) return null;
+                      const other = getDMPartner(dm, currentUserId);
                       return (
                         <Link
                           key={dm.id}
@@ -421,7 +425,7 @@ export default function WorkspaceSidebar() {
                             />
                           </span>
                           <span className="truncate text-xs">
-                            {other.displayName}
+                            {other.displayName || other.username}
                           </span>
                           {dm.unreadCount > 0 && (
                             <span className="ml-auto flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
 import { useVoiceStore } from "../_lib/voice-store";
+import { getDMPartner } from "../_lib/permissions";
 import type { Channel } from "../_lib/chat-types";
 import type { Team } from "../_lib/chat-types";
 import TeamSettingsDialog from "./TeamSettingsDialog";
@@ -219,10 +220,7 @@ export default function ChannelSidebar() {
               onToggle={() => setDmOpen(!dmOpen)}
             >
               {directMessages.map((dm: any) => {
-                const other = dm.participants.find(
-                  (p: any) => p.userId !== currentUserId,
-                );
-                if (!other) return null;
+                const other = getDMPartner(dm, currentUserId);
                 return (
                   <button
                     key={dm.id}

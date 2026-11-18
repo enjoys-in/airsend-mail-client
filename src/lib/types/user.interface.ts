@@ -17,8 +17,12 @@ export interface IUser {
     tenant_name: string;
     name: string;
     role: ROLE_TYPE;
+    org_role?: string | null;
+    permissions?: string[];
+    external_email?: string | null;
+    account_origin?: string | null;
     hasOrgs: string | null;
-    workspace: UserWorkspace | null;
+    workspace?: UserWorkspace | null;
 }
 export enum ROLE {
     USER = "USER",

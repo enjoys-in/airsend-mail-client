@@ -16,6 +16,8 @@ export interface Team {
   updatedAt: string;
 }
 
+export type ChannelPostingPermission = "everyone" | "admins_only";
+
 export interface Channel {
   id: string;
   teamId: string;
@@ -24,15 +26,79 @@ export interface Channel {
   topic?: string;
   type: "text" | "voice" | "announcement";
   visibility: "public" | "private";
-  postingPermission?: "everyone" | "admins_only";
+  postingPermission?: ChannelPostingPermission;
   isPinned: boolean;
   isDefault: boolean;
   isLocked: boolean;
   isArchived?: boolean;
+  permissions?: Partial<ChannelPermissions>;
+  rolePermissions?: ChannelRolePermissionOverrides;
   createdAt: string;
   updatedAt: string;
   unreadCount: number;
   lastMessageAt?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Discord & OpenFGA-inspired Granular Channel Permissions
+// ---------------------------------------------------------------------------
+
+export type ChannelPermissionKey =
+  | "send_messages"
+  | "send_media"
+  | "send_gifs"
+  | "create_polls"
+  | "add_reactions"
+  | "use_emojis"
+  | "reply_threads"
+  | "mention_everyone"
+  | "embed_links"
+  | "read_history"
+  | "connect_voice"
+  | "speak_voice"
+  | "start_calls"
+  | "share_screen"
+  | "video_camera"
+  | "mute_participants"
+  | "create_channels"
+  | "manage_channel"
+  | "manage_messages"
+  | "manage_integrations"
+  | "view_audit_logs";
+
+export interface ChannelPermissions {
+  send_messages: boolean;
+  send_media: boolean;
+  send_gifs: boolean;
+  create_polls: boolean;
+  add_reactions: boolean;
+  use_emojis: boolean;
+  reply_threads: boolean;
+  mention_everyone: boolean;
+  embed_links: boolean;
+  read_history: boolean;
+  connect_voice: boolean;
+  speak_voice: boolean;
+  start_calls: boolean;
+  share_screen: boolean;
+  video_camera: boolean;
+  mute_participants: boolean;
+  create_channels: boolean;
+  manage_channel: boolean;
+  manage_messages: boolean;
+  manage_integrations: boolean;
+  view_audit_logs: boolean;
+}
+
+export type ChannelRolePermissionOverrides = Partial<Record<MemberRole, Partial<ChannelPermissions>>>;
+
+export interface OpenFGATuple {
+  id?: string;
+  objectType: "team" | "channel";
+  objectId: string;
+  relation: string;
+  userEmail: string;
+  createdAt?: string;
 }
 
 export interface TeamMember {

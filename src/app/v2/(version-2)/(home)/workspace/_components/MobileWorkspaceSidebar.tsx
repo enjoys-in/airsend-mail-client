@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
+import { getDMPartner } from "../_lib/permissions";
 import type { Channel } from "../_lib/chat-types";
 import TeamSettingsDialog from "./TeamSettingsDialog";
 
@@ -220,10 +221,7 @@ export default function MobileWorkspaceSidebar({
                 onToggle={() => setDmOpen(!dmOpen)}
               >
                 {directMessages.map((dm) => {
-                  const other = dm.participants.find(
-                    (p) => p.userId !== currentUserId,
-                  );
-                  if (!other) return null;
+                  const other = getDMPartner(dm, currentUserId);
                   return (
                     <Link
                       key={dm.id}

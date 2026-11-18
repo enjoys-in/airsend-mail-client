@@ -301,12 +301,37 @@ export const MenuList = {
             items: [],
         },
         {
-            title: "My Organizations",
+            title: "Organizations",
             url: "/h-panel/org",
             icon: RiOrganizationChart as any,
             isActive: false,
             enabled: true,
-            items: [],
+            items: [
+                {
+                    title: "Overview",
+                    url: "/h-panel/org",
+                },
+                {
+                    title: "Members & Invites",
+                    url: "/h-panel/org/members",
+                },
+                {
+                    title: "Roles & Permissions",
+                    url: "/h-panel/org/roles",
+                },
+                {
+                    title: "Org Domains",
+                    url: "/h-panel/org/domains",
+                },
+                {
+                    title: "Domain History",
+                    url: "/h-panel/org/domain-history",
+                },
+                {
+                    title: "Audit Logs",
+                    url: "/h-panel/org/logs",
+                },
+            ],
         },
         {
             title: "Workspace",

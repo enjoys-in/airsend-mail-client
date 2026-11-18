@@ -39,6 +39,7 @@ import { PollCard } from "./PollCard";
 import AnnouncementBanner from "./AnnouncementBanner";
 import ChannelSettingsDialog from "./ChannelSettingsDialog";
 import { MessageContextMenu, WorkspaceContextMenu } from "./MessageContextMenu";
+import { canUserPerformInChannel, getUserRoleInTeam, getDMPartner } from "../_lib/permissions";
 import type { ChatMessage, TeamMember } from "../_lib/chat-types";
 
 // ---------------------------------------------------------------------------
@@ -137,6 +138,12 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
   const channel = useChatStore((s) =>
     effectiveChannelId ? s.channels.find((c: any) => c.id === effectiveChannelId) : null,
   );
+
+  const userRole = getUserRoleInTeam(members, activeTeamId, currentUserId);
+  const canStartCalls =
+    !channel?.isLocked &&
+    canUserPerformInChannel(channel, currentUserId, userRole, "start_calls");
+  const canAddReactions = canUserPerformInChannel(channel, currentUserId, userRole, "add_reactions");
 
   const dm = useChatStore((s) =>
     effectiveDmId ? s.directMessages.find((d: any) => d.id === effectiveDmId) : null,
@@ -251,7 +258,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
 
   // DM view
   if (dm && !channel) {
-    const other = dm.participants.find((p:any) => p.userId !== currentUserId);
+    const other = getDMPartner(dm, currentUserId);
     return (
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/40 px-4">
@@ -388,16 +395,18 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
           )}
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs px-2 gap-1 text-blue-600 border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-            onClick={() => handleStartChannelMeeting(channel.name, channel.id)}
-            title="Start channel meeting"
-          >
-            <Video className="size-3" />
-            <span className="hidden sm:inline">Meet</span>
-          </Button>
+          {canStartCalls && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs px-2 gap-1 text-blue-600 border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+              onClick={() => handleStartChannelMeeting(channel.name, channel.id)}
+              title="Start channel meeting"
+            >
+              <Video className="size-3" />
+              <span className="hidden sm:inline">Meet</span>
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -557,6 +566,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
                       isCompact={isCompact}
                       members={members}
                       currentUserId={currentUserId}
+                      canAddReactions={canAddReactions}
                       onOpenThread={openThread}
                       onReact={addReaction}
                       onUnreact={removeReaction}
@@ -582,6 +592,7 @@ function MessageBubble({
   isCompact,
   members,
   currentUserId,
+  canAddReactions = true,
   onOpenThread,
   onReact,
   onUnreact,
@@ -590,6 +601,7 @@ function MessageBubble({
   isCompact: boolean;
   members: TeamMember[];
   currentUserId: string;
+  canAddReactions?: boolean;
   onOpenThread: (id: string) => void;
   onReact: (msgId: string, emoji: string) => void;
   onUnreact: (msgId: string, emoji: string) => void;
@@ -775,16 +787,21 @@ function MessageBubble({
                 return (
                   <button
                     key={r.emoji}
-                    onClick={() =>
-                      isMine
-                        ? onUnreact(message.id, r.emoji)
-                        : onReact(message.id, r.emoji)
-                    }
+                    onClick={() => {
+                      if (isMine) {
+                        onUnreact(message.id, r.emoji);
+                      } else if (canAddReactions) {
+                        onReact(message.id, r.emoji);
+                      }
+                    }}
+                    disabled={!isMine && !canAddReactions}
                     className={cn(
                       "flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors",
                       isMine
                         ? "border-primary/40 bg-primary/10 text-primary"
-                        : "border-border/60 bg-accent/30 hover:border-primary/30",
+                        : canAddReactions
+                          ? "border-border/60 bg-accent/30 hover:border-primary/30"
+                          : "border-border/30 bg-accent/10 opacity-70 cursor-not-allowed",
                     )}
                   >
                     {r.emoji}

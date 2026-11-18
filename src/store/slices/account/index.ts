@@ -21,6 +21,10 @@ export const fetchCurrentUser = createAsyncThunk<IUser>(
         tenant_name: raw.tenant_name,
         name: raw.name,
         role: raw.role,
+        org_role: raw.org_role ?? null,
+        permissions: raw.permissions ?? [],
+        external_email: raw.external_email ?? null,
+        account_origin: raw.account_origin ?? null,
         hasOrgs: raw.hasOrgs ?? null,
         workspace: raw.workspace ?? null,
       } as IUser;

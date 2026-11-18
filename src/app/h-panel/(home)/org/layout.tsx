@@ -26,8 +26,8 @@ const navigationItems = [
         items: [
             { title: "All Organizations", url: "/h-panel/org", icon: Building2 },
             { title: "Create Organization", url: "/h-panel/org/create", icon: Plus },
-            { title: "Members", url: "/h-panel/org/members", icon: Users },
-            { title: "Add Member", url: "/h-panel/org/members/add", icon: Plus },
+            { title: "Members & Invites", url: "/h-panel/org/members", icon: Users },
+            { title: "Invite Member", url: "/h-panel/org/members/add", icon: Plus },
         ],
     },
     {

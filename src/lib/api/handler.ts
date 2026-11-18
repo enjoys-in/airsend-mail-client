@@ -64,6 +64,9 @@ export class API {
     static handleGetAllDomains(url: string = "") {
         return instance.get(adminRoutes("/domains" + url))
     }
+    static handleGetAllDomain(url: string = "") {
+        return this.handleGetAllDomains(url)
+    }
     static addNewDomain(data: any) {
         return instance.post(adminRoutes("/domain"), data)
     }
@@ -222,6 +225,26 @@ export class API {
     }
     static removeMember(id: string) {
         return instance.delete(adminRoutes(`/member/${id}`))
+    }
+
+    // INVITATIONS
+    static getInvitations(query: string = "") {
+        return instance.get(adminRoutes(`/invitations${query}`))
+    }
+    static createInvitation(data: { email: string; name?: string; org_id: string | number; domain_id: string; role?: string; scopes?: string[] }) {
+        return instance.post(adminRoutes("/invitations"), data)
+    }
+    static resendInvitation(id: string) {
+        return instance.post(adminRoutes(`/invitation/${id}/resend`))
+    }
+    static revokeInvitation(id: string) {
+        return instance.delete(adminRoutes(`/invitation/${id}`))
+    }
+    static verifyInvitation(token: string) {
+        return instance.get(`/api/v1/invite/verify/${token}`)
+    }
+    static acceptInvitation(data: { token: string; password: string; name?: string }) {
+        return instance.post("/api/v1/invite/accept", data)
     }
 
     // ROLES

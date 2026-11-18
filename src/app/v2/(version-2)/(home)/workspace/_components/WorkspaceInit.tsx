@@ -18,6 +18,7 @@ export default function WorkspaceInit() {
   const {
     activeTeamId,
     activeChannelId,
+    setCurrentUserId,
     fetchTeams,
     fetchChannels,
     fetchMembers,
@@ -44,10 +45,18 @@ export default function WorkspaceInit() {
   // WebSocket connection for real-time
   useWorkspaceWS(email || undefined);
 
+  // Keep currentUserId synchronized with logged-in account
+  useEffect(() => {
+    if (email) {
+      setCurrentUserId(email);
+    }
+  }, [email, setCurrentUserId]);
+
   // Initial fetch: teams + DMs + notifications + calls + meetings
   useEffect(() => {
     if (!email || didInit.current) return;
     didInit.current = true;
+    setCurrentUserId(email);
 
     fetchTeams(email).catch(() => {});
     fetchDMs(email).catch(() => {});

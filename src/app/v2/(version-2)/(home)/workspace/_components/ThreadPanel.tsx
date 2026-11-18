@@ -7,6 +7,8 @@ import {
   Send,
   MessageSquare,
   Copy,
+  Lock,
+  AlertTriangle,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,7 @@ import {
 } from "@/components/ui/context-menu";
 import { toast } from "sonner";
 import { useChatStore } from "../_lib/chat-store";
+import { canUserPerformInChannel, getUserRoleInTeam } from "../_lib/permissions";
 
 // ---------------------------------------------------------------------------
 // ThreadPanel — right-side panel for thread replies (Slack-style)
@@ -32,6 +35,10 @@ export default function ThreadPanel() {
     closeThread,
     sendThreadReply,
     currentUserId,
+    channels,
+    activeChannelId,
+    activeTeamId,
+    members,
   } = useChatStore();
 
   const [content, setContent] = useState("");
@@ -43,12 +50,19 @@ export default function ThreadPanel() {
     (r) => r.threadId === activeThreadMessageId,
   );
 
+  const channel = channels.find(
+    (c) => c.id === parentMsg?.channelId || c.id === activeChannelId
+  );
+  const userRole = getUserRoleInTeam(members, activeTeamId, currentUserId);
+  const canReplyThreads = canUserPerformInChannel(channel, currentUserId, userRole, "reply_threads");
+  const isLocked = channel?.isLocked ?? false;
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [replies.length]);
 
   const handleSend = () => {
-    if (!content.trim()) return;
+    if (!content.trim() || !canReplyThreads) return;
     sendThreadReply(content);
     setContent("");
     textareaRef.current?.focus();
@@ -128,28 +142,39 @@ export default function ThreadPanel() {
 
       {/* Reply input */}
       <div className="shrink-0 border-t border-border/40 p-3">
-        <div className="rounded-lg border border-border/60 bg-accent/20 focus-within:border-primary/40 transition-all">
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Reply..."
-            rows={2}
-            className="w-full resize-none bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
-          />
-          <div className="flex justify-end px-2 pb-1.5">
-            <Button
-              size="sm"
-              className="h-7 px-3 text-xs"
-              disabled={!content.trim()}
-              onClick={handleSend}
-            >
-              <Send className="mr-1 size-3" />
-              Reply
-            </Button>
+        {canReplyThreads ? (
+          <div className="rounded-lg border border-border/60 bg-accent/20 focus-within:border-primary/40 transition-all">
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Reply..."
+              rows={2}
+              className="w-full resize-none bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+            />
+            <div className="flex justify-end px-2 pb-1.5">
+              <Button
+                size="sm"
+                className="h-7 px-3 text-xs"
+                disabled={!content.trim()}
+                onClick={handleSend}
+              >
+                <Send className="mr-1 size-3" />
+                Reply
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+            <Lock className="size-3.5 shrink-0" />
+            <span>
+              {isLocked
+                ? "This channel is locked — only admins and moderators can reply in threads."
+                : "You do not have permission to reply in threads in this channel."}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import type {
   Team,
   Channel,
   TeamMember,
+  MemberRole,
   ChatMessage,
   DirectMessage,
   ChatNotification,
@@ -130,6 +131,7 @@ interface ChatStore {
 
   // Derived / computed helpers
   currentUserId: string;
+  setCurrentUserId: (id: string) => void;
 
   // Actions — Teams
   setActiveTeam: (teamId: string) => void;
@@ -215,6 +217,8 @@ interface ChatStore {
   deleteChannel: (channelId: string) => Promise<void>;
   updateTeam: (teamId: string, updates: Partial<Team>) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
+  updateMemberRole: (teamId: string, memberEmail: string, role: MemberRole, actorEmail?: string) => Promise<boolean>;
+  removeMember: (teamId: string, memberEmail: string, actorEmail?: string) => Promise<boolean>;
 
   isLoading: boolean;
   isLoadingTeams: boolean;
@@ -295,6 +299,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   apiError: null,
 
   currentUserId: "",
+  setCurrentUserId: (id) => set({ currentUserId: id }),
 
   // -----------------------------------------------------------------------
   // Team actions
@@ -1042,6 +1047,51 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     } catch {
       // Keep existing members on failure
     }
+  },
+
+  updateMemberRole: async (teamId, memberEmail, role, actorEmail) => {
+    set((s) => ({
+      members: s.members.map((m) =>
+        m.teamId === teamId &&
+        (m.email?.toLowerCase() === memberEmail.toLowerCase() || m.userId === memberEmail)
+          ? { ...m, role }
+          : m
+      ),
+    }));
+
+    if (isValidUUID(teamId) && actorEmail) {
+      try {
+        await workspaceApi.changeMemberRole(teamId, memberEmail, role, actorEmail);
+        return true;
+      } catch (err) {
+        console.error("Failed to update member role on server", err);
+        return false;
+      }
+    }
+    return true;
+  },
+
+  removeMember: async (teamId, memberEmail, actorEmail) => {
+    set((s) => ({
+      members: s.members.filter(
+        (m) =>
+          !(
+            m.teamId === teamId &&
+            (m.email?.toLowerCase() === memberEmail.toLowerCase() || m.userId === memberEmail)
+          )
+      ),
+    }));
+
+    if (isValidUUID(teamId) && actorEmail) {
+      try {
+        await workspaceApi.removeMember(teamId, memberEmail, actorEmail);
+        return true;
+      } catch (err) {
+        console.error("Failed to remove member on server", err);
+        return false;
+      }
+    }
+    return true;
   },
 
   fetchMessages: async (channelId, email) => {
