@@ -61,13 +61,13 @@ import { useToast } from "@/components/ui/use-toast"
 import { API } from "@/lib/api/handler"
 import {
     SCOPE_FEATURES,
-    SCOPE_PERMISSIONS,
     type Scope,
     type ScopeFeature,
     type ScopePermission,
 } from "@/lib/types/workspace.interface"
 import { buildScope } from "@/lib/workspace-utils"
 import type { IMember } from "../_lib/types"
+import { ScopeSelectorGrid, type PermissionLevel } from "./scope-selector-grid"
 
 interface MembersTableProps {
     data: IMember[]
@@ -131,10 +131,29 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
         setTempScopes(member.scopes || [])
     }
 
-    const handleScopeChange = (feature: ScopeFeature, permission: ScopePermission) => {
+    const scopeMap = React.useMemo(() => {
+        const map: Record<ScopeFeature, PermissionLevel> = {
+            mail: "none",
+            calendar: "none",
+            tasks: "none",
+            workspace: "none",
+            files: "none",
+            contacts: "none",
+        }
+        SCOPE_FEATURES.forEach((feat) => {
+            const found = tempScopes.find((s) => s.startsWith(feat + ":"))
+            if (found) {
+                map[feat] = found.split(":")[1] as PermissionLevel
+            }
+        })
+        return map
+    }, [tempScopes])
+
+    const handleScopeChange = (feature: ScopeFeature, permission: PermissionLevel) => {
         setTempScopes((prev) => {
             const filtered = prev.filter((s) => !s.startsWith(feature + ":"))
-            return [...filtered, buildScope(feature, permission)]
+            if (permission === "none") return filtered
+            return [...filtered, buildScope(feature, permission as ScopePermission)]
         })
     }
 
@@ -374,56 +393,24 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
                 open={!!editingScopesMember}
                 onOpenChange={(open) => !open && setEditingScopesMember(null)}
             >
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="max-w-3xl">
                     <DialogHeader>
-                        <DialogTitle>Edit Permissions & Scopes</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Sliders className="w-5 h-5 text-primary" />
+                            Edit Permissions & Scopes
+                        </DialogTitle>
                         <DialogDescription>
                             Configure feature access levels for{" "}
                             <strong>{editingScopesMember?.name || editingScopesMember?.email}</strong>.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-3 py-3">
-                        {SCOPE_FEATURES.map((feature) => {
-                            const cur = tempScopes.find((s) => s.startsWith(feature + ":"))
-                            const perm = cur ? cur.split(":")[1] : "rw"
-
-                            return (
-                                <div
-                                    key={feature}
-                                    className="flex items-center justify-between p-2 rounded-md bg-neutral-50 dark:bg-neutral-900 border"
-                                >
-                                    <div>
-                                        <div className="text-sm font-medium capitalize">{feature}</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {feature === "mail" && "Send, receive, and organize inbox"}
-                                            {feature === "calendar" && "View and create meetings & invites"}
-                                            {feature === "tasks" && "Manage project tasks and assignments"}
-                                            {feature === "workspace" && "Team channel messaging & shared files"}
-                                            {feature === "files" && "Document drive and attachments"}
-                                            {feature === "contacts" && "Organization address book access"}
-                                        </div>
-                                    </div>
-                                    <Select
-                                        value={perm}
-                                        onValueChange={(v) =>
-                                            handleScopeChange(feature, v as ScopePermission)
-                                        }
-                                    >
-                                        <SelectTrigger className="w-[120px] h-8 text-xs">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {SCOPE_PERMISSIONS.map((p) => (
-                                                <SelectItem key={p.value} value={p.value} className="text-xs">
-                                                    {p.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )
-                        })}
+                    <div className="py-2">
+                        <ScopeSelectorGrid
+                            scopes={scopeMap}
+                            onChange={handleScopeChange}
+                            disabled={savingScopes}
+                        />
                     </div>
 
                     <DialogFooter>

@@ -5,10 +5,6 @@ export type Scope = `${ScopeFeature}:${ScopePermission}`
 export const DEFAULT_SCOPES: Scope[] = [
     "mail:rw",
     "calendar:rw",
-    "tasks:rw",
-    "workspace:rw",
-    "files:rw",
-    "contacts:ro",
 ]
 
 export const SCOPE_FEATURES: ScopeFeature[] = ["mail", "calendar", "tasks", "workspace", "files", "contacts"]

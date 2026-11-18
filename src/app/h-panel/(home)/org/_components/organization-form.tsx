@@ -45,6 +45,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { API } from "@/lib/api/handler"
 import { DOMAIN_STATUS } from "@/lib/types/mail.interface"
 import type { IOrganization } from "../_lib/types"
+import { MailboxFormulaPreview } from "./mailbox-formula-preview"
 
 function slugify(name: string): string {
     return (name || "org")
