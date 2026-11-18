@@ -69,7 +69,7 @@ export function MobileSettingsNav() {
                                 Account
                             </SelectLabel>
                             {accountItems.map((item) => (
-                                <SelectItem key={item.key} value={item.key} className="text-xs sm:text-sm">
+                                <SelectItem key={item.key} value={item.key} textValue={item.label} className="text-xs sm:text-sm">
                                     <div className="flex items-center gap-2">
                                         <span className="text-muted-foreground">{item.icon}</span>
                                         <span>{item.label}</span>
@@ -82,7 +82,7 @@ export function MobileSettingsNav() {
                                 Airsend Mail
                             </SelectLabel>
                             {mailItems.map((item) => (
-                                <SelectItem key={item.key} value={item.key} className="text-xs sm:text-sm">
+                                <SelectItem key={item.key} value={item.key} textValue={item.label} className="text-xs sm:text-sm">
                                     <div className="flex items-center gap-2">
                                         <span className="text-muted-foreground">{item.icon}</span>
                                         <span>{item.label}</span>

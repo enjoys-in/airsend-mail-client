@@ -47,6 +47,15 @@ function EncryptionSettings({ email }: { email: string }) {
     setDirty(false)
   }
 
+  const handleReset = () => {
+    if (settings?.encryption) {
+      setLocal(settings.encryption)
+    } else {
+      setLocal(DEFAULT_ENCRYPTION)
+    }
+    setDirty(false)
+  }
+
   return (
     <div className="w-full space-y-8 animate-in fade-in duration-150">
       <SettingsPageHeader
@@ -143,7 +152,7 @@ function EncryptionSettings({ email }: { email: string }) {
         </SettingsSection>
       </div>
 
-      <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
+      <SaveSettingsBar onSave={handleSave} onReset={handleReset} show={dirty} isSaving={isSaving} />
     </div>
   )
 }

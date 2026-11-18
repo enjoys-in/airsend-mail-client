@@ -81,6 +81,16 @@ export default function ProfileSettings({ email }: { email: string }) {
     (settings?.email_settings?.secure_email_enabled ?? false);
   const dirty = nameChanged || footerChanged || secureChanged;
 
+  const handleReset = () => {
+    if (settings) {
+      reset({
+        display_name: settings.user?.display_name || selectedAccount?.name || "",
+      });
+      setFooterEnabled(settings.email_settings?.email_footer?.footer_enabled ?? false);
+      setSecureEmailEnabled(settings.email_settings?.secure_email_enabled ?? false);
+    }
+  };
+
   /* ---- save handler ---- */
   const onSave = async (data: { display_name: string }) => {
     if (!selectedAccount) return;
@@ -277,6 +287,7 @@ export default function ProfileSettings({ email }: { email: string }) {
 
         <SaveSettingsBar
           onSave={handleSubmit(onSave)}
+          onReset={handleReset}
           show={dirty}
           isSaving={isSaving}
         />

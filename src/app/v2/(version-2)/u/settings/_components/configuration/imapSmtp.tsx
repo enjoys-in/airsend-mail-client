@@ -69,6 +69,20 @@ function IMAPSMTP({ email }: { email: string }) {
         setDirty(false)
     }
 
+    const handleReset = () => {
+        if (settings?.imap_config || settings?.smtp_config) {
+            setLocal({
+                imap_enabled: settings.imap_config?.enable_imap ?? false,
+                smtp_enabled: settings.smtp_config?.enable_smtp ?? false,
+                allow_tracking: settings.smtp_config?.allow_email_tracking ?? false,
+                allow_aliases: settings.smtp_config?.enable_smtp_from_alias ?? false,
+            })
+        } else {
+            setLocal(DEFAULTS)
+        }
+        setDirty(false)
+    }
+
     return (
         <div className="w-full space-y-8 animate-in fade-in duration-150">
             <SettingsPageHeader
@@ -124,7 +138,7 @@ function IMAPSMTP({ email }: { email: string }) {
                 </SettingsSection>
             </div>
 
-            <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
+            <SaveSettingsBar onSave={handleSave} onReset={handleReset} show={dirty} isSaving={isSaving} />
         </div>
     )
 }

@@ -39,6 +39,15 @@ function FoldersAndLabels({ email }: { email: string }) {
     setDirty(false)
   }
 
+  const handleReset = () => {
+    if (settings?.folders_settings) {
+      setLocal(settings.folders_settings)
+    } else {
+      setLocal(DEFAULT_FOLDERS)
+    }
+    setDirty(false)
+  }
+
   return (
     <div className="w-full space-y-8 animate-in fade-in duration-150">
       <SettingsPageHeader
@@ -110,7 +119,7 @@ function FoldersAndLabels({ email }: { email: string }) {
         </SettingsSection>
       </div>
 
-      <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
+      <SaveSettingsBar onSave={handleSave} onReset={handleReset} show={dirty} isSaving={isSaving} />
     </div>
   )
 }

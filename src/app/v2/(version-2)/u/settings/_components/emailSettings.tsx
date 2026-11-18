@@ -50,6 +50,19 @@ function EmailSettings({ email }: { email: string }) {
     setDirty(false);
   };
 
+  const handleReset = useCallback(() => {
+    if (settings?.email_settings) {
+      setLocal(settings.email_settings);
+      if (settings.email_settings.email_footer?.footer_text) {
+        setFooterText(settings.email_settings.email_footer.footer_text);
+      }
+      if (settings.email_settings.system_email?.system_email_reply) {
+        setSystemReply(settings.email_settings.system_email.system_email_reply);
+      }
+    }
+    setDirty(false);
+  }, [settings?.email_settings]);
+
   return (
     <div className="w-full space-y-8 animate-in fade-in duration-150">
       <SettingsPageHeader
@@ -72,7 +85,7 @@ function EmailSettings({ email }: { email: string }) {
         />
       </div>
 
-      <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
+      <SaveSettingsBar onSave={handleSave} onReset={handleReset} show={dirty} isSaving={isSaving} />
     </div>
   );
 }

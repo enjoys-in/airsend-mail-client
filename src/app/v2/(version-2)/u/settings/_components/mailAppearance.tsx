@@ -79,6 +79,19 @@ export default function MailAppearance({ email }: { email: string }) {
     setDirty(false);
   };
 
+  const handleReset = () => {
+    if (settings) {
+      if (settings.composing) setComposing(settings.composing);
+      setInboxLayout(settings.display?.showRightSidebar ? "column" : "row");
+      setDailyEmails(settings.personalization?.theme === "dark");
+    } else {
+      setComposing(DEFAULT_COMPOSING);
+      setInboxLayout("column");
+      setDailyEmails(true);
+    }
+    setDirty(false);
+  };
+
   return (
     <div className="w-full space-y-8 animate-in fade-in duration-150">
       <SettingsPageHeader
@@ -322,7 +335,7 @@ export default function MailAppearance({ email }: { email: string }) {
         </div>
       </SettingsSection>
 
-      <SaveSettingsBar onSave={handleSave} show={dirty} isSaving={isSaving} />
+      <SaveSettingsBar onSave={handleSave} onReset={handleReset} show={dirty} isSaving={isSaving} />
     </div>
   );
 }
