@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Hash,
@@ -12,6 +13,10 @@ import {
   Lock,
   User as UserIcon,
   AlertTriangle,
+  Video,
+  Phone,
+  FolderOpen,
+  CheckSquare,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -38,11 +43,13 @@ interface MessageListProps {
 }
 
 export default function MessageList({ channelId, dmId }: MessageListProps) {
+  const router = useRouter();
   const currAccount = useAppSelector((s) => s.accounts.currAccount);
   const currentUserId = currAccount?.email ?? "";
 
   const activeChannelId = useChatStore((s) => s.activeChannelId);
   const activeDmId = useChatStore((s) => s.activeDmId);
+  const activeTeamId = useChatStore((s) => s.activeTeamId);
   const members = useChatStore((s) => s.members);
   const openThread = useChatStore((s) => s.openThread);
   const addReaction = useChatStore((s) => s.addReaction);
@@ -53,6 +60,30 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
   const fetchOlderMessages = useChatStore((s) => s.fetchOlderMessages);
   const isLoadingOlder = useChatStore((s) => s.isLoadingOlder);
   const isLoadingMessages = useChatStore((s) => s.isLoadingMessages);
+  const startCall = useChatStore((s) => s.startCall);
+  const addCallRecord = useChatStore((s) => s.addCallRecord);
+
+  const handleStartDMCall = (receiverId: string, receiverName: string, type: "video" | "audio") => {
+    const callId = `call-${Date.now().toString(36)}`;
+    startCall(callId, `${type === "video" ? "Video Call with" : "Call with"} ${receiverName}`);
+    addCallRecord({
+      callerId: currentUserId || "u-self",
+      callerName: "You",
+      receiverId,
+      receiverName,
+      type,
+      direction: "outgoing",
+      duration: 0,
+      teamId: activeTeamId || "t-1",
+    });
+    router.push(`/v2/workspace/calls/${callId}`);
+  };
+
+  const handleStartChannelMeeting = (channelName: string) => {
+    const callId = `meet-${Date.now().toString(36)}`;
+    startCall(callId, `#${channelName} Channel Meeting`);
+    router.push(`/v2/workspace/calls/${callId}`);
+  };
 
   // Props from URL take priority, fallback to store
   const effectiveChannelId = channelId ?? activeChannelId;
@@ -169,6 +200,38 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
               {other?.displayName ?? "Direct Message"}
             </h3>
           </div>
+          <div className="flex items-center gap-1">
+            {other && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-purple-600 hover:bg-purple-500/10"
+                  onClick={() => handleStartDMCall(other.userId, other.displayName, "audio")}
+                  title="Audio call"
+                >
+                  <Phone className="size-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-blue-600 hover:bg-blue-500/10"
+                  onClick={() => handleStartDMCall(other.userId, other.displayName, "video")}
+                  title="Video call"
+                >
+                  <Video className="size-3.5" />
+                </Button>
+              </>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => setSidePanelView("search")}
+            >
+              <Search className="size-3.5" />
+            </Button>
+          </div>
         </div>
         <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
           <div className="space-y-0.5 py-4">
@@ -262,10 +325,39 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
         </div>
         <div className="flex items-center gap-1">
           <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs px-2 gap-1 text-blue-600 border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            onClick={() => handleStartChannelMeeting(channel.name)}
+            title="Start channel meeting"
+          >
+            <Video className="size-3" />
+            <span className="hidden sm:inline">Meet</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => router.push("/v2/workspace/tasks")}
+            title="Channel Tasks"
+          >
+            <CheckSquare className="size-3.5 text-amber-500" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => router.push("/v2/workspace/files")}
+            title="Channel Files"
+          >
+            <FolderOpen className="size-3.5 text-indigo-500" />
+          </Button>
+          <Button
             variant="ghost"
             size="icon"
             className="size-7"
             onClick={() => setSidePanelView("pinned")}
+            title="Pinned messages"
           >
             <Pin className="size-3.5" />
           </Button>
@@ -274,6 +366,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
             size="icon"
             className="size-7"
             onClick={() => setSidePanelView("members")}
+            title="Channel members"
           >
             <Users className="size-3.5" />
           </Button>
@@ -282,6 +375,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
             size="icon"
             className="size-7"
             onClick={() => setSidePanelView("search")}
+            title="Search channel"
           >
             <Search className="size-3.5" />
           </Button>

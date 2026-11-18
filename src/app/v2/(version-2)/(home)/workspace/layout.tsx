@@ -1,15 +1,20 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
+import { usePathname } from "next/navigation";
 import ThreadPanel from "./_components/ThreadPanel";
 import SidePanel from "./_components/SidePanel";
 import WorkspaceInit from "./_components/WorkspaceInit";
+import TeamsNavBar from "./_components/TeamsNavBar";
+import WorkspaceErrorBoundary from "./_components/WorkspaceErrorBoundary";
+import { WorkspaceHomeSkeleton } from "./_components/WorkspaceSkeletons";
 import { MobileBottomActions } from "./_components/MobileBottomActions";
 import { useChatStore } from "./_lib/chat-store";
 import { useAppSelector } from "@/store/hooks";
 import { Boxes, Loader2 } from "lucide-react";
 
 const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname();
   const { sidePanelView, activeThreadMessageId } = useChatStore();
   const workspace = useAppSelector((s) => s.accounts?.currAccount?.workspace);
   const loading = useAppSelector((s) => s.accounts?.loading);
@@ -17,6 +22,11 @@ const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
 
   const showThread = sidePanelView === "thread" && activeThreadMessageId;
   const showSidePanel = sidePanelView && sidePanelView !== "thread";
+
+  // Check if current view is a full-screen live video call room
+  const isLiveCallRoom =
+    pathname.includes("/workspace/calls/meet-") ||
+    pathname.includes("/workspace/calls/call-");
 
   // Wait for profile to load before deciding — prevents server/client mismatch
   if (loading || !currAccount) {
@@ -39,21 +49,34 @@ const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="flex h-[calc(100svh-3.5rem)] md:h-[calc(100svh-3rem)] overflow-hidden">
-      {/* Workspace data initializer */}
+      {/* Workspace data initializer & WebSocket connection */}
       <WorkspaceInit />
 
-      {/* Main content */}
+      {/* Main content column with Teams Navigation Bar */}
       <main className="flex flex-1 flex-col overflow-hidden">
-        {children}
-        {/* Mobile bottom actions (thread, activity, tasks, members, search) */}
+        {/* Render Teams Header Bar (except when full-screen call room is active) */}
+        {!isLiveCallRoom && <TeamsNavBar />}
+
+        {/* Route content with Error Boundary and Suspense Skeleton */}
+        <WorkspaceErrorBoundary fallbackTitle="Workspace Section Unavailable">
+          <Suspense fallback={<WorkspaceHomeSkeleton />}>
+            <div className="flex flex-1 flex-col overflow-hidden">
+              {children}
+            </div>
+          </Suspense>
+        </WorkspaceErrorBoundary>
+
+        {/* Mobile bottom quick actions */}
         <MobileBottomActions />
       </main>
 
       {/* Right panels (thread or side panel) — desktop only */}
-      <div className="hidden md:contents">
-        {showThread && <ThreadPanel />}
-        {showSidePanel && <SidePanel />}
-      </div>
+      {!isLiveCallRoom && (
+        <div className="hidden md:contents">
+          {showThread && <ThreadPanel />}
+          {showSidePanel && <SidePanel />}
+        </div>
+      )}
     </div>
   );
 };

@@ -238,3 +238,83 @@ export interface VoiceState {
   isDeafened: boolean;
   isConnecting: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Microsoft Teams Clone Features: Meetings, Calls, Files & Advanced Tasks
+// ---------------------------------------------------------------------------
+
+export interface MeetingAttendee {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  status: "accepted" | "declined" | "tentative" | "pending";
+  isOrganizer?: boolean;
+}
+
+export interface Meeting {
+  id: string;
+  title: string;
+  description?: string;
+  teamId: string;
+  channelId?: string;
+  channelName?: string;
+  organizerId: string;
+  organizerName: string;
+  organizerAvatar?: string;
+  startTime: string; // ISO
+  endTime: string;   // ISO
+  isOnline: boolean;
+  meetingUrl: string;
+  status: "scheduled" | "live" | "completed" | "cancelled";
+  attendees: MeetingAttendee[];
+  passcode?: string;
+}
+
+export interface CallRecord {
+  id: string;
+  callerId: string;
+  callerName: string;
+  callerAvatar?: string;
+  receiverId: string;
+  receiverName: string;
+  receiverAvatar?: string;
+  type: "video" | "audio";
+  direction: "incoming" | "outgoing" | "missed";
+  duration: number; // in seconds
+  timestamp: string; // ISO
+  teamId?: string;
+}
+
+export interface LiveCallParticipant {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  isAudioMuted: boolean;
+  isVideoOff: boolean;
+  isScreenSharing: boolean;
+  isHandRaised: boolean;
+  isSpeaking: boolean;
+  role: "host" | "presenter" | "attendee";
+}
+
+export interface WorkspaceFile {
+  id: string;
+  name: string;
+  size: number;
+  mimeType: string;
+  extension: string;
+  category: "document" | "spreadsheet" | "presentation" | "media" | "code" | "archive" | "other";
+  uploadedBy: string;
+  uploaderName: string;
+  uploaderAvatar?: string;
+  teamId: string;
+  channelId?: string;
+  channelName?: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+  downloadCount: number;
+}
+

@@ -164,6 +164,7 @@ function ThreadMessage({
   createdAt: string;
   isParent?: boolean;
 }) {
+  const currentUserId = useChatStore((s) => s.currentUserId);
   const time = new Date(createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",

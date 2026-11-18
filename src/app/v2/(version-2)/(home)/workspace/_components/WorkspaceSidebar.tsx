@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Hash,
   Volume2,
@@ -20,6 +20,10 @@ import {
   Circle,
   UserPlus,
   Pin,
+  Calendar,
+  Phone,
+  FolderOpen,
+  Home,
 } from "lucide-react";
 import {
   Sidebar,
@@ -68,6 +72,7 @@ import StatusCard from "./StatusCard";
 
 export default function WorkspaceSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const {
     teams,
     activeTeamId,
@@ -210,6 +215,100 @@ export default function WorkspaceSidebar() {
             <SidebarGroupContent>
               <ScrollArea className="flex-1">
                 <div className="px-2 pb-4">
+                  {/* Teams Route Apps */}
+                  <div className="space-y-0.5 pt-1 pb-2">
+                    <Link
+                      href="/v2/workspace"
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
+                        pathname === "/v2/workspace"
+                          ? "bg-accent text-accent-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <Home className="size-3.5 shrink-0 text-blue-500" />
+                      <span>Workspace Hub</span>
+                    </Link>
+                    <Link
+                      href="/v2/workspace/activity"
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
+                        pathname === "/v2/workspace/activity"
+                          ? "bg-accent text-accent-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Bell className="size-3.5 shrink-0 text-rose-500" />
+                        <span>Activity</span>
+                      </div>
+                      {unreadCount > 0 && (
+                        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                    <Link
+                      href="/v2/workspace/meetings"
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
+                        pathname === "/v2/workspace/meetings"
+                          ? "bg-accent text-accent-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <Calendar className="size-3.5 shrink-0 text-emerald-500" />
+                      <span>Meetings</span>
+                    </Link>
+                    <Link
+                      href="/v2/workspace/calls"
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
+                        pathname.startsWith("/v2/workspace/calls")
+                          ? "bg-accent text-accent-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <Phone className="size-3.5 shrink-0 text-purple-500" />
+                      <span>Calls</span>
+                    </Link>
+                    <Link
+                      href="/v2/workspace/tasks"
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
+                        pathname === "/v2/workspace/tasks"
+                          ? "bg-accent text-accent-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckSquare className="size-3.5 shrink-0 text-amber-500" />
+                        <span>Tasks</span>
+                      </div>
+                      {taskCount > 0 && (
+                        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white">
+                          {taskCount > 9 ? "9+" : taskCount}
+                        </span>
+                      )}
+                    </Link>
+                    <Link
+                      href="/v2/workspace/files"
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
+                        pathname === "/v2/workspace/files"
+                          ? "bg-accent text-accent-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <FolderOpen className="size-3.5 shrink-0 text-indigo-500" />
+                      <span>Files</span>
+                    </Link>
+                  </div>
+
+                  <div className="mx-1 my-1">
+                    <Separator className="bg-border/30" />
+                  </div>
+
                   {/* Text / Announcement Channels */}
                   <ChannelSection
                     title="Channels"
@@ -363,9 +462,10 @@ export default function WorkspaceSidebar() {
                 size="icon"
                 className={cn(
                   "size-7",
-                  sidePanelView === "activity" && "bg-accent text-accent-foreground",
+                  pathname === "/v2/workspace/activity" && "bg-accent text-accent-foreground",
                 )}
-                onClick={() => setSidePanelView("activity")}
+                onClick={() => router.push("/v2/workspace/activity")}
+                title="Activity Feed"
               >
                 <Activity className="size-3.5" />
                 {unreadCount > 0 && (
@@ -379,9 +479,10 @@ export default function WorkspaceSidebar() {
                 size="icon"
                 className={cn(
                   "size-7",
-                  sidePanelView === "tasks" && "bg-accent text-accent-foreground",
+                  pathname === "/v2/workspace/tasks" && "bg-accent text-accent-foreground",
                 )}
-                onClick={() => setSidePanelView("tasks")}
+                onClick={() => router.push("/v2/workspace/tasks")}
+                title="Tasks & Planner"
               >
                 <CheckSquare className="size-3.5" />
                 {taskCount > 0 && (

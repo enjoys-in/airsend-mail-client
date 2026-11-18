@@ -17,7 +17,24 @@ import type {
   PresenceStatus,
   Poll,
   CreatePollInput,
+  Meeting,
+  CallRecord,
+  LiveCallParticipant,
+  WorkspaceFile,
 } from "./chat-types";
+import {
+  MOCK_TEAMS,
+  MOCK_MEMBERS,
+  MOCK_CHANNELS,
+  MOCK_MESSAGES,
+  MOCK_DMS,
+  MOCK_NOTIFICATIONS,
+  MOCK_TASKS,
+  MOCK_MEETINGS,
+  MOCK_CALL_RECORDS,
+  MOCK_LIVE_PARTICIPANTS,
+  MOCK_FILES,
+} from "./mock-data";
 import {
   workspaceApi,
   toTeam,
@@ -46,6 +63,43 @@ interface ChatStore {
   notifications: ChatNotification[];
   tasks: ChatTask[];
   typingIndicators: TypingIndicator[];
+
+  // Microsoft Teams Features: Meetings, Calls, Files, Live Meeting Call Room
+  meetings: Meeting[];
+  callRecords: CallRecord[];
+  files: WorkspaceFile[];
+  callParticipants: LiveCallParticipant[];
+
+  // Active Live Call state
+  activeCallId: string | null;
+  activeCallTitle: string | null;
+  isMyCameraOn: boolean;
+  isMyMicMuted: boolean;
+  isMyScreenSharing: boolean;
+  isMyHandRaised: boolean;
+
+  // Actions — Tasks
+  addTask: (task: Omit<ChatTask, "id" | "createdAt">) => void;
+  updateTaskStatus: (taskId: string, status: ChatTask["status"]) => void;
+  deleteTask: (taskId: string) => void;
+
+  // Actions — Meetings
+  addMeeting: (meeting: Omit<Meeting, "id">) => void;
+  updateMeetingStatus: (id: string, status: Meeting["status"]) => void;
+  deleteMeeting: (id: string) => void;
+
+  // Actions — Calls
+  addCallRecord: (call: Omit<CallRecord, "id" | "timestamp">) => void;
+  startCall: (callId: string, title?: string) => void;
+  leaveCall: () => void;
+  toggleCamera: () => void;
+  toggleMic: () => void;
+  toggleScreenShare: () => void;
+  toggleHandRaise: () => void;
+
+  // Actions — Files
+  addFile: (file: Omit<WorkspaceFile, "id" | "createdAt" | "updatedAt" | "downloadCount">) => void;
+  deleteFile: (fileId: string) => void;
 
   // WebSocket reference for sending messages
   _ws: WebSocket | null;
@@ -151,27 +205,41 @@ interface ChatStore {
 export type { ChatStore };
 
 export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore>()((set, get) => ({
-  // Data — starts empty, populated from API
-  teams: [],
-  channels: [],
-  members: [],
-  messages: [],
+  // Data — initialized with rich workspace data, enhanced by live API
+  teams: MOCK_TEAMS,
+  channels: MOCK_CHANNELS,
+  members: MOCK_MEMBERS,
+  messages: MOCK_MESSAGES,
   messageCursors: {},
   messageHasMore: {},
   isLoadingOlder: false,
   threadReplies: [],
-  directMessages: [],
-  notifications: [],
-  tasks: [],
+  directMessages: MOCK_DMS,
+  notifications: MOCK_NOTIFICATIONS,
+  tasks: MOCK_TASKS,
   typingIndicators: [],
+
+  // Microsoft Teams Features
+  meetings: MOCK_MEETINGS,
+  callRecords: MOCK_CALL_RECORDS,
+  files: MOCK_FILES,
+  callParticipants: MOCK_LIVE_PARTICIPANTS,
+
+  // Active Live Call state
+  activeCallId: null,
+  activeCallTitle: null,
+  isMyCameraOn: true,
+  isMyMicMuted: false,
+  isMyScreenSharing: false,
+  isMyHandRaised: false,
 
   // WebSocket
   _ws: null,
   setWS: (ws) => set({ _ws: ws }),
 
   // Selection
-  activeTeamId: null,
-  activeChannelId: null,
+  activeTeamId: "t-1",
+  activeChannelId: "ch-1",
   activeDmId: null,
   activeThreadMessageId: null,
   sidePanelView: null,
@@ -636,6 +704,97 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     set((s) => ({
       notifications: s.notifications.map((n) => ({ ...n, isRead: true })),
     })),
+
+  // -----------------------------------------------------------------------
+  // Microsoft Teams Features: Tasks, Meetings, Calls, Files
+  // -----------------------------------------------------------------------
+
+  addTask: (taskInput) => {
+    const newTask: ChatTask = {
+      ...taskInput,
+      id: `task-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    set((s) => ({ tasks: [newTask, ...s.tasks] }));
+  },
+
+  updateTaskStatus: (taskId, status) => {
+    set((s) => ({
+      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, status } : t)),
+    }));
+  },
+
+  deleteTask: (taskId) => {
+    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== taskId) }));
+  },
+
+  addMeeting: (meetingInput) => {
+    const newMeeting: Meeting = {
+      ...meetingInput,
+      id: `meet-${Date.now()}`,
+    };
+    set((s) => ({ meetings: [newMeeting, ...s.meetings] }));
+  },
+
+  updateMeetingStatus: (id, status) => {
+    set((s) => ({
+      meetings: s.meetings.map((m) => (m.id === id ? { ...m, status } : m)),
+    }));
+  },
+
+  deleteMeeting: (id) => {
+    set((s) => ({ meetings: s.meetings.filter((m) => m.id !== id) }));
+  },
+
+  addCallRecord: (callInput) => {
+    const newRecord: CallRecord = {
+      ...callInput,
+      id: `call-rec-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+    };
+    set((s) => ({ callRecords: [newRecord, ...s.callRecords] }));
+  },
+
+  startCall: (callId, title) => {
+    set({
+      activeCallId: callId,
+      activeCallTitle: title || "Live Meeting Call",
+      isMyCameraOn: true,
+      isMyMicMuted: false,
+      isMyScreenSharing: false,
+      isMyHandRaised: false,
+    });
+  },
+
+  leaveCall: () => {
+    set({
+      activeCallId: null,
+      activeCallTitle: null,
+      isMyScreenSharing: false,
+      isMyHandRaised: false,
+    });
+  },
+
+  toggleCamera: () => set((s) => ({ isMyCameraOn: !s.isMyCameraOn })),
+  toggleMic: () => set((s) => ({ isMyMicMuted: !s.isMyMicMuted })),
+  toggleScreenShare: () => set((s) => ({ isMyScreenSharing: !s.isMyScreenSharing })),
+  toggleHandRaise: () => set((s) => ({ isMyHandRaised: !s.isMyHandRaised })),
+
+  addFile: (fileInput) => {
+    const now = new Date().toISOString();
+    const newFile: WorkspaceFile = {
+      ...fileInput,
+      id: `file-${Date.now()}`,
+      createdAt: now,
+      updatedAt: now,
+      downloadCount: 0,
+    };
+    set((s) => ({ files: [newFile, ...s.files] }));
+  },
+
+  deleteFile: (fileId) => {
+    set((s) => ({ files: s.files.filter((f) => f.id !== fileId) }));
+  },
 
   // -----------------------------------------------------------------------
   // User status actions
