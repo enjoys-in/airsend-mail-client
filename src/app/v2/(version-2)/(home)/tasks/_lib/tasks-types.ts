@@ -9,6 +9,12 @@ export type TaskStatus =
   | "canceled"
   | "archived";
 
+export type TasksViewMode = "board" | "list" | "my-tasks" | "calendar";
+
+export type MyTasksGroupBy = "dueDate" | "project";
+
+export type DueBucket = "overdue" | "today" | "thisWeek" | "later" | "noDueDate";
+
 export function normalizeTaskStatus(status?: string | null): TaskStatus {
   if (!status) return "todo";
   const s = status.toLowerCase();
@@ -22,16 +28,12 @@ export function normalizeTaskStatus(status?: string | null): TaskStatus {
   return s as TaskStatus;
 }
 
-export function toBackendTaskStatus(status: TaskStatus | string): string {
-  if (status === "todo") return "todo";
-  return status;
-}
-
 export interface TaskLabel {
   id: string;
   name: string;
   color: string;
   taskId?: string;
+  workspaceId?: string;
 }
 
 export interface TaskColumn {
@@ -77,14 +79,16 @@ export interface TaskProject {
   description?: string;
   workspaceId: string;
   taskCount?: number;
+  isPublic?: boolean;
 }
 
-export interface TaskWorkspace {
+export interface TaskMember {
   id: string;
-  name: string;
-  slug: string;
+  userId: string;
+  name?: string;
+  email?: string;
   avatarUrl?: string;
-  role?: string;
+  role: string;
 }
 
 export interface CreateTaskInput {
@@ -107,4 +111,11 @@ export interface UpdateTaskInput {
   assigneeId?: string | null;
   projectId?: string;
   labels?: string[];
+}
+
+export interface CreateProjectInput {
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
 }

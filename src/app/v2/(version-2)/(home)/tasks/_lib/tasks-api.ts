@@ -1,19 +1,25 @@
 import {
-  type CreateTaskInput,
   type TaskColumn,
   type TaskItem,
   type TaskProject,
-  type TaskStatus,
-  type UpdateTaskInput,
   normalizeTaskStatus,
 } from "./tasks-types";
+import {
+  createTask,
+  updateTask,
+  updateTaskStatus,
+  deleteTask,
+} from "./tasks-crud-api";
+
+export * from "./tasks-settings-api";
+export * from "./tasks-crud-api";
 
 const BASE_URL = "/api/tasks";
 
 export async function fetchProjects(): Promise<TaskProject[]> {
   try {
     const res = await fetch(`${BASE_URL}/project`, { cache: "no-store" });
-    if (!res.ok) throw new Error("Failed to load projects");
+    if (!res.ok) return [];
     const data = await res.json();
     if (!Array.isArray(data)) return [];
     return data.map((p: any) => ({
@@ -24,9 +30,9 @@ export async function fetchProjects(): Promise<TaskProject[]> {
       description: p.description || "",
       workspaceId: p.workspaceId,
       taskCount: p.statistics?.totalTasks ?? 0,
+      isPublic: Boolean(p.isPublic),
     }));
-  } catch (error) {
-    console.error("fetchProjects error:", error);
+  } catch {
     return [];
   }
 }
@@ -38,7 +44,7 @@ export async function fetchProjectTasks(projectId: string): Promise<{
 }> {
   try {
     const res = await fetch(`${BASE_URL}/task/tasks/${projectId}`, { cache: "no-store" });
-    if (!res.ok) throw new Error("Failed to load tasks");
+    if (!res.ok) return { project: null, columns: [], tasks: [] };
     const json = await res.json();
     const data = json?.data || json;
 
@@ -92,84 +98,42 @@ export async function fetchProjectTasks(projectId: string): Promise<{
         }
       }
     }
-
     return { project, columns, tasks };
-  } catch (error) {
-    console.error("fetchProjectTasks error:", error);
+  } catch {
     return { project: null, columns: [], tasks: [] };
   }
 }
 
-export async function createTask(input: CreateTaskInput): Promise<TaskItem | null> {
+export async function fetchAssignedTasks(workspaceId?: string): Promise<TaskItem[]> {
   try {
-    const res = await fetch(`${BASE_URL}/task/${input.projectId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: input.title,
-        description: input.description || "",
-        status: input.status || "todo",
-        priority: input.priority || "none",
-        userId: input.assigneeId || undefined,
-        dueDate: input.dueDate || undefined,
-      }),
-    });
-    if (!res.ok) throw new Error("Failed to create task");
-    const t = await res.json();
-    return {
+    const url = workspaceId
+      ? `${BASE_URL}/task/assigned?workspaceId=${workspaceId}`
+      : `${BASE_URL}/task/assigned`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const rawList = Array.isArray(data?.tasks) ? data.tasks : [];
+    return rawList.map((t: any) => ({
       id: t.id,
-      projectId: t.projectId || input.projectId,
+      projectId: t.projectId,
+      projectName: t.project?.name,
+      projectSlug: t.project?.slug,
+      projectIcon: t.project?.icon,
       number: t.number,
-      ticketId: t.number ? `#${t.number}` : t.id.slice(0, 8),
+      ticketId: t.number && t.project?.slug ? `${t.project.slug}-${t.number}` : t.id.slice(0, 8),
       title: t.title,
       description: t.description || "",
       status: normalizeTaskStatus(t.status),
       priority: t.priority || "none",
       dueDate: t.dueDate,
       assigneeId: t.userId,
-      labels: [],
+      assigneeName: t.assigneeName,
+      labels: Array.isArray(t.labels) ? t.labels : [],
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
-    };
-  } catch (error) {
-    console.error("createTask error:", error);
-    return null;
-  }
-}
-
-export async function updateTask(taskId: string, input: UpdateTaskInput): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE_URL}/task/${taskId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...(input.title ? { title: input.title } : {}),
-        ...(input.description !== undefined ? { description: input.description } : {}),
-        ...(input.status ? { status: input.status } : {}),
-        ...(input.priority ? { priority: input.priority } : {}),
-        ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
-        ...(input.assigneeId !== undefined ? { userId: input.assigneeId } : {}),
-      }),
-    });
-    return res.ok;
-  } catch (error) {
-    console.error("updateTask error:", error);
-    return false;
-  }
-}
-
-export async function updateTaskStatus(taskId: string, status: TaskStatus) {
-  const ok = await updateTask(taskId, { status });
-  return { isLive: ok, success: ok };
-}
-
-export async function deleteTask(taskId: string): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE_URL}/task/${taskId}`, { method: "DELETE" });
-    return res.ok;
-  } catch (error) {
-    console.error("deleteTask error:", error);
-    return false;
+    }));
+  } catch {
+    return [];
   }
 }
 
@@ -182,9 +146,7 @@ export const tasksApi = {
   deleteTask,
   getWorkspaces: async () => [{ id: "QLgzDfOu35H0B5B4p6qWHC22JLlvoNNQ", name: "AirSend", slug: "airsend" }],
   getAssignedTasks: async (workspaceId?: string) => {
-    const projs = await fetchProjects();
-    const pid = projs[0]?.id || "026bd7c8-beb7-4a3d-96b6-6b3e162ead91";
-    const res = await fetchProjectTasks(pid);
-    return { isLive: true, tasks: res.tasks };
+    const list = await fetchAssignedTasks(workspaceId);
+    return { isLive: true, tasks: list };
   },
 };
