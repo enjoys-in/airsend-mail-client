@@ -1,29 +1,34 @@
-import { SearchDialog } from "@/components/search/search-dialog";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import React, { useState } from "react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useNavigate, useSearch } from "../../_lib/router-shim";
 
 export function SearchBar() {
-	const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const navigate = useNavigate();
+  const searchParams = useSearch();
+  const [query, setQuery] = useState(searchParams.type || "");
 
-	return (
-		<>
-			<Button
-				variant="ghost"
-				size="sm"
-				className="flex h-8 items-center justify-start gap-2 self-stretch rounded-lg px-3 py-2 shadow-sm hover:bg-white dark:bg-neutral-700 dark:hover:bg-neutral-600"
-				onClick={() => setIsSearchOpen(true)}
-				aria-label="Open search dialog"
-				aria-expanded={isSearchOpen}
-			>
-				<Search className="size-4" />
-				<span className="text-sm">Search files...</span>
-				{/* <kbd className="bg-muted text-muted-foreground pointer-events-none ml-auto inline-flex h-5 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100 select-none">
-					<span className="text-xs">ctrl</span>/
-				</kbd>  */}
-			</Button>
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigate({
+      search: { ...searchParams, type: query.trim() || undefined },
+    });
+  };
 
-			<SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
-		</>
-	);
+  return (
+    <form onSubmit={handleSearch} className="relative w-full">
+      <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+      <Input
+        placeholder="Filter by type (doc, media, archive)..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        className="h-8 pl-8 text-xs w-full"
+      />
+    </form>
+  );
 }
+
+export default SearchBar;
