@@ -3,7 +3,7 @@ import React from 'react'
 import { SpotToolbar } from '../../_components/SpotToolbar'
 import { MailList } from '../../_components/mail'
 import { MobileMailHeader } from './_components/MobileMailHeader'
-
+import MailSplitWrapper from './_components/MailSplitWrapper'
 
 const MailTemplate = ({ children }: { children: React.ReactNode }) => {
 
@@ -12,7 +12,9 @@ const MailTemplate = ({ children }: { children: React.ReactNode }) => {
             <MobileMailHeader />
             <SpotToolbar />
             <MailList>
-                {children}
+                <MailSplitWrapper>
+                    {children}
+                </MailSplitWrapper>
             </MailList>
         </div>
     )

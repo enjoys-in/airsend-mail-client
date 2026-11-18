@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useMultiTabStore } from "@/store/settings/multiTabSystem";
+import { useSettingsStore } from "@/store/settings";
 
 export default function MultiTabSystem() {
 
@@ -20,6 +21,11 @@ export default function MultiTabSystem() {
         toggleFullscreen,
     } = useMultiTabStore();
 
+    const composerLayout = useSettingsStore((s) => s.settings?.personalization?.composer_layout)
+        || (typeof window !== "undefined" ? (localStorage.getItem("airsend_composer_layout") as "normal" | "maximized") : null)
+        || "normal";
+    const isPreferredMaximized = composerLayout === "maximized";
+
     return (
         <Fragment>
             {/* Compose button */}
@@ -31,8 +37,21 @@ export default function MultiTabSystem() {
                 <span>Compose</span>
             </Button>
 
+            {/* Backdrop for focused modal mode */}
+            {isPreferredMaximized && visibleTabs.length > 0 && !fullscreenTab && (
+                <div
+                    className="fixed inset-0 bg-background/60 backdrop-blur-xs z-[55] animate-in fade-in duration-200"
+                    onClick={() => visibleTabs[0] && minimizeTab(visibleTabs[0].id)}
+                />
+            )}
+
             {/* Tabs container */}
-            <div className="fixed bottom-0 right-4 flex items-end gap-2 z-50">
+            <div className={cn(
+                "fixed z-50 flex items-end gap-2",
+                isPreferredMaximized && visibleTabs.length > 0 && !fullscreenTab
+                    ? "inset-0 pointer-events-none flex items-center justify-center p-4 sm:p-8"
+                    : "bottom-0 right-4"
+            )}>
                 {/* Minimized tabs */}
                 {minimizedTabs.map((tabId) => {
                     const tab = tabs.find((t) => t.id === tabId);
@@ -43,7 +62,7 @@ export default function MultiTabSystem() {
                             key={`min-${tabId}`}
                             variant="secondary"
                             size="sm"
-                            className="truncate max-w-[140px] h-8 rounded-t-lg rounded-b-none text-xs shadow-md border border-b-0"
+                            className="pointer-events-auto truncate max-w-[140px] h-8 rounded-t-lg rounded-b-none text-xs shadow-md border border-b-0"
                             onClick={() => restoreTab(tabId)}
                         >
                             {tab.title}
@@ -54,14 +73,17 @@ export default function MultiTabSystem() {
                 {/* Visible Tabs */}
                 {visibleTabs.map((tab) => {
                     const isFullscreen = fullscreenTab?.id === tab.id;
+                    const isModalCentered = isPreferredMaximized && !fullscreenTab;
                     return (
                         <Card
                             key={tab.id}
                             className={cn(
-                                "flex flex-col shadow-2xl rounded-t-xl rounded-b-none border-b-0 transition-all duration-200 overflow-hidden",
+                                "flex flex-col shadow-2xl transition-all duration-200 overflow-hidden pointer-events-auto",
                                 isFullscreen
-                                    ? "fixed inset-4 z-[60] mt-14 rounded-xl border-b"
-                                    : "w-[620px] h-[75vh] min-h-[480px]"
+                                    ? "fixed inset-4 z-[60] mt-14 rounded-xl border"
+                                    : isModalCentered
+                                        ? "w-full max-w-3xl h-[80vh] max-h-[720px] rounded-2xl border shadow-2xl bg-card"
+                                        : "w-[620px] h-[75vh] min-h-[480px] rounded-t-xl rounded-b-none border-b-0"
                             )}
                         >
                             {/* Tab Header */}

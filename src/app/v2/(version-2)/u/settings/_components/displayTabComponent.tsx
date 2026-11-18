@@ -87,9 +87,9 @@ export const DisplayTabComponent = () => {
 
 function SettingsSkeleton({ title }: { title: string }) {
     return (
-        <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-200 p-2 sm:p-4">
+        <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-200">
             {/* Header skeleton */}
-            <div className="space-y-2 pb-6 border-b border-border/50">
+            <div className="sticky top-0 md:top-12 md:group-has-[[data-collapsible=icon]]/sidebar-wrapper:top-11 z-30 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 pt-3 pb-4 sm:pt-4 sm:pb-5 border-b border-border/50 space-y-2 -mx-1 px-1 sm:-mx-2 sm:px-2">
                 <div className="flex items-center gap-3">
                     <div className="size-8 rounded-xl bg-muted/70 flex items-center justify-center animate-pulse">
                         <Settings2 className="size-4 text-muted-foreground/60" />

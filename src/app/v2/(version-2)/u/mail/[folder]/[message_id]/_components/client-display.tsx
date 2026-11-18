@@ -29,7 +29,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import React, { Fragment, useEffect, useMemo } from "react";
+import React, { Fragment, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 import moment from "moment";
@@ -50,6 +50,9 @@ import { MailDropdown, type MailDropdownActions } from "./menu-dropdown";
 import { useMailRenderSettings } from "@/store/mails/mail-render-settings";
 import { MailStatusIndicators } from "../../_components/MailStatusIndicators";
 import { useMailActions, safeDecrypt } from "./use-mail-actions";
+import { useSettingsStore } from "@/store/settings";
+import { OtpCard } from "@/components/common/otp-card";
+import { detectOtp, otpCache, OTP_DISCOVERED_EVENT, type OtpInfo } from "@/lib/mail/otp-detector";
 
 const ClientDisplay = ({
     folder,
@@ -70,6 +73,11 @@ const ClientDisplay = ({
     // forward, direct URL) — it showed the wrong mail's header.
     const selectedMail =
         storedMail && storedMail.message_id === message_id ? storedMail : null;
+
+    const inboxLayout = useSettingsStore((s) => (s.settings?.personalization?.layout === "list" ? "row" : "column"))
+        || (typeof window !== "undefined" ? (localStorage.getItem("airsend_inbox_layout") as "column" | "row") : null)
+        || "column";
+    const isColumnSplit = inboxLayout === "column";
 
     const {
         handleReply,
@@ -110,6 +118,39 @@ const ClientDisplay = ({
         },
         [selectedMail?.receipients]
     );
+
+    const decryptedPlainText = useMemo(
+        () => (selectedMail ? safeDecrypt(selectedMail.plain_text) : ""),
+        [selectedMail?.plain_text]
+    );
+
+    const [liveOtp, setLiveOtp] = useState<OtpInfo | null>(() => {
+        return otpCache.get(message_id) || detectOtp(decryptedSubject, decryptedPlainText, null, senderEmail);
+    });
+
+    useEffect(() => {
+        const cached = otpCache.get(message_id);
+        if (cached) {
+            setLiveOtp(cached);
+            return;
+        }
+        const detected = detectOtp(decryptedSubject, decryptedPlainText, null, senderEmail);
+        if (detected) {
+            setLiveOtp(detected);
+            otpCache.set(message_id, detected);
+        }
+    }, [message_id, decryptedSubject, decryptedPlainText, senderEmail]);
+
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const customEvent = e as CustomEvent<{ messageId: string; info: OtpInfo }>;
+            if (customEvent.detail?.messageId === message_id) {
+                setLiveOtp(customEvent.detail.info);
+            }
+        };
+        window.addEventListener(OTP_DISCOVERED_EVENT, handler);
+        return () => window.removeEventListener(OTP_DISCOVERED_EVENT, handler);
+    }, [message_id]);
 
     useEffect(() => {
         if (selectedMail) return;
@@ -158,7 +199,10 @@ const ClientDisplay = ({
                 <Button
                     size="icon"
                     variant="ghost"
-                    className="bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full"
+                    className={cn(
+                        "bg-muted-foreground/50 dark:bg-muted/50 hover:rounded-xl rounded-full",
+                        isColumnSplit && "md:hidden"
+                    )}
                     onClick={() => router.push(`/v2/u/mail/${folder}`)}
                 >
                     <ChevronLeft />
@@ -181,6 +225,14 @@ const ClientDisplay = ({
             </div>
 
             <Separator className="my-2" />
+
+            {/* Verification / Security Code Requested Banner */}
+            {liveOtp && (
+                <div className="px-1 md:px-4 py-2">
+                    <OtpCard otp={liveOtp} />
+                </div>
+            )}
+
             <div className="flex flex-col lg:flex-row justify-between items-start md:px-4 pb-2 md:pl-1">
                 <div className="flex items-center text-sm flex-1 md:gap-2">
                     <Avatar>

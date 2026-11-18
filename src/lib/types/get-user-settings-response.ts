@@ -133,6 +133,8 @@ interface PasswordExpiration {
 export interface IPersonalization {
     theme: 'dark' | 'light';
     layout: 'grid' | 'list' | '2-column';
+    density?: 'comfortable' | 'compact';
+    composer_layout?: 'normal' | 'maximized';
 }
 
 export type EmailSettings = {

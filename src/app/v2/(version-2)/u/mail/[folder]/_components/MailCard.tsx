@@ -15,6 +15,8 @@ import { EmailContextMenu } from './EmailContextMenu';
 import { MailStatusIndicators } from './MailStatusIndicators';
 import { DomainFavicon } from './DomainFavicon';
 import { InviteRsvpChip, hasCalendarAttachment } from './InviteRsvpChip';
+import { OtpChip } from '@/components/common/otp-card';
+import { detectOtp } from '@/lib/mail/otp-detector';
 
 import { GetAllMailsPayload } from '@/lib/types/mail.interface';
 import { Security } from '@/lib/security';
@@ -86,11 +88,22 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
     const setCheckedItems = useMailStore((state) => state.setCheckedItems)
     const { emit } = useCustomEvent(CustomEventKey.MailEvents)
     const showFavicon = useSettingsStore((s) => s.settings?.email_privacy?.show_sender_favicon ?? false)
+    const density = useSettingsStore((s) => s.settings?.personalization?.density)
+        || (typeof window !== "undefined" ? (localStorage.getItem("airsend_density") as "comfortable" | "compact") : null)
+        || "comfortable"
+    const isCompact = density === "compact"
+    const inboxLayout = useSettingsStore((s) => (s.settings?.personalization?.layout === "list" ? "row" : "column"))
+        || (typeof window !== "undefined" ? (localStorage.getItem("airsend_inbox_layout") as "column" | "row") : null)
+        || "column"
+    const isCurrentMessage = params?.message_id === item.message_id
 
     const decryptedFromEmail = React.useMemo(() => safeDecrypt(item.from_email), [item.from_email])
     const decryptedSubject = React.useMemo(() => safeDecrypt(item?.subject), [item?.subject])
     const decryptedPlainText = React.useMemo(() => safeDecrypt(item?.plain_text), [item?.plain_text])
     const previewText = React.useMemo(() => stripHtml(decryptedPlainText), [decryptedPlainText])
+    const otp = React.useMemo(() => {
+        return detectOtp(decryptedSubject, decryptedPlainText, null, decryptedFromEmail);
+    }, [decryptedSubject, decryptedPlainText, decryptedFromEmail])
 
     // Determine if current user sent this mail:
     // receipient = current user's email; from_email = actual sender
@@ -133,8 +146,13 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
     const handleClick = useCallback(async () => {
         const data = await airsendDB.getItemByKey("mails", item.message_id) as any | null
         if (data) setSelectedMail(data)
-        router.push(`/v2/u/mail/${params?.folder}/${item.message_id}`)
-    }, [item.message_id, params?.folder, router, setSelectedMail])
+        if (inboxLayout === "row" || (typeof window !== "undefined" && window.innerWidth < 768)) {
+            router.push(`/v2/u/mail/${params?.folder}/${item.message_id}`)
+        } else {
+            // In Column Split mode on desktop, update URL shallowly to keep list and detail side-by-side
+            window.history.replaceState(null, "", `/v2/u/mail/${params?.folder}/${item.message_id}`)
+        }
+    }, [item.message_id, params?.folder, router, setSelectedMail, inboxLayout])
 
     const handleAction = useCallback(
         (action: string) => (e: React.MouseEvent) => {
@@ -163,11 +181,12 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                     "transition-colors duration-150 ease-out",
                     "hover:bg-accent/50 dark:hover:bg-accent/30",
                     isChecked && "bg-blue-500/5 dark:bg-blue-500/10",
+                    isCurrentMessage && "bg-primary/10 dark:bg-primary/15 border-l-2 border-l-primary",
                     !item.is_read && "bg-background dark:bg-neutral-900/80",
                     item.is_read && "bg-transparent"
                 )}
             >
-                <div className="flex items-center gap-3 px-4 py-3">
+                <div className={cn("flex items-center px-4 transition-all duration-150", isCompact ? "gap-2.5 py-1.5" : "gap-3 py-3")}>
                     {/* Checkbox / Avatar column */}
                     <div className="relative flex-shrink-0">
                         <div className={cn(
@@ -181,8 +200,8 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                     colorClass={avatarColor}
                                 />
                             ) : (
-                                <Avatar className="h-9 w-9">
-                                    <AvatarFallback className={cn("text-xs font-semibold", avatarColor)}>
+                                <Avatar className={cn(isCompact ? "h-7 w-7" : "h-9 w-9", "transition-all")}>
+                                    <AvatarFallback className={cn(isCompact ? "text-[10px]" : "text-xs", "font-semibold", avatarColor)}>
                                         {avatarInitials}
                                     </AvatarFallback>
                                 </Avatar>
@@ -191,7 +210,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                         {(hovered || anyChecked) && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <Checkbox
-                                    className="h-5 w-5 rounded-md border-muted-foreground/30 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 transition-all duration-150"
+                                    className={cn(isCompact ? "h-4 w-4" : "h-5 w-5", "rounded-md border-muted-foreground/30 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 transition-all duration-150")}
                                     checked={isChecked}
                                     onClick={(e) => e.stopPropagation()}
                                     onCheckedChange={(v) => handleCheckChange(item.message_id, !!v)}
@@ -249,6 +268,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                     {previewText}
                                 </p>
                                 {isInvite && <InviteRsvpChip messageId={item.message_id} />}
+                                {otp && <OtpChip code={otp.code} />}
                                 {(attachments.length > 0 || item.has_attachments) && (
                                     <Badge variant="secondary" className="flex-shrink-0 gap-1 text-[10px] font-normal px-1.5 py-0 h-5 rounded-md bg-muted text-muted-foreground">
                                         <RiAttachment2 className="w-3 h-3" />
@@ -261,12 +281,13 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                         {/* ── Desktop: single-line (sender | subject | preview | meta) ── */}
                         <div className="hidden sm:flex items-center min-w-0">
                             {/* Sender — fixed width, always visible */}
-                            <div className="flex-shrink-0 w-[180px] lg:w-[220px] relative flex items-center pr-3">
+                            <div className={cn("flex-shrink-0 relative flex items-center pr-3", isCompact ? "w-[160px] lg:w-[190px]" : "w-[180px] lg:w-[220px]")}>
                                 {!item.is_read && (
                                     <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500" />
                                 )}
                                 <span className={cn(
-                                    "text-sm truncate",
+                                    isCompact ? "text-xs" : "text-sm",
+                                    "truncate",
                                     !item.is_read ? "font-semibold text-foreground" : "font-medium text-muted-foreground"
                                 )}>
                                     {isSentByMe ? (
@@ -284,7 +305,8 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                             {/* Subject + Preview — fills remaining space, truncates */}
                             <div className="flex-1 min-w-0 flex items-center">
                                 <span className={cn(
-                                    "text-sm truncate flex-shrink min-w-0",
+                                    isCompact ? "text-xs" : "text-sm",
+                                    "truncate flex-shrink min-w-0",
                                     !item.is_read ? "text-foreground font-medium" : "text-muted-foreground"
                                 )}>
                                     {decryptedSubject}
@@ -296,6 +318,7 @@ export const MailCard = React.memo(({ item }: { item: GetAllMailsPayload }) => {
                                     </span>
                                 )}
                                 {isInvite && <InviteRsvpChip messageId={item.message_id} className="ml-2" />}
+                                {otp && <OtpChip code={otp.code} className="ml-2" />}
                             </div>
 
                             {/* Right: attachments + indicators + timestamp */}
