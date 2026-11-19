@@ -169,7 +169,7 @@ function WorkspaceDashboardContent() {
           { title: "Meetings", count: meetings.length, href: "/v2/workspace/meetings", icon: Calendar, color: "text-emerald-500 bg-emerald-500/10" },
           { title: "Calls", count: "HD Voice", href: "/v2/workspace/calls", icon: Video, color: "text-purple-500 bg-purple-500/10" },
           { title: "Tasks", count: `${openTasks.length} open`, href: "/v2/workspace/tasks", icon: CheckSquare, color: "text-amber-500 bg-amber-500/10" },
-          { title: "Files", count: `${files.length} items`, href: "/v2/files", icon: FolderOpen, color: "text-indigo-500 bg-indigo-500/10" },
+          { title: "Files", count: `${files.length} items`, href: "/v2/workspace/files", icon: FolderOpen, color: "text-indigo-500 bg-indigo-500/10" },
           { title: "Activity", count: `${unreadActivity.length} unread`, href: "/v2/workspace/activity", icon: Bell, color: "text-rose-500 bg-rose-500/10" },
         ].map((item) => {
           const Icon = item.icon;
@@ -363,7 +363,7 @@ function WorkspaceDashboardContent() {
               </CardTitle>
               <CardDescription className="text-xs">Shared via channels & meetings</CardDescription>
             </div>
-            <Link href="/v2/files">
+            <Link href="/v2/workspace/files">
               <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
                 Browse all <ArrowRight className="size-3" />
               </Button>
@@ -386,7 +386,7 @@ function WorkspaceDashboardContent() {
                     </p>
                   </div>
                 </div>
-                <Link href="/v2/files">
+                <Link href="/v2/workspace/files">
                   <Button variant="ghost" size="icon" className="size-7">
                     <ExternalLink className="size-3.5" />
                   </Button>

@@ -128,9 +128,9 @@ export default function TeamsNavBar() {
     },
     {
       title: "Files",
-      href: "/v2/files",
+      href: "/v2/workspace/files",
       icon: FolderOpen,
-      isActive: pathname.startsWith("/v2/files"),
+      isActive: pathname === "/v2/workspace/files",
     },
     {
       title: "Workflows",
@@ -275,7 +275,7 @@ export default function TeamsNavBar() {
                 Create Task
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/v2/files")}>
+              <DropdownMenuItem onClick={() => router.push("/v2/workspace/files")}>
                 <FolderOpen className="mr-2 size-4 text-indigo-500" />
                 Upload File
               </DropdownMenuItem>

@@ -305,10 +305,10 @@ export default function WorkspaceSidebar() {
                       )}
                     </Link>
                     <Link
-                      href="/v2/files"
+                      href="/v2/workspace/files"
                       className={cn(
                         "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
-                        pathname.startsWith("/v2/files")
+                        pathname === "/v2/workspace/files"
                           ? "bg-accent text-accent-foreground font-semibold"
                           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                       )}

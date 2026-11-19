@@ -1,5 +1,8 @@
 export { TasksProvider, useTasks } from "./_lib/tasks-context";
 export * from "./_lib/tasks-types";
+export * from "./_lib/router-shim";
+export * as constants from "./constants";
+export * as fetchers from "./fetchers";
 export { BoardView } from "./board/BoardView";
 export { ListView } from "./list/ListView";
 export { CalendarView } from "./calendar/CalendarView";

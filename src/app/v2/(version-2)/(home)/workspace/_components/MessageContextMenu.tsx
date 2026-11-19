@@ -314,7 +314,7 @@ export function WorkspaceContextMenu({
 
         {/* Shared files */}
         <ContextMenuItem
-          onClick={() => router.push("/v2/files")}
+          onClick={() => router.push("/v2/workspace/files")}
           className="gap-2.5 text-xs py-1.5 cursor-pointer rounded-lg"
         >
           <FolderOpen className="size-3.5 text-muted-foreground" />
