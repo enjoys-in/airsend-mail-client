@@ -1,9 +1,9 @@
 import z from "zod";
 
-const providers = ["credential", "google", "microsoft", "s3", "box", "dropbox"] as const;
-const providerSlugs = ["c", "g", "m", "s3", "b", "d"] as const;
+// Storage the files app can connect: any S3-compatible bucket, or a Telegram chat used through a bot.
+const providers = ["s3", "telegram"] as const;
+const providerSlugs = ["s3", "tg"] as const;
 
-// Define social providers first
 export const driveProviderSchema = z.enum(providers);
 export const driveProviderSlugSchema = z.enum(providerSlugs);
 export const driveProviderParamSchema = z.object({
@@ -18,32 +18,13 @@ export type DriveProvider = z.infer<typeof driveProviderSchema>;
 export type DriveProviderSlug = z.infer<typeof driveProviderSlugSchema>;
 export type DriveProviderSlugParam = z.infer<typeof driveProviderSlugParamSchema>;
 
-// Create provider schema by combining social providers with "credential"
-// https://www.better-auth.com/docs/authentication/email-password#configuration
-export const providerSchema = z.enum(["credential", ...driveProviderSchema.options]).nullable();
-
-// Create a single source of truth for provider <-> slug mappings
-type SlugToProviderMap = Map<DriveProviderSlug, DriveProvider>;
-type ProviderToSlugMap = Map<DriveProvider, DriveProviderSlug>;
-interface ProviderMapping {
-	slugToProvider: SlugToProviderMap;
-	providerToSlug: ProviderToSlugMap;
-}
-
-const providerMappings = providerSlugs.reduce<ProviderMapping>(
+// Single source of truth for provider <-> slug mappings (same order in both lists).
+const providerMappings = providerSlugs.reduce(
 	(acc, slug, index) => {
 		const provider = providers[index];
-
-		if (!provider) {
-			throw new Error(`Provider not found for slug: ${slug}`);
-		}
-		if (!slug) {
-			throw new Error(`Slug not found for provider: ${provider}`);
-		}
-
+		if (!provider) throw new Error(`Provider not found for slug: ${slug}`);
 		acc.slugToProvider.set(slug, provider);
 		acc.providerToSlug.set(provider, slug);
-
 		return acc;
 	},
 	{
