@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkFeatureAccess } from "@/lib/server/airsend-access";
 
 function stripTrailingSlashes(url: string): string {
   return url.replace(/\/+$/, "");
@@ -11,6 +12,16 @@ async function handleProxy(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
+  // Files needs a `files` scope in the profile (/me); checked here against fresh scopes, not the UI.
+  const token = request.cookies.get("access_token")?.value || request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) {
+    return NextResponse.json({ success: false, error: "Sign in to use files." }, { status: 401 });
+  }
+  const access = await checkFeatureAccess(token, "files");
+  if (!access.ok) {
+    return NextResponse.json({ success: false, error: access.message, message: access.message }, { status: access.status });
+  }
+
   try {
     const { path } = await context.params;
     const targetPath = Array.isArray(path) ? path.join("/") : path || "";

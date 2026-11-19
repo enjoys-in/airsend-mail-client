@@ -37,7 +37,7 @@ type NavItem = {
     icon: React.ComponentType<{ className?: string }>
     matchPath: string
     /** Optional feature-flag key — item hidden when the flag is false */
-    featureKey?: "canAccessCalendar" | "canAccessWorkspace"
+    featureKey?: "canAccessCalendar" | "canAccessWorkspace" | "canAccessTasks" | "canAccessFiles"
 }
 
 const navMain: NavItem[] = [
@@ -59,7 +59,7 @@ const navMain: NavItem[] = [
         url: "/v2/files",
         icon: File,
         matchPath: "/v2/files",
-        featureKey: "canAccessWorkspace",
+        featureKey: "canAccessFiles",
     },
     // {
     //     title: "Chats",
@@ -79,7 +79,7 @@ const navMain: NavItem[] = [
         url: "/v2/tasks",
         icon: CheckSquare,
         matchPath: "/v2/tasks",
-        featureKey: "canAccessWorkspace",
+        featureKey: "canAccessTasks",
     },
     // {
     //     title: "Teams",
@@ -148,17 +148,17 @@ SidebarSecondaryPanel.displayName = "SidebarSecondaryPanel"
 
 export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const pathname = usePathname()
-    const { canAccessCalendar, canAccessWorkspace, isLoaded } = useFeatureAccess()
+    const { canAccessCalendar, canAccessWorkspace, canAccessTasks, canAccessFiles, isLoaded } = useFeatureAccess()
 
     /* Filter nav items based on feature flags */
-    const featureFlagMap = { canAccessCalendar, canAccessWorkspace } as const
+    const featureFlagMap = { canAccessCalendar, canAccessWorkspace, canAccessTasks, canAccessFiles } as const
     const visibleNav = React.useMemo(
         () => navMain.filter((item) => {
             if (!item.featureKey) return true
             if (!isLoaded) return false         // hide gated items until config loads
             return featureFlagMap[item.featureKey]
         }),
-        [isLoaded, canAccessCalendar, canAccessWorkspace],
+        [isLoaded, canAccessCalendar, canAccessWorkspace, canAccessTasks, canAccessFiles],
     )
 
     /* Count of feature-gated items to show as skeletons while loading */

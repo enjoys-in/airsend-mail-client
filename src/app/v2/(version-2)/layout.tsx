@@ -17,6 +17,9 @@ import CustomWidget from "@/components/common/custom-widget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePathname } from "next/navigation";
 import { FilesProvider } from "./(home)/files/_lib/files-provider";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
+import { featureForPath } from "@/lib/feature-gate";
+import { AccessDenied } from "./_components/access-denied";
 
 // NOTE: this must be a layout (not a template). A template remounts on every
 // navigation, which disconnected the socket, re-fetched the user/settings and
@@ -29,6 +32,7 @@ function MainLayout({ children }: { children: ReactNode }) {
   // Defaults to desktop before mount (same as the md breakpoint).
   const isMobile = useIsMobile()
   const pathname = usePathname()
+  const { canAccessTasks, canAccessFiles, canAccessWorkspace, profileReady } = useFeatureAccess()
   const mid = useAppSelector((s) => s.accounts?.currAccount?.mid);
   const email = useAppSelector((s) => s.accounts?.currAccount?.email);
 
@@ -46,16 +50,28 @@ function MainLayout({ children }: { children: ReactNode }) {
   // Calendar data + live stream for the whole app (mailbox "Upcoming meetings",
   // calendar page). Declared after the auth-state effect so X-Tenant-ID is set first.
   useCalDevSync();
+  // Tasks, Files and Workspace need a scope in the profile (`/me`). Without one the page is replaced by an
+  // access-denied screen (the icon is hidden too, and the API proxies refuse the calls).
+  const gatedFeature = featureForPath(pathname)
+  const allowedByFeature = { tasks: canAccessTasks, files: canAccessFiles, workspace: canAccessWorkspace }
+  const pageContent: ReactNode = !gatedFeature
+    ? children
+    : !profileReady
+      ? <Spinner />
+      : allowedByFeature[gatedFeature]
+        ? children
+        : <AccessDenied feature={gatedFeature} />
+
   const content = (
     <SocketContextProvider>
       <CustomWidget />
       <CalendarProvider>
         <Suspense fallback={<Spinner />}>
           <div suppressHydrationWarning className="flex md:hidden flex-1 min-w-0 bg-[#111315]">
-            <MobileLayoutV2>{isMobile ? children : null}</MobileLayoutV2>
+            <MobileLayoutV2>{isMobile ? pageContent : null}</MobileLayoutV2>
           </div>
           <div suppressHydrationWarning className="hidden md:flex flex-1 min-w-0 bg-[#111315]">
-            <DesktopLayoutV2>{isMobile ? null : children}</DesktopLayoutV2>
+            <DesktopLayoutV2>{isMobile ? null : pageContent}</DesktopLayoutV2>
           </div>
           <NewMailRecived />
           <SentMailToast />

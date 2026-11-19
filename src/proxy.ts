@@ -4,6 +4,7 @@ import { jwtDecode, JwtPayload } from 'jwt-decode'
 import { IUser, ROLE } from './lib/types/user.interface';
 import { validateTokenExpiry } from './lib/utils';
 import { resolveSafeRedirect, withToken } from './lib/safe-redirect';
+import { featureForPath } from './lib/feature-gate';
 
 const regex = /^\/u\/(.+)/;
 const hPanelRegex = /^\/h-panel\/(.+)/;
@@ -41,6 +42,30 @@ export async function proxy(request: NextRequest) {
     }
 
     if (isValidToken && isProtectedPath) {
+        return NextResponse.next();
+    }
+
+    // Tasks / Files / Workspace pages need a workspace scope. This is the cheap early rejection on the token's
+    // own claims (no scopes at all -> 403 access-denied page); the layout and the API proxies re-check the
+    // fresh scopes from `/me`, which can be newer than this token.
+    const gatedFeature = featureForPath(pathname);
+    if (gatedFeature) {
+        if (!isValidToken) {
+            const response = NextResponse.redirect(new URL('/v2', request.url));
+            if (access_token) response.cookies.delete('access_token');
+            return response;
+        }
+        let scopes: string[] | undefined;
+        try {
+            scopes = (jwtDecode(access_token as string) as { workspace?: { scopes?: string[] } }).workspace?.scopes;
+        } catch {
+            scopes = undefined;
+        }
+        if (!scopes || scopes.length === 0) {
+            const denied = new URL('/v2/access-denied', request.url);
+            denied.searchParams.set('feature', gatedFeature);
+            return NextResponse.rewrite(denied, { status: 403 });
+        }
         return NextResponse.next();
     }
 

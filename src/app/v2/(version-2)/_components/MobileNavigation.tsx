@@ -13,7 +13,7 @@ type TabItem = {
   href: string
   matchPath: string
   /** Optional feature-flag key — tab hidden when the flag is false */
-  featureKey?: "canAccessCalendar" | "canAccessWorkspace"
+  featureKey?: "canAccessCalendar" | "canAccessWorkspace" | "canAccessTasks"
 }
 
 const tabs: TabItem[] = [
@@ -42,7 +42,7 @@ const tabs: TabItem[] = [
     icon: CheckSquare,
     href: "/v2/tasks",
     matchPath: "/v2/tasks",
-    featureKey: "canAccessWorkspace",
+    featureKey: "canAccessTasks",
   },
   {
     label: "Notifications",
@@ -55,16 +55,16 @@ const tabs: TabItem[] = [
 const MobileNavigation = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { canAccessCalendar, canAccessWorkspace, isLoaded } = useFeatureAccess();
+  const { canAccessCalendar, canAccessWorkspace, canAccessTasks, isLoaded } = useFeatureAccess();
 
-  const featureFlagMap = { canAccessCalendar, canAccessWorkspace } as const;
+  const featureFlagMap = { canAccessCalendar, canAccessWorkspace, canAccessTasks } as const;
   const visibleTabs = React.useMemo(
     () => tabs.filter((tab) => {
       if (!tab.featureKey) return true;
       if (!isLoaded) return false;
       return featureFlagMap[tab.featureKey];
     }),
-    [isLoaded, canAccessCalendar, canAccessWorkspace],
+    [isLoaded, canAccessCalendar, canAccessWorkspace, canAccessTasks],
   );
 
   const gatedCount = tabs.filter((tab) => tab.featureKey).length;
