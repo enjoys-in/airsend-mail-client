@@ -88,6 +88,40 @@ export function Section({
     )
 }
 
+/** Form page layout: the form sections on the left, a sticky side column (preview, next steps, actions) on the right. */
+export function SplitForm({ children, aside }: { children: React.ReactNode; aside: React.ReactNode }) {
+    return (
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="min-w-0 space-y-5">{children}</div>
+            <aside className="space-y-5 xl:sticky xl:top-20">{aside}</aside>
+        </div>
+    )
+}
+
+/** Numbered "what happens next" list for the side column. */
+export function NextSteps({ title = "What happens next", steps }: { title?: string; steps: string[] }) {
+    return (
+        <Panel className="p-5">
+            <h2 className="text-sm font-medium">{title}</h2>
+            <ol className="mt-3 space-y-3">
+                {steps.map((step, index) => (
+                    <li key={step} className="flex gap-3 text-sm text-muted-foreground">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-medium text-foreground">
+                            {index + 1}
+                        </span>
+                        <span>{step}</span>
+                    </li>
+                ))}
+            </ol>
+        </Panel>
+    )
+}
+
+/** Cancel + primary action, side by side. */
+export function FormActions({ children }: { children: React.ReactNode }) {
+    return <div className="flex items-center gap-2">{children}</div>
+}
+
 /** A row of summary numbers. */
 export function StatGrid({ children, className }: { children: React.ReactNode; className?: string }) {
     return <div className={cn("grid grid-cols-2 gap-3 lg:grid-cols-4", className)}>{children}</div>
