@@ -11,6 +11,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import type { IServiceRoles, OrgService, OrgServiceRole, ServiceRoleChanges } from "../_lib/types"
+import { Pill, type Tone } from "./kit"
 
 export const ORG_SERVICES: { key: OrgService; label: string; hint: string }[] = [
     { key: "files", label: "Files", hint: "Admins connect and manage the organization's storage." },
@@ -67,14 +68,15 @@ interface ServiceRolePickerProps {
 export function ServiceRolePicker({ value, onChange, orgRole, disabled, locked = [] }: ServiceRolePickerProps) {
     return (
         <div className="space-y-3">
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
                 The organization role is the default everywhere. Override a service to give this account a different role
-                there, for example <strong>Admin in Files</strong> but <strong>Member in Tasks</strong>.
+                there, for example <span className="text-foreground">Admin in Files</span> but{" "}
+                <span className="text-foreground">Member in Tasks</span>.
             </p>
             <div className="grid gap-3 sm:grid-cols-3">
                 {ORG_SERVICES.map((service) => (
                     <div key={service.key} className="space-y-1.5">
-                        <Label className="text-xs font-semibold">{service.label}</Label>
+                        <Label className="text-sm font-medium">{service.label}</Label>
                         <Select
                             value={value[service.key]}
                             onValueChange={(v) => onChange(service.key, v as ServiceRoleChoice)}
@@ -91,7 +93,7 @@ export function ServiceRolePicker({ value, onChange, orgRole, disabled, locked =
                                 <SelectItem value="admin" className="text-xs">Admin</SelectItem>
                             </SelectContent>
                         </Select>
-                        <p className="text-[10px] leading-snug text-muted-foreground">{service.hint}</p>
+                        <p className="text-xs leading-snug text-muted-foreground">{service.hint}</p>
                     </div>
                 ))}
             </div>
@@ -99,27 +101,25 @@ export function ServiceRolePicker({ value, onChange, orgRole, disabled, locked =
     )
 }
 
-const BADGE_STYLES: Record<OrgServiceRole, string> = {
-    owner: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300",
-    admin: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300",
-    member: "bg-neutral-100 text-neutral-700 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-300",
+const BADGE_TONES: Record<OrgServiceRole, Tone> = {
+    owner: "amber",
+    admin: "blue",
+    member: "neutral",
 }
 
 /** Compact "Files Admin · Tasks Member · Workspace Member" row for the members table. */
 export function ServiceRoleBadges({ roles }: { roles?: IServiceRoles }) {
     if (!roles) return <span className="text-xs text-muted-foreground">—</span>
     return (
-        <div className="flex flex-wrap items-center gap-1 max-w-[230px]">
+        <div className="flex max-w-[240px] flex-wrap items-center gap-1">
             {ORG_SERVICES.map(({ key, label }) => {
                 const role = roles[key] ?? "member"
                 return (
-                    <span
-                        key={key}
-                        title={`${label}: ${roleLabel(role)}`}
-                        className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium ${BADGE_STYLES[role] ?? BADGE_STYLES.member}`}
-                    >
-                        {label}
-                        <span className="font-semibold">{roleLabel(role)}</span>
+                    <span key={key} title={`${label}: ${roleLabel(role)}`}>
+                        <Pill tone={BADGE_TONES[role] ?? "neutral"}>
+                            {label}
+                            <span className="opacity-70">{roleLabel(role)}</span>
+                        </Pill>
                     </span>
                 )
             })}
