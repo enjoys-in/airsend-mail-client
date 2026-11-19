@@ -1,8 +1,6 @@
-"use client";
-
-import type { LimitedAccessAccount } from "@nimbus/_lib/files-types";
+import type { LimitedAccessAccount } from "@nimbus/_packages/shared";
 import { createContext, useContext, useMemo } from "react";
-import type { SessionUser } from "@nimbus/_lib/files-types";
+import type { SessionUser } from "@nimbus/_packages/auth/auth";
 import { useAccounts } from "@nimbus/_hooks/useAccounts";
 import { useGetUser } from "@nimbus/_hooks/useGetUser";
 
