@@ -1,10 +1,18 @@
 import React from 'react'
+import { PageShell, Panel, RowsSkeleton } from '@/components/h-panel/kit'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const loading = () => {
   return (
-    <div className="flex items-center justify-center h-full w-full min-h-[50vh]">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-rose-600 border-t-transparent" />
-    </div>
+    <PageShell>
+      <div className="mb-6 space-y-2">
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-4 w-96 max-w-full" />
+      </div>
+      <Panel>
+        <RowsSkeleton rows={8} />
+      </Panel>
+    </PageShell>
   )
 }
 
