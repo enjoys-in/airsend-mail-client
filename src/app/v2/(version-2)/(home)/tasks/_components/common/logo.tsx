@@ -1,0 +1,31 @@
+import { Link } from "@tanstack/react-router";
+import useProjectStore from "@tasks/_store/project";
+
+type LogoProps = {
+  className?: string;
+};
+
+export function Logo({ className = "" }: LogoProps) {
+  const { setProject } = useProjectStore();
+
+  return (
+    <Link
+      onClick={() => {
+        setProject(undefined);
+      }}
+      to="/dashboard"
+      className={`w-auto ${className}`}
+    >
+      <img
+        src="/airsend-logo-light.png"
+        alt="AirSend"
+        className="h-6 w-auto dark:hidden"
+      />
+      <img
+        src="/airsend-logo-black.png"
+        alt="AirSend"
+        className="hidden h-6 w-auto dark:block"
+      />
+    </Link>
+  );
+}
