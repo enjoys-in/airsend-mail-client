@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	Dialog,
 	DialogContent,
@@ -13,29 +11,22 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 interface DeleteFileDialogProps {
-	isOpen?: boolean;
-	open?: boolean;
-	onClose?: () => void;
-	onOpenChange?: (open: boolean) => void;
+	isOpen: boolean;
+	onClose: () => void;
 	onDelete: () => Promise<void>;
 	fileName: string;
-	fileType?: "file" | "folder";
+	fileType: "file" | "folder";
 }
 
-export function DeleteFileDialog({ isOpen, open, onClose, onOpenChange, onDelete, fileName, fileType = "file" }: DeleteFileDialogProps) {
+export function DeleteFileDialog({ isOpen, onClose, onDelete, fileName, fileType }: DeleteFileDialogProps) {
 	const [isDeleting, setIsDeleting] = useState(false);
-	const isVisible = open !== undefined ? open : isOpen ?? false;
-	const handleClose = () => {
-		onClose?.();
-		onOpenChange?.(false);
-	};
 
 	const handleDelete = async () => {
 		setIsDeleting(true);
 		try {
 			await onDelete();
 			toast.success(`${fileType === "folder" ? "Folder" : "File"} deleted successfully`);
-			handleClose();
+			onClose();
 		} catch (error) {
 			console.error("Error deleting file:", error);
 			toast.error(`Failed to delete ${fileType}`);
@@ -52,7 +43,7 @@ export function DeleteFileDialog({ isOpen, open, onClose, onOpenChange, onDelete
 	};
 
 	return (
-		<Dialog open={isVisible} onOpenChange={(open) => !open && handleClose()}>
+		<Dialog open={isOpen} onOpenChange={onClose}>
 			<DialogContent onKeyDown={handleKeyDown}>
 				<DialogHeader>
 					<DialogTitle>Delete {fileType === "folder" ? "Folder" : "File"}</DialogTitle>
