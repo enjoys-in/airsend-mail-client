@@ -14,6 +14,7 @@ import { capMatcher, matchesShortcut } from "./match-shortcut";
 import { shortcutCaps } from "./shortcut-keys";
 import { ShortcutRow } from "./shortcut-row";
 import { useShortcutsPanelStore } from "./shortcuts-panel-store";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const SHORTCUT_IDS = Object.keys(SHORTCUTS) as ShortcutId[];
 
@@ -59,7 +60,7 @@ export function ShortcutsPanel() {
         }
       }}
     >
-      <DialogPrimitive.Portal>
+      <DialogPrimitive.Portal container={kaneoPortalContainer}>
         <DialogPrimitive.Popup
           data-shortcuts="allow"
           initialFocus={searchRef}

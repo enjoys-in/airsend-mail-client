@@ -228,7 +228,6 @@ input:-webkit-autofill:active {
 
 :root {
   --font-sans:
-    "Geist Variable",
     ui-sans-serif,
     system-ui,
     sans-serif;
@@ -243,28 +242,53 @@ input:-webkit-autofill:active {
     "Liberation Mono",
     "Courier New",
     monospace;
-  --radius: 0.625rem;
-  --accent: --alpha(var(--color-black) / 4%);
-  --accent-foreground: var(--color-neutral-800);
-  --background: var(--color-white);
-  --border: --alpha(var(--color-black) / 8%);
-  --card: var(--color-white);
-  --card-foreground: var(--color-neutral-800);
+
+  /* Surfaces, text, borders, sidebar and radius come from the AirSend design system
+     (see host-tokens.css), so Kaneo follows the host theme. Status colours stay Kaneo's. */
+  --radius: var(--ds-radius);
+  --background: var(--ds-background);
+  --foreground: var(--ds-foreground);
+  --card: var(--ds-card);
+  --card-foreground: var(--ds-card-foreground);
+  --popover: var(--ds-popover);
+  --popover-foreground: var(--ds-popover-foreground);
+  --primary: var(--ds-primary);
+  --primary-foreground: var(--ds-primary-foreground);
+  --secondary: var(--ds-secondary);
+  --secondary-foreground: var(--ds-secondary-foreground);
+  --muted: var(--ds-muted);
+  --muted-foreground: var(--ds-muted-foreground);
+  --accent: var(--ds-accent);
+  --accent-foreground: var(--ds-accent-foreground);
+  --border: var(--ds-border);
+  --input: var(--ds-input);
+  --ring: var(--ds-ring);
+  --sidebar: var(--ds-sidebar);
+  --sidebar-foreground: var(--ds-sidebar-foreground);
+  --sidebar-primary: var(--ds-sidebar-primary);
+  --sidebar-primary-foreground: var(--ds-sidebar-primary-foreground);
+  --sidebar-accent: var(--ds-sidebar-accent);
+  --sidebar-accent-foreground: var(--ds-sidebar-accent-foreground);
+  --sidebar-border: var(--ds-sidebar-border);
+  --sidebar-ring: var(--ds-sidebar-ring);
+  --code: var(--card);
+  --code-foreground: var(--foreground);
+  --code-highlight: color-mix(in srgb, var(--foreground) 5%, transparent);
+  --sidebar-active: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--foreground) 9%, transparent),
+    color-mix(in srgb, var(--foreground) 4%, transparent)
+  );
+  --sidebar-active-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--foreground) 6%, transparent),
+    0 1px 2px color-mix(in srgb, black 30%, transparent);
+
+  /* Status colours (light) */
   --destructive: var(--color-red-500);
   --destructive-foreground: var(--color-red-700);
-  --foreground: var(--color-neutral-800);
   --info: var(--color-blue-500);
   --info-foreground: var(--color-blue-700);
-  --input: --alpha(var(--color-black) / 10%);
-  --muted: --alpha(var(--color-black) / 4%);
-  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-black));
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --primary: var(--color-neutral-800);
-  --primary-foreground: var(--color-neutral-50);
-  --ring: var(--color-neutral-400);
-  --secondary: --alpha(var(--color-black) / 4%);
-  --secondary-foreground: var(--color-neutral-800);
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-700);
   --warning: var(--color-amber-500);
@@ -274,172 +298,89 @@ input:-webkit-autofill:active {
   --chart-3: var(--color-cyan-900);
   --chart-4: var(--color-amber-400);
   --chart-5: var(--color-amber-500);
-  --sidebar: var(--color-neutral-50);
-  --sidebar-foreground: color-mix(
-    in srgb,
-    var(--color-neutral-800) 64%,
-    var(--sidebar)
-  );
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-neutral-50);
-  --sidebar-accent: --alpha(var(--color-black) / 4%);
-  --sidebar-accent-foreground: var(--color-neutral-800);
-  --sidebar-border: --alpha(var(--color-black) / 6%);
-  --sidebar-ring: var(--color-neutral-400);
-  --sidebar-active: linear-gradient(
-    to bottom,
-    var(--color-white),
-    var(--color-neutral-100)
-  );
-  --sidebar-active-shadow:
-    inset 0 1px 0 var(--color-white),
-    0 0 0 1px --alpha(var(--color-black) / 7%),
-    0 1px 2px --alpha(var(--color-black) / 6%),
-    0 2px 6px --alpha(var(--color-black) / 3%);
-  --code: var(--color-white);
-  --code-foreground: var(--foreground);
-  --code-highlight: --alpha(var(--color-black) / 4%);
-  --board-lane: #00000005;
-  --board-card: #ffffff;
-  --board-card-border: #00000014;
-  --board-card-border-hover: #0000002e;
-  --board-card-selected: #f2f2f2;
-  --board-card-selected-border: #00000038;
-  --board-card-focus: #8a8a8a;
-  --board-card-ring: #8a8a8a40;
-  --board-card-shadow: 0 1px 2px #0000000a;
-  --board-card-done: #ffffff99;
-  --board-card-done-border: #0000000f;
-  --board-id: #8a8a8a;
-  --board-id-done: #a3a3a3;
-  --board-title: #171717;
-  --board-title-done: #737373;
-  --chip-border: #00000017;
-  --chip-border-hover: #00000029;
-  --chip-hover: #0000000a;
-  --chip-border-open: #00000033;
-  --chip-open: #0000000f;
-  --chip-foreground: #404040;
-  --chip-muted: #737373;
-  --chip-icon: #8a8a8a;
-  --priority-bar: #525252;
-  --priority-bar-empty: #00000021;
+
+  /* Board cards, chips and avatars: derived from the tokens above so both themes work. */
+  --board-lane: color-mix(in srgb, var(--foreground) 3%, transparent);
+  --board-card: color-mix(in srgb, var(--card) 96%, var(--foreground));
+  --board-card-border: var(--border);
+  --board-card-border-hover: color-mix(in srgb, var(--foreground) 18%, transparent);
+  --board-card-selected: color-mix(in srgb, var(--card) 90%, var(--foreground));
+  --board-card-selected-border: color-mix(in srgb, var(--foreground) 24%, transparent);
+  --board-card-focus: var(--muted-foreground);
+  --board-card-ring: color-mix(in srgb, var(--muted-foreground) 25%, transparent);
+  --board-card-shadow: 0 1px 2px color-mix(in srgb, black 12%, transparent);
+  --board-card-done: color-mix(in srgb, var(--foreground) 1%, transparent);
+  --board-card-done-border: color-mix(in srgb, var(--foreground) 4%, transparent);
+  --board-id: var(--muted-foreground);
+  --board-id-done: color-mix(in srgb, var(--muted-foreground) 70%, transparent);
+  --board-title: var(--foreground);
+  --board-title-done: var(--muted-foreground);
+  --chip-border: color-mix(in srgb, var(--foreground) 9%, transparent);
+  --chip-border-hover: color-mix(in srgb, var(--foreground) 16%, transparent);
+  --chip-hover: color-mix(in srgb, var(--foreground) 4%, transparent);
+  --chip-border-open: color-mix(in srgb, var(--foreground) 20%, transparent);
+  --chip-open: color-mix(in srgb, var(--foreground) 6%, transparent);
+  --chip-foreground: color-mix(in srgb, var(--foreground) 80%, var(--background));
+  --chip-muted: var(--muted-foreground);
+  --chip-icon: var(--muted-foreground);
+  --priority-bar: var(--muted-foreground);
+  --priority-bar-empty: color-mix(in srgb, var(--foreground) 13%, transparent);
   --priority-low: #2563eb;
   --priority-medium: #d97706;
   --priority-high: #ea580c;
   --priority-urgent: #dc2626;
   --due-overdue: #dc2626;
-  --avatar: #e5e5e5;
-  --avatar-selected: #e0e0e0;
-  --avatar-done: #ededed;
-  --avatar-border: #00000017;
-  --avatar-foreground: #404040;
-  --avatar-foreground-done: #737373;
-  --avatar-unassigned: #f5f5f5;
-  --avatar-unassigned-foreground: #8a8a8a;
+  --avatar: color-mix(in srgb, var(--foreground) 14%, var(--background));
+  --avatar-selected: color-mix(in srgb, var(--foreground) 18%, var(--background));
+  --avatar-done: color-mix(in srgb, var(--foreground) 9%, var(--background));
+  --avatar-border: color-mix(in srgb, var(--foreground) 9%, transparent);
+  --avatar-foreground: color-mix(in srgb, var(--foreground) 80%, var(--background));
+  --avatar-foreground-done: var(--muted-foreground);
+  --avatar-unassigned: color-mix(in srgb, var(--foreground) 8%, var(--background));
+  --avatar-unassigned-foreground: var(--muted-foreground);
 }
 
+/* Only the status colours differ per theme; everything else follows the host. */
 .dark {
-  --accent: --alpha(var(--color-white) / 4%);
-  --accent-foreground: var(--color-neutral-100);
-  --background: color-mix(
-    in srgb,
-    var(--color-neutral-950) 96%,
-    var(--color-white)
-  );
-  --border: --alpha(var(--color-white) / 6%);
-  --card: color-mix(in srgb, var(--background) 98%, var(--color-white));
-  --card-foreground: var(--color-neutral-100);
   --destructive: color-mix(in srgb, var(--color-red-500) 90%, var(--color-white));
   --destructive-foreground: var(--color-red-400);
-  --foreground: var(--color-neutral-100);
-  --info: var(--color-blue-500);
   --info-foreground: var(--color-blue-400);
-  --input: --alpha(var(--color-white) / 8%);
-  --muted: --alpha(var(--color-white) / 4%);
-  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
-  --popover: color-mix(in srgb, var(--background) 98%, var(--color-white));
-  --popover-foreground: var(--color-neutral-100);
-  --primary: var(--color-neutral-100);
-  --primary-foreground: var(--color-neutral-800);
-  --ring: var(--color-neutral-500);
-  --secondary: --alpha(var(--color-white) / 4%);
-  --secondary-foreground: var(--color-neutral-100);
-  --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-400);
-  --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-400);
   --chart-1: var(--color-blue-700);
   --chart-2: var(--color-emerald-500);
   --chart-3: var(--color-amber-500);
   --chart-4: var(--color-purple-500);
   --chart-5: var(--color-rose-500);
-  --sidebar: color-mix(
-    in srgb,
-    var(--color-neutral-950) 97%,
-    var(--color-white)
-  );
-  --sidebar-foreground: color-mix(
-    in srgb,
-    var(--color-neutral-100) 64%,
-    var(--sidebar)
-  );
-  --sidebar-primary: var(--color-neutral-100);
-  --sidebar-primary-foreground: var(--color-neutral-800);
-  --sidebar-accent: --alpha(var(--color-white) / 4%);
-  --sidebar-accent-foreground: var(--color-neutral-100);
-  --sidebar-border: --alpha(var(--color-white) / 5%);
-  --sidebar-ring: var(--color-neutral-400);
-  --sidebar-active: linear-gradient(
-    to bottom,
-    --alpha(var(--color-white) / 9%),
-    --alpha(var(--color-white) / 4%)
-  );
-  --sidebar-active-shadow:
-    inset 0 1px 0 --alpha(var(--color-white) / 8%),
-    0 0 0 1px --alpha(var(--color-white) / 6%),
-    0 1px 2px --alpha(var(--color-black) / 40%);
-  --code: color-mix(in srgb, var(--background) 98%, var(--color-white));
-  --code-foreground: var(--foreground);
-  --code-highlight: --alpha(var(--color-white) / 4%);
-  --board-lane: #0000001f;
-  --board-card: #1c1c1c;
-  --board-card-border: transparent;
-  --board-card-border-hover: #ffffff2e;
-  --board-card-selected: #262626;
-  --board-card-selected-border: #ffffff3d;
-  --board-card-focus: #a3a3a3;
-  --board-card-ring: #a3a3a333;
   --board-card-shadow: 0 1px 2px #00000033, 0 4px 12px -4px #00000059;
-  --board-card-done: #ffffff03;
-  --board-card-done-border: #ffffff0a;
-  --board-id: #707070;
-  --board-id-done: #5c5c5c;
-  --board-title: #ededed;
-  --board-title-done: #707070;
-  --chip-border: #ffffff17;
-  --chip-border-hover: #ffffff29;
-  --chip-hover: #ffffff0a;
-  --chip-border-open: #ffffff33;
-  --chip-open: #ffffff0f;
-  --chip-foreground: #cfcfcf;
-  --chip-muted: #8f8f8f;
-  --chip-icon: #8a8a8a;
-  --priority-bar: #a3a3a3;
-  --priority-bar-empty: #ffffff24;
   --priority-low: #60a5fa;
   --priority-medium: #fbbf24;
   --priority-high: #fb923c;
   --priority-urgent: #e5484d;
   --due-overdue: #ff6467;
-  --avatar: #2e2e2e;
-  --avatar-selected: #383838;
-  --avatar-done: #222222;
-  --avatar-border: #ffffff17;
-  --avatar-foreground: #d4d4d4;
-  --avatar-foreground-done: #707070;
-  --avatar-unassigned: #262626;
-  --avatar-unassigned-foreground: #8a8a8a;
+}
+
+/* Typography: inherit the AirSend font (set on the host body) instead of Kaneo's own. */
+.font-sans,
+.font-heading,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: inherit;
+}
+
+/* Kaneo is embedded below the AirSend header, so its "viewport" is the `.kaneo-root` box (see
+   [[...slug]]/page.tsx), not the window. Unlayered on purpose: it is emitted after the utilities
+   and must win over `h-svh`/`min-h-svh`. `scripts/build-tasks-css.mjs` scopes it to `.kaneo-root`. */
+.h-svh {
+  height: 100%;
+}
+
+.min-h-svh {
+  min-height: 100%;
 }
 
 @layer base {
@@ -688,7 +629,7 @@ input:-webkit-autofill:active {
   }
 
   .kaneo-mention-popup {
-    position: absolute;
+    position: fixed;
     z-index: 50;
   }
 

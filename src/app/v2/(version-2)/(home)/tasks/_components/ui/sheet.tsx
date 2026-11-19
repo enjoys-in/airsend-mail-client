@@ -6,6 +6,7 @@ import { Button } from "@tasks/_components/ui/button";
 import { ScrollArea } from "@tasks/_components/ui/scroll-area";
 import { cn } from "@tasks/_lib/cn";
 import { i18n } from "@tasks/_lib/i18n";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const Sheet = SheetPrimitive.Root;
 
@@ -70,7 +71,7 @@ function SheetPopup({
   variant?: "default" | "inset";
 }) {
   return (
-    <SheetPortal>
+    <SheetPortal container={kaneoPortalContainer}>
       <SheetBackdrop />
       <SheetViewport side={side} variant={variant}>
         <SheetPrimitive.Popup

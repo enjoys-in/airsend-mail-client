@@ -5,6 +5,7 @@ import { ChevronRightIcon } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@tasks/_lib/cn";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const MenuCreateHandle = MenuPrimitive.createHandle;
 
@@ -51,7 +52,7 @@ function MenuPopup({
   anchor?: MenuPrimitive.Positioner.Props["anchor"];
 }) {
   return (
-    <MenuPrimitive.Portal>
+    <MenuPrimitive.Portal container={kaneoPortalContainer}>
       <MenuPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

@@ -12,6 +12,7 @@ import { buttonVariants } from "@tasks/_components/ui/button";
 import { ToastShakeRoot } from "@tasks/_components/ui/toast-shake-root";
 import { cn } from "@tasks/_lib/cn";
 import type { ToastIcon } from "@tasks/_lib/toast";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const toastManager = Toast.createToastManager();
 const anchoredToastManager = Toast.createToastManager();
@@ -54,7 +55,7 @@ function Toasts({ position = "bottom-right" }: { position: ToastPosition }) {
   const isTop = position.startsWith("top");
 
   return (
-    <Toast.Portal data-slot="toast-portal">
+    <Toast.Portal data-slot="toast-portal" container={kaneoPortalContainer}>
       <Toast.Viewport
         className={cn(
           "fixed z-[200] mx-auto flex w-[calc(100%-var(--toast-inset)*2)] max-w-90 [--toast-inset:--spacing(4)] sm:[--toast-inset:--spacing(8)]",
@@ -193,7 +194,7 @@ function AnchoredToasts() {
   const { toasts } = Toast.useToastManager();
 
   return (
-    <Toast.Portal data-slot="toast-portal-anchored">
+    <Toast.Portal data-slot="toast-portal-anchored" container={kaneoPortalContainer}>
       <Toast.Viewport
         className="outline-none"
         data-slot="toast-viewport-anchored"

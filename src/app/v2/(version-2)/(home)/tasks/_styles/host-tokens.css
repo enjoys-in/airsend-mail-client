@@ -1,0 +1,38 @@
+/*
+ * AirSend design-system bridge. Appended UNSCOPED to public/tasks/kaneo.css by
+ * scripts/build-tasks-css.mjs.
+ *
+ * Kaneo's tokens live on `.kaneo-root` and shadow the host's same-named variables there, so they
+ * cannot read `--background` etc. directly (that would be a cycle). These aliases are resolved on
+ * <html>, where the host's light/dark values apply, and then inherited into `.kaneo-root`, which
+ * maps its own tokens onto them (see _styles/index.css). Switching the host theme therefore
+ * re-themes Kaneo with no extra work. The `--ds-*` names are unique, so nothing is clobbered.
+ */
+:root {
+  --ds-background: hsl(var(--background));
+  --ds-foreground: hsl(var(--foreground));
+  --ds-card: hsl(var(--card));
+  --ds-card-foreground: hsl(var(--card-foreground));
+  --ds-popover: hsl(var(--popover));
+  --ds-popover-foreground: hsl(var(--popover-foreground));
+  --ds-primary: hsl(var(--primary));
+  --ds-primary-foreground: hsl(var(--primary-foreground));
+  --ds-secondary: hsl(var(--secondary));
+  --ds-secondary-foreground: hsl(var(--secondary-foreground));
+  --ds-muted: hsl(var(--muted));
+  --ds-muted-foreground: hsl(var(--muted-foreground));
+  --ds-accent: hsl(var(--accent));
+  --ds-accent-foreground: hsl(var(--accent-foreground));
+  --ds-border: hsl(var(--border));
+  --ds-input: hsl(var(--input));
+  --ds-ring: hsl(var(--ring));
+  --ds-sidebar: hsl(var(--sidebar-background));
+  --ds-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --ds-sidebar-primary: hsl(var(--sidebar-primary));
+  --ds-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --ds-sidebar-accent: hsl(var(--sidebar-accent));
+  --ds-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --ds-sidebar-border: hsl(var(--sidebar-border));
+  --ds-sidebar-ring: hsl(var(--sidebar-ring));
+  --ds-radius: var(--radius);
+}

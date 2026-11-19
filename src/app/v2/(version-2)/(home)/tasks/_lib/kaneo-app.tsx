@@ -9,7 +9,11 @@ import queryClient from "@tasks/_query-client";
 import { useAuth } from "@tasks/_components/providers/auth-provider/hooks/use-auth";
 import { SequenceHint } from "../_components/shortcuts/sequence-hint";
 import { ShortcutsPanel } from "../_components/shortcuts/shortcuts-panel";
-import { BootFrame } from "../_components/common/boot-frame";
+import {
+  RouteError,
+  RouteNotFound,
+  RoutePending,
+} from "../_components/common/route-states";
 import AuthProvider from "../_components/providers/auth-provider";
 import { ThemeProvider } from "../_components/providers/theme-provider";
 import { ErrorBoundary } from "../_components/ui/error-boundary";
@@ -29,7 +33,12 @@ const router = createRouter({
   basepath: TASKS_BASE_PATH,
   defaultPreload: "intent",
   defaultPreloadStaleTime: 0,
-  defaultPendingComponent: BootFrame,
+  defaultPendingComponent: RoutePending,
+  defaultErrorComponent: RouteError,
+  defaultNotFoundComponent: RouteNotFound,
+  // Don't flash a spinner for fast loads; once shown, keep it long enough to read as a state.
+  defaultPendingMs: 250,
+  defaultPendingMinMs: 400,
   context: {
     user: null,
     queryClient,

@@ -5,6 +5,7 @@ import { ChevronsUpDownIcon, XIcon } from "lucide-react";
 import { Input } from "@tasks/_components/ui/input";
 import { ScrollArea } from "@tasks/_components/ui/scroll-area";
 import { cn } from "@tasks/_lib/cn";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const Autocomplete = AutocompletePrimitive.Root;
 
@@ -91,7 +92,7 @@ function AutocompletePopup({
   anchor?: AutocompletePrimitive.Positioner.Props["anchor"];
 }) {
   return (
-    <AutocompletePrimitive.Portal>
+    <AutocompletePrimitive.Portal container={kaneoPortalContainer}>
       <AutocompletePrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

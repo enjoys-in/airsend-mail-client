@@ -12,6 +12,7 @@ import {
 import type * as React from "react";
 
 import { cn } from "@tasks/_lib/cn";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const Select = SelectPrimitive.Root;
 
@@ -120,7 +121,7 @@ function SelectPopup({
   anchor?: SelectPrimitive.Positioner.Props["anchor"];
 }) {
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={kaneoPortalContainer}>
       <SelectPrimitive.Positioner
         align={align}
         alignItemWithTrigger={alignItemWithTrigger}

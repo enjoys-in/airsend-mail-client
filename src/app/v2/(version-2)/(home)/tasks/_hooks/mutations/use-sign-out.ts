@@ -1,22 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { replayAuthEntrance } from "@tasks/_components/auth/auth-entrance";
 import { replayShellEntrance } from "@tasks/_components/common/shell-entered";
 import { getIdToken } from "@tasks/_fetchers/oauth/get-id-token";
+import { withTasksBasePath } from "@tasks/_lib/base-path";
 import { descriptionSaveQueue } from "@tasks/_lib/description-save-queue";
 import { i18n } from "@tasks/_lib/i18n";
 import { authClient } from "@tasks/_lib/auth-client";
 import { signOutState } from "@tasks/_lib/sign-out-state";
 
 function useSignOut(idpLogoutUrl?: string | null) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: session } = authClient.useSession();
 
   return useMutation({
     mutationFn: async () => {
       const resume = descriptionSaveQueue.pause(session?.user.id ?? "");
-      let returnTo: string | null = null;
       try {
         if (!(await descriptionSaveQueue.drain(session?.user.id ?? "")))
           throw new Error(i18n.t("tasks:detail.editor.saveFailed"));
@@ -24,7 +21,7 @@ function useSignOut(idpLogoutUrl?: string | null) {
         if (url) {
           url.searchParams.set(
             "post_logout_redirect_uri",
-            `${window.location.origin}/auth/sign-in`,
+            `${window.location.origin}${withTasksBasePath("/dashboard")}`,
           );
           signOutState.isRedirecting = true;
           try {
@@ -35,13 +32,7 @@ function useSignOut(idpLogoutUrl?: string | null) {
           }
         } else {
           signOutState.isRedirecting = true;
-          replayAuthEntrance();
           replayShellEntrance();
-          returnTo =
-            window.location.pathname +
-            window.location.search +
-            window.location.hash;
-          await navigate({ to: "/auth/sign-in", replace: true });
         }
 
         const result = await authClient.signOut();
@@ -56,12 +47,12 @@ function useSignOut(idpLogoutUrl?: string | null) {
             queryKey[0] !== "config" && queryKey[0] !== "instance-status",
         });
         queryClient.getMutationCache().clear();
+        // There is no sign-in screen: reload into the app, which opens a fresh session.
         if (url) window.location.href = url.toString();
-        else signOutState.isRedirecting = false;
+        else window.location.assign(withTasksBasePath("/dashboard"));
         return result.data;
       } catch (error) {
         signOutState.isRedirecting = false;
-        if (returnTo) void navigate({ href: returnTo, replace: true });
         throw error;
       } finally {
         resume();

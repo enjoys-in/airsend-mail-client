@@ -3,6 +3,7 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@tasks/_lib/cn";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 function ContextMenu(props: ContextMenuPrimitive.Root.Props) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
@@ -32,7 +33,7 @@ function ContextMenuTrigger({
 
 function ContextMenuPortal(props: ContextMenuPrimitive.Portal.Props) {
   return (
-    <ContextMenuPrimitive.Portal data-slot="context-menu-portal" {...props} />
+    <ContextMenuPrimitive.Portal data-slot="context-menu-portal" container={kaneoPortalContainer} {...props} />
   );
 }
 
@@ -74,7 +75,7 @@ function ContextMenuContent({
   anchor?: ContextMenuPrimitive.Positioner.Props["anchor"];
 }) {
   return (
-    <ContextMenuPrimitive.Portal>
+    <ContextMenuPrimitive.Portal container={kaneoPortalContainer}>
       <ContextMenuPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

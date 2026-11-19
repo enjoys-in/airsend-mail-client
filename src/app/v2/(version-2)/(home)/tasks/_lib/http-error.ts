@@ -1,4 +1,5 @@
 import i18n from "i18next";
+import { ensureSession } from "./ensure-session";
 import { signOutState } from "./sign-out-state";
 import {
   type ApiErrorDetails,
@@ -56,20 +57,27 @@ export function isUnauthorizedError(error: unknown): boolean {
   return code === undefined || code === "UNAUTHORIZED";
 }
 
-// Shared unauthorized redirect for both the React Query error cache and direct
-// fetcher calls (e.g. route loaders) that bypass the QueryCache. Stashes the
-// current pathname/search/hash so the sign-in page can return the user to
-// where they were instead of dropping them on /dashboard.
+// Shared unauthorized handler for both the React Query error cache and direct fetcher calls
+// (e.g. route loaders) that bypass the QueryCache. There is no sign-in screen, so a 401 means the
+// session expired or was revoked: open a fresh one and refetch. Attempts are throttled so a
+// backend that keeps answering 401 can't spin in a loop.
+const RECOVERY_COOLDOWN_MS = 15_000;
+let lastRecoveryAt = 0;
+let onSessionRecovered: (() => void) | undefined;
+
+// Registered by the query client (which imports this module, so it can't be imported back here).
+export function setSessionRecoveredHandler(handler: () => void): void {
+  onSessionRecovered = handler;
+}
+
 export function handleUnauthorized(): void {
-  if (
-    signOutState.isRedirecting ||
-    window.location.pathname.startsWith("/auth/")
-  )
-    return;
-  const currentPath =
-    window.location.pathname + window.location.search + window.location.hash;
-  const target = currentPath
-    ? `/auth/sign-in?redirect=${encodeURIComponent(currentPath)}`
-    : "/auth/sign-in";
-  window.location.replace(target);
+  if (signOutState.isRedirecting) return;
+  const now = Date.now();
+  if (now - lastRecoveryAt < RECOVERY_COOLDOWN_MS) return;
+  lastRecoveryAt = now;
+  void ensureSession()
+    .then(() => onSessionRecovered?.())
+    .catch(() => {
+      // Surfaced by the route error boundary on the next navigation / retry.
+    });
 }

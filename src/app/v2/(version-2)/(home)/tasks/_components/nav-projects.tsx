@@ -81,6 +81,7 @@ import {
 } from "./ui/alert-dialog";
 import { Button } from "./ui/button";
 import { withTasksBasePath } from "@tasks/_lib/base-path";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 function SortableProjectItem({
   id,
@@ -398,7 +399,7 @@ export function NavProjects() {
                       </div>
                     ) : null}
                   </DragOverlay>,
-                  document.body,
+                  kaneoPortalContainer.current ?? document.body,
                 )}
               </DndContext>
             </SidebarGroupContent>

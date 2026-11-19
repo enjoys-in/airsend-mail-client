@@ -2,7 +2,7 @@ import { stripTasksBasePath } from "@tasks/_lib/base-path";
 import { hasShellEntered } from "./shell-entered";
 import { ShellFrame } from "./shell-frame";
 
-function isShellPath(pathname: string) {
+export function isShellPath(pathname: string) {
   const path = pathname.replace(/\/+$/, "");
   return path === "/dashboard" || path.startsWith("/dashboard/workspace/");
 }

@@ -6,6 +6,7 @@ import MentionList, {
   type MentionListRef,
   type MentionMember,
 } from "./mention-list";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 type MentionSuggestionOptions = {
   getMembers: () => MentionMember[];
@@ -57,8 +58,9 @@ export const MentionSuggestion = Extension.create<MentionSuggestionOptions>({
           if (!popup || !clientRect) return;
           const rect = clientRect();
           if (!rect) return;
-          popup.style.top = `${rect.bottom + window.scrollY + 4}px`;
-          popup.style.left = `${rect.left + window.scrollX}px`;
+          // `fixed` + viewport coordinates: the popup lives in the Kaneo portal host, not <body>.
+          popup.style.top = `${rect.bottom + 4}px`;
+          popup.style.left = `${rect.left}px`;
         };
 
         return {
@@ -70,7 +72,7 @@ export const MentionSuggestion = Extension.create<MentionSuggestionOptions>({
             popup = document.createElement("div");
             popup.className = "kaneo-mention-popup";
             popup.appendChild(component.element);
-            document.body.appendChild(popup);
+            (kaneoPortalContainer.current ?? document.body).appendChild(popup);
             place(props.clientRect);
           },
           onUpdate: (props) => {

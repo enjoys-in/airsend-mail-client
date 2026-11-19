@@ -3,6 +3,7 @@
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
 
 import { cn } from "@tasks/_lib/cn";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const AlertDialogCreateHandle = AlertDialogPrimitive.createHandle;
 
@@ -56,7 +57,7 @@ function AlertDialogPopup({
   bottomStickOnMobile?: boolean;
 }) {
   return (
-    <AlertDialogPortal>
+    <AlertDialogPortal container={kaneoPortalContainer}>
       <AlertDialogBackdrop forceRender />
       <AlertDialogViewport
         className={cn(

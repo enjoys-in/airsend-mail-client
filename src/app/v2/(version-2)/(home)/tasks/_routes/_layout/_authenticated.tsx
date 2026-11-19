@@ -1,47 +1,19 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { GlobalShortcuts } from "@tasks/_components/shortcuts/global-shortcuts";
 import { useTrackSignup } from "@tasks/_hooks/use-track-signup";
 import { useUserWebSocket } from "@tasks/_hooks/use-user-websocket";
-import { authClient } from "@tasks/_lib/auth-client";
 import { getCachedSession } from "@tasks/_lib/cached-session";
+import { ensureSession } from "@tasks/_lib/ensure-session";
 
-// protects all child routes, must be logged in
+// Protects all child routes. There is no sign-in screen: a missing session is created silently
+// (`ensureSession`), and if that fails the route error boundary shows a retry state.
 export const Route = createFileRoute("/_layout/_authenticated")({
   component: AuthenticatedLayout,
-  beforeLoad: async ({ location }) => {
+  beforeLoad: async () => {
     const cached = getCachedSession();
     if (cached) return { session: cached, sessionError: false };
-
-    let session = null;
-    let sessionError = false;
-    try {
-      // better-auth reports failures (429, 5xx, network) in `error` rather
-      // than throwing; a missing session is `data: null` with no error.
-      const { data, error } = await authClient.getSession();
-      session = data;
-      if (error) {
-        sessionError = true;
-        if (process.env.NODE_ENV !== "production") console.warn("getSession failed", error);
-      }
-    } catch (error) {
-      sessionError = true;
-      if (process.env.NODE_ENV !== "production") console.warn("getSession failed", error);
-      // getSession() rejected (e.g. network error) — session state is
-      // unknown. Don't conflate with "no session" (unauthenticated): let
-      // children decide whether to skip active-organization mutations.
-    }
-    if (!session && !sessionError) {
-      throw redirect({
-        to: "/auth/sign-in",
-        search: {
-          // location.href is pathname + search + hash without the origin.
-          // location.search is a null-prototype parsed object, so string
-          // concatenation on it throws "Cannot convert object to primitive value".
-          redirect: location.href,
-        },
-      });
-    }
-    return { session, sessionError };
+    const session = await ensureSession();
+    return { session, sessionError: false };
   },
 });
 

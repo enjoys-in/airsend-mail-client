@@ -7,6 +7,7 @@ import { Input } from "@tasks/_components/ui/input";
 import { ScrollArea } from "@tasks/_components/ui/scroll-area";
 import { cn } from "@tasks/_lib/cn";
 import { i18n } from "@tasks/_lib/i18n";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const ComboboxContext = React.createContext<{
   chipsRef: React.RefObject<Element | null> | null;
@@ -161,7 +162,7 @@ function ComboboxPopup({
   const anchor = anchorProp ?? chipsRef;
 
   return (
-    <ComboboxPrimitive.Portal>
+    <ComboboxPrimitive.Portal container={kaneoPortalContainer}>
       <ComboboxPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

@@ -1,5 +1,9 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
-import { handleUnauthorized, isUnauthorizedError } from "@tasks/_lib/http-error";
+import {
+  handleUnauthorized,
+  isUnauthorizedError,
+  setSessionRecoveredHandler,
+} from "@tasks/_lib/http-error";
 import { isForbiddenOrNotFound } from "@tasks/_lib/is-forbidden-or-not-found";
 
 // TanStack raises these before any fetcher-level message exists; CORS rejections
@@ -46,6 +50,11 @@ const queryClient = new QueryClient({
       retry: false,
     },
   },
+});
+
+// After a 401 the session is re-opened silently; refetch everything that failed.
+setSessionRecoveredHandler(() => {
+  void queryClient.invalidateQueries();
 });
 
 export default queryClient;

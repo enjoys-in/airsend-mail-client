@@ -15,6 +15,7 @@ import {
   AutocompleteSeparator,
 } from "@tasks/_components/ui/autocomplete";
 import { cn } from "@tasks/_lib/cn";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const CommandDialog = CommandDialogPrimitive.Root;
 
@@ -70,7 +71,7 @@ function CommandDialogPopup({
   ...props
 }: CommandDialogPrimitive.Popup.Props & { instant?: boolean }) {
   return (
-    <CommandDialogPortal>
+    <CommandDialogPortal container={kaneoPortalContainer}>
       <CommandDialogBackdrop
         className={cn(
           instant &&

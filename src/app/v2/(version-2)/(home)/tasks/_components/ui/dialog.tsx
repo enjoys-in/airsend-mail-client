@@ -7,6 +7,7 @@ import { Button } from "@tasks/_components/ui/button";
 import { ScrollArea } from "@tasks/_components/ui/scroll-area";
 import { cn } from "@tasks/_lib/cn";
 import { i18n } from "@tasks/_lib/i18n";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const DialogCreateHandle = DialogPrimitive.createHandle;
 
@@ -99,7 +100,7 @@ function DialogPopup({
   instant?: boolean;
 }) {
   return (
-    <DialogPortal>
+    <DialogPortal container={kaneoPortalContainer}>
       <DialogBackdrop
         forceRender
         className={cn(

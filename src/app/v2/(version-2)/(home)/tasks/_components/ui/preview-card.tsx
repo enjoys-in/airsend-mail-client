@@ -4,6 +4,7 @@ import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card
 import * as React from "react";
 
 import { cn } from "@tasks/_lib/cn";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const PreviewCardDelays = React.createContext<{
   openDelay?: number;
@@ -69,7 +70,7 @@ function PreviewCardPopup({
   anchor?: PreviewCardPrimitive.Positioner.Props["anchor"];
 }) {
   return (
-    <PreviewCardPrimitive.Portal>
+    <PreviewCardPrimitive.Portal container={kaneoPortalContainer}>
       <PreviewCardPrimitive.Positioner
         align={align}
         anchor={anchor}

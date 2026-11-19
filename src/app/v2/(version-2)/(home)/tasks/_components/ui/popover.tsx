@@ -4,6 +4,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import * as React from "react";
 
 import { cn } from "@tasks/_lib/cn";
+import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 
 const PopoverCreateHandle = PopoverPrimitive.createHandle;
 
@@ -54,7 +55,7 @@ function PopoverPopup({
   positionerClassName?: string;
 }) {
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={kaneoPortalContainer}>
       <PopoverPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}
