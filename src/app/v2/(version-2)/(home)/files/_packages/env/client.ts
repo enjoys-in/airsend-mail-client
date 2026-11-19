@@ -6,10 +6,6 @@ const backendUrl = (process.env.NEXT_PUBLIC_FILES_API_URL || "http://localhost:1
 
 const env = {
 	VITE_BACKEND_URL: backendUrl,
-	/** Where this app lives (used for post-login redirects). */
-	VITE_FRONTEND_URL: (
-		process.env.NEXT_PUBLIC_FILES_APP_URL || (typeof window === "undefined" ? "http://localhost:9500" : window.location.origin)
-	).replace(/\/+$/, ""),
 };
 
 export default env;
