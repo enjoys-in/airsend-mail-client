@@ -43,7 +43,7 @@ export default function OrganizationMembersPage() {
                 </div>
             </header>
             <div className="flex-1 p-4 min-w-0 overflow-auto">
-                <MembersTable data={orgMembers} />
+                <MembersTable data={orgMembers} orgId={orgId} />
             </div>
         </div>
     )

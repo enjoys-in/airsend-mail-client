@@ -12,6 +12,8 @@ import {
     ExternalLink,
     Check,
     KeyRound,
+    RefreshCw,
+    Loader2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -83,6 +85,8 @@ import type { OrgService } from "../_lib/types"
 interface MembersTableProps {
     data: IMember[]
     onUpdated?: () => void
+    /** When set, "Sync users" only covers this organization. */
+    orgId?: string
 }
 
 const defaultRoles = [
@@ -92,7 +96,7 @@ const defaultRoles = [
     { value: "viewer", label: "Viewer" },
 ]
 
-export function MembersTable({ data, onUpdated }: MembersTableProps) {
+export function MembersTable({ data, onUpdated, orgId }: MembersTableProps) {
     const { toast } = useToast()
     const [members, setMembers] = React.useState<IMember[]>(data)
     const [searchQuery, setSearchQuery] = React.useState("")
@@ -140,6 +144,38 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
             }
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to update role", variant: "destructive" })
+        }
+    }
+
+    const [syncingId, setSyncingId] = React.useState<string | null>(null)
+    const [syncingAll, setSyncingAll] = React.useState(false)
+
+    // "Sync": seeds the Files / Tasks / Workspace roles a member is missing; roles that exist (overrides too) stay as they are.
+    const syncOne = async (member: IMember) => {
+        setSyncingId(member.id)
+        try {
+            const { data: res } = await API.syncMember(member.id)
+            if (!res?.success) throw new Error(res?.message || "Failed to sync")
+            toast({ title: "Synced", description: `${member.email}: ${res.message}` })
+            onUpdated?.()
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to sync member", variant: "destructive" })
+        } finally {
+            setSyncingId(null)
+        }
+    }
+
+    const syncAll = async () => {
+        setSyncingAll(true)
+        try {
+            const { data: res } = await API.syncMembers(orgId)
+            if (!res?.success) throw new Error(res?.message || "Failed to sync users")
+            toast({ title: "Users synced", description: res.message })
+            onUpdated?.()
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to sync users", variant: "destructive" })
+        } finally {
+            setSyncingAll(false)
         }
     }
 
@@ -304,8 +340,8 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
     return (
         <div className="space-y-4">
             {/* Search Bar */}
-            <div className="flex items-center gap-2 max-w-sm">
-                <div className="relative w-full">
+            <div className="flex items-center justify-between gap-2">
+                <div className="relative w-full max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="text"
@@ -315,6 +351,10 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
                         className="pl-8 text-sm"
                     />
                 </div>
+                <Button variant="outline" size="sm" onClick={syncAll} disabled={syncingAll} title="Add the Files, Tasks and Workspace roles that are missing for members">
+                    {syncingAll ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                    Sync users
+                </Button>
             </div>
 
             {/* Members Table */}
@@ -412,6 +452,10 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
                                                 <DropdownMenuItem onClick={() => openRoleEditor(member)}>
                                                     <KeyRound className="h-4 w-4 mr-2" />
                                                     Edit Service Roles
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => syncOne(member)} disabled={syncingId === member.id}>
+                                                    {syncingId === member.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                                                    Sync access
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => openScopeEditor(member)}>
                                                     <Sliders className="h-4 w-4 mr-2" />
