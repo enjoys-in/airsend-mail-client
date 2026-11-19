@@ -1,4 +1,4 @@
-import { useNavigate, useSearch } from "@nimbus/_lib/router-shim";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Sheet, SheetContent } from "@nimbus/_components/ui/sheet";
 
 export function FilePreview() {
