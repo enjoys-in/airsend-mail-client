@@ -15,6 +15,17 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   devIndicators: false,
+  async redirects() {
+    return [
+      // The tasks app has no page at its root. Redirect on the server instead of letting the
+      // client router boot just to bounce to /dashboard. Next matches a trailing slash too.
+      {
+        source: "/v2/tasks",
+        destination: "/v2/tasks/dashboard",
+        permanent: false,
+      },
+    ];
+  },
   turbopack: {},
   webpack: (config) => {
     config.infrastructureLogging = { level: 'error' }

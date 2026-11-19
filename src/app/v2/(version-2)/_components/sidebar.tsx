@@ -203,33 +203,31 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                         ))}
                     </SidebarMenu>
                 </SidebarHeader>
-                <SidebarContent>
-                    <SidebarGroup>
-                        <SidebarGroupContent className="px-1.5 md:px-0">
-                            <SidebarMenuItem>
-                                <Link href="/v2/u/settings">
-                                    <SidebarMenuButton
-                                        tooltip={{ children: "Settings", hidden: false }}
-                                        isActive={pathname.includes("/v2/u/settings")}
-                                        className={cn(
-                                            "px-2.5 md:px-2 transition-all duration-200 group/settings-btn",
-                                            pathname.includes("/v2/u/settings")
-                                                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-xs"
-                                                : "text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent/50"
-                                        )}
-                                    >
-                                        <Settings className={cn(
-                                            "!size-[18px] stroke-[1.8] transition-all duration-300 group-hover/settings-btn:rotate-45 group-hover/settings-btn:scale-110",
-                                            pathname.includes("/v2/u/settings") ? "stroke-[2.2] text-foreground" : "text-muted-foreground group-hover/settings-btn:text-foreground"
-                                        )} />
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-                </SidebarContent>
+                {/* Spacer: pushes the footer (settings + account) to the bottom of the rail. */}
+                <SidebarContent />
                 <SidebarRail />
                 <SidebarFooter>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <Link href="/v2/u/settings">
+                                <SidebarMenuButton
+                                    tooltip={{ children: "Settings", hidden: false }}
+                                    isActive={pathname.includes("/v2/u/settings")}
+                                    className={cn(
+                                        "px-2.5 md:px-2 transition-all duration-200 group/settings-btn",
+                                        pathname.includes("/v2/u/settings")
+                                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-xs"
+                                            : "text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent/50"
+                                    )}
+                                >
+                                    <Settings className={cn(
+                                        "!size-[18px] stroke-[1.8] transition-all duration-300 group-hover/settings-btn:rotate-45 group-hover/settings-btn:scale-110",
+                                        pathname.includes("/v2/u/settings") ? "stroke-[2.2] text-foreground" : "text-muted-foreground group-hover/settings-btn:text-foreground"
+                                    )} />
+                                </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
                     <NavUserV2 />
                 </SidebarFooter>
             </Sidebar>
