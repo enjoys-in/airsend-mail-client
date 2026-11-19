@@ -1,6 +1,6 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
 import { Button } from "@nimbus/_components/ui/button";
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 
 interface AuthErrorCardProps {
