@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useFormContext } from "react-hook-form"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -107,13 +107,13 @@ export function AdvancedSection({ account }: AdvancedSectionProps) {
     return (
         <div className="space-y-4">
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Auto Sync</CardTitle>
+                <CardHeader>
+                    <CardTitle>Auto Sync</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <FormSwitchField name="auto_sync.enabled" label="Enable Auto Sync" description="Automatically sync mailbox" />
                     {autoSyncEnabled && (
-                        <div className="ml-4">
+                        <div className="ml-1 border-l border-border/70 pl-4">
                             <FormInputField
                                 name="auto_sync.interval"
                                 label="Sync Interval (seconds)"
@@ -133,8 +133,8 @@ export function AdvancedSection({ account }: AdvancedSectionProps) {
             </Card>
 
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Calendar</CardTitle>
+                <CardHeader>
+                    <CardTitle>Calendar</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <SettingRow
@@ -151,7 +151,7 @@ export function AdvancedSection({ account }: AdvancedSectionProps) {
                         </p>
                     )}
                     {calenderEnabled && (
-                        <div className="ml-4 space-y-4">
+                        <div className="ml-1 space-y-4 border-l border-border/70 pl-4">
                             <FormInputField
                                 name="calender_config.calender_sync_interval"
                                 label="Sync Interval (seconds)"
@@ -207,8 +207,8 @@ export function AdvancedSection({ account }: AdvancedSectionProps) {
             </Dialog>
 
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base">User Profile</CardTitle>
+                <CardHeader>
+                    <CardTitle>User Profile</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -222,8 +222,8 @@ export function AdvancedSection({ account }: AdvancedSectionProps) {
             </Card>
 
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Personalization</CardTitle>
+                <CardHeader>
+                    <CardTitle>Personalization</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">

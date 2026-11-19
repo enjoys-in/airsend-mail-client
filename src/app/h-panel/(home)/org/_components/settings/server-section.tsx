@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useFormContext } from "react-hook-form"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -47,8 +47,8 @@ export function ServerSection() {
     return (
         <div className="space-y-4">
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base">SMTP Configuration</CardTitle>
+                <CardHeader>
+                    <CardTitle>SMTP Configuration</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <FormSwitchField name="smtp_config.enable_smtp" label="Enable SMTP" description="Allow sending emails via SMTP" />
@@ -58,8 +58,8 @@ export function ServerSection() {
             </Card>
 
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base">IMAP Configuration</CardTitle>
+                <CardHeader>
+                    <CardTitle>IMAP Configuration</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <FormSwitchField name="imap_config.enable_imap" label="Enable IMAP" description="Allow receiving emails via IMAP" />
@@ -67,8 +67,8 @@ export function ServerSection() {
             </Card>
 
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Blocked Domains</CardTitle>
+                <CardHeader>
+                    <CardTitle>Blocked Domains</CardTitle>
                     <CardDescription>Block specific domains from sending or receiving</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

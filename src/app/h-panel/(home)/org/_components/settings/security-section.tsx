@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormContext } from "react-hook-form"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Separator } from "@/components/ui/separator"
 import { FormSwitchField } from "./setting-row"
 import { FormInputField } from "./form-input-field"
@@ -13,8 +13,8 @@ export function SecuritySection() {
 
     return (
         <Card>
-            <CardHeader className="pb-3">
-                <CardTitle className="text-base">Security Settings</CardTitle>
+            <CardHeader>
+                <CardTitle>Security Settings</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
                 <FormSwitchField name="security.password_confirmation" label="Password Confirmation" description="Require password for sensitive actions" />
@@ -22,7 +22,7 @@ export function SecuritySection() {
                 <Separator />
                 <FormSwitchField name="security.password_expiration.enabled" label="Password Expiration" description="Enable password expiration policy" />
                 {expirationEnabled && (
-                    <div className="ml-4">
+                    <div className="ml-1 border-l border-border/70 pl-4">
                         <FormInputField
                             name="security.password_expiration.days"
                             label="Expiration Days"

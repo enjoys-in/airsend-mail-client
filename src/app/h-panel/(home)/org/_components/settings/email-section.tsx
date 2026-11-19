@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormContext } from "react-hook-form"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -21,8 +21,8 @@ export function EmailSection() {
         <div className="space-y-4">
             {/* Email Settings */}
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Email Settings</CardTitle>
+                <CardHeader>
+                    <CardTitle>Email Settings</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <FormSwitchField name="email_settings.autoShowImages" label="Auto Show Images" description="Automatically show images in emails" />
@@ -49,7 +49,7 @@ export function EmailSection() {
                             { shouldDirty: true }
                         )} />
                     {emailFooter.footer_enabled && (
-                        <div className="ml-4">
+                        <div className="ml-1 border-l border-border/70 pl-4">
                             <Textarea placeholder="Enter footer text..."
                                 value={emailFooter.footer_text || ""}
                                 onChange={(e) => setValue("email_settings.email_footer", { footer_enabled: true, footer_text: e.target.value }, { shouldDirty: true })} />
@@ -65,7 +65,7 @@ export function EmailSection() {
                             { shouldDirty: true }
                         )} />
                     {systemEmail.is_system_email && (
-                        <div className="ml-4 space-y-2">
+                        <div className="ml-1 space-y-2 border-l border-border/70 pl-4">
                             <Label>System Email Reply Address</Label>
                             <Input placeholder="noreply@domain.com"
                                 value={systemEmail.system_email_reply || ""}
@@ -77,8 +77,8 @@ export function EmailSection() {
 
             {/* Auto Reply */}
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Auto Reply</CardTitle>
+                <CardHeader>
+                    <CardTitle>Auto Reply</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <FormSwitchField name="auto_reply.enabled" label="Enable Auto Reply" description="Automatically reply to incoming emails" />
@@ -87,15 +87,15 @@ export function EmailSection() {
 
             {/* Vacation / Auto Reply */}
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
+                <CardHeader>
+                    <CardTitle>
                         <Calendar className="h-4 w-4" /> Vacation / Auto-Reply
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <FormSwitchField name="vacationSender.enabled" label="Enable Vacation Sender" description="Automatically reply when you are away" />
                     {vacationSender.enabled && (
-                        <div className="space-y-3 ml-4">
+                        <div className="ml-1 space-y-3 border-l border-border/70 pl-4">
                             <div className="space-y-2">
                                 <Label>Auto-Reply Message</Label>
                                 <Textarea placeholder="I am currently out of office..."
