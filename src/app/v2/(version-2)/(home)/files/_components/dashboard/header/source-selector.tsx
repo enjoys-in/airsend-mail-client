@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -10,9 +8,9 @@ import {
 import { BoxIcon, DropboxIcon, GoogleDriveIcon, LogoIcon, OneDriveIcon, S3Icon } from "@nimbus/_components/icons";
 import { useUserInfoProvider } from "@nimbus/_components/providers/user-info-provider";
 import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
-import type { LimitedAccessAccount } from "@nimbus/_lib/files-types";
+import type { LimitedAccessAccount } from "@nimbus/_packages/shared";
 import { ScrollArea } from "@nimbus/_components/ui/scroll-area";
-import { useNavigate } from "@nimbus/_lib/router-shim";
+import { useNavigate } from "@tanstack/react-router";
 import { Skeleton } from "@nimbus/_components/ui/skeleton";
 import { ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "@nimbus/_components/ui/button";
@@ -39,7 +37,7 @@ export function providerToIcon(providerId: string) {
 export function SourceSelector() {
 	const { accounts, isLoading } = useUserInfoProvider();
 	const { providerId, accountId, setDriveProviderById } = useAccountProvider();
-	const [selectedAccountNickname, setSelectedAccountNickname] = useState<string | null | undefined>(null);
+	const [selectedAccountNickname, setSelectedAccountNickname] = useState(null);
 	const [selectedIcon, setSelectedIcon] = useState(<LogoIcon className="h-5 w-5" />);
 	const navigate = useNavigate({ from: "/dashboard/$providerSlug/$accountId" });
 
