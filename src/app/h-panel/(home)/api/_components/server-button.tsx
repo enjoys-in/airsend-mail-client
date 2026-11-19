@@ -27,8 +27,15 @@ const ServerButton = ({ children, key_id, name,domain_id }: { key_id: string, do
         }
     }
     return (
-        <Button variant="ghost" onClick={handleDelete}>{
-            children}
+        <Button
+            variant="ghost"
+            size="icon"
+            title={`Delete ${name}`}
+            className="h-8 w-8 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
+            onClick={handleDelete}
+        >
+            {children}
+            <span className="sr-only">Delete {name}</span>
         </Button>
     )
 }
