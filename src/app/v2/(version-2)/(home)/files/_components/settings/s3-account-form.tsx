@@ -1,7 +1,5 @@
-"use client";
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@nimbus/_components/ui/select";
-import { AWS_REGIONS, createS3AccountSchema, type CreateS3AccountSchema } from "@nimbus/_lib/files-types";
+import { AWS_REGIONS, createS3AccountSchema, type CreateS3AccountSchema } from "@nimbus/_packages/shared";
 import { FieldError } from "@nimbus/_components/ui/field-error";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -9,7 +7,7 @@ import { Button } from "@nimbus/_components/ui/button";
 import { Label } from "@nimbus/_components/ui/label";
 import { Input } from "@nimbus/_components/ui/input";
 import { Loader2 } from "lucide-react";
-import env from "@nimbus/_lib/env-shim";
+import env from "@nimbus/_packages/env/client";
 import { useState } from "react";
 
 type S3AccountFormProps = {
