@@ -2,11 +2,12 @@
 
 import * as React from "react"
 import { useParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { UserPlus, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { UserPlus } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { MembersTable } from "../../_components/members-table"
+import { OrgPage, PageHeader, Section } from "../../_components/kit"
 import { API } from "@/lib/api/handler"
 import type { IMember } from "../../_lib/types"
 
@@ -23,28 +24,26 @@ export default function OrganizationMembersPage() {
             .finally(() => setLoading(false))
     }, [orgId])
 
+    const orgName = orgMembers[0]?.organization
+
     return (
-        <div className="flex flex-col h-full">
-            <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-                <Button variant="ghost" size="sm" asChild>
-                    <Link href="/h-panel/org">
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
-                    </Link>
-                </Button>
-                <h1 className="text-lg font-semibold">Members — Org {orgId}</h1>
-                <div className="ml-auto">
-                    <Button size="sm" asChild>
+        <OrgPage>
+            <PageHeader
+                back={{ href: "/h-panel/org", label: "Organizations" }}
+                title={orgName ? `${orgName} members` : "Organization members"}
+                description="Mailboxes on the domains of this organization."
+                actions={
+                    <Button size="sm" className="h-9 gap-2" asChild>
                         <Link href="/h-panel/org/members/add">
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Add Member
+                            <UserPlus className="h-4 w-4" />
+                            Add member
                         </Link>
                     </Button>
-                </div>
-            </header>
-            <div className="flex-1 p-4 min-w-0 overflow-auto">
-                <MembersTable data={orgMembers} orgId={orgId} />
-            </div>
-        </div>
+                }
+            />
+            <Section>
+                <MembersTable data={orgMembers} orgId={orgId} loading={loading} />
+            </Section>
+        </OrgPage>
     )
 }
