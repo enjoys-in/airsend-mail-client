@@ -15,12 +15,12 @@ import {
 import Link from 'next/link'
 import { API } from '@/lib/api/handler'
 import { DOMAIN_STATUS } from "@/lib/types/mail.interface"
-import { Card } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { validateMailboxSize } from '@/lib/utils'
-import { Trash2Icon, Plus, ArrowLeft } from 'lucide-react'
+import { Trash2Icon, Plus, Loader2 } from 'lucide-react'
+import { FormActions, NextSteps, PageHeader, PageShell, Section, SplitForm } from "@/components/h-panel/kit"
 
 const userSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
@@ -41,6 +41,9 @@ const userSchema = z.object({
 type UserFormInput = z.input<typeof userSchema>
 type UserFormData = z.output<typeof userSchema>
 const sizes = ["MB", "GB"]
+
+const FieldError = ({ message }: { message?: string }) =>
+    message ? <p className="text-xs text-red-600 dark:text-red-400">{message}</p> : null
 
 const Page = () => {
     const { toast } = useToast()
@@ -127,202 +130,204 @@ const Page = () => {
         fetchAllDomains()
     }, [])
 
+    const aside = (
+        <>
+            <NextSteps
+                steps={[
+                    "The mailbox is created on the domain you pick, ready to sign in.",
+                    "They use the username and password you set for webmail, IMAP and SMTP.",
+                    "Quota, send limit and usage alerts apply from the first message.",
+                ]}
+            />
+            <FormActions>
+                <Button type="button" variant="outline" asChild>
+                    <Link href="/h-panel/accounts">Cancel</Link>
+                </Button>
+                <Button type="submit" className="flex-1 gap-2" disabled={myDomains.length === 0 || isSubmitting}>
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Creating user
+                        </>
+                    ) : (
+                        "Create user"
+                    )}
+                </Button>
+            </FormActions>
+        </>
+    )
+
     return (
-        <div className="bg-background min-h-screen">
-            <div className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between gap-4">
-                    <Link href="/h-panel/accounts">
-                        <Button variant="outline" className="rounded-none gap-2">
-                            <ArrowLeft className="h-4 w-4" />
-                            Go Back
-                        </Button>
-                    </Link>
-                    <h1 className="text-xl sm:text-2xl font-semibold text-gray-300">Add New User</h1>
-                </div>
-            </div>
+        <PageShell>
+            <PageHeader
+                back={{ href: "/h-panel/accounts", label: "Users" }}
+                title="Add a user"
+                description="Create a mailbox on one of your verified domains, with its limits and routing."
+            />
 
-            <div className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
-                <Card className="p-4 sm:p-6 rounded-none">
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        {/* Section: Basic Info */}
-                        <fieldset className="space-y-4">
-                            <legend className="text-sm font-medium text-gray-400 uppercase tracking-wide">Basic Information</legend>
-
-                            <div className="space-y-1">
-                                <Label htmlFor="name">Login/Display Name</Label>
+            <form onSubmit={handleSubmit(onSubmit)}>
+                <SplitForm aside={aside}>
+                    <Section title="Basic information" description="Who the mailbox belongs to and its address.">
+                        <div className="space-y-4">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="name" className="text-sm">Login / display name</Label>
                                 <Input
                                     id="name"
                                     type="text"
-                                    className="rounded-none"
+                                    className="h-9"
                                     {...register("name", { required: "Name is required" })}
                                     aria-invalid={errors.name ? "true" : "false"}
                                 />
-                                {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
+                                <FieldError message={errors.name?.message} />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="username">Username</Label>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="username" className="text-sm">Username</Label>
                                     <Input
                                         id="username"
                                         placeholder="Username"
+                                        className="h-9"
                                         {...form.register("username")}
-                                        className="bg-transparent border-white/20 text-white rounded-none"
                                     />
-                                    {errors.username && <p className="text-sm text-red-500">{errors.username.message}</p>}
+                                    <FieldError message={errors.username?.message} />
                                 </div>
 
-                                <div className="space-y-1">
-                                    <Label>Domain</Label>
+                                <div className="space-y-1.5">
+                                    <Label className="text-sm">Domain</Label>
                                     <Select onValueChange={field => form.setValue("domain_name_id", field)}>
-                                        <SelectTrigger className="bg-transparent border-white/20 text-white rounded-none">
-                                            <SelectValue placeholder="Select Your Domain" />
+                                        <SelectTrigger className="h-9">
+                                            <SelectValue placeholder="Select your domain" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {myDomains.map((domain: any) => (
+                                            {myDomains.filter(Boolean).map((domain: any) => (
                                                 <SelectItem value={domain.id} key={domain.id}>{domain.domain_name}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    {errors.domain_name_id && <p className="text-sm text-red-500">{errors.domain_name_id.message}</p>}
+                                    <FieldError message={errors.domain_name_id?.message} />
                                 </div>
                             </div>
-                        </fieldset>
+                        </div>
+                    </Section>
 
-                        {/* Section: Security & Storage */}
-                        <fieldset className="space-y-4">
-                            <legend className="text-sm font-medium text-gray-400 uppercase tracking-wide">Security & Storage</legend>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="password">Password</Label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        placeholder="Password"
-                                        className="rounded-none"
-                                        {...register("password", {
-                                            required: "Password is required",
-                                            minLength: { value: 8, message: "Password must be at least 8 characters" }
-                                        })}
-                                        aria-invalid={errors.password ? "true" : "false"}
-                                    />
-                                    {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
-                                </div>
-
-                                <div className="space-y-1">
-                                    <Label htmlFor="mailbox_size">Mailbox Size</Label>
-                                    <div className="flex flex-row gap-2">
-                                        <Input
-                                            id="mailbox_size"
-                                            className="rounded-none flex-1"
-                                            type="number"
-                                            placeholder="0"
-                                            {...register("mailbox_size", { valueAsNumber: true })}
-                                        />
-                                        <Select onValueChange={field => setSelectedSize(field)}>
-                                            <SelectTrigger className="bg-transparent border-white/20 text-white rounded-none w-24">
-                                                <SelectValue placeholder="Unit" defaultValue={selectedSize} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {sizes.map((size: any) => (
-                                                    <SelectItem value={size} key={size}>{size}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <small className="text-xs text-purple-400">(leave blank/0 for unlimited)</small>
-                                </div>
+                    <Section title="Security and storage" description="Sign-in password and how much space the mailbox gets.">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="password" className="text-sm">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="Password"
+                                    className="h-9"
+                                    {...register("password", {
+                                        required: "Password is required",
+                                        minLength: { value: 8, message: "Password must be at least 8 characters" }
+                                    })}
+                                    aria-invalid={errors.password ? "true" : "false"}
+                                />
+                                <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                                <FieldError message={errors.password?.message} />
                             </div>
-                        </fieldset>
 
-                        {/* Section: Limits & Alerts */}
-                        <fieldset className="space-y-4">
-                            <legend className="text-sm font-medium text-gray-400 uppercase tracking-wide">Limits & Alerts</legend>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="limit_per_minute">Limit Per Minute</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="mailbox_size" className="text-sm">Mailbox size</Label>
+                                <div className="flex flex-row gap-2">
                                     <Input
-                                        id="limit_per_minute"
-                                        className="rounded-none"
+                                        id="mailbox_size"
+                                        className="h-9 flex-1"
                                         type="number"
-                                        {...register("limit_per_minute", { valueAsNumber: true })}
+                                        placeholder="0"
+                                        {...register("mailbox_size", { valueAsNumber: true })}
                                     />
-                                    <small className="text-xs text-purple-400">(0 for unlimited, Max 60/min)</small>
-                                    {errors.limit_per_minute && <p className="text-red-500 text-sm">{errors.limit_per_minute.message}</p>}
+                                    <Select onValueChange={field => setSelectedSize(field)}>
+                                        <SelectTrigger className="h-9 w-24">
+                                            <SelectValue placeholder="Unit" defaultValue={selectedSize} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {sizes.map((size: any) => (
+                                                <SelectItem value={size} key={size}>{size}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-
-                                <div className="space-y-1">
-                                    <Label htmlFor="usage_alert">Usage Alert (%)</Label>
-                                    <Input
-                                        id="usage_alert"
-                                        className="rounded-none"
-                                        type="number"
-                                        {...register("usage_alert", { valueAsNumber: true })}
-                                    />
-                                    <small className="text-xs text-purple-400">(0 min, 100 max)</small>
-                                    {errors.usage_alert && <p className="text-red-500 text-sm">{errors.usage_alert.message}</p>}
-                                </div>
+                                <p className="text-xs text-muted-foreground">Leave blank or 0 for unlimited.</p>
                             </div>
-                        </fieldset>
+                        </div>
+                    </Section>
 
-                        {/* Section: Routing */}
-                        <fieldset className="space-y-4">
-                            <legend className="text-sm font-medium text-gray-400 uppercase tracking-wide">Email Routing</legend>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="catch_all">Catch-all Email Sent to</Label>
-                                    <Input
-                                        id="catch_all"
-                                        className="rounded-none"
-                                        type="email"
-                                        {...register("catch_all")}
-                                    />
-                                    <div className="flex flex-row gap-2 items-center">
-                                        <small className="text-xs text-indigo-400">(leave blank for none)</small>
-                                        {errors.catch_all && <p className="text-red-500 text-sm">{errors.catch_all.message}</p>}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <Label htmlFor="forward_to">Forward To</Label>
-                                    <Input
-                                        id="forward_to"
-                                        className="rounded-none"
-                                        type="email"
-                                        {...register("forward_to")}
-                                    />
-                                    <div className="flex flex-row gap-2 items-center">
-                                        <small className="text-xs text-indigo-400">(leave blank for none)</small>
-                                        {errors.forward_to && <p className="text-red-500 text-sm">{errors.forward_to.message}</p>}
-                                    </div>
-                                </div>
+                    <Section title="Limits and alerts" description="Throttle sending and get warned before the mailbox fills up.">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="limit_per_minute" className="text-sm">Limit per minute</Label>
+                                <Input
+                                    id="limit_per_minute"
+                                    className="h-9"
+                                    type="number"
+                                    {...register("limit_per_minute", { valueAsNumber: true })}
+                                />
+                                <p className="text-xs text-muted-foreground">0 for unlimited, max 60 per minute.</p>
+                                <FieldError message={errors.limit_per_minute?.message} />
                             </div>
-                        </fieldset>
 
-                        {/* Section: Aliases */}
-                        <fieldset className="space-y-4">
-                            <legend className="text-sm font-medium text-gray-400 uppercase tracking-wide">Email Aliases</legend>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="usage_alert" className="text-sm">Usage alert (%)</Label>
+                                <Input
+                                    id="usage_alert"
+                                    className="h-9"
+                                    type="number"
+                                    {...register("usage_alert", { valueAsNumber: true })}
+                                />
+                                <p className="text-xs text-muted-foreground">Between 0 and 100.</p>
+                                <FieldError message={errors.usage_alert?.message} />
+                            </div>
+                        </div>
+                    </Section>
 
+                    <Section title="Email routing" description="Optional: where mail for this mailbox should also go.">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="catch_all" className="text-sm">Catch-all email sent to</Label>
+                                <Input
+                                    id="catch_all"
+                                    className="h-9"
+                                    type="email"
+                                    {...register("catch_all")}
+                                />
+                                <p className="text-xs text-muted-foreground">Leave blank for none.</p>
+                                <FieldError message={errors.catch_all?.message} />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="forward_to" className="text-sm">Forward to</Label>
+                                <Input
+                                    id="forward_to"
+                                    className="h-9"
+                                    type="email"
+                                    {...register("forward_to")}
+                                />
+                                <p className="text-xs text-muted-foreground">Leave blank for none.</p>
+                                <FieldError message={errors.forward_to?.message} />
+                            </div>
+                        </div>
+                    </Section>
+
+                    <Section title="Email aliases" description="Extra addresses that deliver to this mailbox.">
+                        <div className="space-y-3">
                             {fields.map((field, index) => (
-                                <div key={field.id} className="flex items-center gap-2">
-                                    <div className="flex flex-col flex-1">
+                                <div key={field.id} className="flex items-start gap-2">
+                                    <div className="flex flex-1 flex-col gap-1">
                                         <Input
                                             type="text"
                                             placeholder="Alias"
-                                            className="rounded-none"
+                                            className="h-9"
                                             {...register(`aliases.${index}.alias`, { required: "Email Alias is required" })}
                                             aria-invalid={errors.aliases?.[index]?.alias ? "true" : "false"}
                                         />
-                                        {errors.aliases?.[index]?.alias && (
-                                            <p className="text-sm text-red-500 mt-1">{errors.aliases?.[index]?.alias?.message}</p>
-                                        )}
+                                        <FieldError message={errors.aliases?.[index]?.alias?.message} />
                                     </div>
                                     {index > 0 && (
-                                        <Button type="button" variant="destructive" size="icon" className="shrink-0" onClick={() => remove(index)}>
+                                        <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 text-red-600 hover:text-red-600 dark:text-red-400" onClick={() => remove(index)}>
                                             <Trash2Icon className="h-4 w-4" />
                                         </Button>
                                     )}
@@ -331,7 +336,7 @@ const Page = () => {
                                             type="button"
                                             variant="outline"
                                             size="icon"
-                                            className="shrink-0"
+                                            className="h-9 w-9 shrink-0"
                                             onClick={() => {
                                                 const lastAlias = form.getValues(`aliases.${index}.alias`);
                                                 if (!lastAlias?.trim()) {
@@ -350,15 +355,11 @@ const Page = () => {
                                     )}
                                 </div>
                             ))}
-                        </fieldset>
-
-                        <Button type="submit" className="w-full rounded-none" disabled={myDomains.length === 0 || isSubmitting}>
-                            {isSubmitting ? 'Creating User...' : 'Create User'}
-                        </Button>
-                    </form>
-                </Card>
-            </div>
-        </div>
+                        </div>
+                    </Section>
+                </SplitForm>
+            </form>
+        </PageShell>
     )
 }
 
