@@ -9,6 +9,8 @@ export const limitedAccessAccountSchema = z.object({
 	providerId: driveProviderSchema,
 	accountId: z.string(),
 	nickname: nicknameSchema.optional(),
+	// The organization's default storage (set by an owner or admin).
+	isDefault: z.boolean().optional(),
 	createdAt: z.date(),
 	updatedAt: z.date(),
 });
