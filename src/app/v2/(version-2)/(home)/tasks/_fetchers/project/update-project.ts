@@ -1,0 +1,33 @@
+import { client } from "@tasks/_packages/libs";
+import type { InferRequestType } from "hono/client";
+import { HttpError } from "@tasks/_lib/http-error";
+
+export type UpdateProjectRequest = InferRequestType<
+  (typeof client)["project"][":id"]["$put"]
+>["json"] &
+  InferRequestType<(typeof client)["project"][":id"]["$put"]>["param"];
+
+async function updateProject({
+  id,
+  name,
+  icon,
+  slug,
+  description,
+  isPublic,
+  includeSubtasks,
+}: UpdateProjectRequest) {
+  const response = await client.project[":id"].$put({
+    param: { id },
+    json: { name, icon, slug, description, isPublic, includeSubtasks },
+  });
+
+  if (!response.ok) {
+    throw await HttpError.fromResponse(response);
+  }
+
+  const data = await response.json();
+
+  return data;
+}
+
+export default updateProject;
