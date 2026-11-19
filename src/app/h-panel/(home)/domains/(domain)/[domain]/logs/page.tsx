@@ -16,7 +16,7 @@ const page = async ({ params }: { params: any }) => {
     if (!data.success) {
       throw new Error(data.message);
     }
-    return <LogViewer logs={data.result} />;
+    return <LogViewer logs={data.result} domainId={domain} />;
   } catch (error) {
     return <SomethingWentWrong />;
   }

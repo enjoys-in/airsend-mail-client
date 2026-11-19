@@ -82,6 +82,10 @@ export class API {
     static deleteDomain(domainId: string) {
         return instance.delete(adminRoutes(`/domain/${domainId}`))
     }
+    /** Removes every log of one domain (the admin must own it). */
+    static handleClearDomainLogs(domainId: string) {
+        return instance.delete(adminRoutes(`/domain/logs/${domainId}`))
+    }
 
     static verifyDomainOwnership(domainId: string) {
         return instance.get(adminRoutes(`/verify-domain-ownership/${domainId}`))

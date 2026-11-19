@@ -1,4 +1,7 @@
+"use client";
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { ClearDomainLogsButton } from "./ClearDomainLogsButton";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -18,12 +21,23 @@ export interface Log {
     event: string;
     message: string;
 }
-export function LogViewer({ logs }: { logs: Log[] }) {
+export function LogViewer({ logs, domainId }: { logs: Log[]; domainId: string }) {
+    const router = useRouter();
+
+    // The page is rendered on the server once; this makes "updated every 1 Minute" true by re-running it.
+    React.useEffect(() => {
+        const timer = setInterval(() => router.refresh(), 60_000);
+        return () => clearInterval(timer);
+    }, [router]);
+
     return (
         <div className="w-full p-4">
-            <h1 className="text-xl md:text-2xl text-foreground mb-4">
-                All Logs will be displayed here and will be updated in every 1 Minute
-            </h1>
+            <div className="mb-4 flex items-center justify-between gap-4">
+                <h1 className="text-xl md:text-2xl text-foreground">
+                    All Logs will be displayed here and will be updated in every 1 Minute
+                </h1>
+                <ClearDomainLogsButton domainId={domainId} disabled={logs.length === 0} />
+            </div>
             <div className="rounded-md border overflow-hidden">
                 <ScrollArea className="h-[600px] rounded-md border">
                     <div className="w-full overflow-x-auto">
