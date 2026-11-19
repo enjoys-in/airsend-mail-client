@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { API } from "@/lib/api/handler"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
+import { Pill, Section } from "@/components/h-panel/kit"
 
 interface WorkspaceToggleProps {
     domainId: string
@@ -35,36 +35,35 @@ export function WorkspaceToggle({ domainId, domainName, initialEnabled }: Worksp
     }
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Workspace</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium">
-                            {enabled ? "Workspace is active" : "Enable workspace for this domain"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {enabled
-                                ? `${domainName} Workspace — members can access shared features`
-                                : "Activating creates a workspace where you can add members with scoped access"
-                            }
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                        <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} />
-                    </div>
+        <Section
+            title="Workspace"
+            description="A shared workspace for the members of this domain."
+            actions={<Pill tone={enabled ? "green" : "neutral"}>{enabled ? "Active" : "Off"}</Pill>}
+        >
+            <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                        {enabled ? "Workspace is active" : "Enable workspace for this domain"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        {enabled
+                            ? `${domainName} Workspace — members can access shared features`
+                            : "Activating creates a workspace where you can add members with scoped access"
+                        }
+                    </p>
                 </div>
-                {enabled && (
-                    <Link href={`/h-panel/workspace/${domainId}`}>
-                        <Button variant="outline" size="sm" className="rounded-none">
-                            Manage Members & Scopes
-                        </Button>
-                    </Link>
-                )}
-            </CardContent>
-        </Card>
+                <div className="flex shrink-0 items-center gap-3">
+                    {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                    <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} />
+                </div>
+            </div>
+            {enabled && (
+                <div className="mt-4 border-t border-border/70 pt-4">
+                    <Button asChild variant="outline" size="sm">
+                        <Link href={`/h-panel/workspace/${domainId}`}>Manage members and scopes</Link>
+                    </Button>
+                </div>
+            )}
+        </Section>
     )
 }
