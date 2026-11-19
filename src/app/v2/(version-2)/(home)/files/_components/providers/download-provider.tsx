@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { DownloadProgress } from "@nimbus/_components/ui/download-progress";
 
