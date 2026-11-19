@@ -8,7 +8,6 @@ export const limitedAccessAccountSchema = z.object({
 	id: z.string(),
 	providerId: driveProviderSchema,
 	accountId: z.string(),
-	scope: z.string(),
 	nickname: nicknameSchema.optional(),
 	createdAt: z.date(),
 	updatedAt: z.date(),
@@ -28,6 +27,13 @@ export const createS3AccountSchema = z.object({
 	nickname: nicknameSchema,
 });
 
+export const createTelegramAccountSchema = z.object({
+	botToken: z.string().min(1, "Bot token is required"),
+	chatId: z.string().min(1, "Chat ID is required"),
+	nickname: nicknameSchema.optional(),
+});
+
 export type LimitedAccessAccount = z.infer<typeof limitedAccessAccountSchema>;
 export type UpdateAccountSchema = z.infer<typeof updateAccountSchema>;
 export type CreateS3AccountSchema = z.infer<typeof createS3AccountSchema>;
+export type CreateTelegramAccountSchema = z.infer<typeof createTelegramAccountSchema>;
