@@ -1,4 +1,4 @@
-import type { ApiResponse, UserSchema } from "@nimbus/_lib/files-types";
+import type { ApiResponse, UserSchema } from "@nimbus/_packages/shared";
 import { useQuery } from "@tanstack/react-query";
 import { protectedClient } from "@nimbus/_utils/client";
 
