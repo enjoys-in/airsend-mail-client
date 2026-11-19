@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { create } from "zustand";
 import { eventBus } from "@/lib/event-bus";
 import { CustomEventKey } from "@/hooks/use-custom-event";
-import { tasksApi } from "./tasks-api";
+import { fetchAssignedTasksResult, tasksApi } from "./tasks-api";
 import type { TaskItem, TaskStatus } from "./tasks-types";
 export type { TaskItem, TaskStatus };
 
@@ -32,6 +32,8 @@ interface MyTasksState {
   tasks: TaskItem[];
   isLoading: boolean;
   error: string | null;
+  /** The tasks service refused the token or the user isn't in a workspace there. */
+  noAccess: boolean;
   /** Epoch ms of the last successful load; null = never loaded. */
   lastFetchedAt: number | null;
   fetchMyTasks: () => Promise<void>;
@@ -46,6 +48,7 @@ export const useMyTasksStore = create<MyTasksState>()((set, get) => ({
   tasks: [],
   isLoading: false,
   error: null,
+  noAccess: false,
   lastFetchedAt: null,
 
   fetchMyTasks: () => {
@@ -58,12 +61,14 @@ export const useMyTasksStore = create<MyTasksState>()((set, get) => ({
     inFlight = (async () => {
       set({ isLoading: true });
       try {
-        const workspaces = await tasksApi.getWorkspaces();
-        const res = await tasksApi.getAssignedTasks(workspaces[0]?.id);
-        if (res.isLive) {
-          set({ tasks: res.tasks, error: null, lastFetchedAt: Date.now() });
+        // The workspace comes from the tasks service's own list for this user (not a constant).
+        const res = await fetchAssignedTasksResult();
+        if (res.status === "ok") {
+          set({ tasks: res.tasks, error: null, noAccess: false, lastFetchedAt: Date.now() });
+        } else if (res.status === "no-access") {
+          set({ tasks: [], error: null, noAccess: true, lastFetchedAt: Date.now() });
         } else {
-          set({ error: "Couldn't reach the tasks service." });
+          set({ error: "Couldn't reach the tasks service.", noAccess: false });
         }
       } catch {
         set({ error: "Couldn't load your tasks." });

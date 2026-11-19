@@ -130,15 +130,27 @@ export async function fetchProjectTasks(projectId: string): Promise<{
   }
 }
 
-export async function fetchAssignedTasks(workspaceId?: string): Promise<TaskItem[]> {
+export type AssignedTasksResult =
+  | { status: "ok"; tasks: TaskItem[] }
+  /** The token was refused (401/403), or the user has no workspace in the tasks service. */
+  | { status: "no-access" }
+  | { status: "unreachable" };
+
+/**
+ * Tasks assigned to the signed-in user. The tasks API decides "who" from the AirSend token and
+ * only ever returns that user's own tasks; this just reports why a list is empty instead of
+ * collapsing every failure into "no tasks".
+ */
+export async function fetchAssignedTasksResult(workspaceId?: string): Promise<AssignedTasksResult> {
   try {
     const ws = workspaceId ?? (await resolveWorkspaceId());
-    if (!ws) return [];
+    if (!ws) return { status: "no-access" };
     const res = await tasksFetch(`${BASE_URL}/task/assigned?workspaceId=${encodeURIComponent(ws)}`, { cache: "no-store" });
-    if (!res.ok) return [];
+    if (res.status === 401 || res.status === 403) return { status: "no-access" };
+    if (!res.ok) return { status: "unreachable" };
     const data = await res.json();
     const rawList = Array.isArray(data?.tasks) ? data.tasks : [];
-    return rawList.map((t: any) => ({
+    const tasks: TaskItem[] = rawList.map((t: any) => ({
       id: t.id,
       projectId: t.projectId,
       projectName: t.project?.name,
@@ -157,9 +169,15 @@ export async function fetchAssignedTasks(workspaceId?: string): Promise<TaskItem
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
     }));
+    return { status: "ok", tasks };
   } catch {
-    return [];
+    return { status: "unreachable" };
   }
+}
+
+export async function fetchAssignedTasks(workspaceId?: string): Promise<TaskItem[]> {
+  const result = await fetchAssignedTasksResult(workspaceId);
+  return result.status === "ok" ? result.tasks : [];
 }
 
 export const tasksApi = {
@@ -169,7 +187,6 @@ export const tasksApi = {
   updateTask,
   updateTaskStatus,
   deleteTask,
-  getWorkspaces: async () => [{ id: "QLgzDfOu35H0B5B4p6qWHC22JLlvoNNQ", name: "AirSend", slug: "airsend" }],
   getAssignedTasks: async (workspaceId?: string) => {
     const list = await fetchAssignedTasks(workspaceId);
     return { isLive: true, tasks: list };

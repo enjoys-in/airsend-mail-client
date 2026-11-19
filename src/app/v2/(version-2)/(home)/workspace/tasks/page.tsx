@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   CheckSquare,
   Loader2,
+  Lock,
   RefreshCw,
   Search,
 } from "lucide-react";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
 import {
   refreshMyTasks,
   useMyTasksStore,
@@ -30,6 +32,7 @@ function MyTasksContent() {
   const tasks = useMyTasksStore((s) => s.tasks);
   const isLoading = useMyTasksStore((s) => s.isLoading);
   const error = useMyTasksStore((s) => s.error);
+  const noAccess = useMyTasksStore((s) => s.noAccess);
   const lastFetchedAt = useMyTasksStore((s) => s.lastFetchedAt);
   const setTaskStatus = useMyTasksStore((s) => s.setTaskStatus);
   const [tab, setTab] = useState<TabKey>("open");
@@ -130,7 +133,16 @@ function MyTasksContent() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {isLoading && tasks.length === 0 ? (
+        {noAccess ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground">
+            <Lock className="size-8" />
+            <p className="text-sm font-medium text-foreground">Tasks aren&apos;t set up for you yet</p>
+            <p className="max-w-sm text-xs">
+              You aren&apos;t a member of a workspace in the tasks service. Ask an admin to add you to a
+              team.
+            </p>
+          </div>
+        ) : isLoading && tasks.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
@@ -171,6 +183,27 @@ function MyTasksContent() {
 }
 
 export default function WorkspaceTasksPage() {
+  const { canAccessTasks, profileReady } = useFeatureAccess();
+
+  // Wait for the profile (`/me`) so a user with access never flashes the "no access" state, and
+  // never trigger a tasks request for someone without the tasks scope.
+  if (!profileReady) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (!canAccessTasks) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground">
+        <Lock className="size-8" />
+        <p className="text-sm font-medium text-foreground">You don&apos;t have access to Tasks</p>
+        <p className="max-w-sm text-xs">Ask a workspace admin to enable Tasks for your account.</p>
+      </div>
+    );
+  }
+
   return (
     <WorkspaceErrorBoundary fallbackTitle="Unable to load your tasks">
       <MyTasksContent />
