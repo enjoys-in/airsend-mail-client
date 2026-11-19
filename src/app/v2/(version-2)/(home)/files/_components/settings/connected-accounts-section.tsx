@@ -7,13 +7,15 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@nimbus/_components/ui/button";
 import { Input } from "@nimbus/_components/ui/input";
 import { Badge } from "@nimbus/_components/ui/badge";
+import { providerLabel } from "@nimbus/_lib/providers";
 import { cn } from "@nimbus/_lib/utils";
 
 interface ConnectedAccountsSectionProps {
 	accounts: LimitedAccessAccount[] | null;
 	defaultAccountId: string | null;
 	isSettingDefault: string | null;
-	onDisconnect: (provider: DriveProvider, accountId: string) => void;
+	onDisconnect: (provider: DriveProvider, accountId: string, tableAccountId: string) => void;
+	onAddAccount: () => void;
 	onSetDefault: (provider: DriveProvider, accountId: string) => void;
 	onUpdateAccount: (
 		providerId: DriveProvider,
@@ -123,6 +125,7 @@ export function ConnectedAccountsSection({
 	defaultAccountId,
 	isSettingDefault,
 	onDisconnect,
+	onAddAccount,
 	onSetDefault,
 	onUpdateAccount,
 }: ConnectedAccountsSectionProps) {
@@ -210,7 +213,7 @@ export function ConnectedAccountsSection({
 		<Card id="accounts" className="py-6">
 			<CardHeader>
 				<CardTitle>Connected Accounts</CardTitle>
-				<CardDescription>Manage your connected social accounts</CardDescription>
+				<CardDescription>Manage your connected storage accounts</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<Table>
@@ -225,9 +228,9 @@ export function ConnectedAccountsSection({
 					<TableBody>
 						{accounts?.map(account => (
 							<TableRow key={`${account.providerId}-${account.accountId}`} className="group">
-								<TableCell className="font-medium capitalize">
+								<TableCell className="font-medium">
 									<div className="flex items-center gap-2">
-										{account.providerId}
+										{providerLabel(account.providerId)}
 										{defaultAccountId === account.accountId && (
 											<Badge variant="default" className="text-xs">
 												<Check className="mr-1 h-3 w-3" /> Default
@@ -290,7 +293,7 @@ export function ConnectedAccountsSection({
 											variant="outline"
 											size="sm"
 											disabled={defaultAccountId === account.accountId || isSettingDefault === account.accountId}
-											onClick={() => onDisconnect(account.providerId as DriveProvider, account.accountId)}
+											onClick={() => onDisconnect(account.providerId as DriveProvider, account.accountId, account.id)}
 										>
 											{isSaving ? "Disconnecting..." : "Disconnect"}
 											<span className="sr-only">Disconnect {account.nickname || "unnamed account"}</span>
@@ -303,12 +306,7 @@ export function ConnectedAccountsSection({
 				</Table>
 			</CardContent>
 			<CardFooter className="flex justify-between">
-				<Button
-					variant="outline"
-					// onClick={
-					// Implement opening the signing dialog
-					// }
-				>
+				<Button variant="outline" onClick={onAddAccount}>
 					<Plus className="mr-2 h-4 w-4" />
 					Add Account
 				</Button>
