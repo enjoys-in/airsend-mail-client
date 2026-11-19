@@ -1,16 +1,15 @@
 "use client"
 
 import React from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { API } from "@/lib/api/handler"
 import { isValidDomain } from "@/lib/helper"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
+import { FormActions, NextSteps, PageHeader, PageShell, Section, SplitForm } from "@/components/h-panel/kit"
 
 export default function CreateDomainPage() {
     const { toast } = useToast()
@@ -47,50 +46,54 @@ export default function CreateDomainPage() {
     }
 
     return (
-        <div className="flex flex-col h-full">
-            <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-                <Button variant="ghost" size="sm" asChild>
-                    <Link href="/h-panel/domains">
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
-                    </Link>
-                </Button>
-                <h1 className="text-lg font-semibold">Add New Domain</h1>
-            </header>
+        <PageShell>
+            <PageHeader
+                back={{ href: "/h-panel/domains", label: "Domains" }}
+                title="Add a domain"
+                description="Add a domain you own. You will verify it with a DNS record before you can send mail."
+            />
 
-            <div className="flex-1 p-4">
-                <div className="max-w-lg mx-auto">
-                    <Card className="rounded-none">
-                        <CardHeader>
-                            <CardTitle className="text-base">Domain Information</CardTitle>
-                            <CardDescription>Enter the domain name you want to add</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="domain-name">Domain Name</Label>
-                                <Input
-                                    id="domain-name"
-                                    type="text"
-                                    placeholder="example.com"
-                                    className="rounded-none"
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && !loading && handleAddNewDomain()}
-                                />
-                            </div>
-                            <div className="flex gap-2 justify-end">
-                                <Button variant="outline" size="sm" className="rounded-none" onClick={() => router.back()}>
-                                    Cancel
-                                </Button>
-                                <Button size="sm" className="rounded-none" onClick={handleAddNewDomain} disabled={loading || !input.trim()}>
-                                    {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                    Add Domain
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </div>
+            <SplitForm
+                aside={
+                    <>
+                        <NextSteps
+                            steps={[
+                                "Add the domain here.",
+                                "Verify ownership with the TXT record we show you.",
+                                "Publish the DKIM, SPF and DMARC records, then verify them to start sending.",
+                            ]}
+                        />
+                        <FormActions>
+                            <Button variant="outline" onClick={() => router.back()} disabled={loading}>
+                                Cancel
+                            </Button>
+                            <Button className="flex-1" onClick={handleAddNewDomain} disabled={loading || !input.trim()}>
+                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Add domain
+                            </Button>
+                        </FormActions>
+                    </>
+                }
+            >
+                <Section title="Domain" description="Enter the domain name you want to add.">
+                    <div className="max-w-md space-y-1.5">
+                        <Label htmlFor="domain-name" className="text-sm">
+                            Domain name
+                        </Label>
+                        <Input
+                            id="domain-name"
+                            type="text"
+                            placeholder="example.com"
+                            className="h-9 font-mono text-sm"
+                            value={input}
+                            autoFocus
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && !loading && handleAddNewDomain()}
+                        />
+                        <p className="text-xs text-muted-foreground">Without http:// or www, for example example.com.</p>
+                    </div>
+                </Section>
+            </SplitForm>
+        </PageShell>
     )
 }
