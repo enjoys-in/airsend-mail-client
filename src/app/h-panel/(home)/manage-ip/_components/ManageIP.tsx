@@ -14,10 +14,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { useToast } from "@/components/ui/use-toast"
 import { API } from "@/lib/api/handler"
-import Badge from "@/components/common/badges"
+import { EmptyState, PageHeader, PageShell, Pill, Section, Stat, StatGrid } from "@/components/h-panel/kit"
 import { useState, useMemo, useCallback } from "react"
 import { useAppSelector } from "@/store/hooks"
 
@@ -121,67 +120,71 @@ export function ManageIP({ globalIPs: initGlobal, domainIPs: initDomain }: Props
   const purgeLabel = activeTab === "global"
     ? "all global blocked IPs"
     : domainFilter !== "all" ? `all IPs for "${domainFilter}"` : "all domain blocked IPs"
+  const domainTotal = useMemo(() => Object.values(domainIPs).reduce((sum, ips) => sum + ips.length, 0), [domainIPs])
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Shield className="h-6 w-6 text-red-500" />
-          <h1 className="text-2xl font-semibold text-gray-300">Manage Blocked IPs</h1>
-        </div>
-        <ConfirmAction
-          title={`Purge ${purgeLabel}?`}
-          description="This action cannot be undone."
-          onConfirm={() => activeTab === "global" ? purgeGlobal() : purgeDomain(domainFilter !== "all" ? domainFilter : "")}
-          disabled={totalCount === 0 || (activeTab === "domain" && domainFilter === "all")}
-          variant="destructive"
-        >
-          <Trash2 className="h-4 w-4 mr-2" /> Purge All
-        </ConfirmAction>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Blocked IPs"
+        description="Addresses that can no longer connect to your mail servers. Unblock one, or purge a whole list."
+        actions={
+          <ConfirmAction
+            title={`Purge ${purgeLabel}?`}
+            description="This action cannot be undone."
+            onConfirm={() => activeTab === "global" ? purgeGlobal() : purgeDomain(domainFilter !== "all" ? domainFilter : "")}
+            disabled={totalCount === 0 || (activeTab === "domain" && domainFilter === "all")}
+            variant="destructive"
+          >
+            <Trash2 className="h-4 w-4 mr-2" /> Purge all
+          </ConfirmAction>
+        }
+      />
 
-      {/* Tabs + Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex gap-1 border rounded-md p-0.5">
-          <Button size="sm" variant={activeTab === "domain" ? "default" : "ghost"} className="rounded-sm" onClick={() => setActiveTab("domain")}>
-            Per Domain
-          </Button>
-          {isSuperAdmin && (
-            <Button size="sm" variant={activeTab === "global" ? "default" : "ghost"} className="rounded-sm" onClick={() => setActiveTab("global")}>
-              Global
+      <StatGrid className="mb-6 lg:grid-cols-3">
+        <Stat label="Blocked on your domains" value={domainTotal} icon={Shield} />
+        <Stat label="Domains with blocked IPs" value={domains.length} />
+        {isSuperAdmin && <Stat label="Blocked globally" value={globalIPs.length} />}
+      </StatGrid>
+
+      <Section flush>
+        {/* Tabs + filters */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-4 py-3">
+          <div className="flex gap-0.5 rounded-lg bg-muted/60 p-0.5">
+            <Button size="sm" variant={activeTab === "domain" ? "secondary" : "ghost"} className="h-8 px-3 text-xs" onClick={() => setActiveTab("domain")}>
+              Per domain
             </Button>
+            {isSuperAdmin && (
+              <Button size="sm" variant={activeTab === "global" ? "secondary" : "ghost"} className="h-8 px-3 text-xs" onClick={() => setActiveTab("global")}>
+                Global
+              </Button>
+            )}
+          </div>
+          <div className="relative min-w-[200px] max-w-sm flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input type="search" placeholder="Search by IP" className="h-9 pl-8" value={query} onChange={(e) => setQuery(e.target.value)} />
+          </div>
+          {activeTab === "domain" && (
+            <Select value={domainFilter} onValueChange={setDomainFilter}>
+              <SelectTrigger className="h-9 w-[200px]">
+                <SelectValue placeholder="Filter by domain" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All domains</SelectItem>
+                {domains.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              </SelectContent>
+            </Select>
           )}
+          <span className="ml-auto text-xs text-muted-foreground">{totalCount} blocked IP{totalCount !== 1 ? "s" : ""}</span>
         </div>
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input type="search" placeholder="Search by IP..." className="pl-8 bg-background focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </div>
-        {activeTab === "domain" && (
-          <Select value={domainFilter} onValueChange={setDomainFilter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filter by domain" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Domains</SelectItem>
-              {domains.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
 
-      <p className="text-sm text-muted-foreground">{totalCount} blocked IP{totalCount !== 1 ? "s" : ""}</p>
-
-      {/* Table */}
-      <ScrollArea className="h-[400px] w-full rounded-md border">
         {activeTab === "global" ? (
           <IPTable
             items={filteredGlobal.map((ip) => ({ ip }))}
-            columns={["IP Address", "Actions"]}
+            columns={["IP address", "Actions"]}
             renderRow={({ ip }) => (
               <TableRow key={ip}>
-                <TableCell className="font-mono">{ip}</TableCell>
-                <TableCell>
+                <TableCell className="pl-5 font-mono text-sm">{ip}</TableCell>
+                <TableCell className="pr-4 text-right">
                   <ConfirmAction title="Unblock this IP?" description={<>Remove <b className="font-mono">{ip}</b> from the global block list.</>} onConfirm={() => removeGlobalIP(ip)} variant="warning">
                     <ShieldOff className="h-4 w-4" />
                   </ConfirmAction>
@@ -192,12 +195,12 @@ export function ManageIP({ globalIPs: initGlobal, domainIPs: initDomain }: Props
         ) : (
           <IPTable
             items={domainIPList}
-            columns={["IP Address", "Domain", "Actions"]}
+            columns={["IP address", "Domain", "Actions"]}
             renderRow={({ ip, domain }) => (
               <TableRow key={`${domain}-${ip}`}>
-                <TableCell className="font-mono">{ip}</TableCell>
-                <TableCell><Badge text={domain} variant="teal" /></TableCell>
-                <TableCell>
+                <TableCell className="pl-5 font-mono text-sm">{ip}</TableCell>
+                <TableCell><Pill tone="blue">{domain}</Pill></TableCell>
+                <TableCell className="pr-4 text-right">
                   <ConfirmAction title="Unblock this IP?" description={<>Remove <b className="font-mono">{ip}</b> from <b>{domain}</b>.</>} onConfirm={() => unblockDomainIP(domain, ip)} variant="warning">
                     <ShieldOff className="h-4 w-4" />
                   </ConfirmAction>
@@ -206,34 +209,30 @@ export function ManageIP({ globalIPs: initGlobal, domainIPs: initDomain }: Props
             )}
           />
         )}
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
-    </div>
+      </Section>
+    </PageShell>
   )
 }
 
 // ── Reusable table with empty state ──
 
 function IPTable<T>({ items, columns, renderRow }: { items: T[]; columns: string[]; renderRow: (item: T) => React.ReactNode }) {
+  if (items.length === 0) {
+    return <EmptyState icon={Shield} title="No blocked IPs" description="There are no blocked IPs to display." />
+  }
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>{columns.map((c) => <TableHead key={c}>{c}</TableHead>)}</TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={columns.length} className="h-[300px]">
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <Shield className="h-12 w-12 text-muted-foreground mb-4" />
-                <h2 className="text-xl font-semibold mb-1">No blocked IPs</h2>
-                <p className="text-muted-foreground text-sm">There are no blocked IPs to display.</p>
-              </div>
-            </TableCell>
+    <div className="max-h-[calc(100vh-24rem)] min-h-[200px] overflow-auto">
+      <Table>
+        <TableHeader className="sticky top-0 z-10 bg-card">
+          <TableRow className="hover:bg-transparent">
+            {columns.map((c, index) => (
+              <TableHead key={c} className={index === 0 ? "pl-5" : index === columns.length - 1 ? "pr-4 text-right" : undefined}>{c}</TableHead>
+            ))}
           </TableRow>
-        ) : items.map(renderRow)}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>{items.map(renderRow)}</TableBody>
+      </Table>
+    </div>
   )
 }
 
@@ -244,12 +243,12 @@ function ConfirmAction({ children, title, description, onConfirm, disabled, vari
   onConfirm: () => void; disabled?: boolean; variant: "destructive" | "warning"
 }) {
   const btnClass = variant === "destructive"
-    ? "bg-red-500 hover:bg-red-600 text-white rounded-none"
-    : "bg-orange-500 hover:bg-orange-600 text-white rounded-none"
+    ? "bg-red-600 hover:bg-red-700 text-white"
+    : "bg-amber-600 hover:bg-amber-700 text-white"
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant={variant === "destructive" ? "destructive" : "ghost"} size={variant === "destructive" ? "default" : "icon"} className={variant === "destructive" ? "rounded-none" : "h-8 w-8"} disabled={disabled}>
+        <Button variant={variant === "destructive" ? "outline" : "ghost"} size={variant === "destructive" ? "sm" : "icon"} className={variant === "destructive" ? "text-red-600 hover:text-red-600" : "h-8 w-8 text-muted-foreground hover:text-foreground"} disabled={disabled} title={variant === "warning" ? "Unblock" : undefined}>
           {children}
         </Button>
       </AlertDialogTrigger>
@@ -259,7 +258,7 @@ function ConfirmAction({ children, title, description, onConfirm, disabled, vari
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-none">Cancel</AlertDialogCancel>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} className={btnClass}>Confirm</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
