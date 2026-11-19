@@ -26,6 +26,7 @@ import SidebarCalendar from "../(home)/calender/_components/sidebar-calendar"
 import ChannelList from "../(home)/workspace/_components/ChannelList"
 import WorkspaceSidebar from "../(home)/workspace/_components/WorkspaceSidebar"
 import { FilesSidebar } from "../(home)/files/_components/FilesSidebar"
+import { TasksSidebar } from "./tasks-sidebar"
 import { SettingsMenuSidebar } from "./mail/settingsSidebar"
 import { cn } from "@/lib/utils"
 import { useFeatureAccess } from "@/hooks/use-feature-access"
@@ -139,7 +140,8 @@ const SidebarSecondaryPanel = React.memo(({ pathname }: { pathname: string }) =>
     if (pathname === "/v2/calender") return <SidebarCalendar />
     // Workspace nested sidebar — team switcher + channels + DMs
     if (pathname.startsWith("/v2/workspace")) return <WorkspaceSidebar />
-    // /v2/tasks renders the Kaneo app, which brings its own sidebar.
+    // Kaneo (tasks) renders its sidebar content into this panel; see tasks-sidebar.tsx.
+    if (pathname.startsWith("/v2/tasks")) return <TasksSidebar />
     if (pathname.startsWith("/v2/files")) return <FilesSidebar />
     if (pathname === "/v2/chats") return <ChannelList />
     return null

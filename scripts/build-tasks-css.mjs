@@ -67,6 +67,8 @@ function scopeSelector(selector, layer) {
   if (sel.includes("::backdrop")) return []; // native <dialog> backdrops are not used
   if (SELF_SELECTORS.has(sel)) return [SCOPE];
   if (sel === ".dark") return [`.dark ${SCOPE}`, `${SCOPE}.dark`];
+  // `:root[attr] .x` -> `.kaneo-root[attr] .x`: state set on the root element itself.
+  if (/^:root[\[.:]/.test(sel)) return [`${SCOPE}${sel.slice(":root".length)}`];
   const prefix =
     layer === "utilities" || layer === null ? SCOPE : `:where(${SCOPE})`;
   if (sel.startsWith(".dark ")) {

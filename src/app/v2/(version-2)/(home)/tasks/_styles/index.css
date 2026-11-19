@@ -263,7 +263,9 @@ input:-webkit-autofill:active {
   --border: var(--ds-border);
   --input: var(--ds-input);
   --ring: var(--ds-ring);
-  --sidebar: var(--ds-sidebar);
+  /* The AirSend sidebar is already the gray panel on screen, so Kaneo's own sidebar (and its
+     loading frame) sit on the page background instead of adding a second gray strip. */
+  --sidebar: var(--ds-background);
   --sidebar-foreground: var(--ds-sidebar-foreground);
   --sidebar-primary: var(--ds-sidebar-primary);
   --sidebar-primary-foreground: var(--ds-sidebar-primary-foreground);
@@ -375,6 +377,14 @@ h6 {
 /* Kaneo is embedded below the AirSend header, so its "viewport" is the `.kaneo-root` box (see
    [[...slug]]/page.tsx), not the window. Unlayered on purpose: it is emitted after the utilities
    and must win over `h-svh`/`min-h-svh`. `scripts/build-tasks-css.mjs` scopes it to `.kaneo-root`. */
+/* Kaneo's sidebar lives in the AirSend sidebar on desktop, which has its own toggle, so Kaneo's
+   toggle buttons would do nothing there. Kept on mobile, where Kaneo's drawer is still used. */
+@media (min-width: 768px) {
+  :root[data-host-sidebar] [data-slot="sidebar-trigger"] {
+    display: none;
+  }
+}
+
 .h-svh {
   height: 100%;
 }

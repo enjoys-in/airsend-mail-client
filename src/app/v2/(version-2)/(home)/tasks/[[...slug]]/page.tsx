@@ -2,23 +2,16 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { TasksSkeleton } from "@/components/common/tasks-skeleton";
 import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
+import { useTasksSidebarSlot } from "@tasks/_lib/sidebar-slot";
 
 // Fills the space below the AirSend header (3.5rem on mobile, 3rem from md up, same as the
 // calendar page) so the page never overflows the host's scroll area.
 const FRAME_HEIGHT = "h-[calc(100svh-3.5rem)] md:h-[calc(100svh-3rem)]";
 
 function Loading() {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={`flex ${FRAME_HEIGHT} w-full items-center justify-center`}
-    >
-      <Loader2 className="size-6 animate-spin text-muted-foreground" />
-    </div>
-  );
+  return <TasksSkeleton />;
 }
 
 // The Kaneo app is a client-only TanStack Router SPA (it reads `window` while the
@@ -64,6 +57,7 @@ function useKaneoStylesheet() {
 
 export default function TasksPage() {
   const ready = useKaneoStylesheet();
+  const inHostSidebar = useTasksSidebarSlot() !== null;
   const setPortalHost = useCallback((el: HTMLDivElement | null) => {
     kaneoPortalContainer.current = el;
   }, []);
@@ -74,6 +68,7 @@ export default function TasksPage() {
           than the window, so it doesn't paint over the AirSend header and sidebar. */}
       <div
         className={`kaneo-root flex ${FRAME_HEIGHT} w-full flex-row overflow-hidden`}
+        data-host-sidebar={inHostSidebar ? "" : undefined}
         style={{ contain: "layout" }}
       >
         {ready ? <KaneoApp /> : <Loading />}

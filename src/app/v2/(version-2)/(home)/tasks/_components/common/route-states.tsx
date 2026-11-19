@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { TasksSkeleton } from "@/components/common/tasks-skeleton";
 import { Button } from "@tasks/_components/ui/button";
 import {
   Card,
@@ -14,7 +15,6 @@ import {
   CardTitle,
 } from "@tasks/_components/ui/card";
 import { ErrorDisplay } from "@tasks/_components/ui/error-display";
-import { Spinner } from "@tasks/_components/ui/spinner";
 import { stripTasksBasePath } from "@tasks/_lib/base-path";
 import { isSessionBootstrapError } from "@tasks/_lib/ensure-session";
 import { BootFrame, isShellPath } from "./boot-frame";
@@ -23,20 +23,12 @@ import { BootFrame, isShellPath } from "./boot-frame";
 // `defaultNotFoundComponent` in kaneo-app.tsx). Every route that suspends or throws ends up here
 // instead of rendering a blank pane.
 
-/** Shown while a route loads: the app-shell skeleton on the dashboard, a spinner elsewhere. */
+/** Shown while a route loads: the app-shell skeleton on the dashboard, a content skeleton elsewhere. */
 export function RoutePending() {
   if (isShellPath(stripTasksBasePath(window.location.pathname))) {
     return <BootFrame />;
   }
-  return (
-    <div
-      aria-live="polite"
-      className="delayed-reveal flex h-full min-h-0 w-full flex-1 items-center justify-center"
-      role="status"
-    >
-      <Spinner className="size-5 text-muted-foreground" />
-    </div>
-  );
+  return <TasksSkeleton variant="content" className="delayed-reveal" />;
 }
 
 function SessionError({
