@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	Dialog,
 	DialogContent,
@@ -11,11 +9,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@nimbus/_components/ui/select";
 import { useEffect, useState, type ReactNode } from "react";
 import { FieldError } from "@nimbus/_components/ui/field-error";
-import { updateTagSchema } from "@nimbus/_lib/files-types";
+import { updateTagSchema } from "@nimbus/_packages/shared";
 import { Button } from "@nimbus/_components/ui/button";
 import { Label } from "@nimbus/_components/ui/label";
 import { Input } from "@nimbus/_components/ui/input";
-import type { Tag } from "@nimbus/_lib/files-types";
+import type { Tag } from "@nimbus/_packages/shared";
 
 function getDescendantIds(tag: Tag): string[] {
 	if (!tag.children) return [];
@@ -40,26 +38,18 @@ function renderTagSelectItems(tags: Tag[], forbiddenIds: string[], level = 0): R
 }
 
 interface UpdateTagDialogProps {
-	isOpen?: boolean;
-	open?: boolean;
-	onClose?: () => void;
-	onOpenChange?: (open: boolean) => void;
-	onUpdate?: (data: { id: string; name?: string; color?: string; parentId?: string | null }) => void;
-	onUpdateTag?: (data: { id: string; name?: string; color?: string; parentId?: string | null }) => void;
-	tags?: Tag[];
+	isOpen: boolean;
+	onClose: () => void;
+	onUpdate: (data: { id: string; name?: string; color?: string; parentId?: string | null }) => void;
+	tags: Tag[];
 	tag: Tag | null;
 }
 
-export function UpdateTagDialog({ isOpen, open, onClose, onOpenChange, onUpdate, onUpdateTag, tags = [], tag }: UpdateTagDialogProps) {
+export function UpdateTagDialog({ isOpen, onClose, onUpdate, tags, tag }: UpdateTagDialogProps) {
 	const [name, setName] = useState("");
 	const [color, setColor] = useState("#808080");
 	const [parentId, setParentId] = useState<string | null>(null);
 	const [errors, setErrors] = useState<{ name?: string; color?: string }>({});
-	const isVisible = open !== undefined ? open : isOpen ?? false;
-	const handleClose = () => {
-		onClose?.();
-		onOpenChange?.(false);
-	};
 
 	useEffect(() => {
 		if (tag) {
@@ -115,15 +105,13 @@ export function UpdateTagDialog({ isOpen, open, onClose, onOpenChange, onUpdate,
 		});
 
 		if (validationResult.success) {
-			const data = {
+			onUpdate({
 				id: tag.id,
 				name: name.trim() === tag.name ? undefined : name,
 				color: color === tag.color ? undefined : color,
 				parentId: parentId === tag.parentId ? undefined : parentId === "none" ? null : parentId,
-			};
-			onUpdate?.(data);
-			onUpdateTag?.(data);
-			handleClose();
+			});
+			onClose();
 		} else {
 			// Update errors for final validation
 			const newErrors: { name?: string; color?: string } = {};
@@ -147,7 +135,7 @@ export function UpdateTagDialog({ isOpen, open, onClose, onOpenChange, onUpdate,
 	const isValid = Object.keys(errors).length === 0;
 
 	return (
-		<Dialog open={isVisible} onOpenChange={(open) => !open && handleClose()}>
+		<Dialog open={isOpen} onOpenChange={onClose}>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Update Tag</DialogTitle>
