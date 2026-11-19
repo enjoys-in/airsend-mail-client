@@ -51,11 +51,6 @@ export function useBreadcrumbPath(fileId?: string) {
 	});
 }
 
-export function useBreadcrumb(fileId?: string) {
-	const query = useBreadcrumbPath(fileId);
-	return { items: query.data || [], ...query };
-}
-
 async function getBaseFileClient(clientPromise: Promise<DriveProviderClient>) {
 	const client = await clientPromise;
 	const BASE_FILE_CLIENT = client.api.files;
