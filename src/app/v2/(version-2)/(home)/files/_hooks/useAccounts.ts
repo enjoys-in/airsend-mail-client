@@ -1,4 +1,4 @@
-import type { ApiResponse, LimitedAccessAccount } from "@nimbus/_lib/files-types";
+import type { ApiResponse, LimitedAccessAccount } from "@nimbus/_packages/shared";
 import { useQuery } from "@tanstack/react-query";
 import { protectedClient } from "@nimbus/_utils/client";
 
@@ -10,8 +10,8 @@ const fetchAccounts = async (): Promise<LimitedAccessAccount[]> => {
 		throw new Error(data.message || "Failed to fetch accounts");
 	}
 
-	const accountsData = (await response.json()) as any[];
-	return accountsData.map((account: any) => ({
+	const accountsData = await response.json();
+	return accountsData.map(account => ({
 		...account,
 		createdAt: new Date(account.createdAt),
 		updatedAt: new Date(account.updatedAt),
