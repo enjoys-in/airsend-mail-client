@@ -1,4 +1,4 @@
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 import { LogoIcon } from "@nimbus/_components/icons";
 
 // this is a copy of Analogs footer component with some changes
