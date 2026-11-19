@@ -149,7 +149,8 @@ function MyTasksContent() {
         ) : error && lastFetchedAt === null ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
             <AlertTriangle className="size-8 text-amber-500" />
-            <p className="text-sm">{error}</p>
+            <p className="text-sm font-medium text-foreground">Something went wrong</p>
+            <p className="max-w-sm text-center text-xs">{error}</p>
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={load}>
               Try again
             </Button>

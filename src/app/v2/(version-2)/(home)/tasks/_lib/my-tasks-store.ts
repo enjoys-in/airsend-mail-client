@@ -68,7 +68,7 @@ export const useMyTasksStore = create<MyTasksState>()((set, get) => ({
         } else if (res.status === "no-access") {
           set({ tasks: [], error: null, noAccess: true, lastFetchedAt: Date.now() });
         } else {
-          set({ error: "Couldn't reach the tasks service.", noAccess: false });
+          set({ error: "Service is not available right now. Please try again in a moment.", noAccess: false });
         }
       } catch {
         set({ error: "Couldn't load your tasks." });
