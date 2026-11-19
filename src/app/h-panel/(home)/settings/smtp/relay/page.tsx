@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { PageHeader } from "@/components/h-panel/kit"
 import { RelayForm } from "./_components/RelayForm"
 import RelayTable from "./_components/RelayTable"
 
@@ -62,25 +62,24 @@ export default function RelayPage() {
     }
 
     return (
-        <div className="flex flex-col h-full">
-            <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-                <h1 className="text-lg font-semibold">SMTP Relay Configuration</h1>
-            </header>
-            <ScrollArea className="flex-1">
-                <div className="p-4 space-y-4 max-w-5xl">
-                    <RelayTable
-                        relays={relays}
-                        onEdit={setEditingRelay}
-                        onDelete={handleDelete}
-                        onToggle={handleToggle}
-                    />
-                    <RelayForm
-                        editingRelay={editingRelay}
-                        onSave={handleSave}
-                        onCancel={() => setEditingRelay(null)}
-                    />
-                </div>
-            </ScrollArea>
+        <div>
+            <PageHeader
+                title="SMTP relay"
+                description="Route outbound email through your relay servers. Add a relay below, then switch it on."
+            />
+            <div className="space-y-5">
+                <RelayTable
+                    relays={relays}
+                    onEdit={setEditingRelay}
+                    onDelete={handleDelete}
+                    onToggle={handleToggle}
+                />
+                <RelayForm
+                    editingRelay={editingRelay}
+                    onSave={handleSave}
+                    onCancel={() => setEditingRelay(null)}
+                />
+            </div>
         </div>
     )
 }

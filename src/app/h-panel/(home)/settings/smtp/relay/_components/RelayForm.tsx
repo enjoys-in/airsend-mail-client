@@ -1,16 +1,15 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { Plus, X, Loader2, Server } from "lucide-react"
+import { Plus, X, Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { Pill, Section } from "@/components/h-panel/kit"
+import { FormFooter } from "../../../_components/settings-shell"
 import type { RelayConfig } from "../page"
 
 interface RelayFormProps {
@@ -93,97 +92,83 @@ export function RelayForm({ editingRelay, onSave, onCancel }: RelayFormProps) {
     const isEditing = !!editingRelay
 
     return (
-        <Card className="rounded-none">
-            <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                    <Server className="h-4 w-4 text-muted-foreground" />
-                    <CardTitle className="text-base">{isEditing ? "Edit Relay" : "Add New Relay"}</CardTitle>
+        <form onSubmit={handleSubmit} className="space-y-5">
+            <Section
+                title={isEditing ? "Edit relay" : "Add a relay"}
+                description={isEditing ? "Update the relay configuration below." : "Configure Airsend as your SMTP relay server for outbound email routing."}
+            >
+                <div className="max-w-md space-y-1.5">
+                    <Label htmlFor="relay-name">Relay name</Label>
+                    <Input
+                        id="relay-name"
+                        placeholder="e.g. Primary Relay"
+                        className="h-9"
+                        value={form.name}
+                        onChange={(e) => updateField("name", e.target.value)}
+                        required
+                    />
                 </div>
-                <CardDescription>
-                    {isEditing
-                        ? "Update the relay configuration below"
-                        : "Configure Airsend as your SMTP relay server for outbound email routing"}
-                </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-4">
-                    {/* Name */}
-                    <div className="space-y-2">
-                        <Label htmlFor="relay-name">Relay Name</Label>
-                        <Input
-                            id="relay-name"
-                            placeholder="e.g. Primary Relay"
-                            className="rounded-none"
-                            value={form.name}
-                            onChange={(e) => updateField("name", e.target.value)}
-                            required
-                        />
-                    </div>
+            </Section>
 
-                    <Separator />
-
-                    {/* Connection */}
-                    <div>
-                        <p className="text-sm font-medium mb-3">Connection Settings</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="relay-host">SMTP Host</Label>
-                                <Input
-                                    id="relay-host"
-                                    placeholder="relay.airsend.dev"
-                                    className="rounded-none"
-                                    value={form.host}
-                                    onChange={(e) => updateField("host", e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="relay-port">Port</Label>
-                                <Input
-                                    id="relay-port"
-                                    placeholder="587"
-                                    className="rounded-none"
-                                    value={form.port}
-                                    onChange={(e) => updateField("port", e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="relay-auth">Auth Method</Label>
-                                <Select value={form.auth_method} onValueChange={(v) => updateField("auth_method", v as RelayConfig["auth_method"])}>
-                                    <SelectTrigger id="relay-auth" className="rounded-none">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="plain">PLAIN</SelectItem>
-                                        <SelectItem value="login">LOGIN</SelectItem>
-                                        <SelectItem value="cram-md5">CRAM-MD5</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+            <Section title="Connection" description="Where the relay lives and how to sign in.">
+                <div className="space-y-5">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="relay-host">SMTP host</Label>
+                            <Input
+                                id="relay-host"
+                                placeholder="relay.airsend.dev"
+                                className="h-9"
+                                value={form.host}
+                                onChange={(e) => updateField("host", e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="relay-port">Port</Label>
+                            <Input
+                                id="relay-port"
+                                placeholder="587"
+                                className="h-9"
+                                value={form.port}
+                                onChange={(e) => updateField("port", e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="relay-auth">Auth method</Label>
+                            <Select value={form.auth_method} onValueChange={(v) => updateField("auth_method", v as RelayConfig["auth_method"])}>
+                                <SelectTrigger id="relay-auth" className="h-9">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="plain">PLAIN</SelectItem>
+                                    <SelectItem value="login">LOGIN</SelectItem>
+                                    <SelectItem value="cram-md5">CRAM-MD5</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 
-                    {/* Credentials */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-1.5">
                             <Label htmlFor="relay-user">Username</Label>
                             <Input
                                 id="relay-user"
                                 placeholder="relay-user"
-                                className="rounded-none"
+                                className="h-9"
                                 value={form.username}
                                 onChange={(e) => updateField("username", e.target.value)}
                                 required
                             />
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             <Label htmlFor="relay-pass">Password</Label>
                             <Input
                                 id="relay-pass"
                                 type="password"
                                 placeholder="••••••••"
-                                className="rounded-none"
+                                className="h-9"
                                 value={form.password}
                                 onChange={(e) => updateField("password", e.target.value)}
                                 required
@@ -191,82 +176,81 @@ export function RelayForm({ editingRelay, onSave, onCancel }: RelayFormProps) {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <Switch checked={form.secure} onCheckedChange={(v) => updateField("secure", v)} />
-                        <Label>Use Secure Connection (SSL/TLS)</Label>
-                    </div>
-
-                    <Separator />
-
-                    {/* Limits */}
-                    <div>
-                        <p className="text-sm font-medium mb-3">Rate Limiting & Connections</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="relay-max-conn">Max Connections</Label>
-                                <Input
-                                    id="relay-max-conn"
-                                    type="number"
-                                    className="rounded-none"
-                                    value={form.max_connections}
-                                    onChange={(e) => updateField("max_connections", parseInt(e.target.value) || 0)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="relay-rate">Rate Limit (emails/hr)</Label>
-                                <Input
-                                    id="relay-rate"
-                                    type="number"
-                                    className="rounded-none"
-                                    value={form.rate_limit}
-                                    onChange={(e) => updateField("rate_limit", parseInt(e.target.value) || 0)}
-                                />
-                            </div>
+                    <div className="flex items-center justify-between gap-4 rounded-lg border border-border/70 px-4 py-3">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="relay-secure">Secure connection</Label>
+                            <p className="text-xs text-muted-foreground">Use SSL/TLS from the first byte (usually port 465).</p>
                         </div>
+                        <Switch id="relay-secure" checked={form.secure} onCheckedChange={(v) => updateField("secure", v)} />
                     </div>
+                </div>
+            </Section>
 
-                    <Separator />
-
-                    {/* Allowed Domains */}
-                    <div className="space-y-2">
-                        <Label>Allowed Domains</Label>
-                        <p className="text-xs text-muted-foreground">Only these domains will be permitted to relay through this server. Leave empty to allow all.</p>
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="example.com"
-                                className="rounded-none"
-                                value={newDomain}
-                                onChange={(e) => setNewDomain(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addDomain())}
-                            />
-                            <Button type="button" variant="outline" size="sm" className="rounded-none shrink-0" onClick={addDomain}>
-                                <Plus className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        {form.allowed_domains.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                                {form.allowed_domains.map((d) => (
-                                    <Badge key={d} variant="secondary" className="gap-1 rounded-none">
-                                        {d}
-                                        <X className="h-3 w-3 cursor-pointer" onClick={() => removeDomain(d)} />
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
+            <Section title="Limits" description="Rate limiting and connection pool.">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="relay-max-conn">Max connections</Label>
+                        <Input
+                            id="relay-max-conn"
+                            type="number"
+                            className="h-9"
+                            value={form.max_connections}
+                            onChange={(e) => updateField("max_connections", parseInt(e.target.value) || 0)}
+                        />
                     </div>
-                </CardContent>
-                <CardFooter className="flex gap-2 justify-end border-t pt-4">
-                    {isEditing && (
-                        <Button type="button" variant="outline" size="sm" className="rounded-none" onClick={onCancel}>
-                            Cancel
+                    <div className="space-y-1.5">
+                        <Label htmlFor="relay-rate">Rate limit (emails per hour)</Label>
+                        <Input
+                            id="relay-rate"
+                            type="number"
+                            className="h-9"
+                            value={form.rate_limit}
+                            onChange={(e) => updateField("rate_limit", parseInt(e.target.value) || 0)}
+                        />
+                    </div>
+                </div>
+            </Section>
+
+            <Section title="Allowed domains" description="Only these domains may relay through this server. Leave empty to allow all.">
+                <div className="space-y-3">
+                    <div className="flex max-w-md gap-2">
+                        <Input
+                            placeholder="example.com"
+                            className="h-9"
+                            value={newDomain}
+                            onChange={(e) => setNewDomain(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addDomain())}
+                        />
+                        <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={addDomain} aria-label="Add domain">
+                            <Plus className="h-4 w-4" />
                         </Button>
+                    </div>
+                    {form.allowed_domains.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {form.allowed_domains.map((d) => (
+                                <Pill key={d} className="gap-1.5 py-1 pl-2.5 pr-1.5">
+                                    {d}
+                                    <button type="button" onClick={() => removeDomain(d)} aria-label={`Remove ${d}`} className="rounded-full p-0.5 hover:bg-foreground/10">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </Pill>
+                            ))}
+                        </div>
                     )}
-                    <Button type="submit" size="sm" className="rounded-none" disabled={submitting}>
-                        {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                        {isEditing ? "Update Relay" : "Add Relay"}
+                </div>
+            </Section>
+
+            <FormFooter>
+                {isEditing && (
+                    <Button type="button" variant="outline" onClick={onCancel}>
+                        Cancel
                     </Button>
-                </CardFooter>
-            </form>
-        </Card>
+                )}
+                <Button type="submit" disabled={submitting}>
+                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isEditing ? "Update relay" : "Add relay"}
+                </Button>
+            </FormFooter>
+        </form>
     )
 }
