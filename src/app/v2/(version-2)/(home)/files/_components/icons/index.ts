@@ -13,6 +13,7 @@ export { MicrosoftIcon } from "./microsoft-icon";
 export { OneDriveIcon } from "./onedrive-icon";
 export { PdfIcon } from "./pdf-icon";
 export { S3Icon } from "./s3-icon";
+export { TelegramIcon } from "./telegram-icon";
 export { XPlatformIcon } from "./x-platform-icon";
 
 export interface IconProps {
