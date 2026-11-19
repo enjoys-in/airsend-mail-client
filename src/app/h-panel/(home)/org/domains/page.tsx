@@ -1,16 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
     Dialog,
     DialogContent,
@@ -50,10 +47,12 @@ import {
     RefreshCw,
     Building2,
     Search,
+    ArrowRightLeft,
 } from "lucide-react"
 import type { IDomain } from "../_lib/types"
 import { API } from "@/lib/api/handler"
 import type { IOrganization } from "../_lib/types"
+import { EmptyState, OrgPage, PageHeader, Panel, Pill, RowsSkeleton, Section, Stat, StatGrid, type Tone } from "../_components/kit"
 
 type VerifyField = "dns_verified" | "mx_verified" | "spf_verified" | "dkim_verified" | "dmarc_verified"
 
@@ -65,15 +64,45 @@ const VERIFY_LABELS: Record<VerifyField, string> = {
     dmarc_verified: "DMARC",
 }
 
+const VERIFY_FIELDS = Object.keys(VERIFY_LABELS) as VerifyField[]
+
+const STATUS_TONE: Record<string, Tone> = {
+    active: "green",
+    pending: "amber",
+    inactive: "neutral",
+    suspended: "red",
+}
+
 function VerifyBadge({ ok }: { ok: boolean }) {
     return ok ? (
-        <Badge variant="default" className="gap-1 text-[10px] bg-emerald-600">
+        <Pill tone="green">
             <Check className="h-3 w-3" /> Verified
-        </Badge>
+        </Pill>
     ) : (
-        <Badge variant="secondary" className="gap-1 text-[10px]">
+        <Pill>
             <X className="h-3 w-3" /> Pending
-        </Badge>
+        </Pill>
+    )
+}
+
+/** DNS / MX / SPF / DKIM / DMARC as five small marks; hover for the name. */
+function VerifyMarks({ domain }: { domain: IDomain }) {
+    return (
+        <div className="flex items-center gap-1.5">
+            {VERIFY_FIELDS.map((field) => (
+                <span
+                    key={field}
+                    title={`${VERIFY_LABELS[field]}: ${domain[field] ? "verified" : "pending"}`}
+                    className={
+                        domain[field]
+                            ? "inline-flex items-center gap-0.5 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
+                            : "inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground/70"
+                    }
+                >
+                    {VERIFY_LABELS[field]}
+                </span>
+            ))}
+        </div>
     )
 }
 
@@ -117,6 +146,8 @@ export default function DomainsPage() {
             return matchSearch && matchStatus
         })
     }, [domains, search, statusFilter])
+
+    const assignedCount = React.useMemo(() => domains.filter((d) => !!d.org_id).length, [domains])
 
     const handleAddDomain = async () => {
         if (!newDomain.trim()) return
@@ -202,135 +233,142 @@ export default function DomainsPage() {
         }
     }
 
-    const statusColor: Record<string, string> = {
-        active: "bg-emerald-600",
-        pending: "bg-yellow-600",
-        inactive: "bg-neutral-500",
-        suspended: "bg-red-600",
-    }
-
     return (
-        <div className="flex flex-col h-full">
-            <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-                <h1 className="text-lg font-semibold">Domain Management</h1>
-                <div className="ml-auto">
+        <OrgPage>
+            <PageHeader
+                title="Domains"
+                description="Domains you own, the organization each one belongs to, and whether its DNS records are verified."
+                actions={
                     <Button size="sm" onClick={() => setIsAddOpen(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Domain
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add domain
                     </Button>
-                </div>
-            </header>
+                }
+            />
 
-            <div className="flex-1 p-4 space-y-4 min-w-0 overflow-auto">
+            <StatGrid className="mb-6 lg:grid-cols-3">
+                <Stat label="Total domains" value={domains.length} icon={Globe} loading={loading} />
+                <Stat label="In an organization" value={assignedCount} icon={Building2} loading={loading} />
+                <Stat label="Not assigned" value={domains.length - assignedCount} icon={ArrowRightLeft} loading={loading} />
+            </StatGrid>
+
+            <Section flush>
                 {/* Filters */}
-                <div className="flex flex-wrap gap-3 items-center">
-                    <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-4 py-3">
+                    <div className="relative min-w-[200px] max-w-sm flex-1">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search domains..."
-                            className="pl-8"
+                            placeholder="Search domains or organizations"
+                            className="h-9 pl-8"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[140px]">
+                        <SelectTrigger className="h-9 w-[150px]">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="all">All statuses</SelectItem>
                             <SelectItem value="active">Active</SelectItem>
                             <SelectItem value="pending">Pending</SelectItem>
                             <SelectItem value="inactive">Inactive</SelectItem>
                             <SelectItem value="suspended">Suspended</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Badge variant="outline" className="text-xs">
+                    <span className="ml-auto text-xs text-muted-foreground">
                         {filtered.length} domain{filtered.length !== 1 ? "s" : ""}
-                    </Badge>
+                    </span>
                 </div>
 
-                {/* Table */}
-                {filtered.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <Globe className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                        <h3 className="text-lg font-medium mb-1">No domains found</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                            {search || statusFilter !== "all"
-                                ? "Try adjusting your search or filter."
-                                : "Add your first domain to get started."}
-                        </p>
-                    </div>
+                {loading ? (
+                    <RowsSkeleton rows={4} />
+                ) : filtered.length === 0 ? (
+                    <EmptyState
+                        icon={Globe}
+                        title="No domains found"
+                        description={search || statusFilter !== "all" ? "Try adjusting your search or filter." : "Add your first domain to get started."}
+                        action={
+                            !search && statusFilter === "all" ? (
+                                <Button size="sm" onClick={() => setIsAddOpen(true)}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add domain
+                                </Button>
+                            ) : undefined
+                        }
+                    />
                 ) : (
-                    <div className="rounded-md border overflow-x-auto">
+                    <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Domain</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Organization</TableHead>
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="pl-5">Domain</TableHead>
+                                    <TableHead>Organization</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead className="hidden md:table-cell">DNS</TableHead>
-                                    <TableHead className="hidden md:table-cell">MX</TableHead>
-                                    <TableHead className="hidden lg:table-cell">SPF</TableHead>
-                                    <TableHead className="hidden lg:table-cell">DKIM</TableHead>
-                                    <TableHead className="hidden lg:table-cell">DMARC</TableHead>
-                                    <TableHead className="hidden sm:table-cell text-center">Accounts</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    <TableHead className="hidden lg:table-cell">Verification</TableHead>
+                                    <TableHead className="hidden text-right sm:table-cell">Accounts</TableHead>
+                                    <TableHead className="w-12 pr-4 text-right">
+                                        <span className="sr-only">Actions</span>
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filtered.map((d) => (
                                     <TableRow key={d.id}>
-                                        <TableCell className="font-medium">{d.domain_name}</TableCell>
-                                        <TableCell className="hidden sm:table-cell">
-                                            {d.org_name ? (
-                                                <span className="flex items-center gap-1.5 text-sm">
-                                                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                                                    {d.org_name}
+                                        <TableCell className="pl-5">
+                                            <div className="flex items-center gap-2.5">
+                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                                                    <Globe className="h-4 w-4" />
                                                 </span>
-                                            ) : (
-                                                <span className="text-xs text-muted-foreground">—</span>
-                                            )}
+                                                <span className="truncate text-sm font-medium">{d.domain_name}</span>
+                                            </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge className={`${statusColor[d.status]} text-white text-[10px]`}>
+                                            <div className="flex items-center gap-2">
+                                                {d.org_name ? (
+                                                    <Pill tone="blue">
+                                                        <Building2 className="h-3 w-3" />
+                                                        {d.org_name}
+                                                    </Pill>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">Not assigned</span>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                                    onClick={() => openSettings(d)}
+                                                >
+                                                    <ArrowRightLeft className="mr-1 h-3 w-3" />
+                                                    {d.org_name ? "Move" : "Assign"}
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Pill tone={STATUS_TONE[d.status] ?? "neutral"} className="capitalize">
                                                 {d.status}
-                                            </Badge>
+                                            </Pill>
                                         </TableCell>
-                                        {(["dns_verified", "mx_verified"] as VerifyField[]).map(
-                                            (field) => (
-                                                <TableCell key={field} className="hidden md:table-cell">
-                                                    {d[field] ? (
-                                                        <Check className="h-4 w-4 text-emerald-500" />
-                                                    ) : (
-                                                        <X className="h-4 w-4 text-muted-foreground/40" />
-                                                    )}
-                                                </TableCell>
-                                            )
-                                        )}
-                                        {(["spf_verified", "dkim_verified", "dmarc_verified"] as VerifyField[]).map(
-                                            (field) => (
-                                                <TableCell key={field} className="hidden lg:table-cell">
-                                                    {d[field] ? (
-                                                        <Check className="h-4 w-4 text-emerald-500" />
-                                                    ) : (
-                                                        <X className="h-4 w-4 text-muted-foreground/40" />
-                                                    )}
-                                                </TableCell>
-                                            )
-                                        )}
-                                        <TableCell className="hidden sm:table-cell text-center">
-                                            <Badge variant="secondary">{d.accounts_count}</Badge>
+                                        <TableCell className="hidden lg:table-cell">
+                                            <VerifyMarks domain={d} />
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="hidden text-right text-sm tabular-nums text-muted-foreground sm:table-cell">
+                                            {d.accounts_count}
+                                        </TableCell>
+                                        <TableCell className="pr-4 text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" className="h-8 w-8 p-0">
                                                         <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">Domain actions</span>
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={() => openSettings(d)}>
+                                                        <ArrowRightLeft className="mr-2 h-4 w-4" />
+                                                        Move to organization
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => openSettings(d)}>
                                                         <Settings className="mr-2 h-4 w-4" />
                                                         Settings
@@ -347,7 +385,7 @@ export default function DomainsPage() {
                                                         onClick={() => setDeleteTarget(d)}
                                                     >
                                                         <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete Domain
+                                                        Delete domain
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -358,20 +396,20 @@ export default function DomainsPage() {
                         </Table>
                     </div>
                 )}
-            </div>
+            </Section>
 
             {/* ── Add Domain Dialog ── */}
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Add Domain</DialogTitle>
+                        <DialogTitle>Add domain</DialogTitle>
                         <DialogDescription>
                             Enter the domain name. DNS records will need to be verified before the domain becomes active.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
                         <div className="space-y-2">
-                            <Label>Domain Name</Label>
+                            <Label>Domain name</Label>
                             <Input
                                 placeholder="example.com"
                                 value={newDomain}
@@ -380,7 +418,7 @@ export default function DomainsPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Assign to Organization (optional)</Label>
+                            <Label>Assign to organization (optional)</Label>
                             <Select value={newDomainOrg} onValueChange={setNewDomainOrg}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="None — unassigned" />
@@ -401,8 +439,8 @@ export default function DomainsPage() {
                             Cancel
                         </Button>
                         <Button onClick={handleAddDomain} disabled={!newDomain.trim()}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Domain
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add domain
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -412,8 +450,8 @@ export default function DomainsPage() {
             <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
-                        <DialogTitle>Domain Settings — {selectedDomain?.domain_name}</DialogTitle>
-                        <DialogDescription>Update the configuration for this domain.</DialogDescription>
+                        <DialogTitle>Domain settings — {selectedDomain?.domain_name}</DialogTitle>
+                        <DialogDescription>Move this domain to another organization or update its configuration.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
                         <div className="space-y-2">
@@ -435,7 +473,7 @@ export default function DomainsPage() {
                         <Separator />
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label>Catch-All Address</Label>
+                                <Label>Catch-all address</Label>
                                 <p className="text-xs text-muted-foreground">
                                     Route all unmatched addresses to a default mailbox
                                 </p>
@@ -444,7 +482,7 @@ export default function DomainsPage() {
                         </div>
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label>Auto Sync</Label>
+                                <Label>Auto sync</Label>
                                 <p className="text-xs text-muted-foreground">
                                     Periodically sync accounts on this domain
                                 </p>
@@ -452,32 +490,26 @@ export default function DomainsPage() {
                             <Switch checked={settingsAutoSync} onCheckedChange={setSettingsAutoSync} />
                         </div>
                         <Separator />
-                        <Card className="border-dashed">
-                            <CardHeader className="pb-2 pt-3 px-4">
-                                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                    <Shield className="h-4 w-4" /> DNS Verification Status
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="px-4 pb-3">
-                                <div className="grid grid-cols-5 gap-2">
-                                    {selectedDomain &&
-                                        (Object.keys(VERIFY_LABELS) as VerifyField[]).map((f) => (
-                                            <div key={f} className="flex flex-col items-center gap-1">
-                                                <span className="text-[10px] font-medium text-muted-foreground">
-                                                    {VERIFY_LABELS[f]}
-                                                </span>
-                                                <VerifyBadge ok={selectedDomain[f]} />
-                                            </div>
-                                        ))}
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <Panel className="border-dashed px-4 py-3">
+                            <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+                                <Shield className="h-4 w-4 text-muted-foreground" /> DNS verification status
+                            </div>
+                            <div className="grid grid-cols-5 gap-2">
+                                {selectedDomain &&
+                                    VERIFY_FIELDS.map((f) => (
+                                        <div key={f} className="flex flex-col items-center gap-1">
+                                            <span className="text-[11px] text-muted-foreground">{VERIFY_LABELS[f]}</span>
+                                            <VerifyBadge ok={selectedDomain[f]} />
+                                        </div>
+                                    ))}
+                            </div>
+                        </Panel>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveSettings}>Save Settings</Button>
+                        <Button onClick={handleSaveSettings}>Save settings</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -488,21 +520,21 @@ export default function DomainsPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-destructive" />
-                            Delete Domain
+                            Delete domain
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete <strong>{deleteTarget?.domain_name}</strong> and all
+                            This will permanently delete <strong className="font-medium text-foreground">{deleteTarget?.domain_name}</strong> and all
                             associated accounts ({deleteTarget?.accounts_count}). This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleDelete}>
-                            Delete Domain
+                            Delete domain
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+        </OrgPage>
     )
 }
