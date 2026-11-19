@@ -62,37 +62,38 @@ export function ResetPasswordForm({ email }: { email: string }) {
     }
 
     return (
-        <div className="max-w-md space-y-6  ">
-            <h2 className="text-xl font-semibold">Reset Password</h2>
+        <div className="space-y-5">
             <p className="text-sm text-muted-foreground">
                 {isRandom
                     ? "A strong random password will be generated automatically."
                     : "Enter a new password or choose to generate one automatically."}
             </p>
 
-            <div className="flex items-center justify-between">
-                <Label htmlFor="random">Generate Random Password</Label>
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-4 py-3">
+                <Label htmlFor="random" className="text-sm">Generate a random password</Label>
                 <Switch id="random" checked={isRandom} onCheckedChange={handleRandomToggle} />
             </div>
 
             {!isRandom && (
                 <div className="space-y-3">
-                    <div>
-                        <Label htmlFor="new-password">New Password</Label>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="new-password" className="text-sm">New password</Label>
                         <Input
                             id="new-password"
                             type="password"
+                            className="h-9"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             placeholder="Enter new password"
                         />
                     </div>
 
-                    <div>
-                        <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="confirm-password" className="text-sm">Confirm password</Label>
                         <Input
                             id="confirm-password"
                             type="password"
+                            className="h-9"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="Re-enter new password"
@@ -101,8 +102,8 @@ export function ResetPasswordForm({ email }: { email: string }) {
                 </div>
             )}
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            {success && <p className="text-green-500 text-sm">{success}</p>}
+            {error && <p className="whitespace-pre-line text-sm text-red-600 dark:text-red-400">{error}</p>}
+            {success && <p className="text-sm text-emerald-600 dark:text-emerald-400">{success}</p>}
 
             {!isRandom && (
                 <Button
@@ -110,7 +111,7 @@ export function ResetPasswordForm({ email }: { email: string }) {
                     disabled={loading || !newPassword || !confirmPassword}
                     className="w-full"
                 >
-                    {loading ? "Updating..." : "Update Password"}
+                    {loading ? "Updating..." : "Update password"}
                 </Button>
             )}
         </div>
