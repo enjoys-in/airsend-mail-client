@@ -2,6 +2,7 @@ import type { CreateS3AccountSchema, CreateTelegramAccountSchema, DriveProvider 
 import { providerToSlug } from "@nimbus/_packages/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import env from "@nimbus/_packages/env/client";
+import { SESSION_QUERY_KEY } from "@nimbus/_lib/session";
 import { useNavigate } from "@tanstack/react-router";
 
 type CreatedAccount = { id: string; accountId: string; providerId: DriveProvider; nickname?: string | null };
@@ -23,14 +24,14 @@ async function postAccount(path: "s3" | "telegram", body: unknown, fallbackMessa
 	return account;
 }
 
-/** After an account is added: refresh the lists and open the new account's files. */
+/** After the organization's storage is added: refresh the lists and open the new account's files. */
 function useAfterConnect() {
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	return async (account: CreatedAccount) => {
 		await Promise.all([
 			queryClient.invalidateQueries({ queryKey: ["accounts"] }),
-			queryClient.invalidateQueries({ queryKey: ["user"] }),
+			queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY }),
 		]);
 		const providerSlug = providerToSlug(account.providerId);
 		if (providerSlug) {

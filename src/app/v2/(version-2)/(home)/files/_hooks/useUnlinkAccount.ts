@@ -6,10 +6,10 @@ import { toast } from "sonner";
 export const useUnlinkAccount = () => {
 	const { defaultAccountId, defaultProviderId } = useDefaultAccountProvider();
 
-	/** Removes a connected storage account. `tableAccountId` is the account row id (`LimitedAccessAccount.id`). */
+	/** Removes one of the organization's storage accounts (owners and admins only). `tableAccountId` is the account row id (`LimitedAccessAccount.id`). */
 	const unlinkAccount = async (provider: DriveProvider, accountId: string, tableAccountId: string) => {
 		if (defaultAccountId === accountId && provider === defaultProviderId) {
-			toast.error("Cannot disconnect the default account. Set another account as default first.");
+			toast.error("Cannot remove the default storage. Make another storage the default first.");
 			return;
 		}
 		const response = await fetch(`${env.VITE_BACKEND_URL}/api/account/${encodeURIComponent(tableAccountId)}`, {
@@ -18,7 +18,7 @@ export const useUnlinkAccount = () => {
 		});
 		if (!response.ok) {
 			const data = (await response.json().catch(() => ({}))) as Partial<ApiResponse>;
-			return { error: { message: data.message || "Failed to disconnect account" } };
+			return { error: { message: data.message || "Failed to remove the storage account" } };
 		}
 		return { error: null };
 	};
