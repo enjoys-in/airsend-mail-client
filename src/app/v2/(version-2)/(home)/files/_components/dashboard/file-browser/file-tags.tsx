@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -8,7 +6,7 @@ import {
 } from "@nimbus/_components/ui/dropdown-menu";
 import { CreateTagDialog } from "@nimbus/_components/dialogs/create-tag-dialog";
 import { Button } from "@nimbus/_components/ui/button";
-import type { File, Tag } from "@nimbus/_lib/files-types";
+import type { File, Tag } from "@nimbus/_packages/shared";
 import { Badge } from "@nimbus/_components/ui/badge";
 import { useTags } from "@nimbus/_hooks/useTags";
 import { Plus, X } from "lucide-react";
