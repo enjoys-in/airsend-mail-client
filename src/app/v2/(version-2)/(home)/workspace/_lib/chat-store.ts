@@ -60,7 +60,7 @@ import {
   apiErrorMessage,
   type AttachmentRef,
 } from "./api";
-import { uploadWorkspaceFile, filesErrorMessage, type WorkspaceFileMeta } from "./files-api";
+import { uploadWorkspaceFile, deleteWorkspaceFile, filesErrorMessage, type WorkspaceFileMeta } from "./files-api";
 import { categoryFor, extensionOf, fileKind } from "./file-utils";
 import { toast } from "sonner";
 
@@ -866,7 +866,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
         });
       } catch (err) {
         if (!uploadControllers.has(uploadId)) continue; // cancelled by the user
-        const message = filesErrorMessage(err, "Upload failed");
+        const message = filesErrorMessage(err, "Upload failed", target.type);
         patch({ status: "error", error: message });
         toast.error(`${file.name}: ${message}`);
         continue;
@@ -1291,7 +1291,12 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   deleteFile: (fileId) => {
+    const removed = get().files.find((f) => f.id === fileId);
     set((s) => ({ files: s.files.filter((f) => f.id !== fileId) }));
+    // Files in the files service: also remove the stored bytes (best effort; the record is removed below).
+    if (removed?.fileId) {
+      deleteWorkspaceFile(removed.fileId).catch(() => {});
+    }
 
     const email = get().currentUserId || "alex@airsend.io";
     workspaceApi.deleteFile(fileId, email).catch((err) => {
