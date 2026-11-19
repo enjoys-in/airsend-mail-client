@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -10,7 +8,7 @@ import { UploadFolderDialog } from "@nimbus/_components/dialogs/upload-folder-di
 import { CreateFolderDialog } from "@nimbus/_components/dialogs/create-folder-dialog";
 import { UploadFileDialog } from "@nimbus/_components/dialogs/upload-files-dialog";
 import { FolderPlus, Plus, Upload } from "lucide-react";
-import { useSearch } from "@nimbus/_lib/router-shim";
+import { useSearch } from "@tanstack/react-router";
 import { Button } from "@nimbus/_components/ui/button";
 import { useState } from "react";
 
