@@ -6,12 +6,12 @@ import {
 	type ResetPasswordFormData,
 	type SignInFormData,
 	type SignUpFormData,
-} from "@nimbus/_lib/files-types";
-import { authClient } from "@nimbus/_lib/auth-shim";
-import { useNavigate } from "@nimbus/_lib/router-shim";
+} from "@nimbus/_packages/shared";
+import { authClient } from "@nimbus/_packages/auth/auth-client";
+import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { publicClient } from "@nimbus/_utils/client";
-import env from "@nimbus/_lib/env-shim";
+import env from "@nimbus/_packages/env/client";
 import { toast } from "sonner";
 
 // Simple error handler
@@ -43,7 +43,7 @@ export const useSocialAuth = () => {
 							callbackURL: `${env.VITE_FRONTEND_URL}/dashboard`,
 						});
 
-			return toast.promise(authPromise as any, {
+			return toast.promise(authPromise, {
 				loading: action === "link" ? `Linking ${providerName} account...` : `Signing in with ${providerName}...`,
 				success: action === "link" ? `Successfully linked ${providerName} account` : `Signed in with ${providerName}`,
 				error: error => handleAuthError(error, `${options.provider} authentication failed`),
@@ -61,7 +61,7 @@ export const useSignIn = () => {
 
 	return useMutation({
 		mutationFn: async (data: SignInFormData) => {
-			await (authClient.signIn.email as any)(
+			await authClient.signIn.email(
 				{
 					email: data.email,
 					password: data.password,
@@ -72,7 +72,7 @@ export const useSignIn = () => {
 						const redirectUrl = new URLSearchParams(window.location.search).get("redirect") || "/dashboard";
 						navigate({ to: redirectUrl });
 					},
-					onError: (ctx: any) => {
+					onError: ctx => {
 						throw ctx.error;
 					},
 				}
@@ -128,9 +128,9 @@ export const useSignOut = () => {
 
 	return useMutation({
 		mutationFn: async (options?: { redirectTo?: string }) => {
-			const response: any = await authClient.signOut();
-			const data = response?.data;
-			const success = data?.success ?? true;
+			const response = await authClient.signOut();
+			const data = response.data;
+			const success = data?.success ?? false;
 
 			if (!success) {
 				throw new Error("Sign out failed");
