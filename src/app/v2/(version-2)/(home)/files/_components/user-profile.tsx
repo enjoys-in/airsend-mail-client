@@ -1,5 +1,3 @@
-"use client";
-
 import { Avatar, AvatarFallback, AvatarImage } from "@nimbus/_components/ui/avatar";
 import { cva, type VariantProps } from "class-variance-authority";
 import { useIsMounted } from "@nimbus/_hooks/useIsMounted";
