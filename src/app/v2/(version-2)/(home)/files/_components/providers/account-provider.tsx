@@ -1,11 +1,9 @@
-"use client";
-
-import { type DriveProvider, type DriveProviderSlug, providerToSlug, slugToProvider } from "@nimbus/_lib/files-types";
+import { type DriveProvider, type DriveProviderSlug, providerToSlug, slugToProvider } from "@nimbus/_packages/shared";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createProtectedClient, type DriveProviderClient } from "@nimbus/_utils/client";
-import { useNavigate } from "@nimbus/_lib/router-shim";
-import { useLocation } from "@nimbus/_lib/router-shim";
-import { useParams } from "@nimbus/_lib/router-shim";
+import { useNavigate } from "@tanstack/react-router";
+import { useLocation } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 
 interface AccountProviderContextType {
 	providerId: string | null;
