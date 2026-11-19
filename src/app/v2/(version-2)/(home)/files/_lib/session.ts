@@ -55,7 +55,9 @@ export function useSession() {
 	const { data, isPending, error, refetch } = useQuery({
 		queryKey: SESSION_QUERY_KEY,
 		queryFn: getSession,
-		staleTime: 60_000,
+		// Short on purpose: a role change (published by airsend-api) is picked up on the next focus or within 15s.
+		staleTime: 15_000,
+		refetchOnWindowFocus: true,
 		retry: false,
 	});
 	return { data: data ?? null, isPending, error: error as Error | null, refetch };
