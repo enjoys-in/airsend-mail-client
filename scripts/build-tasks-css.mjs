@@ -36,7 +36,7 @@ const INPUT = join(
 const OUTPUT = join(ROOT_DIR, "public/tasks/kaneo.css");
 const HOST_TOKENS = join(
   ROOT_DIR,
-  "src/app/v2/(version-2)/(home)/tasks/_styles/host-tokens.css",
+  "src/styles/host-design-tokens.css",
 );
 const SCOPE = ".kaneo-root";
 const LAYER_ORDER = ["properties", "theme", "base", "components", "utilities"];

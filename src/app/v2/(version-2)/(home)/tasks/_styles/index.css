@@ -244,7 +244,7 @@ input:-webkit-autofill:active {
     monospace;
 
   /* Surfaces, text, borders, sidebar and radius come from the AirSend design system
-     (see host-tokens.css), so Kaneo follows the host theme. Status colours stay Kaneo's. */
+     (see src/styles/host-design-tokens.css), so Kaneo follows the host theme. Status colours stay Kaneo's. */
   --radius: var(--ds-radius);
   --background: var(--ds-background);
   --foreground: var(--ds-foreground);

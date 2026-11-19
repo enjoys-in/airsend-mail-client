@@ -34,6 +34,7 @@ const INPUT = join(
   "src/app/v2/(version-2)/(home)/files/_styles/index.css",
 );
 const OUTPUT = join(ROOT_DIR, "public/files/nimbus.css");
+const HOST_TOKENS = join(ROOT_DIR, "src/styles/host-design-tokens.css");
 const SCOPE = ".nimbus-root";
 const LAYER_ORDER = ["properties", "theme", "base", "components", "utilities"];
 const SELF_SELECTORS = new Set([":root", ":host", "html", "body"]);
@@ -129,7 +130,9 @@ function flattenAndScope(css) {
 }
 
 const raw = compileTailwind();
-const scoped = flattenAndScope(raw);
+// The design-system bridge must stay on :root (it reads the host theme), so it is not scoped.
+const scoped = `${flattenAndScope(raw)}
+${readFileSync(HOST_TOKENS, "utf8")}`;
 const { code } = transform({
   filename: "nimbus.css",
   code: Buffer.from(scoped),
