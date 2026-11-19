@@ -1,10 +1,17 @@
-import React from 'react'
+import React from "react"
+import { PageHeader, PageShell } from "@/components/h-panel/kit"
+import { StatCardSkeleton, ChartSkeleton } from "./_components/CardSkelton"
 
 const loading = () => {
   return (
-    <div className="flex items-center justify-center h-full w-full min-h-[50vh]">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-rose-600 border-t-transparent" />
-    </div>
+    <PageShell>
+      <PageHeader title="Dashboard" description="Accounts, domains and mail traffic across everything you manage." />
+      <div className="space-y-4">
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+        <ChartSkeleton />
+      </div>
+    </PageShell>
   )
 }
 

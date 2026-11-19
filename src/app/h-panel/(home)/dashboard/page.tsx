@@ -1,13 +1,15 @@
-import React, { Suspense } from 'react'
-import AccountStatistics from './_components/AccountStatistics';
-import { StatCardSkeleton, ChartSkeleton } from './_components/CardSkelton';
-import MailStatistics from './_components/MailStatistics';
-import ChartsComponent from './_components/ChartsComponent';
+import React, { Suspense } from "react"
+import AccountStatistics from "./_components/AccountStatistics"
+import { StatCardSkeleton, ChartSkeleton } from "./_components/CardSkelton"
+import MailStatistics from "./_components/MailStatistics"
+import ChartsComponent from "./_components/ChartsComponent"
+import { PageHeader, PageShell } from "@/components/h-panel/kit"
 
 const page = async () => {
     return (
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-1 space-y-4">
-            <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min gap-2 p-2">              
+        <PageShell>
+            <PageHeader title="Dashboard" description="Accounts, domains and mail traffic across everything you manage." />
+            <div className="space-y-4">
                 <Suspense fallback={<StatCardSkeleton />}>
                     <AccountStatistics />
                 </Suspense>
@@ -17,9 +19,8 @@ const page = async () => {
                 <Suspense fallback={<ChartSkeleton />}>
                     <ChartsComponent />
                 </Suspense>
-
             </div>
-        </div>
+        </PageShell>
     )
 
 }
