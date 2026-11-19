@@ -1,12 +1,12 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
-import { forgotPasswordSchema, type ForgotPasswordFormData } from "@nimbus/_lib/files-types";
+import { forgotPasswordSchema, type ForgotPasswordFormData } from "@nimbus/_packages/shared";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { FieldError } from "@nimbus/_components/ui/field-error";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForgotPassword } from "@nimbus/_hooks/useAuth";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@nimbus/_components/ui/button";
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 import { Label } from "@nimbus/_components/ui/label";
 import { Input } from "@nimbus/_components/ui/input";
 import type { ComponentProps } from "react";
