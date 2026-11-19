@@ -261,9 +261,14 @@ export interface Reaction {
 export interface MessageAttachment {
   id: string;
   name: string;
+  /** Legacy download URL on the workspace server (attachments stored before the files service). */
   url: string;
   mimeType: string;
   size: number;
+  /** Id of the file in the files service. When set, bytes are fetched from there; otherwise `url` is used. */
+  fileId?: string;
+  /** Lower-case extension without the dot. */
+  extension?: string;
   previewUrl?: string;
   uploadProgress?: number;
 }
@@ -474,7 +479,10 @@ export interface WorkspaceFile {
   teamId: string;
   channelId?: string;
   channelName?: string;
+  /** Legacy download URL on the workspace server (files stored before the files service). */
   url: string;
+  /** Id of the file in the files service. When set, bytes are fetched from there; otherwise `url` is used. */
+  fileId?: string;
   createdAt: string;
   updatedAt: string;
   downloadCount: number;
