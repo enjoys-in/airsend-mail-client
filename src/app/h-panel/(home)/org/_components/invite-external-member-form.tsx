@@ -25,7 +25,7 @@ import { buildScope } from "@/lib/workspace-utils"
 import type { IOrganization, IRole } from "../_lib/types"
 import { ScopeSelectorGrid, type PermissionLevel } from "./scope-selector-grid"
 import { MailboxFormulaPreview } from "./mailbox-formula-preview"
-import { Pill, Section } from "./kit"
+import { FormActions, NextSteps, Pill, Section, SplitForm } from "./kit"
 
 export interface InviteExternalMemberFormProps {
     organizations: IOrganization[]
@@ -209,13 +209,61 @@ export function InviteExternalMemberForm({
         }
     }
 
+    const aside = (
+        <>
+            <NextSteps
+                steps={[
+                    "They get an email with a secure invitation link.",
+                    "They sign in with their own Outlook, Gmail or other account and accept.",
+                    "Their mailbox is set up on the chosen domain with the role and access you picked.",
+                ]}
+            />
+            <MailboxFormulaPreview
+                orgSlug={orgSlug}
+                externalEmail={deferredEmail}
+                targetDomain={targetDomainName}
+                role={role}
+            />
+
+            <FormActions>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onCancel || (() => router.push("/h-panel/org/members"))}
+                    disabled={submitting}
+                >
+                    Cancel
+                </Button>
+
+                <Button
+                    type="submit"
+                    disabled={submitting || !email.includes("@") || !orgId || !domainId}
+                    className="flex-1 gap-2"
+                >
+                    {submitting ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Sending
+                        </>
+                    ) : (
+                        <>
+                            <Send className="h-4 w-4" />
+                            Send invitation
+                        </>
+                    )}
+                </Button>
+            </FormActions>
+        </>
+    )
+
     return (
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit}>
+            <SplitForm aside={aside}>
             <Section title="Recipient" description="Who to invite and where the invitation link goes.">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* External Email Input */}
                     <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-h-6 items-center justify-between gap-2">
                             <Label htmlFor="ext-email" className="text-sm">
                                 External email <span className="text-destructive">*</span>
                             </Label>
@@ -239,9 +287,11 @@ export function InviteExternalMemberForm({
 
                     {/* Display Name Input */}
                     <div className="space-y-1.5">
-                        <Label htmlFor="ext-name" className="text-sm">
-                            Display name
-                        </Label>
+                        <div className="flex min-h-6 items-center">
+                            <Label htmlFor="ext-name" className="text-sm">
+                                Display name
+                            </Label>
+                        </div>
                         <div className="relative">
                             <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
@@ -321,42 +371,7 @@ export function InviteExternalMemberForm({
                 <ScopeSelectorGrid scopes={scopes} onChange={handleScopeChange} disabled={submitting} />
             </Section>
 
-            <MailboxFormulaPreview
-                orgSlug={orgSlug}
-                externalEmail={deferredEmail}
-                targetDomain={targetDomainName}
-                role={role}
-            />
-
-            {/* ── Action Buttons ── */}
-            <div className="flex items-center justify-end gap-2">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onCancel || (() => router.push("/h-panel/org/members"))}
-                    disabled={submitting}
-                >
-                    Cancel
-                </Button>
-
-                <Button
-                    type="submit"
-                    disabled={submitting || !email.includes("@") || !orgId || !domainId}
-                    className="min-w-[170px] gap-2"
-                >
-                    {submitting ? (
-                        <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Sending
-                        </>
-                    ) : (
-                        <>
-                            <Send className="h-4 w-4" />
-                            Send invitation
-                        </>
-                    )}
-                </Button>
-            </div>
+            </SplitForm>
         </form>
     )
 }
