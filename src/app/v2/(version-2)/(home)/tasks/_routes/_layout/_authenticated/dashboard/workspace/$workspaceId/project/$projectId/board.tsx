@@ -1,0 +1,270 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import ProjectLayout from "@tasks/_components/common/project-layout";
+import KanbanBoard from "@tasks/_components/kanban-board";
+import ListView from "@tasks/_components/list-view";
+import PageTitle from "@tasks/_components/page-title";
+import { BoardLoadError } from "@tasks/_components/project/board-load-error";
+import { BoardRefreshError } from "@tasks/_components/project/board-refresh-error";
+import { DisplaySection } from "@tasks/_components/project/display/display-section";
+import { TaskDisplayOptions } from "@tasks/_components/project/display/task-display-options";
+import { ActiveFiltersBar } from "@tasks/_components/project/task-filters/active-filters-bar";
+import { ProjectToolbar } from "@tasks/_components/project/toolbar/project-toolbar";
+import { TaskCount } from "@tasks/_components/project/toolbar/task-count";
+import { useProjectTaskView } from "@tasks/_components/project/toolbar/use-project-task-view";
+import { LayoutSwitch } from "@tasks/_components/project/views/layout-switch";
+import CreateTaskModal from "@tasks/_components/shared/modals/create-task-modal";
+import TaskDetailsSheet from "@tasks/_components/task/task-details-sheet";
+import { Skeleton } from "@tasks/_components/ui/skeleton";
+import { useGetTasks } from "@tasks/_hooks/queries/task/use-get-tasks";
+import { useBoardSort } from "@tasks/_hooks/use-board-sort";
+import { cn } from "@tasks/_lib/cn";
+import { sortTasks } from "@tasks/_lib/sort-tasks";
+import { countColumnTasks } from "@tasks/_lib/task-filters/count-tasks";
+import { useBackgroundStore } from "@tasks/_store/background";
+import useProjectStore from "@tasks/_store/project";
+import { useUserPreferencesStore } from "@tasks/_store/user-preferences";
+import type { ProjectWithTasks } from "@tasks/_types/project";
+
+type BoardSearchParams = {
+  taskId?: string;
+};
+
+export const Route = createFileRoute(
+  "/_layout/_authenticated/dashboard/workspace/$workspaceId/project/$projectId/board",
+)({
+  component: RouteComponent,
+  validateSearch: (search: Record<string, unknown>): BoardSearchParams => ({
+    taskId: typeof search.taskId === "string" ? search.taskId : undefined,
+  }),
+});
+
+const skeletonColumns = [
+  { key: "col-todo", cards: 3 },
+  { key: "col-progress", cards: 4 },
+  { key: "col-review", cards: 2 },
+  { key: "col-done", cards: 1 },
+];
+
+function BoardSkeleton() {
+  return (
+    <div className="delayed-reveal flex h-full w-full overflow-hidden bg-linear-to-b from-muted/20 to-background">
+      <div className="flex h-full min-w-max gap-4 px-4 py-4 md:px-5">
+        {skeletonColumns.map((col) => (
+          <div
+            key={col.key}
+            className="flex h-full max-w-96 min-w-[min(20rem,calc(100vw-4.5rem))] shrink-0 flex-1 flex-col"
+          >
+            <div className="flex h-8 shrink-0 items-center gap-2 mt-1 pr-2 pl-3">
+              <Skeleton className="size-3.5 rounded-full" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <div className="flex flex-col gap-2 px-1.5 pt-1.5">
+              {Array.from(
+                { length: col.cards },
+                (_, i) => `${col.key}-${i}`,
+              ).map((cardKey) => (
+                <div
+                  key={cardKey}
+                  className="flex flex-col gap-2.5 rounded-[10px] border border-board-card-border bg-board-card p-3"
+                >
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className="h-3.5 w-4/5" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RouteComponent() {
+  const { t } = useTranslation();
+  const { projectId, workspaceId } = Route.useParams();
+  const { taskId } = Route.useSearch();
+  const navigate = useNavigate();
+  const {
+    data,
+    isError: boardError,
+    isFetching: boardFetching,
+    isSuccess: boardLoaded,
+    refetch: retryBoard,
+  } = useGetTasks(projectId);
+  const { project: storedProject, setProject } = useProjectStore();
+  const project: ProjectWithTasks | undefined =
+    storedProject?.id === projectId ? storedProject : data;
+  const viewMode = useUserPreferencesStore((state) => state.viewMode);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const { sort, setSort } = useBoardSort(projectId);
+  const { background } = useBackgroundStore();
+  const view = useProjectTaskView({
+    project,
+    projectId,
+    workspaceId,
+    scope: "board",
+  });
+  const { descriptionSearch, filters } = view;
+
+  const handleCloseTaskSheet = useCallback(() => {
+    navigate({
+      to: ".",
+      search: {},
+      replace: true,
+    });
+  }, [navigate]);
+
+  useEffect(() => {
+    if (data) {
+      setProject(data);
+    }
+  }, [data, setProject]);
+
+  const sortedProject = useMemo(() => {
+    const filteredProject = filters.filteredProject;
+    if (!filteredProject || sort.field === "position") return filteredProject;
+    return {
+      ...filteredProject,
+      columns: filteredProject.columns.map((column) => ({
+        ...column,
+        tasks: sortTasks(column.tasks, sort),
+      })),
+    };
+  }, [filters.filteredProject, sort]);
+
+  return (
+    <ProjectLayout
+      projectId={projectId}
+      workspaceId={workspaceId}
+      activeView="board"
+      toolbar={
+        <ProjectToolbar
+          view={view}
+          display={
+            <>
+              <DisplaySection>
+                <LayoutSwitch
+                  workspaceId={workspaceId}
+                  projectId={projectId}
+                  currentRoute="board"
+                  currentView={viewMode}
+                />
+              </DisplaySection>
+              <TaskDisplayOptions
+                projectId={projectId}
+                sort={sort}
+                onSortChange={setSort}
+                layout={viewMode === "board" ? "cards" : "rows"}
+                showBackgroundSwitch={
+                  viewMode === "board" && !!project?.backgroundVersion
+                }
+              />
+            </>
+          }
+        />
+      }
+      summary={
+        <TaskCount
+          shown={countColumnTasks(filters.filteredProject)}
+          total={countColumnTasks(project)}
+        />
+      }
+      filterBar={
+        <ActiveFiltersBar
+          subjects={view.subjects}
+          onClear={filters.clearFilters}
+          customFieldValues={filters.customFieldValues}
+        />
+      }
+    >
+      <PageTitle
+        title={
+          project
+            ? `${project.name} / ${viewMode === "board" ? t("tasks:view.board") : t("tasks:view.list")}`
+            : undefined
+        }
+      />
+      <div className="relative flex flex-col h-full min-h-0 overflow-hidden">
+        {descriptionSearch.isLoading && (
+          <p role="status" className="px-4 py-2 text-sm text-muted-foreground">
+            {t("tasks:descriptionSearchLoading")}
+          </p>
+        )}
+        {descriptionSearch.isError && (
+          <p role="alert" className="px-4 py-2 text-sm text-destructive">
+            {t("tasks:descriptionSearchError")}{" "}
+            <button
+              type="button"
+              className="underline"
+              onClick={() => void descriptionSearch.retry()}
+            >
+              {t("tasks:descriptionRetry")}
+            </button>
+          </p>
+        )}
+
+        {boardError && sortedProject ? (
+          <BoardRefreshError
+            isRetrying={boardFetching}
+            onRetry={() => void retryBoard()}
+          />
+        ) : null}
+        <div
+          className={cn("flex h-full flex-1 overflow-hidden", {
+            "bg-background": !background,
+          })}
+        >
+          {sortedProject ? (
+            viewMode === "board" ? (
+              <KanbanBoard
+                key={projectId}
+                project={sortedProject}
+                disableCollectionActions={boardFetching || boardError}
+                disableDragDrop={
+                  (boardFetching && !boardLoaded) ||
+                  boardError ||
+                  (sort.field !== "position" &&
+                    sort.field !== "number" &&
+                    sort.field !== "priority")
+                }
+                sortedByNumber={sort.field === "number"}
+                sortedByPriority={sort.field === "priority"}
+              />
+            ) : (
+              <ListView
+                key={projectId}
+                project={sortedProject}
+                disableCollectionActions={boardFetching || boardError}
+                disableDragDrop={
+                  boardFetching || boardError || sort.field !== "position"
+                }
+              />
+            )
+          ) : boardError ? (
+            <BoardLoadError
+              isRetrying={boardFetching}
+              onRetry={() => void retryBoard()}
+            />
+          ) : (
+            <BoardSkeleton />
+          )}
+        </div>
+
+        <CreateTaskModal
+          open={isTaskModalOpen}
+          projectId={projectId}
+          onClose={() => setIsTaskModalOpen(false)}
+        />
+
+        <TaskDetailsSheet
+          taskId={taskId}
+          projectId={projectId}
+          workspaceId={workspaceId}
+          onClose={handleCloseTaskSheet}
+        />
+      </div>
+    </ProjectLayout>
+  );
+}
