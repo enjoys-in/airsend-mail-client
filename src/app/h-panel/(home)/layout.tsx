@@ -24,6 +24,7 @@ import { Settings } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAppDispatch } from "@/store/hooks"
 import { fetchAdminFromServer } from "@/store/slices/account/admin"
+import { HPanelBreadcrumbs } from "@/components/common/hpanel-breadcrumbs"
 
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -35,15 +36,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <HPanelAppSidebar />
       <SidebarInset className="min-w-0 overflow-x-hidden overflow-y-auto h-svh">
-        <header className="flex h-16 shrink-0 border-b border-gray-100 dark:border-gray-800 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 sticky top-0 bg-gray-100 dark:bg-black blur-0  shadow-md z-50">
-          <div className="flex items-center justify-between w-full px-4">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="-ml-1 dark:hover:bg-gray-700 bg-gray-50 dark:bg-slate-800 " />
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <div>
-              </div>
+        <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center border-b border-border/70 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex w-full items-center justify-between gap-3 px-4">
+            <div className="flex min-w-0 items-center gap-2">
+              <SidebarTrigger className="-ml-1 h-8 w-8 text-muted-foreground hover:text-foreground" />
+              <Separator orientation="vertical" className="mr-1 h-4" />
+              <HPanelBreadcrumbs />
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Notifications />
             </div>
           </div>
@@ -65,11 +65,11 @@ const Notifications = () => {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="relative inline-flex justify-center items-center h-8 w-8 rounded-full text-sm font-semibold  border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-800"
+                  className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border-border/70 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
 
                 >
                   <svg
-                    className="flex-shrink-0 size-5"
+                    className="flex-shrink-0 size-4"
                     xmlns="http://www.w3.org/2000/svg"
                     width={24}
                     height={24}
@@ -83,10 +83,7 @@ const Notifications = () => {
                     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
                     <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
                   </svg>
-                  <span className="flex absolute top-0 end-0 size-3 -mt-1.5 -me-1.5">
-                    <span className="animate-ping absolute inline-flex size-full rounded-full bg-red-400 opacity-75 dark:bg-red-600" />
-                    <span className="relative inline-flex rounded-full size-3 bg-red-500" />
-                  </span>
+                  <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500 ring-2 ring-background" />
 
                 </Button>
               </DropdownMenuTrigger>
@@ -95,11 +92,11 @@ const Notifications = () => {
           </Tooltip>
         </TooltipProvider>
 
-        <DropdownMenuContent className="w-full rounded-none shadow-lg" align="end" forceMount>
+        <DropdownMenuContent className="w-full max-w-md rounded-lg border-border/70 shadow-md" align="end" forceMount>
           <div className="px-4 py-8  h-[600px]">
             <div className="mb-4 flex justify-between border-b pb-3">
-              <p className="text-xl font-bold text-gray-700 dark:text-slate-200">All Notifications</p>
-              <Button variant="outline" className="text-sm font-medium text-blue-700 focus:outline-none focus:ring-1">
+              <p className="text-base font-medium">All Notifications</p>
+              <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground shadow-none">
                 <Settings className="inline h-4 w-4" />
               </Button>
             </div>
