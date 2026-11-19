@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	SidebarGroup,
 	SidebarGroupContent,
@@ -23,7 +21,7 @@ import { Skeleton } from "@nimbus/_components/ui/skeleton";
 import { ChevronDown, Plus } from "lucide-react";
 import { Button } from "@nimbus/_components/ui/button";
 import { useTags } from "@nimbus/_hooks/useTags";
-import type { Tag } from "@nimbus/_lib/files-types";
+import type { Tag } from "@nimbus/_packages/shared";
 import { useState } from "react";
 
 const containerVariants: Variants = {
