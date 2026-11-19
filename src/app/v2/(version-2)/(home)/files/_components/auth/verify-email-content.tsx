@@ -1,14 +1,12 @@
-"use client";
-
 // import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
 // import { AuthErrorCard } from "./shared/auth-error-card";
 // import { type ComponentProps } from "react";
 // import { useSearchParams } from "next/navigation";
 // import { ArrowLeft, Loader2 } from "lucide-react";
 // import { Button } from "@nimbus/_components/ui/button";
-// import { Link } from "@nimbus/_lib/router-shim";
+// import { Link } from "@tanstack/react-router";
 // import axios, { AxiosError } from "axios";
-// import env from "@nimbus/_lib/env-shim";
+// import env from "@nimbus/_packages/env/client";
 // import { toast } from "sonner";
 
 export function VerifyEmailContent() {}
