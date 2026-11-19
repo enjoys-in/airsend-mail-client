@@ -2,7 +2,7 @@ import type { LimitedAccessAccount } from "@nimbus/_packages/shared";
 import { createContext, useContext, useMemo } from "react";
 import type { SessionUser } from "@nimbus/_packages/auth/auth";
 import { useAccounts } from "@nimbus/_hooks/useAccounts";
-import { useGetUser } from "@nimbus/_hooks/useGetUser";
+import { useSession } from "@nimbus/_lib/session";
 
 interface DriveProviderState {
 	user: SessionUser | null;
@@ -16,7 +16,9 @@ interface DriveProviderState {
 const DriveProviderContext = createContext<DriveProviderState | undefined>(undefined);
 
 export function UserInfoProvider({ children }: { children: React.ReactNode }) {
-	const { data: user, error: userError, isLoading: isUserLoading, refetch: refetchUser } = useGetUser();
+	// The user comes from the session (GET /api/auth/get-session); there is no separate /api/user any more.
+	const { data: session, error: userError, isPending: isUserLoading, refetch: refetchUser } = useSession();
+	const user = session?.user ?? null;
 
 	const {
 		data: accounts,
