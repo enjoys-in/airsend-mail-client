@@ -75,7 +75,6 @@ import { toast } from "@tasks/_lib/toast";
 import { uploadTaskImage } from "@tasks/_lib/upload-task-image";
 import { ResizableImage } from "./extensions/resizable-image";
 import { SHIKI_CODEBLOCK_REFRESH_META } from "./extensions/shiki-code-block";
-import "tippy.js/dist/tippy.css";
 
 type TaskDescriptionProps = {
   taskId: string;
