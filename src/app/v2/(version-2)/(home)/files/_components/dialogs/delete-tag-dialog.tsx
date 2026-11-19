@@ -7,36 +7,27 @@ import {
 	DialogTitle,
 } from "@nimbus/_components/ui/dialog";
 import { Button } from "@nimbus/_components/ui/button";
-import type { Tag } from "@nimbus/_lib/files-types";
+import type { Tag } from "@nimbus/_packages/shared";
 
 interface DeleteTagDialogProps {
-	isOpen?: boolean;
-	open?: boolean;
-	onClose?: () => void;
-	onOpenChange?: (open: boolean) => void;
-	onDelete?: (id: string) => void;
-	onDeleteTag?: () => void;
+	isOpen: boolean;
+	onClose: () => void;
+	onDelete: (id: string) => void;
 	tag: Tag | null;
 }
 
-export function DeleteTagDialog({ isOpen, open, onClose, onOpenChange, onDelete, onDeleteTag, tag }: DeleteTagDialogProps) {
+export function DeleteTagDialog({ isOpen, onClose, onDelete, tag }: DeleteTagDialogProps) {
 	if (!tag) {
 		return null;
 	}
-	const isVisible = open !== undefined ? open : isOpen ?? false;
-	const handleClose = () => {
-		onClose?.();
-		onOpenChange?.(false);
-	};
 
 	const handleSubmit = () => {
-		onDelete?.(tag.id);
-		onDeleteTag?.();
-		handleClose();
+		onDelete(tag.id);
+		onClose();
 	};
 
 	return (
-		<Dialog open={isVisible} onOpenChange={(o) => !o && handleClose()}>
+		<Dialog open={isOpen} onOpenChange={onClose}>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Delete Tag</DialogTitle>
