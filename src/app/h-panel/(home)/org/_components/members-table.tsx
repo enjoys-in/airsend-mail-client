@@ -11,6 +11,7 @@ import {
     Globe,
     ExternalLink,
     Check,
+    KeyRound,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -68,6 +69,16 @@ import {
 import { buildScope } from "@/lib/workspace-utils"
 import type { IMember } from "../_lib/types"
 import { ScopeSelectorGrid, type PermissionLevel } from "./scope-selector-grid"
+import {
+    ServiceRoleBadges,
+    ServiceRolePicker,
+    changedServices,
+    choicesFromMember,
+    choicesToChanges,
+    type ServiceRoleChoice,
+    type ServiceRoleChoices,
+} from "./service-role-picker"
+import type { OrgService } from "../_lib/types"
 
 interface MembersTableProps {
     data: IMember[]
@@ -92,6 +103,12 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
     const [editingScopesMember, setEditingScopesMember] = React.useState<IMember | null>(null)
     const [tempScopes, setTempScopes] = React.useState<string[]>([])
     const [savingScopes, setSavingScopes] = React.useState(false)
+
+    // Per-service role editor (Files / Tasks / Workspace)
+    const [editingRolesMember, setEditingRolesMember] = React.useState<IMember | null>(null)
+    const [initialChoices, setInitialChoices] = React.useState<ServiceRoleChoices | null>(null)
+    const [tempChoices, setTempChoices] = React.useState<ServiceRoleChoices | null>(null)
+    const [savingRoles, setSavingRoles] = React.useState(false)
 
     React.useEffect(() => {
         setMembers(data)
@@ -123,6 +140,41 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
             }
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to update role", variant: "destructive" })
+        }
+    }
+
+    const openRoleEditor = (member: IMember) => {
+        const choices = choicesFromMember(member.role, member.service_roles)
+        setEditingRolesMember(member)
+        setInitialChoices(choices)
+        setTempChoices(choices)
+    }
+
+    const saveServiceRoles = async () => {
+        if (!editingRolesMember || !initialChoices || !tempChoices) return
+        const changed = changedServices(initialChoices, tempChoices)
+        if (changed.length === 0) {
+            setEditingRolesMember(null)
+            return
+        }
+        setSavingRoles(true)
+        try {
+            const { data: res } = await API.updateMemberServiceRoles(
+                editingRolesMember.id,
+                choicesToChanges(tempChoices, changed) as Record<string, "admin" | "member" | null>
+            )
+            if (!res?.success) throw new Error(res?.message || "Failed to update service roles")
+            toast({ title: "Service roles updated", description: "Files, Tasks and Workspace roles saved." })
+            setEditingRolesMember(null)
+            onUpdated?.()
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to save service roles",
+                variant: "destructive",
+            })
+        } finally {
+            setSavingRoles(false)
         }
     }
 
@@ -274,6 +326,7 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
                             <TableHead>Type</TableHead>
                             <TableHead>Organization & Domain</TableHead>
                             <TableHead>Role</TableHead>
+                            <TableHead>Service Roles</TableHead>
                             <TableHead>Feature Scopes</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -282,7 +335,7 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
                     <TableBody>
                         {filteredMembers.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                                     No organization members found.
                                 </TableCell>
                             </TableRow>
@@ -325,6 +378,9 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
                                         </Select>
                                     </TableCell>
                                     <TableCell>
+                                        <ServiceRoleBadges roles={member.service_roles} />
+                                    </TableCell>
+                                    <TableCell>
                                         <div className="flex flex-wrap items-center gap-1 max-w-[220px]">
                                             {(member.scopes && member.scopes.length > 0) ? (
                                                 member.scopes.map((s) => {
@@ -353,6 +409,10 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => openRoleEditor(member)}>
+                                                    <KeyRound className="h-4 w-4 mr-2" />
+                                                    Edit Service Roles
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => openScopeEditor(member)}>
                                                     <Sliders className="h-4 w-4 mr-2" />
                                                     Edit Access Scopes
@@ -387,6 +447,55 @@ export function MembersTable({ data, onUpdated }: MembersTableProps) {
                     </TableBody>
                 </Table>
             </div>
+
+            {/* Service Roles Dialog */}
+            <Dialog
+                open={!!editingRolesMember}
+                onOpenChange={(open) => !open && !savingRoles && setEditingRolesMember(null)}
+            >
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <KeyRound className="w-5 h-5 text-primary" />
+                            Service Roles
+                        </DialogTitle>
+                        <DialogDescription>
+                            Choose the role of{" "}
+                            <strong>{editingRolesMember?.name || editingRolesMember?.email}</strong> in each service of{" "}
+                            {editingRolesMember?.organization || "the organization"}.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {tempChoices && (
+                        <div className="py-2">
+                            <ServiceRolePicker
+                                value={tempChoices}
+                                orgRole={editingRolesMember?.role}
+                                disabled={savingRoles}
+                                locked={(["files", "tasks", "workspace"] as OrgService[]).filter(
+                                    (s) => editingRolesMember?.service_roles?.[s] === "owner"
+                                )}
+                                onChange={(service: OrgService, choice: ServiceRoleChoice) =>
+                                    setTempChoices((prev) => (prev ? { ...prev, [service]: choice } : prev))
+                                }
+                            />
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setEditingRolesMember(null)}
+                            disabled={savingRoles}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={saveServiceRoles} disabled={savingRoles}>
+                            {savingRoles ? "Saving..." : "Save Roles"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Scope Editor Dialog */}
             <Dialog
