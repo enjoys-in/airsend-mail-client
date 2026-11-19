@@ -1,5 +1,3 @@
-"use client";
-
 import type { PasswordInputProps } from "@nimbus/_lib/types";
 import { Button } from "@nimbus/_components/ui/button";
 import { Input } from "@nimbus/_components/ui/input";
