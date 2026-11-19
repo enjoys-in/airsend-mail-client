@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
+import { cn } from "@/lib/utils"
+import { PageHeader, Section } from "@/components/h-panel/kit"
 
 const templates = [
   { id: 1, name: "Classic", layout: ["img", "title", "description"] },
@@ -105,15 +107,15 @@ export default function MailGenerator() {
       }
       switch (item) {
         case "img":
-          return <div key={index} className="h-16 bg-gray-200 rounded-md mb-2" />
+          return <div key={index} className="mb-2 h-12 rounded bg-muted-foreground/20" />
         case "title":
-          return <div key={index} className="h-6 bg-gray-200 rounded-md w-3/4 mb-2" />
+          return <div key={index} className="mb-2 h-4 w-3/4 rounded bg-muted-foreground/25" />
         case "description":
           return (
             <div key={index} className="space-y-1 mb-2">
-              <div className="h-4 bg-gray-200 rounded-md w-full" />
-              <div className="h-4 bg-gray-200 rounded-md w-5/6" />
-              <div className="h-4 bg-gray-200 rounded-md w-4/6" />
+              <div className="h-2 w-full rounded bg-muted-foreground/20" />
+              <div className="h-2 w-5/6 rounded bg-muted-foreground/20" />
+              <div className="h-2 w-4/6 rounded bg-muted-foreground/20" />
             </div>
           )
         default:
@@ -123,52 +125,57 @@ export default function MailGenerator() {
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900">
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="md:flex">
-          <div className="md:w-1/3 bg-gray-100 dark:bg-accent p-6 overflow-y-auto  " style={{ maxHeight: "calc(100vh - 4rem)" }}>
-            <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Choose Template</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className={`p-4 border rounded-lg cursor-pointer transition-all ${selectedTemplate.id === template.id
-                    ? "border-blue-500 shadow-md"
-                    : "border-gray-200 hover:border-blue-300"
-                    }`}
-                  onClick={() => setSelectedTemplate(template)}
-                >
-                  <div className="text-sm font-medium mb-2 text-gray-600 dark:text-gray-100">{template.name}</div>
-                  {renderTemplatePreview(template.layout)}
-                </div>
-              ))}
-            </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Email templates"
+        description="Pick a layout, fill in the content and copy the generated HTML."
+        actions={
+          <Button onClick={copyEmailHTML} className="gap-2">
+            <Copy className="h-4 w-4" /> Copy email HTML
+          </Button>
+        }
+      />
+
+      <div className="grid items-start gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">
+        <Section title="Choose a template" description="Seven starting layouts.">
+          <div className="grid grid-cols-2 gap-3">
+            {templates.map((template) => (
+              <button
+                type="button"
+                key={template.id}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition-colors",
+                  selectedTemplate.id === template.id
+                    ? "border-foreground/60 bg-muted/60"
+                    : "border-border/70 hover:border-foreground/30 hover:bg-muted/40"
+                )}
+                onClick={() => setSelectedTemplate(template)}
+              >
+                <div className="mb-2 text-xs font-medium text-muted-foreground">{template.name}</div>
+                {renderTemplatePreview(template.layout)}
+              </button>
+            ))}
           </div>
-          <div className="md:w-2/3 p-6 bg-accent dark:bg-black">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100 ">Email Preview</h2>
-            <div className="space-y-6 max-w-2xl mx-auto">
-              {selectedTemplate.layout.map((item, index) => {
-                if (Array.isArray(item)) {
-                  return (
-                    <div key={index} className="flex space-x-4">
-                      {item.map((subItem, subIndex) => (
-                        <div key={subIndex} className="flex-1">
-                          {renderContentEditable(subItem)}
-                        </div>
-                      ))}
-                    </div>
-                  )
-                }
-                return renderContentEditable(item, index)
-              })}
-            </div>
-            <div className="mt-8 text-center">
-              <Button onClick={copyEmailHTML} className="bg-blue-500 hover:bg-blue-600 text-gray-800 dark:text-gray-100 dark:bg-accent rounded-e-none">
-                <Copy className="mr-2 h-4 w-4" /> Copy Email HTML
-              </Button>
-            </div>
+        </Section>
+
+        <Section title="Email preview" description="Click a block to edit it.">
+          <div className="mx-auto max-w-2xl space-y-5">
+            {selectedTemplate.layout.map((item, index) => {
+              if (Array.isArray(item)) {
+                return (
+                  <div key={index} className="flex gap-4">
+                    {item.map((subItem, subIndex) => (
+                      <div key={subIndex} className="flex-1">
+                        {renderContentEditable(subItem)}
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+              return renderContentEditable(item, index)
+            })}
           </div>
-        </div>
+        </Section>
       </div>
     </div>
   )
@@ -233,15 +240,15 @@ function EditableField({ value, onChange, placeholder, isTextarea = false }: Edi
           </Button>
         </div>
       ) : (
-        <div className="min-h-[2.5rem] p-2 rounded-md bg-gray-50 hover:bg-gray-100 transition-colors">
+        <div className="min-h-[2.5rem] rounded-md border border-dashed border-border/70 p-2 transition-colors hover:bg-muted/50">
           {value ? (
             isTextarea ? (
               <p className="whitespace-pre-wrap">{value}</p>
             ) : (
-              <h3 className="text-lg font-semibold">{value}</h3>
+              <h3 className="text-lg font-medium">{value}</h3>
             )
           ) : (
-            <span className="text-gray-400">{placeholder}</span>
+            <span className="text-muted-foreground">{placeholder}</span>
           )}
         </div>
       )}
@@ -272,11 +279,11 @@ function ImageUpload({ image, onUpload }: ImageUploadProps) {
         alt="Template image"
         width={800}
         height={400}
-        className="w-full h-[200px] object-cover rounded-md"
+        className="h-[200px] w-full rounded-md border border-border/70 object-cover"
       />
       <label
         htmlFor="image-upload"
-        className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-md"
+        className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-md bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
       >
         <Upload className="h-8 w-8 text-white" />
       </label>
