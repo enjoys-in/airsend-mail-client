@@ -2,17 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import {
-    Send,
-    Sparkles,
-    Building2,
-    Globe,
-    UserCheck,
-    Mail,
-    User,
-    Loader2,
-    ShieldCheck,
-} from "lucide-react"
+import { Send, Mail, User, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,7 +14,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
 import { API } from "@/lib/api/handler"
 import {
@@ -36,6 +25,7 @@ import { buildScope } from "@/lib/workspace-utils"
 import type { IOrganization, IRole } from "../_lib/types"
 import { ScopeSelectorGrid, type PermissionLevel } from "./scope-selector-grid"
 import { MailboxFormulaPreview } from "./mailbox-formula-preview"
+import { Pill, Section } from "./kit"
 
 export interface InviteExternalMemberFormProps {
     organizations: IOrganization[]
@@ -197,7 +187,7 @@ export function InviteExternalMemberForm({
 
             if (res?.success) {
                 toast({
-                    title: "Invitation sent successfully!",
+                    title: "Invitation sent",
                     description: `An invite email was delivered to ${trimmedEmail}.`,
                 })
                 if (onSuccess) {
@@ -220,89 +210,67 @@ export function InviteExternalMemberForm({
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            {/* ── Section 1: Member Profile & Recipient ── */}
-            <div className="rounded-xl border bg-card p-5 sm:p-6 space-y-5 shadow-xs">
-                <div className="flex items-center gap-2 border-b pb-3">
-                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                        <UserCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                        <div className="text-sm font-semibold text-foreground">
-                            Recipient & Role Assignment
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                            Specify the external email recipient and their target workspace organization.
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+            <Section title="Recipient" description="Who to invite and where the invitation link goes.">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* External Email Input */}
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="ext-email" className="text-xs font-semibold">
-                                External Email Address <span className="text-destructive">*</span>
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                            <Label htmlFor="ext-email" className="text-sm">
+                                External email <span className="text-destructive">*</span>
                             </Label>
-                            {providerBadge && (
-                                <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/30 text-primary">
-                                    {providerBadge}
-                                </Badge>
-                            )}
+                            {providerBadge && <Pill tone="blue">{providerBadge}</Pill>}
                         </div>
                         <div className="relative">
-                            <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+                            <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 id="ext-email"
                                 type="email"
                                 placeholder="colleague@outlook.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="pl-9 text-xs sm:text-sm font-mono"
+                                className="h-9 pl-9 font-mono text-sm"
                                 required
                                 autoFocus
                             />
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
-                            The external inbox where the branded invitation link will be sent.
-                        </p>
+                        <p className="text-xs text-muted-foreground">The inbox that receives the invitation link.</p>
                     </div>
 
                     {/* Display Name Input */}
-                    <div className="space-y-2">
-                        <Label htmlFor="ext-name" className="text-xs font-semibold">
-                            Recipient Display Name
+                    <div className="space-y-1.5">
+                        <Label htmlFor="ext-name" className="text-sm">
+                            Display name
                         </Label>
                         <div className="relative">
-                            <User className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+                            <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 id="ext-name"
                                 type="text"
                                 placeholder="e.g. Alex Johnson"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="pl-9 text-xs sm:text-sm"
+                                className="h-9 pl-9 text-sm"
                             />
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
-                            Personalizes the invitation template and directory listing.
-                        </p>
+                        <p className="text-xs text-muted-foreground">Used in the invitation email and the member list.</p>
                     </div>
                 </div>
+            </Section>
 
-                {/* Organization, Domain & Role Selectors */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold">
+            <Section title="Access" description="Where they join and what role they get.">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="space-y-1.5">
+                        <Label className="text-sm">
                             Organization <span className="text-destructive">*</span>
                         </Label>
                         <Select value={orgId} onValueChange={setOrgId}>
-                            <SelectTrigger className="text-xs h-9">
-                                <SelectValue placeholder="Select Organization" />
+                            <SelectTrigger className="h-9 text-sm">
+                                <SelectValue placeholder="Select organization" />
                             </SelectTrigger>
                             <SelectContent>
                                 {organizations.map((org) => (
-                                    <SelectItem key={org.id} value={String(org.id)} className="text-xs">
+                                    <SelectItem key={org.id} value={String(org.id)} className="text-sm">
                                         {org.name}
                                     </SelectItem>
                                 ))}
@@ -310,17 +278,17 @@ export function InviteExternalMemberForm({
                         </Select>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold">
-                            Target Domain <span className="text-destructive">*</span>
+                    <div className="space-y-1.5">
+                        <Label className="text-sm">
+                            Domain <span className="text-destructive">*</span>
                         </Label>
                         <Select value={domainId} onValueChange={setDomainId}>
-                            <SelectTrigger className="text-xs h-9">
-                                <SelectValue placeholder="Select Domain" />
+                            <SelectTrigger className="h-9 text-sm">
+                                <SelectValue placeholder="Select domain" />
                             </SelectTrigger>
                             <SelectContent>
                                 {domains.map((dom) => (
-                                    <SelectItem key={dom.id} value={String(dom.id)} className="text-xs">
+                                    <SelectItem key={dom.id} value={String(dom.id)} className="text-sm">
                                         @{dom.domain_name}
                                     </SelectItem>
                                 ))}
@@ -328,18 +296,18 @@ export function InviteExternalMemberForm({
                         </Select>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold">Assigned Role</Label>
+                    <div className="space-y-1.5">
+                        <Label className="text-sm">Role</Label>
                         <Select value={role} onValueChange={setRole}>
-                            <SelectTrigger className="text-xs h-9">
-                                <SelectValue placeholder="Select Role" />
+                            <SelectTrigger className="h-9 text-sm">
+                                <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="member" className="text-xs">Member</SelectItem>
-                                <SelectItem value="admin" className="text-xs">Administrator</SelectItem>
-                                <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
+                                <SelectItem value="member" className="text-sm">Member</SelectItem>
+                                <SelectItem value="admin" className="text-sm">Administrator</SelectItem>
+                                <SelectItem value="viewer" className="text-sm">Viewer</SelectItem>
                                 {roles.map((r) => (
-                                    <SelectItem key={r.id} value={r.name} className="text-xs">
+                                    <SelectItem key={r.id} value={r.name} className="text-sm">
                                         {r.name}
                                     </SelectItem>
                                 ))}
@@ -347,18 +315,12 @@ export function InviteExternalMemberForm({
                         </Select>
                     </div>
                 </div>
-            </div>
+            </Section>
 
-            {/* ── Section 2: Reusable Scope Selector Grid ── */}
-            <div className="rounded-xl border bg-card p-5 sm:p-6 shadow-xs">
-                <ScopeSelectorGrid
-                    scopes={scopes}
-                    onChange={handleScopeChange}
-                    disabled={submitting}
-                />
-            </div>
+            <Section title="Feature access">
+                <ScopeSelectorGrid scopes={scopes} onChange={handleScopeChange} disabled={submitting} />
+            </Section>
 
-            {/* ── Section 3: Reusable Mailbox Formula Preview ── */}
             <MailboxFormulaPreview
                 orgSlug={orgSlug}
                 externalEmail={deferredEmail}
@@ -367,7 +329,7 @@ export function InviteExternalMemberForm({
             />
 
             {/* ── Action Buttons ── */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2">
                 <Button
                     type="button"
                     variant="outline"
@@ -380,17 +342,17 @@ export function InviteExternalMemberForm({
                 <Button
                     type="submit"
                     disabled={submitting || !email.includes("@") || !orgId || !domainId}
-                    className="min-w-[190px] gap-2 shadow-xs"
+                    className="min-w-[170px] gap-2"
                 >
                     {submitting ? (
                         <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Sending Invitation...
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Sending
                         </>
                     ) : (
                         <>
-                            <Send className="w-4 h-4" />
-                            Send Invitation Email
+                            <Send className="h-4 w-4" />
+                            Send invitation
                         </>
                     )}
                 </Button>
