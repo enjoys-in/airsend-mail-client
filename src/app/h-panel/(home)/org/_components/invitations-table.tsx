@@ -11,11 +11,10 @@ import {
     XCircle,
     AlertCircle,
     Mail,
-    Send,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { EmptyState, Initials, Pill } from "./kit"
 import {
     Table,
     TableBody,
@@ -124,107 +123,96 @@ export function InvitationsTable({ data, onUpdated }: InvitationsTableProps) {
         switch (displayStatus) {
             case "pending":
                 return (
-                    <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400">
-                        <Clock className="w-3 h-3" /> Pending
-                    </Badge>
+                    <Pill tone="amber">
+                        <Clock className="h-3 w-3" /> Pending
+                    </Pill>
                 )
             case "accepted":
                 return (
-                    <Badge variant="outline" className="gap-1 border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400">
-                        <CheckCircle2 className="w-3 h-3" /> Accepted
-                    </Badge>
+                    <Pill tone="green">
+                        <CheckCircle2 className="h-3 w-3" /> Accepted
+                    </Pill>
                 )
             case "expired":
                 return (
-                    <Badge variant="outline" className="gap-1 border-neutral-300 text-neutral-600 bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-400">
-                        <AlertCircle className="w-3 h-3" /> Expired
-                    </Badge>
+                    <Pill>
+                        <AlertCircle className="h-3 w-3" /> Expired
+                    </Pill>
                 )
             case "revoked":
                 return (
-                    <Badge variant="outline" className="gap-1 border-rose-300 text-rose-700 bg-rose-50 dark:bg-rose-950/30 dark:text-rose-400">
-                        <XCircle className="w-3 h-3" /> Revoked
-                    </Badge>
+                    <Pill tone="red">
+                        <XCircle className="h-3 w-3" /> Revoked
+                    </Pill>
                 )
             default:
-                return <Badge variant="secondary">{status}</Badge>
+                return <Pill>{status}</Pill>
         }
     }
 
     if (!invitations || invitations.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed rounded-lg">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 text-primary">
-                    <Mail className="w-6 h-6" />
-                </div>
-                <h3 className="text-base font-semibold">No pending invitations</h3>
-                <p className="text-sm text-muted-foreground max-w-sm mt-1">
-                    When you invite external members to your organization, their invite status and setup links will appear here.
-                </p>
+            <div className="rounded-lg border border-dashed border-border/70">
+                <EmptyState
+                    icon={Mail}
+                    title="No invitations"
+                    description="When you invite external members to your organization, their invite status and setup links appear here."
+                />
             </div>
         )
     }
 
     return (
         <>
-            <div className="rounded-md border bg-card">
+            <div className="overflow-hidden rounded-lg border border-border/70">
                 <Table>
                     <TableHeader>
-                        <TableRow>
-                            <TableHead>Invited User</TableHead>
-                            <TableHead>Organization & Domain</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Scopes</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Sent</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                            <TableHead className="h-10 text-xs text-muted-foreground">Invited</TableHead>
+                            <TableHead className="h-10 text-xs text-muted-foreground">Organization</TableHead>
+                            <TableHead className="h-10 text-xs text-muted-foreground">Role</TableHead>
+                            <TableHead className="hidden h-10 text-xs text-muted-foreground xl:table-cell">Scopes</TableHead>
+                            <TableHead className="h-10 text-xs text-muted-foreground">Status</TableHead>
+                            <TableHead className="h-10 text-xs text-muted-foreground">Sent</TableHead>
+                            <TableHead className="h-10 text-right text-xs text-muted-foreground">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {invitations.map((inv) => (
-                            <TableRow key={inv.id}>
-                                <TableCell>
-                                    <div className="font-medium text-sm text-foreground">
-                                        {inv.name || inv.email}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                        {inv.email}
-                                    </div>
-                                    {inv.accepted_email && (
-                                        <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-                                            Created: {inv.accepted_email}
+                            <TableRow key={inv.id} className="hover:bg-muted/30">
+                                <TableCell className="py-3">
+                                    <div className="flex items-center gap-3">
+                                        <Initials text={inv.name || inv.email} />
+                                        <div className="min-w-0">
+                                            <div className="truncate text-sm">{inv.name || inv.email}</div>
+                                            <div className="truncate text-xs text-muted-foreground">{inv.email}</div>
+                                            {inv.accepted_email && (
+                                                <div className="truncate text-[11px] text-emerald-700 dark:text-emerald-400">
+                                                    Created: {inv.accepted_email}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+                                    </div>
                                 </TableCell>
-                                <TableCell>
-                                    <div className="text-sm font-medium">{inv.org_name || "—"}</div>
+                                <TableCell className="py-3">
+                                    <div className="text-sm">{inv.org_name || "—"}</div>
                                     <div className="text-xs text-muted-foreground">{inv.domain_name}</div>
                                 </TableCell>
-                                <TableCell>
-                                    <Badge variant="secondary" className="capitalize text-xs font-medium">
-                                        {inv.role}
-                                    </Badge>
+                                <TableCell className="py-3">
+                                    <Pill className="capitalize">{inv.role}</Pill>
                                 </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                        {(inv.scopes || []).map((s) => {
-                                            const [feat, perm] = s.split(":")
-                                            return (
-                                                <span
-                                                    key={s}
-                                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                                                >
-                                                    {feat}:{perm}
-                                                </span>
-                                            )
-                                        })}
+                                <TableCell className="hidden py-3 xl:table-cell">
+                                    <div className="flex max-w-[200px] flex-wrap gap-1">
+                                        {(inv.scopes || []).map((s) => (
+                                            <Pill key={s}>{s}</Pill>
+                                        ))}
                                     </div>
                                 </TableCell>
-                                <TableCell>{getStatusBadge(inv.status, inv.expires_at)}</TableCell>
-                                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                <TableCell className="py-3">{getStatusBadge(inv.status, inv.expires_at)}</TableCell>
+                                <TableCell className="whitespace-nowrap py-3 text-xs text-muted-foreground">
                                     {new Date(inv.created_at).toLocaleDateString()}
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="py-3 text-right">
                                     <div className="flex items-center justify-end gap-1">
                                         {inv.status === "pending" && (
                                             <>
@@ -232,7 +220,7 @@ export function InvitationsTable({ data, onUpdated }: InvitationsTableProps) {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                                    title="Copy Invite Link"
+                                                    title="Copy invite link"
                                                     onClick={() => copyInviteLink(inv)}
                                                 >
                                                     {copiedId === inv.id ? (
@@ -245,7 +233,7 @@ export function InvitationsTable({ data, onUpdated }: InvitationsTableProps) {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                                    title="Resend Invite Email"
+                                                    title="Resend invite email"
                                                     disabled={resendingId === inv.id}
                                                     onClick={() => handleResend(inv)}
                                                 >
@@ -259,7 +247,7 @@ export function InvitationsTable({ data, onUpdated }: InvitationsTableProps) {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-muted-foreground hover:text-rose-600"
-                                                    title="Revoke Invitation"
+                                                    title="Revoke invitation"
                                                     onClick={() => setRevokeTarget(inv)}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -286,10 +274,10 @@ export function InvitationsTable({ data, onUpdated }: InvitationsTableProps) {
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Revoke Invitation?</AlertDialogTitle>
+                        <AlertDialogTitle>Revoke invitation?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Are you sure you want to cancel the invitation sent to{" "}
-                            <strong>{revokeTarget?.email}</strong>? The invitation link will no
+                            <span className="text-foreground">{revokeTarget?.email}</span>? The invitation link will no
                             longer be valid.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -300,7 +288,7 @@ export function InvitationsTable({ data, onUpdated }: InvitationsTableProps) {
                             disabled={revoking}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            {revoking ? "Revoking..." : "Revoke Invitation"}
+                            {revoking ? "Revoking..." : "Revoke invitation"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
