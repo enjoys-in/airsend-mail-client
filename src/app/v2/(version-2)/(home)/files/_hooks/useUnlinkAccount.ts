@@ -1,23 +1,21 @@
-"use client";
-
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { filesApiClient } from "../_lib/files-client";
-import type { DriveProvider } from "../_lib/files-types";
+import { useDefaultAccountProvider } from "@nimbus/_components/providers/default-account-provider";
+import { authClient } from "@nimbus/_lib/auth-shim";
+import type { DriveProvider } from "@nimbus/_lib/files-types";
 import { toast } from "sonner";
 
-export function useUnlinkAccount() {
-  const queryClient = useQueryClient();
+export const useUnlinkAccount = () => {
+	const { defaultAccountId, defaultProviderId } = useDefaultAccountProvider();
 
-  return useMutation({
-    mutationFn: async ({ providerId, accountId }: { providerId: DriveProvider; accountId: string }) => {
-      return filesApiClient.unlinkAccount(providerId, accountId);
-    },
-    onSuccess: () => {
-      toast.success("Account unlinked successfully");
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to unlink account");
-    },
-  });
-}
+	const unlinkAccount = async (provider: DriveProvider, accountId: string) => {
+		if (defaultAccountId === accountId && provider === defaultProviderId) {
+			toast.error("Cannot disconnect the default account. Set another account as default first.");
+			return;
+		}
+		return await (authClient.unlinkAccount as any)({
+			providerId: provider,
+			accountId,
+		});
+	};
+
+	return { unlinkAccount };
+};

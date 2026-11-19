@@ -67,7 +67,7 @@ function MainLayout({ children }: { children: ReactNode }) {
 
   // Providers that must sit above both sidebar and page:
   const needsTasks = pathname.startsWith("/v2/tasks");
-  const needsFiles = pathname.startsWith("/v2/files") || pathname.startsWith("/v2/workspace/files");
+  const needsFiles = pathname.startsWith("/v2/files");
 
   let wrapped = content;
   if (needsTasks) wrapped = <TasksProvider>{wrapped}</TasksProvider>;

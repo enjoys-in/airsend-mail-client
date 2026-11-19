@@ -1,100 +1,187 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
-import { Button } from "../ui/button";
-import { Label } from "../ui/label";
-import { Input } from "../ui/input";
-import type { Tag } from "../../_lib/files-types";
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@nimbus/_components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@nimbus/_components/ui/select";
+import { useEffect, useState, type ReactNode } from "react";
+import { FieldError } from "@nimbus/_components/ui/field-error";
+import { createTagSchema } from "@nimbus/_lib/files-types";
+import { Button } from "@nimbus/_components/ui/button";
+import { Label } from "@nimbus/_components/ui/label";
+import { Input } from "@nimbus/_components/ui/input";
+import type { Tag } from "@nimbus/_lib/files-types";
 
-interface CreateTagDialogProps {
-  isOpen: boolean;
-  onOpenChange?: (open: boolean) => void;
-  onClose?: () => void;
-  onCreateTag?: (data: { name: string; color: string; parentId?: string | null }) => void;
-  onCreate?: (data: { name: string; color: string; parentId?: string | null }) => void;
-  tags?: Tag[];
-  initialParentId?: string;
+function renderTagSelectItems(tags: Tag[], level = 0): ReactNode[] {
+	return tags.flatMap(tag => [
+		<SelectItem key={tag.id} value={tag.id}>
+			<span className="flex items-center">
+				{level > 0 && <span className="text-muted-foreground mr-2">{"│\u00A0".repeat(level - 1)}└─</span>}
+				{tag.name}
+			</span>
+		</SelectItem>,
+		...(tag.children ? renderTagSelectItems(tag.children, level + 1) : []),
+	]);
 }
 
-export function CreateTagDialog({
-  isOpen,
-  onOpenChange,
-  onClose,
-  onCreateTag,
-  onCreate,
-  tags = [],
-  initialParentId,
-}: CreateTagDialogProps) {
-  const [name, setName] = useState("");
-  const [color, setColor] = useState("#3b82f6");
+interface CreateTagDialogProps {
+	isOpen?: boolean;
+	open?: boolean;
+	onClose?: () => void;
+	onOpenChange?: (open: boolean) => void;
+	onCreate?: (data: { name: string; color: string; parentId?: string }) => void;
+	onCreateTag?: (data: { name: string; color: string; parentId?: string | null }) => void;
+	tags?: Tag[];
+	initialParentId?: string;
+}
 
-  const handleClose = () => {
-    if (onOpenChange) onOpenChange(false);
-    if (onClose) onClose();
-  };
+export function CreateTagDialog({ isOpen, open, onClose, onOpenChange, onCreate, onCreateTag, tags = [], initialParentId }: CreateTagDialogProps) {
+	const [name, setName] = useState("");
+	const [color, setColor] = useState("#808080");
+	const [parentId, setParentId] = useState<string | undefined>(undefined);
+	const [errors, setErrors] = useState<{ name?: string; color?: string }>({});
+	const isVisible = open !== undefined ? open : isOpen ?? false;
+	const handleClose = () => {
+		onClose?.();
+		onOpenChange?.(false);
+	};
 
-  const handleSubmit = () => {
-    if (!name.trim()) return;
-    const fn = onCreateTag || onCreate;
-    if (fn) {
-      fn({ name: name.trim(), color, parentId: initialParentId || null });
-    }
-    handleClose();
-    setName("");
-  };
+	useEffect(() => {
+		if (isVisible) {
+			setParentId(initialParentId);
+		} else {
+			// Batch state updates to avoid race conditions
+			const resetName = "";
+			const resetColor = "#808080";
+			const resetParentId = undefined;
+			const resetErrors = {};
 
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New Tag</DialogTitle>
-          <DialogDescription>Create a tag to organize and filter your files.</DialogDescription>
-        </DialogHeader>
+			setName(resetName);
+			setColor(resetColor);
+			setParentId(resetParentId);
+			setErrors(resetErrors);
+		}
+	}, [isOpen, initialParentId]);
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-1">
-            <Label htmlFor="tag-name">Tag Name</Label>
-            <Input
-              id="tag-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Invoices, Contracts, Design"
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            />
-          </div>
+	// Real-time validation
+	useEffect(() => {
+		const validationResult = createTagSchema.safeParse({
+			name,
+			color,
+			parentId: parentId === "none" ? undefined : parentId,
+		});
+		if (!validationResult.success) {
+			const newErrors: { name?: string; color?: string } = {};
+			validationResult.error.issues.forEach(issue => {
+				if (issue.path.includes("name")) {
+					newErrors.name = issue.message;
+				}
+				if (issue.path.includes("color")) {
+					newErrors.color = issue.message;
+				}
+			});
+			setErrors(newErrors);
+		} else {
+			setErrors({});
+		}
+	}, [name, color, parentId]);
 
-          <div className="space-y-1">
-            <Label htmlFor="tag-color">Color</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="tag-color"
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-10 w-16 p-1 cursor-pointer"
-              />
-              <span className="text-xs text-muted-foreground font-mono">{color}</span>
-            </div>
-          </div>
-        </div>
+	const handleSubmit = () => {
+		const validationResult = createTagSchema.safeParse({
+			name,
+			color,
+			parentId: parentId === "none" ? undefined : parentId,
+		});
+		if (validationResult.success) {
+			const data = {
+				name: validationResult.data.name,
+				color: validationResult.data.color,
+				parentId: validationResult.data.parentId ?? undefined,
+			};
+			onCreate?.(data);
+			onCreateTag?.(data);
+			handleClose();
+		} else {
+			// Update errors for final validation
+			const newErrors: { name?: string; color?: string } = {};
+			validationResult.error.issues.forEach(issue => {
+				if (issue.path.includes("name")) {
+					newErrors.name = issue.message;
+				}
+				if (issue.path.includes("color")) {
+					newErrors.color = issue.message;
+				}
+			});
+			setErrors(newErrors);
+		}
+	};
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!name.trim()}>
-            Create Tag
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+	const isValid = Object.keys(errors).length === 0 && name.trim().length > 0;
+
+	return (
+		<Dialog open={isVisible} onOpenChange={(open) => !open && handleClose()}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Create New Tag</DialogTitle>
+					<DialogDescription>Create a new tag to organize your files.</DialogDescription>
+				</DialogHeader>
+				<div className="grid gap-4 py-4">
+					<div className="grid grid-cols-4 items-center gap-4">
+						<Label htmlFor="new-tag-name" className="text-right">
+							Name
+						</Label>
+						<div className="col-span-3">
+							<Input
+								id="new-tag-name"
+								value={name}
+								onChange={e => setName(e.target.value)}
+								className={errors.name ? "border-red-500" : ""}
+								placeholder="Enter tag name (letters and spaces only)"
+							/>
+						</div>
+					</div>
+					<div className="text-xs text-red-500">{errors.name && <FieldError error={errors.name} />}</div>
+					<div className="grid grid-cols-4 items-center gap-4">
+						<Label htmlFor="new-tag-color" className="text-right">
+							Color
+						</Label>
+						<div className="col-span-3">
+							<Input id="new-tag-color" type="color" value={color} onChange={e => setColor(e.target.value)} />
+						</div>
+					</div>
+					<div className="text-xs text-red-500">{errors.color && <FieldError error={errors.color} />}</div>
+					<div className="grid grid-cols-4 items-center gap-4">
+						<Label htmlFor="new-tag-parent" className="text-right">
+							Parent Tag
+						</Label>
+						<Select
+							value={parentId || "none"}
+							onValueChange={value => setParentId(value === "none" ? undefined : value)}
+						>
+							<SelectTrigger className="col-span-3" id="new-tag-parent">
+								<SelectValue placeholder="Select a parent tag" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="none">None</SelectItem>
+								{renderTagSelectItems(tags)}
+							</SelectContent>
+						</Select>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" onClick={onClose}>
+						Cancel
+					</Button>
+					<Button onClick={handleSubmit} disabled={!isValid}>
+						Create
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
 }

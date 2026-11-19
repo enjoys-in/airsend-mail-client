@@ -2,7 +2,7 @@ import { Description, Root, Trigger, Close, Portal, Overlay, Title, Content } fr
 import type { ComponentProps } from "react";
 import { XIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@nimbus/_lib/utils";
 
 function Sheet({ ...props }: ComponentProps<typeof Root>) {
 	return <Root data-slot="sheet" {...props} />;

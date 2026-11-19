@@ -1,63 +1,106 @@
 "use client";
 
-import React, { useState, useEffect, type FormEvent } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
-import { UploadZone } from "./upload-zone";
-import { useUploadFile } from "../../_hooks/useFileOperations";
-import { Button } from "../ui/button";
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@nimbus/_components/ui/dialog";
+import { UploadZone } from "@nimbus/_components/upload/upload-zone";
+import { useEffect, useState, type FormEvent } from "react";
+import type { UploadFileDialogProps } from "@nimbus/_lib/types";
+import { Button } from "@nimbus/_components/ui/button";
+import { toast } from "sonner";
 
-export interface UploadFolderDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  parentId?: string;
-}
+export function UploadFolderDialog({ open, onOpenChange }: UploadFileDialogProps) {
+	const [selectedFolder, setSelectedFolder] = useState<FileList | null>(null);
+	const [isUploading, setIsUploading] = useState(false);
+	const [uploadProgress, setUploadProgress] = useState(0);
 
-export function UploadFolderDialog({ open, onOpenChange, parentId = "root" }: UploadFolderDialogProps) {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const { mutate: uploadFile, isPending } = useUploadFile();
+	// Reset states when dialog closes
+	useEffect(() => {
+		if (!open) {
+			setSelectedFolder(null);
+			setIsUploading(false);
+			setUploadProgress(0);
+		}
+	}, [open]);
 
-  useEffect(() => {
-    if (!open) {
-      setSelectedFiles([]);
-    }
-  }, [open]);
+	const simulateUploadProgress = () => {
+		setIsUploading(true);
+		let progress = 0;
+		const interval = setInterval(() => {
+			progress += 5;
+			setUploadProgress(progress);
+			if (progress >= 100) {
+				clearInterval(interval);
+				setTimeout(() => {
+					if (selectedFolder) {
+						// Get the folder name from the first file's path
+						const folderName = selectedFolder[0]?.webkitRelativePath?.split("/")[0] || "Folder";
+						toast.success(
+							`Successfully uploaded folder "${folderName}" with ${selectedFolder.length} ${selectedFolder.length === 1 ? "file" : "files"}`
+						);
+					}
+					onOpenChange(false);
+					setIsUploading(false);
+					setUploadProgress(0);
+				}, 500);
+			}
+		}, 100);
+	};
 
-  const handleUpload = async (e: FormEvent) => {
-    e.preventDefault();
-    if (selectedFiles.length === 0) return;
+	// TODO: Implement upload folder handler using the mutation hooks in "useFileOperations"
 
-    for (const file of selectedFiles) {
-      uploadFile({ file, parentId });
-    }
-    onOpenChange(false);
-  };
+	const handleUploadFolder = (event: FormEvent) => {
+		event.preventDefault();
+		if (selectedFolder && selectedFolder.length > 0) {
+			simulateUploadProgress();
+		}
+	};
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Upload Folder</DialogTitle>
-          <DialogDescription>Select an entire folder to upload its contents.</DialogDescription>
-        </DialogHeader>
-
-        <UploadZone isFolder onFilesSelected={(files) => setSelectedFiles(Array.from(files))} />
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
-            Cancel
-          </Button>
-          <Button onClick={handleUpload} disabled={isPending || selectedFiles.length === 0}>
-            {isPending ? "Uploading..." : "Upload Folder"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="sm:max-w-[425px]">
+				<DialogHeader>
+					<DialogTitle className="text-xl font-semibold">Upload Folder</DialogTitle>
+					<DialogDescription>Click or drag and drop a folder below to upload.</DialogDescription>
+				</DialogHeader>
+				<form onSubmit={handleUploadFolder}>
+					<UploadZone
+						onFilesSelected={files => setSelectedFolder(files as FileList)}
+						isFolder={true}
+						isUploading={isUploading}
+						uploadProgress={uploadProgress}
+					/>
+					<DialogFooter>
+						{!isUploading && (
+							<>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => {
+										onOpenChange(false);
+										setSelectedFolder(null);
+									}}
+									className="cursor-pointer"
+								>
+									Cancel
+								</Button>
+								<Button
+									type="submit"
+									disabled={!selectedFolder || selectedFolder.length === 0}
+									className="cursor-pointer"
+								>
+									Upload {selectedFolder && selectedFolder.length > 0 ? `(${selectedFolder.length} files)` : ""}
+								</Button>
+							</>
+						)}
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
+	);
 }

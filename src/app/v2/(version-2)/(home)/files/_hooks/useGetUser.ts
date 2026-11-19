@@ -1,20 +1,31 @@
-"use client";
-
+import type { ApiResponse, UserSchema } from "@nimbus/_lib/files-types";
 import { useQuery } from "@tanstack/react-query";
-import type { UserSchema } from "../_lib/files-types";
-import { useAppSelector } from "@/store/hooks";
+import { protectedClient } from "@nimbus/_utils/client";
+
+const fetchUser = async (): Promise<UserSchema> => {
+	const response = await protectedClient.api.user.$get();
+
+	if (!response.ok) {
+		const data = (await response.json()) as unknown as ApiResponse;
+		throw new Error(data.message || "Failed to fetch user");
+	}
+
+	const userData = await response.json();
+	return {
+		...userData,
+		createdAt: new Date(userData.createdAt),
+		updatedAt: new Date(userData.updatedAt),
+	};
+};
 
 export function useGetUser() {
-  const account = useAppSelector((s) => s.accounts?.currAccount);
-
-  return useQuery<UserSchema>({
-    queryKey: ["user-info", account?.email, account?.mid],
-    queryFn: async () => {
-      return {
-        id: account?.mid || "current-user",
-        name: account?.name || account?.email?.split("@")[0] || "User",
-        email: account?.email || "user@airsend.in",
-      };
-    },
-  });
+	return useQuery({
+		queryKey: ["user"],
+		queryFn: fetchUser,
+		retry: (failureCount, error) => {
+			// Don't retry on 401 (unauthorized) errors
+			if (error.message.includes("401")) return false;
+			return failureCount < 3; // Retry up to 3 times for other errors
+		},
+	});
 }

@@ -15,7 +15,7 @@ import { getWorkspaceApiUrl, isValidUUID } from "../_lib/api";
 
 export default function WorkspaceInit() {
   const currAccount = useAppSelector((s: any) => s.accounts.currAccount);
-  const email = currAccount?.email ?? "";
+  const email = currAccount?.email || "mullayam06@airsend.in";
   const {
     activeTeamId,
     activeChannelId,

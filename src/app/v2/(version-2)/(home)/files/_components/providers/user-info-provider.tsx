@@ -1,48 +1,55 @@
 "use client";
 
-import React, { createContext, useContext, useMemo } from "react";
-import type { LimitedAccessAccount, UserSchema } from "../../_lib/files-types";
-import { useAccounts } from "../../_hooks/useAccounts";
-import { useGetUser } from "../../_hooks/useGetUser";
+import type { LimitedAccessAccount } from "@nimbus/_lib/files-types";
+import { createContext, useContext, useMemo } from "react";
+import type { SessionUser } from "@nimbus/_lib/files-types";
+import { useAccounts } from "@nimbus/_hooks/useAccounts";
+import { useGetUser } from "@nimbus/_hooks/useGetUser";
 
-interface UserInfoState {
-  user: UserSchema | null;
-  accounts: LimitedAccessAccount[] | null;
-  error: Error | null;
-  isLoading: boolean;
-  refreshUser: () => Promise<void>;
-  refreshAccounts: () => Promise<void>;
+interface DriveProviderState {
+	user: SessionUser | null;
+	accounts: LimitedAccessAccount[] | null;
+	error: Error | null;
+	isLoading: boolean;
+	refreshUser: () => Promise<void>;
+	refreshAccounts: () => Promise<void>;
 }
 
-const UserInfoContext = createContext<UserInfoState | undefined>(undefined);
+const DriveProviderContext = createContext<DriveProviderState | undefined>(undefined);
 
 export function UserInfoProvider({ children }: { children: React.ReactNode }) {
-  const { data: user, error: userError, isLoading: isUserLoading, refetch: refetchUser } = useGetUser();
-  const { data: accounts, error: accountsError, isLoading: isAccountsLoading, refetch: refetchAccounts } = useAccounts();
+	const { data: user, error: userError, isLoading: isUserLoading, refetch: refetchUser } = useGetUser();
 
-  const value = useMemo<UserInfoState>(
-    () => ({
-      user: user || null,
-      accounts: accounts || null,
-      error: (userError || accountsError) as Error | null,
-      isLoading: isUserLoading || isAccountsLoading,
-      refreshUser: async () => {
-        await refetchUser();
-      },
-      refreshAccounts: async () => {
-        await refetchAccounts();
-      },
-    }),
-    [user, accounts, userError, accountsError, isUserLoading, isAccountsLoading, refetchUser, refetchAccounts]
-  );
+	const {
+		data: accounts,
+		error: accountsError,
+		isLoading: isAccountsLoading,
+		refetch: refetchAccounts,
+	} = useAccounts();
 
-  return <UserInfoContext.Provider value={value}>{children}</UserInfoContext.Provider>;
+	const value = useMemo<DriveProviderState>(
+		() => ({
+			user: user || null,
+			accounts: accounts || null,
+			error: (userError || accountsError) as Error | null,
+			isLoading: isUserLoading || isAccountsLoading,
+			refreshUser: async () => {
+				await refetchUser();
+			},
+			refreshAccounts: async () => {
+				await refetchAccounts();
+			},
+		}),
+		[user, accounts, userError, accountsError, isUserLoading, isAccountsLoading, refetchUser, refetchAccounts]
+	);
+
+	return <DriveProviderContext.Provider value={value}>{children}</DriveProviderContext.Provider>;
 }
 
 export function useUserInfoProvider() {
-  const context = useContext(UserInfoContext);
-  if (context === undefined) {
-    throw new Error("useUserInfoProvider must be used within a UserInfoProvider");
-  }
-  return context;
+	const context = useContext(DriveProviderContext);
+	if (context === undefined) {
+		throw new Error("useUserInfoProvider must be used within a UserInfoProvider");
+	}
+	return context;
 }

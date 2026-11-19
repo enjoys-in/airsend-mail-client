@@ -1,0 +1,50 @@
+import type { ClientRequestOptions } from "hono/client";
+type AppType = any;
+import env from "@nimbus/_lib/env-shim";
+import { hc } from "hono/client";
+
+const createClient = (options?: ClientRequestOptions): any => {
+	const backendUrl = env.VITE_BACKEND_URL || "/api/files";
+	return hc<AppType>(backendUrl, options) as any;
+};
+export const publicClient: any = createClient();
+
+export const createProtectedClient = (options?: ClientRequestOptions): any =>
+	createClient({
+		...options,
+		init: {
+			...options?.init,
+			credentials: "include",
+		},
+	});
+
+export const protectedClient: any = createProtectedClient();
+
+export type DriveProviderClient = any;
+
+let authContext: { openSignIn: () => void } | null = null;
+
+// This function allows us to access the auth context outside of React components
+export const setAuthContext = (context: { openSignIn: () => void }) => {
+	authContext = context;
+};
+
+export async function handleUnauthorizedError<T extends () => Promise<Response>>(
+	requestFn: T,
+	errorMessage: string
+): Promise<Awaited<ReturnType<T>>> {
+	const response = await requestFn();
+
+	if (!response.ok) {
+		const errorDetails = await response.text().catch(() => response.statusText);
+		if (response.status === 401) {
+			// Check if this is a provider switching related error
+			if (errorDetails.includes("re-authenticate") || errorDetails.includes("Authentication expired")) {
+				authContext?.openSignIn();
+			}
+		}
+		throw new Error(`${errorMessage}. Status: ${response.status}. ${errorDetails}`);
+	}
+
+	return response as Awaited<ReturnType<T>>;
+}

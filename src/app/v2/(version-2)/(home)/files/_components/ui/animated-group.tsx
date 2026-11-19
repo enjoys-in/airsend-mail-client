@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode, JSX, ElementType } from "react";
 import { motion, type Variants } from "motion/react";
 import { Children, useMemo } from "react";

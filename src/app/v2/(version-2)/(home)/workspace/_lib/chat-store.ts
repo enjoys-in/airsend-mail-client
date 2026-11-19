@@ -240,29 +240,29 @@ interface ChatStore {
 export type { ChatStore };
 
 export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore>()((set, get) => ({
-  // Data — initialized with rich workspace data, enhanced by live API
-  teams: MOCK_TEAMS,
-  channels: MOCK_CHANNELS,
-  members: MOCK_MEMBERS,
-  messages: MOCK_MESSAGES,
+  // Data — initialized empty, loaded from live backend API
+  teams: [],
+  channels: [],
+  members: [],
+  messages: [],
   messageCursors: {},
   messageHasMore: {},
   isLoadingOlder: false,
   threadReplies: [],
-  directMessages: MOCK_DMS,
-  notifications: MOCK_NOTIFICATIONS,
-  tasks: MOCK_TASKS,
+  directMessages: [],
+  notifications: [],
+  tasks: [],
   typingIndicators: [],
 
   // Microsoft Teams Features
-  meetings: MOCK_MEETINGS,
-  callRecords: MOCK_CALL_RECORDS,
-  files: MOCK_FILES,
-  callParticipants: MOCK_LIVE_PARTICIPANTS,
+  meetings: [],
+  callRecords: [],
+  files: [],
+  callParticipants: [],
 
   // Workflows & Automations Engine
-  workflows: MOCK_WORKFLOWS,
-  workflowRuns: MOCK_WORKFLOW_RUNS,
+  workflows: [],
+  workflowRuns: [],
 
   // Active Live Call state
   activeCallId: null,
@@ -996,22 +996,30 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   // -----------------------------------------------------------------------
 
   fetchTeams: async (email) => {
-    if (!email) return;
-    set({ isLoading: true, isLoadingTeams: true, apiError: null, currentUserId: email });
+    const userEmail = email || get().currentUserId || "mullayam06@airsend.in";
+    set({ isLoading: true, isLoadingTeams: true, apiError: null, currentUserId: userEmail });
     try {
-      const serverTeams = await workspaceApi.listTeams(email);
-      const teams = serverTeams.map(toTeam);
+      const serverTeams = await workspaceApi.listTeams(userEmail);
+      const teams = (serverTeams || []).map(toTeam);
       set((s) => {
         const nextActiveTeamId = teams.length > 0
           ? (teams.some((t) => t.id === s.activeTeamId) ? s.activeTeamId : teams[0].id)
-          : (isValidUUID(s.activeTeamId) ? s.activeTeamId : null);
+          : null;
         return {
-          teams: teams.length > 0 ? teams : s.teams,
+          teams,
           activeTeamId: nextActiveTeamId,
           isLoading: false,
           isLoadingTeams: false,
         };
       });
+
+      if (teams.length > 0) {
+        const activeId = teams[0].id;
+        get().fetchChannels(activeId, userEmail);
+        get().fetchMembers(activeId, userEmail);
+        get().fetchMeetings(activeId);
+        get().fetchFiles(activeId);
+      }
     } catch (err) {
       set({ isLoading: false, isLoadingTeams: false, apiError: (err as Error).message });
     }
@@ -1022,10 +1030,11 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       set({ isLoadingChannels: false });
       return;
     }
+    const userEmail = email || get().currentUserId || "mullayam06@airsend.in";
     set({ isLoadingChannels: true });
     try {
-      const serverChannels = await workspaceApi.listChannels(teamId, email);
-      const channels = serverChannels.map(toChannel);
+      const serverChannels = await workspaceApi.listChannels(teamId, userEmail);
+      const channels = (serverChannels || []).map(toChannel);
       set((s) => {
         const currentActiveChannelId = s.activeChannelId;
         const channelBelongsToTeam = channels.some((c) => c.id === currentActiveChannelId);
@@ -1051,9 +1060,10 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
 
   fetchMembers: async (teamId, email) => {
     if (!isValidUUID(teamId)) return;
+    const userEmail = email || get().currentUserId || "mullayam06@airsend.in";
     try {
-      const serverMembers = await workspaceApi.listMembers(teamId, email);
-      const members = serverMembers.map(toMember);
+      const serverMembers = await workspaceApi.listMembers(teamId, userEmail);
+      const members = (serverMembers || []).map(toMember);
       set((s) => ({
         members: [
           ...s.members.filter((m) => m.teamId !== teamId),
@@ -1061,7 +1071,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
         ],
       }));
     } catch {
-      // Keep existing members on failure
+      // Empty members
     }
   },
 
@@ -1163,32 +1173,27 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   fetchDMs: async (email) => {
-    if (!email) return;
+    const userEmail = email || get().currentUserId || "mullayam06@airsend.in";
     try {
-      const serverDMs = await workspaceApi.listDMs(email);
-      const dms = serverDMs.map(toDM);
-      set((s) => ({
-        directMessages: dms.length > 0 ? dms : s.directMessages,
-      }));
+      const serverDMs = await workspaceApi.listDMs(userEmail);
+      const dms = (serverDMs || []).map(toDM);
+      set({ directMessages: dms });
     } catch {
-      // Keep existing DMs on failure
+      set({ directMessages: [] });
     }
   },
 
   fetchMeetings: async (teamId) => {
-    const email = get().currentUserId;
-    if (!email) return;
+    const email = get().currentUserId || "mullayam06@airsend.in";
     if (teamId && !isValidUUID(teamId)) return;
     try {
       const res = teamId
         ? await workspaceApi.listTeamMeetings(teamId, email)
         : await workspaceApi.listMyMeetings(email);
-      const meetings = res.map(toMeeting);
-      if (meetings.length > 0) {
-        set({ meetings });
-      }
+      const meetings = (res || []).map(toMeeting);
+      set({ meetings });
     } catch {
-      // Fallback kept
+      set({ meetings: [] });
     }
   },
 
@@ -1199,54 +1204,45 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   fetchFiles: async (teamId) => {
     const targetTeam = teamId || get().activeTeamId;
     if (!targetTeam || !isValidUUID(targetTeam)) return;
-    const email = get().currentUserId;
-    if (!email) return;
+    const email = get().currentUserId || "mullayam06@airsend.in";
     try {
       const res = await workspaceApi.listTeamFiles(targetTeam, email);
-      const files = res.map(toWorkspaceFile);
-      if (files.length > 0) {
-        set({ files });
-      }
+      const files = (res || []).map(toWorkspaceFile);
+      set({ files });
     } catch {
-      // Fallback kept
+      set({ files: [] });
     }
   },
 
   fetchCalls: async () => {
-    const email = get().currentUserId;
-    if (!email) return;
+    const email = get().currentUserId || "mullayam06@airsend.in";
     try {
       const res = await workspaceApi.listCallHistory(email);
-      const callRecords = res.map(toCallRecord);
-      if (callRecords.length > 0) {
-        set({ callRecords });
-      }
+      const callRecords = (res || []).map(toCallRecord);
+      set({ callRecords });
     } catch {
-      // Fallback kept
+      set({ callRecords: [] });
     }
   },
 
   fetchNotifications: async () => {
-    const email = get().currentUserId;
-    if (!email) return;
+    const email = get().currentUserId || "mullayam06@airsend.in";
     try {
       const res = await workspaceApi.listNotifications(email);
-      if (res.length > 0) {
-        set({
-          notifications: res.map((n) => ({
-            id: n.id,
-            type: (n.type === "meeting.invite" ? "meeting_invite" : n.type === "call.missed" ? "call_missed" : n.type === "task.assigned" ? "task_assigned" : "system") as ChatNotification["type"],
-            teamId: get().activeTeamId || "team-1",
-            fromUserId: n.recipient_email,
-            fromUserName: n.title,
-            content: n.body || n.title,
-            isRead: n.is_read,
-            createdAt: n.created_at,
-          })),
-        });
-      }
+      set({
+        notifications: (res || []).map((n) => ({
+          id: n.id,
+          type: (n.type === "meeting.invite" ? "meeting_invite" : n.type === "call.missed" ? "call_missed" : n.type === "task.assigned" ? "task_assigned" : "system") as ChatNotification["type"],
+          teamId: get().activeTeamId || "026bd7c8-beb7-4a3d-96b6-6b3e162ead91",
+          fromUserId: n.recipient_email,
+          fromUserName: n.title,
+          content: n.body || n.title,
+          isRead: n.is_read,
+          createdAt: n.created_at,
+        })),
+      });
     } catch {
-      // Fallback kept
+      set({ notifications: [] });
     }
   },
 

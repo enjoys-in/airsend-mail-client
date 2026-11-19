@@ -13,6 +13,7 @@ export async function createProject(input: CreateProjectInput): Promise<TaskProj
     name: input.name,
     slug: input.slug,
     description: input.description,
+    workspaceId: "ws-1",
     taskCount: 0,
   };
 }

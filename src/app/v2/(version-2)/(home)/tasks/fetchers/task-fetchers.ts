@@ -21,8 +21,8 @@ export async function createTask(input: CreateTaskInput): Promise<TaskItem | nul
     description: input.description,
     status: input.status || "todo",
     priority: input.priority || "none",
-    order: 0,
     dueDate: input.dueDate,
+    labels: (input as any).labels || [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -33,7 +33,8 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<bo
 }
 
 export async function updateTaskStatus(id: string, status: TaskStatus): Promise<boolean> {
-  return crud.updateTaskStatus(id, status);
+  const res = await crud.updateTaskStatus(id, status);
+  return res.success;
 }
 
 export async function deleteTask(id: string): Promise<boolean> {

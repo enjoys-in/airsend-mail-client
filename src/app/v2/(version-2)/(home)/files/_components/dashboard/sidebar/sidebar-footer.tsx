@@ -1,0 +1,119 @@
+"use client";
+
+import { SidebarFooter, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@nimbus/_components/ui/sidebar";
+import { Progress } from "@nimbus/_components/ui/progress";
+import { useDriveInfo } from "@nimbus/_hooks/useDriveOps";
+import { Moon, Settings, Sun } from "lucide-react";
+import { formatFileSize } from "@nimbus/_lib/files-types";
+import { Link } from "@nimbus/_lib/router-shim";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
+export default function StorageFooter() {
+	const { data, error, isError, isPending } = useDriveInfo();
+	const [usedSpace, setUsedSpace] = useState<number>(0);
+	const [totalSpace, setTotalSpace] = useState<number>(0);
+	const [usagePercent, setUsagePercent] = useState<number>(0);
+	const [isMounted, setIsMounted] = useState(false);
+
+	// Simple theme state management
+	const [theme, setTheme] = useState<"light" | "dark">("light");
+
+	useEffect(() => {
+		// Check for saved theme preference or default to light mode
+		const savedTheme = localStorage.getItem("theme");
+		if (savedTheme === "dark" || (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+			document.documentElement.classList.add("dark");
+			setTheme("dark");
+		} else {
+			document.documentElement.classList.remove("dark");
+			setTheme("light");
+		}
+		setIsMounted(true);
+	}, []);
+
+	const toggleTheme = () => {
+		if (theme === "light") {
+			document.documentElement.classList.add("dark");
+			localStorage.setItem("theme", "dark");
+			setTheme("dark");
+		} else {
+			document.documentElement.classList.remove("dark");
+			localStorage.setItem("theme", "light");
+			setTheme("light");
+		}
+	};
+
+	useEffect(() => {
+		if (isError && error) {
+			toast.error("Failed to load storage details.");
+		}
+	}, [isError, error]);
+
+	useEffect(() => {
+		if (data) {
+			// Calculate percentage using the new data values to avoid race conditions
+			const newUsedSpace = data.usedSpace;
+			const newTotalSpace = data.totalSpace;
+			const percent = Number(newTotalSpace) > 0 ? Math.floor((Number(newUsedSpace) / Number(newTotalSpace)) * 100) : 0;
+
+			// Batch state updates to avoid race conditions
+			setUsedSpace(newUsedSpace);
+			setTotalSpace(newTotalSpace);
+			setUsagePercent(percent);
+		}
+	}, [data]);
+
+	return (
+		<SidebarFooter className="flex flex-col items-start gap-2 self-stretch p-2 pb-0 transition-all duration-300 ease-linear dark:bg-neutral-800">
+			<SidebarMenu>
+				<SidebarMenuItem>
+					<div className="flex flex-col items-start self-stretch rounded-lg border border-neutral-200 bg-neutral-200 dark:border-0 dark:border-transparent dark:bg-neutral-700">
+						<div className="flex flex-col items-start gap-3 self-stretch rounded-lg bg-white p-3 shadow-sm dark:bg-[#0C0A09]">
+							<div className="flex items-center justify-between self-stretch">
+								<p className="text-sm font-medium text-neutral-800 dark:text-neutral-300">Storage Used</p>
+								{isPending ? (
+									<div className="h-4 w-12 animate-pulse rounded bg-neutral-300 dark:bg-neutral-500"></div>
+								) : (
+									<p className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{usagePercent}% Used</p>
+								)}
+							</div>
+							<Progress value={usagePercent} />
+						</div>
+						<div className="flex h-8 items-center justify-between self-stretch px-3">
+							{isPending ? (
+								<div className="h-4 w-32 animate-pulse rounded bg-neutral-300 dark:bg-neutral-500"></div>
+							) : (
+								<div className="flex flex-wrap items-center gap-1 text-sm font-medium text-neutral-500 dark:text-neutral-300">
+									{fileSizeText(isError, usedSpace)}
+									<span>of</span>
+									{fileSizeText(isError, totalSpace)}
+								</div>
+							)}
+						</div>
+					</div>
+				</SidebarMenuItem>
+				<SidebarMenuButton
+					onClick={toggleTheme}
+					className="transition-all duration-200 ease-linear hover:bg-neutral-200 dark:hover:bg-neutral-700"
+				>
+					{isMounted && (theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />)}
+					<span>Theme</span>
+				</SidebarMenuButton>
+				<SidebarMenuButton
+					asChild
+					className="transition-all duration-200 ease-linear hover:bg-neutral-200 dark:hover:bg-neutral-700"
+				>
+					<Link to="/dashboard/settings">
+						<Settings className="size-4" />
+						<span>Settings</span>
+					</Link>
+				</SidebarMenuButton>
+			</SidebarMenu>
+		</SidebarFooter>
+	);
+}
+
+function fileSizeText(isError: boolean, num: number | undefined) {
+	return <span>{isError || !num ? "--" : formatFileSize(num)}</span>;
+}

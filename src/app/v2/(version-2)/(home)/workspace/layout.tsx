@@ -29,8 +29,8 @@ const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
     pathname.includes("/workspace/calls/meet-") ||
     pathname.includes("/workspace/calls/call-");
 
-  // Wait for profile to load before deciding — prevents server/client mismatch
-  if (loading || !currAccount) {
+  // Wait for initial profile load before deciding
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100svh-3.5rem)]">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -38,7 +38,8 @@ const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!workspace) {
+  // If user account is specifically disabled for workspace
+  if (currAccount && currAccount.workspace === false) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100svh-3.5rem)] gap-3 text-muted-foreground">
         <Boxes className="h-10 w-10" />

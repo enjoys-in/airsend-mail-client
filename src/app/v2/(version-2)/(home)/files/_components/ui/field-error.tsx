@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@nimbus/_lib/utils";
 
 interface FieldErrorProps extends ComponentProps<"span"> {
 	error?: string;

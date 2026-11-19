@@ -96,8 +96,12 @@ export interface DriveInfo {
 
 export interface PinnedFile {
   id: string;
-  userId: string;
+  userId?: string;
   fileId: string;
+  name?: string;
+  type?: string;
+  provider?: string;
+  accountId?: string;
   createdAt?: string | Date | null;
 }
 
@@ -128,16 +132,46 @@ export interface UserSchema {
 // Constants
 export const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 export const AWS_REGIONS = [
-  "us-east-1",
-  "us-east-2",
-  "us-west-1",
-  "us-west-2",
-  "eu-west-1",
-  "eu-central-1",
-  "ap-southeast-1",
-  "ap-southeast-2",
-  "ap-northeast-1",
+  { value: "us-east-1", label: "US East (N. Virginia)" },
+  { value: "us-east-2", label: "US East (Ohio)" },
+  { value: "us-west-1", label: "US West (N. California)" },
+  { value: "us-west-2", label: "US West (Oregon)" },
+  { value: "us-gov-east-1", label: "AWS GovCloud (US-East)" },
+  { value: "us-gov-west-1", label: "AWS GovCloud (US-West)" },
+  { value: "ca-central-1", label: "Canada (Central)" },
+  { value: "ca-west-1", label: "Canada (Calgary)" },
+  { value: "mx-central-1", label: "Mexico (Central)" },
+  { value: "eu-north-1", label: "Europe (Stockholm)" },
+  { value: "eu-west-1", label: "Europe (Ireland)" },
+  { value: "eu-west-2", label: "Europe (London)" },
+  { value: "eu-west-3", label: "Europe (Paris)" },
+  { value: "eu-central-1", label: "Europe (Frankfurt)" },
+  { value: "eu-central-2", label: "Europe (Zurich)" },
+  { value: "eu-south-1", label: "Europe (Milan)" },
+  { value: "eu-south-2", label: "Europe (Spain)" },
+  { value: "ap-northeast-1", label: "Asia Pacific (Tokyo)" },
+  { value: "ap-northeast-2", label: "Asia Pacific (Seoul)" },
+  { value: "ap-northeast-3", label: "Asia Pacific (Osaka)" },
+  { value: "ap-southeast-1", label: "Asia Pacific (Singapore)" },
+  { value: "ap-southeast-2", label: "Asia Pacific (Sydney)" },
+  { value: "ap-southeast-3", label: "Asia Pacific (Jakarta)" },
+  { value: "ap-southeast-4", label: "Asia Pacific (Melbourne)" },
+  { value: "ap-southeast-5", label: "Asia Pacific (Malaysia)" },
+  { value: "ap-east-1", label: "Asia Pacific (Hong Kong)" },
+  { value: "ap-east-2", label: "Asia Pacific (Taipei)" },
+  { value: "ap-south-1", label: "Asia Pacific (Mumbai)" },
+  { value: "ap-south-2", label: "Asia Pacific (Hyderabad)" },
+  { value: "ap-southeast-6", label: "Asia Pacific (Thailand)" },
+  { value: "cn-north-1", label: "China (Beijing)" },
+  { value: "cn-northwest-1", label: "China (Ningxia)" },
+  { value: "sa-east-1", label: "South America (São Paulo)" },
+  { value: "me-south-1", label: "Middle East (Bahrain)" },
+  { value: "me-central-1", label: "Middle East (UAE)" },
+  { value: "af-south-1", label: "Africa (Cape Town)" },
+  { value: "il-central-1", label: "Israel (Tel Aviv)" },
 ] as const;
+
+export type AWSRegion = (typeof AWS_REGIONS)[number]["value"];
 
 // Schemas
 export const createTagSchema = z.object({
@@ -210,4 +244,108 @@ export interface UploadFileSchema {
 
 export interface CreatePinnedFile {
   fileId: string;
+  name?: string;
+  type?: string;
+  mimeType?: string;
+  provider?: string;
+  accountId?: string;
 }
+
+export interface SessionUser {
+  id: string;
+  name?: string | null;
+  email: string;
+  image?: string | null;
+  emailVerified?: boolean;
+  defaultAccountId?: string | null;
+  defaultProviderId?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export const LEGAL_UPDATE_DATE = "July 29, 2025";
+export const WEBSITE_NAME = "Nimbus";
+export const COMPANY_NAME = "Borea Inc.";
+export const URL = "https://nimbus.storage";
+export const CONTACT_EMAIL = "hello@nimbus.storage";
+export const ADDRESS = "251 Little Falls Drive Wilmington, DE 19808";
+export const STATE = "Delaware";
+export const COUNTRY = "USA";
+
+export interface CheckEmailExists {
+  exists: boolean;
+}
+
+export type Auth = any;
+export type auth = any;
+
+export function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+export const emailSchema = z.string().email("Please enter a valid email address");
+
+export const emailObjectSchema = z.object({
+  email: emailSchema,
+});
+
+export const nicknameSchema = z.string().max(100).nullable().optional();
+
+export const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(100, "Password must be less than 100 characters");
+
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
+
+export const signInSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  remember: z.boolean().optional(),
+});
+
+export const signUpSchema = z
+  .object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    email: emailSchema,
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+export const resetPasswordSchema = z
+  .object({
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+export type SignInFormData = z.infer<typeof signInSchema>;
+export type SignUpFormData = z.infer<typeof signUpSchema>;
+export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+
+export interface WaitlistCount {
+  count: number;
+}
+
+
+export function getFileExtension(filename: string): string {
+  if (!filename) return "";
+  const parts = filename.split(".");
+  return parts.length > 1 ? parts.pop() || "" : "";
+}
+

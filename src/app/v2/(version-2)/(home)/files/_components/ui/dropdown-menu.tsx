@@ -18,7 +18,7 @@ import {
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@nimbus/_lib/utils";
 
 function DropdownMenu({ ...props }: ComponentProps<typeof Root>) {
 	return <Root data-slot="dropdown-menu" {...props} />;

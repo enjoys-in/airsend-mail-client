@@ -1,27 +1,63 @@
-"use client";
+//  TODO: Find a better implementation of this that provides instant breadcrumb fetching
 
-import { useMemo } from "react";
-import { useSearch } from "../_lib/router-shim";
+import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
+import type { DriveProviderClient } from "@nimbus/_utils/client";
+import { handleUnauthorizedError } from "@nimbus/_utils/client";
+import { useQuery } from "@tanstack/react-query";
 
 export interface BreadcrumbItem {
-  id: string;
-  name: string;
+	id: string;
+	name: string;
 }
 
-export function useBreadcrumb() {
-  const search = useSearch();
-  const folderId = search.folderId || "root";
+export function useBreadcrumbPath(fileId?: string) {
+	const { clientPromise } = useAccountProvider();
 
-  // Build breadcrumb items based on folderId
-  const items = useMemo<BreadcrumbItem[]>(() => {
-    if (folderId === "root") {
-      return [{ id: "root", name: "My Drive" }];
-    }
-    return [
-      { id: "root", name: "My Drive" },
-      { id: folderId, name: folderId },
-    ];
-  }, [folderId]);
+	return useQuery({
+		queryKey: ["breadcrumbs", fileId],
+		queryFn: async () => {
+			if (!fileId) return [];
 
-  return { items };
+			const breadcrumbs: BreadcrumbItem[] = [];
+			let currentId = fileId;
+
+			while (currentId !== "root") {
+				const BASE_FILE_CLIENT = await getBaseFileClient(clientPromise);
+				const response = await handleUnauthorizedError(
+					() =>
+						BASE_FILE_CLIENT[":fileId"].$get({
+							param: { fileId: currentId },
+							query: { returnedValues: ["id", "name", "parents"] },
+						}),
+					"Failed to fetch file"
+				);
+
+				const file = await response.json();
+
+				if (file.parentId !== "root") {
+					breadcrumbs.unshift({
+						id: file.id,
+						name: file.name,
+					});
+				}
+
+				currentId = file.parentId;
+			}
+
+			return breadcrumbs;
+		},
+		enabled: !!fileId || fileId !== "root",
+		placeholderData: prevData => prevData,
+	});
+}
+
+export function useBreadcrumb(fileId?: string) {
+	const query = useBreadcrumbPath(fileId);
+	return { items: query.data || [], ...query };
+}
+
+async function getBaseFileClient(clientPromise: Promise<DriveProviderClient>) {
+	const client = await clientPromise;
+	const BASE_FILE_CLIENT = client.api.files;
+	return BASE_FILE_CLIENT;
 }

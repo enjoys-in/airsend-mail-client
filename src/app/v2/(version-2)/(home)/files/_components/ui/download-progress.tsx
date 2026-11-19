@@ -1,7 +1,9 @@
+"use client";
+
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { Progress } from "@nimbus/_components/ui/progress";
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@nimbus/_lib/utils";
 
 interface DownloadProgressProps {
 	isDownloading: boolean;

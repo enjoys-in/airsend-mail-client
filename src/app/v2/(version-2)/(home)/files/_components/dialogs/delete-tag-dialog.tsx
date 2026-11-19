@@ -1,64 +1,59 @@
-"use client";
-
-import React from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
-import { Button } from "../ui/button";
-import type { Tag } from "../../_lib/files-types";
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@nimbus/_components/ui/dialog";
+import { Button } from "@nimbus/_components/ui/button";
+import type { Tag } from "@nimbus/_lib/files-types";
 
 interface DeleteTagDialogProps {
-  isOpen: boolean;
-  onOpenChange?: (open: boolean) => void;
-  onClose?: () => void;
-  onDeleteTag?: () => void;
-  onDelete?: () => void;
-  tag: Tag;
+	isOpen?: boolean;
+	open?: boolean;
+	onClose?: () => void;
+	onOpenChange?: (open: boolean) => void;
+	onDelete?: (id: string) => void;
+	onDeleteTag?: () => void;
+	tag: Tag | null;
 }
 
-export function DeleteTagDialog({
-  isOpen,
-  onOpenChange,
-  onClose,
-  onDeleteTag,
-  onDelete,
-  tag,
-}: DeleteTagDialogProps) {
-  const handleClose = () => {
-    if (onOpenChange) onOpenChange(false);
-    if (onClose) onClose();
-  };
+export function DeleteTagDialog({ isOpen, open, onClose, onOpenChange, onDelete, onDeleteTag, tag }: DeleteTagDialogProps) {
+	if (!tag) {
+		return null;
+	}
+	const isVisible = open !== undefined ? open : isOpen ?? false;
+	const handleClose = () => {
+		onClose?.();
+		onOpenChange?.(false);
+	};
 
-  const handleDelete = () => {
-    const fn = onDeleteTag || onDelete;
-    if (fn) fn();
-    handleClose();
-  };
+	const handleSubmit = () => {
+		onDelete?.(tag.id);
+		onDeleteTag?.();
+		handleClose();
+	};
 
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete Tag</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to delete the tag &quot;{tag?.name}&quot;? Files with this tag will not be deleted.
-          </DialogDescription>
-        </DialogHeader>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button variant="destructive" onClick={handleDelete}>
-            Delete Tag
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+	return (
+		<Dialog open={isVisible} onOpenChange={(o) => !o && handleClose()}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Delete Tag</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to delete the tag {tag.name} ? Be aware that this will delete all of its children as
+						well. This action cannot be undone.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button variant="outline" onClick={onClose}>
+						Cancel
+					</Button>
+					<Button variant="destructive" onClick={handleSubmit}>
+						Delete
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
 }

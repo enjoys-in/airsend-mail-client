@@ -55,7 +55,12 @@ export function FileActions({ file, fileType }: { file: File; fileType: "file" |
   };
 
   const handlePinFile = async () => {
-    pinFile(file.id);
+    pinFile({
+      fileId: file.id,
+      name: file.name,
+      type: fileType,
+      provider: providerId || "google",
+    });
     toast.success("File pinned");
   };
 

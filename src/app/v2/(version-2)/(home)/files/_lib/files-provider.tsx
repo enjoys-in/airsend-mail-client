@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FilesRouterProvider } from "./router-shim";
 import { UserInfoProvider } from "../_components/providers/user-info-provider";
 import { AccountProvider } from "../_components/providers/account-provider";
+import { DefaultAccountProvider } from "../_components/providers/default-account-provider";
 import { DownloadProvider } from "../_components/providers/download-provider";
 
 export function FilesProvider({ children }: { children: React.ReactNode }) {
@@ -26,7 +27,9 @@ export function FilesProvider({ children }: { children: React.ReactNode }) {
       <FilesRouterProvider>
         <UserInfoProvider>
           <AccountProvider>
-            <DownloadProvider>{children}</DownloadProvider>
+            <DefaultAccountProvider>
+              <DownloadProvider>{children}</DownloadProvider>
+            </DefaultAccountProvider>
           </AccountProvider>
         </UserInfoProvider>
       </FilesRouterProvider>

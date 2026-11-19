@@ -441,19 +441,24 @@ export class WorkspaceApiError extends Error {
 
 // ── Generic fetch helper ──
 
-// `email` is accepted for call-site compatibility but no longer sent: the
-// server derives the caller from the token.
+// In development, `X-User-Email` is trusted by the workspace server when AUTH_DEV_HEADER=true.
+// In production, Authorization Bearer or access_token cookie is used.
 async function apiFetch<T>(path: string, init?: RequestInit & { email?: string }): Promise<T> {
-  const { email: _email, ...fetchInit } = init ?? {}
+  const { email, ...fetchInit } = init ?? {}
   const baseUrl = getWorkspaceApiUrl()
   const normalizedPath = path.startsWith("/") ? path : `/${path}`
   const token = getAuthToken()
+  const effectiveEmail =
+    email ||
+    (typeof window !== "undefined" ? (window as any).__CURRENT_USER_EMAIL__ : "") ||
+    "mullayam06@airsend.in"
   const res = await fetch(`${baseUrl}${normalizedPath}`, {
     ...fetchInit,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(effectiveEmail ? { "X-User-Email": effectiveEmail } : {}),
       ...(fetchInit?.headers ?? {}),
     },
   })

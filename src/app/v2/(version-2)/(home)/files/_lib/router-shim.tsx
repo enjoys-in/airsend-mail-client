@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useMemo, useCallback, Suspense } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter, useSearchParams, usePathname, useParams as useNextParams } from "next/navigation";
 
 export interface DashboardSearch {
   folderId?: string;
@@ -27,6 +27,44 @@ interface RouterContextValue {
 }
 
 const RouterContext = createContext<RouterContextValue | null>(null);
+
+function mapTargetPath(rawTarget: string, params?: Record<string, string>, search?: Record<string, any>): string {
+  let target = rawTarget || "";
+  if (params) {
+    for (const [pk, pv] of Object.entries(params)) {
+      target = target.replace(`$${pk}`, pv).replace(`:${pk}`, pv);
+    }
+  }
+  if (target === "/dashboard" || target === "") {
+    target = "/v2/files";
+  } else if (target === "/dashboard/settings" || target === "/settings") {
+    target = "/v2/files/settings";
+  } else if (target === "/contributors") {
+    target = "/v2/files/contributors";
+  } else if (target === "/developers") {
+    target = "/v2/files/developers";
+  } else if (target === "/privacy") {
+    target = "/v2/files/privacy";
+  } else if (target === "/terms") {
+    target = "/v2/files/terms";
+  } else if (target.startsWith("/dashboard/")) {
+    target = target.replace("/dashboard/", "/v2/files/");
+  }
+
+  if (search) {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(search)) {
+      if (v !== undefined && v !== null && v !== false) {
+        sp.set(k, String(v));
+      }
+    }
+    const q = sp.toString();
+    if (q) {
+      target = target.includes("?") ? `${target}&${q}` : `${target}?${q}`;
+    }
+  }
+  return target;
+}
 
 function InnerFilesRouterProvider({
   children,
@@ -60,19 +98,13 @@ function InnerFilesRouterProvider({
       const nextSearch =
         typeof opts.search === "function" ? opts.search(search) : { ...search, ...(opts.search || {}) };
 
-      const sp = new URLSearchParams();
-      for (const [k, v] of Object.entries(nextSearch)) {
-        if (v !== undefined && v !== null && v !== false) {
-          sp.set(k, String(v));
-        }
-      }
+      const rawTarget = opts.to || pathname;
+      const finalUrl = mapTargetPath(rawTarget, opts.params, nextSearch);
 
-      const q = sp.toString() ? `?${sp.toString()}` : "";
-      const target = opts.to || pathname;
       if (opts.replace) {
-        router.replace(`${target}${q}`);
+        router.replace(finalUrl);
       } else {
-        router.push(`${target}${q}`);
+        router.push(finalUrl);
       }
     },
     [router, search, pathname]
@@ -148,15 +180,52 @@ export function useSearch(_options?: any): DashboardSearch {
 }
 
 export function useParams(_options?: any): Record<string, string> {
+  const nextParams = useNextParams();
   const ctx = useContext(RouterContext);
+  if (nextParams && Object.keys(nextParams).length > 0) {
+    return nextParams as Record<string, string>;
+  }
   return ctx?.params || { providerSlug: "g", accountId: "default" };
 }
 
-export function useLocation(): { pathname: string; search: Record<string, string> } {
+import NextLink from "next/link";
+
+export function useLocation(): { pathname: string; search: DashboardSearch } {
   const pathname = usePathname();
   const search = useSearch();
   return {
     pathname: pathname || "/v2/files",
-    search: search as any,
+    search,
   };
 }
+
+export function createFileRoute(_path: string) {
+  return (config: any) => {
+    const Component = config?.component;
+    return {
+      component: Component,
+      useSearch: () => useSearch(),
+      useParams: () => useParams(),
+    };
+  };
+}
+
+export function createRootRoute(_config?: any) {
+  return {};
+}
+
+export function redirect(_opts?: any) {
+  return {};
+}
+
+export function Outlet() {
+  return null;
+}
+
+export const Link = React.forwardRef<HTMLAnchorElement, any>(({ to, href, search, params, ...props }, ref) => {
+  const raw = href || to || "#";
+  const target = mapTargetPath(raw, params, search);
+  return <NextLink ref={ref} href={target} {...props} />;
+});
+Link.displayName = "Link";
+

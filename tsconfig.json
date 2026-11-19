@@ -22,6 +22,9 @@
       }
     ],
     "paths": {
+      "@nimbus/*": [
+        "./src/app/v2/(version-2)/(home)/files/*"
+      ],
       "@/*": [
         "./src/*"
       ]

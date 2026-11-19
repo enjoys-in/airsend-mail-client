@@ -1,0 +1,580 @@
+"use client";
+
+import {
+	Archive,
+	ChevronDown,
+	ChevronUp,
+	Code,
+	FileIcon,
+	FileSpreadsheet,
+	FileText,
+	Folder,
+	ImageIcon,
+	Music,
+	Presentation,
+	Video,
+} from "lucide-react";
+import {
+	createColumnHelper,
+	flexRender,
+	getCoreRowModel,
+	getSortedRowModel,
+	useReactTable,
+	type Row,
+	type SortingState,
+} from "@tanstack/react-table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@nimbus/_components/ui/table";
+import { DownloadProvider } from "@nimbus/_components/providers/download-provider";
+import { useNavigate, useSearch } from "@nimbus/_lib/router-shim";
+import { useDraggable, useDroppable } from "@dnd-kit/react";
+import { pointerIntersection } from "@dnd-kit/collision";
+import DragNDropUploader from "./drag-n-drop-uploader";
+import { useMemo, useState, type JSX } from "react";
+import { Button } from "@nimbus/_components/ui/button";
+import { formatFileSize } from "@nimbus/_lib/files-types";
+import { PdfIcon } from "@nimbus/_components/icons";
+import { FileActions } from "./file-actions";
+import type { File } from "@nimbus/_lib/files-types";
+import { useTags } from "@nimbus/_hooks/useTags";
+import { FileTags } from "./file-tags";
+import { format } from "date-fns";
+import { cn } from "@nimbus/_lib/utils";
+
+// Utility function for date formatting
+const formatDate = (dateString: string | null): string => {
+	if (!dateString) return "—";
+
+	const date = new Date(dateString);
+	const now = new Date();
+	const diffInMs = now.getTime() - date.getTime();
+	const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+	const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+
+	// Less than 1 hour: show minutes
+	if (diffInHours < 1) {
+		if (diffInMinutes < 1) {
+			return "just now";
+		}
+		return `${diffInMinutes} min ago`;
+	}
+
+	// Less than 24 hours: show hours
+	if (diffInHours < 24) {
+		return `${diffInHours} hour${diffInHours === 1 ? "" : "s"} ago`;
+	}
+
+	// 24 hours or more: show full date
+	return format(date, "MMM d, yyyy");
+};
+
+interface FileTableProps {
+	files: File[];
+	isLoading: boolean;
+	refetch: () => void;
+	error: Error | null;
+}
+
+const columnHelper = createColumnHelper<File>();
+
+export function FileTable({ files, isLoading, refetch, error }: FileTableProps) {
+	const { tags } = useTags(files[0]?.parentId);
+	const navigate = useNavigate({ from: "/dashboard/$providerSlug/$accountId" });
+	const searchParams = useSearch({ from: "/_protected/dashboard/$providerSlug/$accountId" });
+	const [sorting, setSorting] = useState<SortingState>([]);
+
+	const safeFiles = useMemo(() => {
+		if (isLoading || !files || !Array.isArray(files)) {
+			return [];
+		}
+		return files;
+	}, [files, isLoading]);
+
+	const filteredFiles = useMemo(() => {
+		if (!safeFiles.length) return [];
+
+		const searchType = searchParams.type;
+		if (!searchType) return safeFiles;
+
+		return safeFiles.filter(file => {
+			const mimeType = file.mimeType?.toLowerCase() ?? "";
+			const fileName = file.name?.toLowerCase() ?? "";
+
+			switch (searchType) {
+				case "folder":
+					return mimeType === "application/vnd.google-apps.folder" || mimeType === "folder";
+				case "document":
+					return (
+						// Google Docs
+						mimeType.includes("application/vnd.google-apps.document") ||
+						mimeType.includes("application/vnd.google-apps.spreadsheet") ||
+						mimeType.includes("application/vnd.google-apps.presentation") ||
+						// Microsoft Office
+						mimeType.includes("officedocument") ||
+						mimeType.includes("msword") ||
+						// PDFs
+						mimeType.includes("pdf") ||
+						// Text files
+						mimeType.includes("text/") ||
+						// Common document extensions
+						/\.(doc|docx|xls|xlsx|ppt|pptx|pdf|txt|rtf|odt|ods|odp)$/i.test(fileName)
+					);
+				case "media":
+					return (
+						// Images
+						mimeType.includes("image/") ||
+						// Videos
+						mimeType.includes("video/") ||
+						// Audio
+						mimeType.includes("audio/") ||
+						// Common media extensions
+						/\.(jpg|jpeg|png|gif|bmp|webp|mp4|webm|mov|mp3|wav|ogg)$/i.test(fileName)
+					);
+				default:
+					return true;
+			}
+		});
+	}, [safeFiles, searchParams.type]);
+
+	const handleRowDoubleClick = (file: File): void => {
+		const fileType = file.mimeType.includes("folder") || file.mimeType === "folder" ? "folder" : "file";
+
+		if (fileType === "folder") {
+			navigate({
+				search: { ...searchParams, folderId: file.id },
+			});
+		}
+	};
+
+	const columns = useMemo(
+		() => [
+			columnHelper.accessor("name", {
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+						className="h-8 w-full justify-start px-1 text-left text-neutral-500 hover:text-neutral-900 has-[>svg]:px-0 dark:text-neutral-500 dark:hover:bg-transparent dark:hover:text-neutral-300"
+					>
+						Name
+						<div className="w-6">
+							{column.getIsSorted() === "asc" && <ChevronUp className="w-6" />}
+							{column.getIsSorted() === "desc" && <ChevronDown className="w-6" />}
+						</div>
+					</Button>
+				),
+				cell: ({ getValue, row }) => (
+					<div className="flex items-center gap-2 pl-1">
+						<div className="flex-shrink-0">{getModernFileIcon(row.original.mimeType, row.original.name)}</div>
+						<span>{getValue()}</span>
+					</div>
+				),
+			}),
+
+			columnHelper.accessor("modifiedTime", {
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+						className="h-8 w-full justify-start px-1 text-left text-neutral-500 hover:text-neutral-900 has-[>svg]:px-0 dark:text-neutral-500 dark:hover:bg-transparent dark:hover:text-neutral-300"
+					>
+						Date Modified
+						<div className="w-6">
+							{column.getIsSorted() === "asc" && <ChevronUp className="w-6" />}
+							{column.getIsSorted() === "desc" && <ChevronDown className="w-6" />}
+						</div>
+					</Button>
+				),
+				cell: ({ getValue }) => <div className="pl-1">{formatDate(getValue())}</div>,
+				sortingFn: (rowA, rowB) => {
+					const a = rowA.original.modifiedTime;
+					const b = rowB.original.modifiedTime;
+					if (!a && !b) return 0;
+					if (!a) return 1;
+					if (!b) return -1;
+					return new Date(a).getTime() - new Date(b).getTime();
+				},
+				size: 125,
+				maxSize: 125,
+				minSize: 125,
+			}),
+
+			// columnHelper.display({
+			// 	id: "owner",
+			// 	header: ({ column }) => (
+			// 		<Button
+			// 			variant="ghost"
+			// 			onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+			// 			className="h-8 w-full justify-start px-0 text-left text-neutral-500 hover:text-neutral-300 has-[>svg]:px-0 dark:hover:bg-transparent"
+			// 		>
+			// 			Owner
+			// 			<div className="w-6">
+			// 				{column.getIsSorted() === "asc" && <ChevronUp className="w-6" />}
+			// 				{column.getIsSorted() === "desc" && <ChevronDown className="w-6" />}
+			// 			</div>
+			// 		</Button>
+			// 	),
+			// 	cell: () => <div className="text-neutral-600 dark:text-neutral-400">You</div>,
+			// }),
+
+			columnHelper.accessor("size", {
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+						className="h-8 w-full justify-start px-1 text-left text-neutral-500 hover:text-neutral-900 has-[>svg]:px-0 dark:text-neutral-500 dark:hover:bg-transparent dark:hover:text-neutral-300"
+					>
+						Size
+						<div className="w-6">
+							{column.getIsSorted() === "asc" && <ChevronUp className="w-6" />}
+							{column.getIsSorted() === "desc" && <ChevronDown className="w-6" />}
+						</div>
+					</Button>
+				),
+				cell: ({ getValue }) => <div className="pl-1">{formatFileSize(Number(getValue()))}</div>,
+				size: 125,
+				maxSize: 125,
+				minSize: 125,
+			}),
+
+			columnHelper.accessor("tags", {
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+						className="h-8 w-full justify-start px-1 text-left text-neutral-500 hover:text-neutral-900 has-[>svg]:px-0 dark:text-neutral-500 dark:hover:bg-transparent dark:hover:text-neutral-300"
+					>
+						Tags
+						<div className="w-6">
+							{column.getIsSorted() === "asc" && <ChevronUp className="w-6" />}
+							{column.getIsSorted() === "desc" && <ChevronDown className="w-6" />}
+						</div>
+					</Button>
+				),
+				cell: ({ row }) => <FileTags file={row.original} availableTags={tags} refetch={refetch} />,
+				size: 150,
+				maxSize: 150,
+				minSize: 150,
+			}),
+
+			columnHelper.display({
+				id: "actions",
+				header: "",
+				cell: ({ row }) => {
+					const file = row.original;
+					const fileType = file.mimeType.includes("folder") || file.mimeType === "folder" ? "folder" : "file";
+
+					return (
+						<DownloadProvider>
+							<FileActions file={row.original} fileType={fileType} />
+						</DownloadProvider>
+					);
+				},
+				size: 50,
+				maxSize: 50,
+				minSize: 50,
+			}),
+		],
+		[refetch, tags]
+	);
+
+	const table = useReactTable({
+		data: searchParams.type ? filteredFiles : safeFiles,
+		columns,
+		state: {
+			sorting,
+		},
+		onSortingChange: setSorting,
+		getCoreRowModel: getCoreRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+	});
+
+	return (
+		<div className="relative flex h-full w-full flex-col justify-start">
+			<DragNDropUploader>
+				{/* h-0 is required to make the table scrollable */}
+				<div className="scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-accent/70 scrollbar-track-transparent scrollbar-hover:scrollbar-thumb-accent scrollbar-w-2 scrollbar-h-2 h-0 min-h-full w-full overflow-auto overflow-y-scroll pb-5">
+					<Table>
+						<TableHeader className="select-none hover:bg-transparent">
+							{table.getHeaderGroups().map(headerGroup => (
+								<TableRow key={headerGroup.id} className="h-6 select-none hover:bg-transparent">
+									{headerGroup.headers.map(header => (
+										<TableHead
+											key={header.id}
+											className="whitespace-nowrap select-none"
+											style={{
+												width:
+													header.id === "tags" || header.id === "size" || header.id === "modifiedTime"
+														? `${header.getSize()}px`
+														: undefined,
+											}}
+										>
+											{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+										</TableHead>
+									))}
+								</TableRow>
+							))}
+						</TableHeader>
+						<TableBody className="select-none">
+							{table.getRowModel().rows.map(row => (
+								<DroppableTableRow key={row.id} row={row} handleRowDoubleClick={handleRowDoubleClick} />
+							))}
+						</TableBody>
+					</Table>
+				</div>
+			</DragNDropUploader>
+		</div>
+	);
+}
+
+function DroppableTableRow({
+	row,
+	handleRowDoubleClick,
+}: {
+	row: Row<File>;
+	handleRowDoubleClick: (file: File) => void;
+}) {
+	const { ref: droppableRef, isDropTarget } = useDroppable({
+		id: `droppable-${row.id}`,
+		accept: "files",
+		data: { id: row.original.id },
+		collisionDetector: pointerIntersection,
+	});
+
+	const { ref: draggableRef, isDragging } = useDraggable({
+		id: `draggable-${row.id}`,
+		type: "files",
+		data: { id: row.original.id, parentId: row.original.parentId },
+	});
+
+	const isFolder = row.original.type === "folder" || row.original.mimeType.includes("folder");
+
+	return (
+		<>
+			<TableRow
+				className={cn(
+					"h-8 rounded-md transition-all hover:bg-transparent",
+					isDragging && "z-[100] scale-x-90 rounded-md bg-blue-500/20 text-blue-500 ring-2 ring-blue-500",
+					isDropTarget && "scale-x-95 rounded-md bg-blue-500/20 text-blue-500 ring-2 ring-blue-500"
+				)}
+				onDoubleClick={() => handleRowDoubleClick(row.original)}
+				ref={node => {
+					if (isFolder) {
+						droppableRef(node);
+					}
+					draggableRef(node);
+				}}
+			>
+				{row.getVisibleCells().map(cell => (
+					<TableCell
+						key={cell.id}
+						className="h-10 py-0 whitespace-nowrap"
+						style={{
+							width: cell.column.id === "tags" || cell.column.id === "actions" ? "50px" : undefined,
+						}}
+					>
+						{flexRender(cell.column.columnDef.cell, cell.getContext())}
+					</TableCell>
+				))}
+			</TableRow>
+		</>
+	);
+}
+
+export default DroppableTableRow;
+
+/**
+ * Get modern Lucide React icon for file type
+ */
+export function getModernFileIcon(mimeType?: string, filename?: string) {
+	if (!mimeType) {
+		if (filename) {
+			const ext = filename.split(".").pop()?.toLowerCase();
+			return getIconByExtension(ext || "");
+		}
+		return <FileText className="h-4 w-4 text-blue-500" />;
+	}
+
+	// Folder
+	if (mimeType.includes("folder")) {
+		return <Folder className="h-4 w-4 text-blue-500" />;
+	}
+
+	// Images
+	if (mimeType.startsWith("image/")) {
+		return <ImageIcon className="h-4 w-4 text-green-500" />;
+	}
+
+	// Videos
+	if (mimeType.startsWith("video/")) {
+		return <Video className="h-4 w-4 text-red-500" />;
+	}
+
+	// Audio
+	if (mimeType.startsWith("audio/")) {
+		return <Music className="h-4 w-4 text-purple-500" />;
+	}
+
+	// Google Workspace files
+	if (mimeType === "application/vnd.google-apps.document") {
+		return <FileText className="h-4 w-4 text-blue-600" />;
+	}
+	if (mimeType === "application/vnd.google-apps.spreadsheet") {
+		return <FileSpreadsheet className="h-4 w-4 text-green-600" />;
+	}
+	if (mimeType === "application/vnd.google-apps.presentation") {
+		return <Presentation className="h-4 w-4 text-orange-500" />;
+	}
+
+	// Archive files
+	if (isArchiveFile(mimeType)) {
+		return <Archive className="h-4 w-4 text-yellow-600" />;
+	}
+
+	// Code files
+	if (isCodeFile(mimeType, filename)) {
+		return <Code className="h-4 w-4 text-green-600" />;
+	}
+
+	// Office documents
+	if (isOfficeFile(mimeType)) {
+		return <FileText className="h-4 w-4 text-blue-500" />;
+	}
+
+	// PDF
+	if (mimeType === "application/pdf") {
+		return <PdfIcon className="h-4 w-4" />;
+	}
+
+	// Text files
+	if (mimeType.startsWith("text/")) {
+		return <FileText className="h-4 w-4 text-gray-600" />;
+	}
+
+	// Default
+	return <FileIcon className="h-4 w-4 text-gray-500" />;
+}
+
+/**
+ * Get icon by file extension (fallback method)
+ */
+function getIconByExtension(extension: string) {
+	const iconMap: Record<string, JSX.Element> = {
+		// Images
+		jpg: <ImageIcon className="h-4 w-4 text-green-500" />,
+		jpeg: <ImageIcon className="h-4 w-4 text-green-500" />,
+		png: <ImageIcon className="h-4 w-4 text-green-500" />,
+		gif: <ImageIcon className="h-4 w-4 text-green-500" />,
+		svg: <ImageIcon className="h-4 w-4 text-green-500" />,
+		webp: <ImageIcon className="h-4 w-4 text-green-500" />,
+		// Videos
+		mp4: <Video className="h-4 w-4 text-red-500" />,
+		avi: <Video className="h-4 w-4 text-red-500" />,
+		mov: <Video className="h-4 w-4 text-red-500" />,
+		mkv: <Video className="h-4 w-4 text-red-500" />,
+		webm: <Video className="h-4 w-4 text-red-500" />,
+		// Audio
+		mp3: <Music className="h-4 w-4 text-purple-500" />,
+		wav: <Music className="h-4 w-4 text-purple-500" />,
+		flac: <Music className="h-4 w-4 text-purple-500" />,
+		aac: <Music className="h-4 w-4 text-purple-500" />,
+		// Documents
+		pdf: <PdfIcon className="h-4 w-4" />,
+		doc: <FileText className="h-4 w-4 text-blue-500" />,
+		docx: <FileText className="h-4 w-4 text-blue-500" />,
+		txt: <FileText className="h-4 w-4 text-gray-600" />,
+		// Spreadsheets
+		xls: <FileSpreadsheet className="h-4 w-4 text-green-600" />,
+		xlsx: <FileSpreadsheet className="h-4 w-4 text-green-600" />,
+		csv: <FileSpreadsheet className="h-4 w-4 text-green-600" />,
+		// Presentations
+		ppt: <Presentation className="h-4 w-4 text-orange-500" />,
+		pptx: <Presentation className="h-4 w-4 text-orange-500" />,
+		// Code
+		js: <Code className="h-4 w-4 text-yellow-500" />,
+		ts: <Code className="h-4 w-4 text-blue-600" />,
+		jsx: <Code className="h-4 w-4 text-cyan-500" />,
+		tsx: <Code className="h-4 w-4 text-cyan-600" />,
+		html: <Code className="h-4 w-4 text-orange-600" />,
+		css: <Code className="h-4 w-4 text-blue-400" />,
+		py: <Code className="h-4 w-4 text-yellow-600" />,
+		java: <Code className="h-4 w-4 text-red-600" />,
+		cpp: <Code className="h-4 w-4 text-blue-700" />,
+		c: <Code className="h-4 w-4 text-blue-700" />,
+		// Archives
+		zip: <Archive className="h-4 w-4 text-yellow-600" />,
+		rar: <Archive className="h-4 w-4 text-yellow-600" />,
+		"7z": <Archive className="h-4 w-4 text-yellow-600" />,
+		tar: <Archive className="h-4 w-4 text-yellow-600" />,
+		gz: <Archive className="h-4 w-4 text-yellow-600" />,
+	};
+
+	return iconMap[extension] || <FileIcon className="h-4 w-4 text-gray-500" />;
+}
+
+// Helper functions for file type detection
+function isCodeFile(mimeType: string, filename?: string): boolean {
+	const codeTypes = [
+		"text/javascript",
+		"application/javascript",
+		"text/html",
+		"text/css",
+		"application/json",
+		"text/xml",
+		"application/xml",
+	];
+
+	if (codeTypes.includes(mimeType)) {
+		return true;
+	}
+
+	if (filename) {
+		const ext = filename.split(".").pop()?.toLowerCase();
+		const codeExtensions = [
+			"js",
+			"ts",
+			"jsx",
+			"tsx",
+			"html",
+			"css",
+			"json",
+			"xml",
+			"py",
+			"java",
+			"cpp",
+			"c",
+			"cs",
+			"php",
+			"rb",
+			"go",
+			"rs",
+			"swift",
+			"kt",
+			"dart",
+		];
+		return codeExtensions.includes(ext || "");
+	}
+
+	return false;
+}
+
+function isOfficeFile(mimeType: string): boolean {
+	const officeTypes = [
+		"application/msword",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		"application/vnd.ms-excel",
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		"application/vnd.ms-powerpoint",
+		"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+	];
+	return officeTypes.includes(mimeType);
+}
+
+function isArchiveFile(mimeType: string): boolean {
+	const archiveTypes = [
+		"application/zip",
+		"application/x-rar-compressed",
+		"application/x-7z-compressed",
+		"application/x-tar",
+		"application/gzip",
+	];
+	return archiveTypes.includes(mimeType);
+}

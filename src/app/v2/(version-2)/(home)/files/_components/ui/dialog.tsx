@@ -2,7 +2,7 @@ import { Close, Content, Description, Overlay, Portal, Root, Title, Trigger } fr
 import { ArrowLeftIcon, XIcon } from "lucide-react";
 
 import type { ComponentProps } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@nimbus/_lib/utils";
 
 function Dialog({ ...props }: ComponentProps<typeof Root>) {
 	return <Root data-slot="dialog" {...props} />;
