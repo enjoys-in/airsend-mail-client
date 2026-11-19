@@ -36,6 +36,7 @@ import TimeSeparator, { getDateLabel } from "./TimeSeparator";
 import { renderContentWithMentions } from "./MentionHighlight";
 import MobileWorkspaceSidebar from "./MobileWorkspaceSidebar";
 import { PollCard } from "./PollCard";
+import { AttachmentList } from "./FileCard";
 import AnnouncementBanner from "./AnnouncementBanner";
 import { MessageContextMenu, WorkspaceContextMenu } from "./MessageContextMenu";
 import { getDMPartner } from "../_lib/permissions";
@@ -756,22 +757,8 @@ function MessageBubble({
             </div>
           )}
 
-          {/* Attachments */}
-          {message.attachments.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-2">
-              {message.attachments.map((att) => (
-                <div
-                  key={att.id}
-                  className="flex items-center gap-2 rounded-md border border-border/40 bg-accent/30 px-3 py-2 text-xs"
-                >
-                  <span className="truncate max-w-[200px]">{att.name}</span>
-                  <span className="text-muted-foreground">
-                    {formatFileSize(att.size)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Attachments (bytes live in the files service; the card downloads by file id) */}
+          <AttachmentList attachments={message.attachments} />
 
           {/* Reactions */}
           {message.reactions.length > 0 && (
@@ -865,12 +852,6 @@ function groupByDate(
     label: getDateLabel(new Date(key)),
     messages: msgs,
   }));
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatRelativeTime(date: Date): string {
