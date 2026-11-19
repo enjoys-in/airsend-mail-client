@@ -13,7 +13,6 @@ import {
   DoorOpen,
   Crown,
   Clock,
-  HardDrive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -68,7 +67,6 @@ export default function TeamSettingsLayout({ children }: { children: React.React
     { href: `${base}/roles`, label: "Roles", icon: Shield, show: true, count: s.roles.length || undefined },
     { href: `${base}/channels`, label: "Channels & Permissions", icon: Hash, show: canSeeChannels },
     { href: `${base}/integrations`, label: "Integrations", icon: Webhook, show: s.can("manage_integrations") },
-    { href: `${base}/storage`, label: "Storage", icon: HardDrive, show: true },
     { href: `${base}/danger`, label: s.isOwner ? "Delete Team" : "Leave Team", icon: DoorOpen, show: true, danger: true },
   ].filter((n) => n.show);
 
