@@ -37,6 +37,7 @@ import { renderContentWithMentions } from "./MentionHighlight";
 import MobileWorkspaceSidebar from "./MobileWorkspaceSidebar";
 import { PollCard } from "./PollCard";
 import { AttachmentList } from "./FileCard";
+import DMThread from "./DMThread";
 import AnnouncementBanner from "./AnnouncementBanner";
 import { MessageContextMenu, WorkspaceContextMenu } from "./MessageContextMenu";
 import { getDMPartner } from "../_lib/permissions";
@@ -318,6 +319,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
                   This is the beginning of your conversation.
                 </p>
               </div>
+              <DMThread dmId={dm.id} currentUserId={currentUserId} />
               <div ref={endRef} />
             </div>
           </ScrollArea>
