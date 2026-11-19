@@ -236,6 +236,14 @@ export class API {
     static updateMemberServiceRoles(id: string, service_roles: Record<string, "admin" | "member" | null>) {
         return instance.put(adminRoutes(`/member/${id}`), { service_roles })
     }
+    /** Seeds the roles one member is missing (Files / Tasks / Workspace); existing roles are left as they are. */
+    static syncMember(id: string) {
+        return instance.post(adminRoutes(`/member/${id}/sync`))
+    }
+    /** The same for every member (optionally only of one organization). */
+    static syncMembers(orgId?: string) {
+        return instance.post(adminRoutes(`/members/sync`), orgId ? { org_id: orgId } : {})
+    }
     static removeMember(id: string) {
         return instance.delete(adminRoutes(`/member/${id}`))
     }
