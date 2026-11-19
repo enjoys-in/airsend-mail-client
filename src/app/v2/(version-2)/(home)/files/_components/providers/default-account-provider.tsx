@@ -1,9 +1,7 @@
-"use client";
-
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { DriveProvider, DriveProviderSlug } from "@nimbus/_lib/files-types";
-import { useNavigate, useLocation } from "@nimbus/_lib/router-shim";
-import { providerToSlug, slugToProvider } from "@nimbus/_lib/files-types";
+import type { DriveProvider, DriveProviderSlug } from "@nimbus/_packages/shared";
+import { useNavigate, useLocation } from "@tanstack/react-router";
+import { providerToSlug, slugToProvider } from "@nimbus/_packages/shared";
 import { useUserInfoProvider } from "./user-info-provider";
 
 interface AccountProvider {
@@ -64,7 +62,7 @@ export function DefaultAccountProvider({ children }: { children: ReactNode }) {
 	}, [user, userInfoError, userInfoIsPending]);
 
 	useEffect(() => {
-		if (pathname !== "/dashboard" && pathname !== "/v2/files") {
+		if (pathname !== "/dashboard") {
 			return;
 		}
 		navigateToProvider();
@@ -77,7 +75,7 @@ export function DefaultAccountProvider({ children }: { children: ReactNode }) {
 		if (!user || !providerSlug || !accountId) {
 			return;
 		}
-		const path = `/v2/files/${providerSlug}/${accountId}`;
+		const path = `/dashboard/${providerSlug}/${accountId}`;
 		if (pathname !== path) {
 			navigate({ to: path as any });
 		}
