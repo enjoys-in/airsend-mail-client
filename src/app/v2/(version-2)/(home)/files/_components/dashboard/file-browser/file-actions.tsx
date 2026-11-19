@@ -6,14 +6,10 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuPortal,
 	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@nimbus/_components/ui/dropdown-menu";
-import { Copy, Download, ExternalLink, FileIcon, FileText, MoreVertical, Pin } from "lucide-react";
+import { Copy, Download, ExternalLink, MoreVertical, Pin } from "lucide-react";
 import { useDeleteFile, useDownloadFile, useUpdateFile } from "@nimbus/_hooks/useFileOperations";
 import { useDownloadContext } from "@nimbus/_components/providers/download-provider";
 import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
@@ -33,7 +29,6 @@ export function FileActions({ file, fileType }: { file: File; fileType: "file" |
 	const { startDownload, updateProgress, completeDownload, errorDownload } = useDownloadContext();
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 	const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-	const [mimeDownloadType, setMimeDownloadType] = useState<string | null>(null);
 	const { providerId } = useAccountProvider();
 
 	const handleDelete = async () => {
@@ -72,17 +67,6 @@ export function FileActions({ file, fileType }: { file: File; fileType: "file" |
 		});
 	};
 
-	const getGoogleWorkspaceExportMimeType = (mimeType: string): string | undefined => {
-		const exportMimeTypes: Record<string, string> = {
-			"application/vnd.google-apps.document": "application/pdf",
-			"application/vnd.google-apps.spreadsheet": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-			"application/vnd.google-apps.presentation":
-				"application/vnd.openxmlformats-officedocument.presentationml.presentation",
-		};
-
-		return exportMimeTypes[mimeType];
-	};
-
 	const handleDownloadError = (error: unknown, fileId: string) => {
 		const errorMessage = error instanceof Error ? error.message : "Download failed";
 		if (errorDownload) {
@@ -96,66 +80,6 @@ export function FileActions({ file, fileType }: { file: File; fileType: "file" |
 		if (completeDownload) completeDownload(fileId);
 	};
 
-	// TODO:(fix): this is just binary data. also downloaded as .txt
-	const handleGoogleWorkspaceDownload = async () => {
-		if (!file.mimeType?.startsWith("application/vnd.google-apps.") || !downloadFile) {
-			return false;
-		}
-
-		const exportMimeType = mimeDownloadType || getGoogleWorkspaceExportMimeType(file.mimeType);
-		if (!exportMimeType) return false;
-
-		try {
-			downloadFile(
-				{
-					fileId: file.id,
-					exportMimeType,
-					fileName: file.name,
-					onProgress: progress => updateProgress?.(file.id, progress),
-				},
-				{
-					onSuccess: () => handleDownloadSuccess(file.id),
-					onError: error => handleDownloadError(error, file.id),
-				}
-			);
-			return true;
-		} catch (error) {
-			handleDownloadError(error, file.id);
-			return false;
-		}
-	};
-
-	// TODO:(fix): this is just binary data same as the normal download. also downloaded as .txt
-	const handleDownloadAsPDF = async () => {
-		setMimeDownloadType("application/pdf");
-		await handleGoogleWorkspaceDownload();
-	};
-
-	// TODO:(fix): this is somehow a PDF??? also downloaded as .txt
-	const handleDownloadAsDocx = async () => {
-		setMimeDownloadType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-		await handleGoogleWorkspaceDownload();
-	};
-
-	const handleDirectDownload = async () => {
-		// TODO:(session): get provider from session
-		// const isGoogleProvider = provider === "google";
-
-		// TODO:(provider context): figure this out when we implement multiSession / multiProvider support
-		// console.log({ isGoogleProvider, provider });
-
-		// if (isGoogleProvider) {
-		// 	const success = await handleGoogleWorkspaceDownload();
-		// 	if (success) return true;
-		// }
-
-		if (!file.webContentLink) return false;
-
-		window.open(file.webContentLink, "_blank");
-		handleDownloadSuccess(file.id);
-		return true;
-	};
-
 	const handleDownload = async () => {
 		if (fileType === "folder") {
 			return toast.error("Cannot download folders");
@@ -165,24 +89,25 @@ export function FileActions({ file, fileType }: { file: File; fileType: "file" |
 		startDownload?.(file.id, file.name);
 
 		try {
-			const isGoogleWorkspaceFile = file.mimeType?.startsWith("application/vnd.google-apps.");
-
-			// Try Google Workspace export first if applicable
-			if (isGoogleWorkspaceFile) {
-				const success = await handleGoogleWorkspaceDownload();
-				if (success) return true;
+			// A provider-supplied direct link wins; otherwise the backend streams the file.
+			if (file.webContentLink) {
+				window.open(file.webContentLink, "_blank");
+				handleDownloadSuccess(file.id);
+				return true;
 			}
 
-			// Fallback to direct download
-			if (await handleDirectDownload()) return true;
-
-			// If we get here, no download method was successful
-			const errorMsg = "Download not available for this file";
-			if (errorDownload) {
-				errorDownload(file.id, errorMsg);
-			} else {
-				toast.error(errorMsg);
-			}
+			downloadFile(
+				{
+					fileId: file.id,
+					fileName: file.name,
+					onProgress: progress => updateProgress?.(file.id, progress),
+				},
+				{
+					onSuccess: () => handleDownloadSuccess(file.id),
+					onError: error => handleDownloadError(error, file.id),
+				}
+			);
+			return true;
 		} catch (error) {
 			handleDownloadError(error, file.id);
 		}
@@ -216,42 +141,10 @@ export function FileActions({ file, fileType }: { file: File; fileType: "file" |
 							</DropdownMenuItem>
 						)}
 						{fileType === "file" && (
-							<>
-								{file.mimeType?.startsWith("application/vnd.google-apps.") ? (
-									<DropdownMenuSub>
-										<DropdownMenuSubTrigger className="cursor-pointer">
-											<Download className="mr-2 h-4 w-4 text-neutral-500 dark:text-neutral-400" />
-											Download As...
-										</DropdownMenuSubTrigger>
-										<DropdownMenuPortal>
-											<DropdownMenuSubContent>
-												<DropdownMenuItem onClick={handleDownload} className="cursor-pointer">
-													<FileIcon className="mr-2 h-4 w-4" />
-													Original Format
-												</DropdownMenuItem>
-												<DropdownMenuItem onClick={handleDownloadAsPDF} className="cursor-pointer">
-													<FileText className="mr-2 h-4 w-4" />
-													PDF Document
-												</DropdownMenuItem>
-												<DropdownMenuItem onClick={handleDownloadAsDocx} className="cursor-pointer">
-													<FileText className="mr-2 h-4 w-4" />
-													Microsoft Word
-												</DropdownMenuItem>
-											</DropdownMenuSubContent>
-										</DropdownMenuPortal>
-									</DropdownMenuSub>
-								) : file.webContentLink ? (
-									<DropdownMenuItem onClick={handleDirectDownload} className="cursor-pointer">
-										<Download className="mr-2 h-4 w-4" />
-										Direct Download
-									</DropdownMenuItem>
-								) : (
-									<DropdownMenuItem onClick={handleDownload} className="cursor-pointer">
-										<Download className="mr-4 w-4" />
-										Download
-									</DropdownMenuItem>
-								)}
-							</>
+							<DropdownMenuItem onClick={handleDownload} className="cursor-pointer">
+								<Download className="mr-2 h-4 w-4" />
+								Download
+							</DropdownMenuItem>
 						)}
 						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={() => setIsRenameDialogOpen(true)} className="cursor-pointer">
