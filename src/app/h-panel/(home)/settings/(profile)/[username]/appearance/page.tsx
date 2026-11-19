@@ -1,18 +1,14 @@
-import * as React from "react"; 
-import { Separator } from "@/components/ui/separator";
+import * as React from "react";
+import { PageHeader } from "@/components/h-panel/kit";
 import { AppearanceForm } from "./appearance-form";
 
-function Appearancepage() { 
+function Appearancepage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Appearance</h2>
-        <p className="text-sm text-muted-foreground">
-          Customize the appearance of the app. Automatically switch between day
-          and night themes.
-        </p>
-      </div>
-      <Separator />
+    <div className="max-w-3xl">
+      <PageHeader
+        title="Appearance"
+        description="Customize the appearance of the app. Automatically switch between day and night themes."
+      />
       <AppearanceForm />
     </div>
   );
