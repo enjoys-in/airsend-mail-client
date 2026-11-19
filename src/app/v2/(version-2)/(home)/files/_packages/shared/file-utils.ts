@@ -50,7 +50,7 @@ export function getFileExtension(filename: string): string {
 
 // Convert MIME type to internal file type
 export function mimeTypeToFileType(mimeType: string): string {
-	if (mimeType === "application/vnd.google-apps.folder") {
+	if (mimeType === "folder") {
 		return "folder";
 	}
 
