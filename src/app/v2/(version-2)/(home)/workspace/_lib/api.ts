@@ -1197,7 +1197,7 @@ export const workspaceApi = {
   /** Attach an already-uploaded file to a DM message. */
   addDMAttachmentRef: (dmId: string, messageId: string, ref: AttachmentRef, email: string) => {
     if (!isValidUUID(dmId) || !isValidUUID(messageId)) return Promise.reject(new Error("Invalid DM or message UUID"))
-    return apiFetch<ServerAttachment>(`/api/v1/dm/${dmId}/messages/${messageId}/attachments/ref`, {
+    return apiFetch<ServerAttachment>(`/api/v1/dms/${dmId}/messages/${messageId}/attachments/ref`, {
       method: "POST",
       body: JSON.stringify(ref),
       email,
