@@ -258,6 +258,20 @@ export interface Reaction {
   userIds: string[];
 }
 
+/** A file being uploaded to the files service (and then attached to a message / the team Files tab). */
+export interface PendingUpload {
+  id: string;
+  contextType: "channel" | "dm" | "team";
+  /** Channel / DM conversation / team uuid the file is going to. */
+  contextId: string;
+  name: string;
+  size: number;
+  /** 0-100 while uploading. */
+  progress: number;
+  status: "uploading" | "sending" | "error";
+  error?: string;
+}
+
 export interface MessageAttachment {
   id: string;
   name: string;
