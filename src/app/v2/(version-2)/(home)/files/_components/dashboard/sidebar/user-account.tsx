@@ -8,11 +8,11 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@nimbus/_components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@nimbus/_components/ui/avatar";
 import { ArrowLeft, ChevronsUpDown } from "lucide-react";
-import { authClient } from "@nimbus/_packages/auth/auth-client";
+import { useSession } from "@nimbus/_lib/session";
 import Profile from "@nimbus/_components/user-profile";
 
 export default function UserAccount() {
-	const { data: session, isPending } = authClient.useSession();
+	const { data: session, isPending } = useSession();
 
 	const userName = session?.user?.name;
 	const userEmail = session?.user?.email;
