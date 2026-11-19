@@ -1,11 +1,9 @@
-"use client";
-
 import { SidebarFooter, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@nimbus/_components/ui/sidebar";
 import { Progress } from "@nimbus/_components/ui/progress";
 import { useDriveInfo } from "@nimbus/_hooks/useDriveOps";
 import { Moon, Settings, Sun } from "lucide-react";
-import { formatFileSize } from "@nimbus/_lib/files-types";
-import { Link } from "@nimbus/_lib/router-shim";
+import { formatFileSize } from "@nimbus/_packages/shared";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
