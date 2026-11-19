@@ -588,8 +588,9 @@ html:has(.hpanel-root) :is(.font-extrabold, .font-black) { font-weight: 600; }
 html:has(.hpanel-root) .font-bold { font-weight: 600; }
 html:has(.hpanel-root) .font-semibold { font-weight: 550; }
 html:has(.hpanel-root) .font-medium { font-weight: 480; }
-html:has(.hpanel-root) :is(h1, h2, h3, h4) { font-weight: 550; letter-spacing: -0.012em; }
-/* a legacy global `h1 { color: #333 }` (editor template) made page titles near-invisible on dark backgrounds */
-html:has(.hpanel-root) h1 { color: inherit; }
-html:has(.hpanel-root) :is(th, label) { font-weight: 480; }
-html:has(.hpanel-root) :is(input, textarea, select, button) { font-weight: inherit; }
+:where(html:has(.hpanel-root)) :is(h1, h2, h3, h4) { font-weight: 550; letter-spacing: -0.012em; }
+/* (the :where() scope keeps these element rules at the lowest specificity so utility classes still override them)
+ * a legacy global `h1 { color: #333 }` (editor template) made page titles near-invisible on dark backgrounds */
+:where(html:has(.hpanel-root)) h1 { color: inherit; }
+:where(html:has(.hpanel-root)) :is(th, label) { font-weight: 480; }
+:where(html:has(.hpanel-root)) :is(input, textarea, select, button) { font-weight: inherit; }
