@@ -1,9 +1,4 @@
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Pill, Section } from "@/components/h-panel/kit";
 
 interface ServerDetailsProps {
   selectedAccount: {
@@ -16,75 +11,44 @@ interface ServerDetailsProps {
 
 export function MailServerDetails({ selectedAccount }: ServerDetailsProps) {
   return (
-    <div className="space-y-8 mt-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="space-y-1 text-center md:text-left">
-        <h2 className="text-2xl font-bold tracking-tight text-primary">
-          Mail Server Configuration
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Use these settings to configure your mail client for both incoming
-          (IMAP) and outgoing (SMTP) connections.
-        </p>
-      </div>
-
-      {/* Grid for IMAP and SMTP */}
+    <Section
+      title="Mail server settings"
+      description={`Use these settings to set up ${selectedAccount.email} in a mail client, for incoming (IMAP) and outgoing (SMTP) mail.`}
+    >
       <div className="grid gap-6 md:grid-cols-2">
         {/* Incoming (IMAP) */}
-        <Card className="p-6 border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow">
-          <CardHeader className="p-0 mb-4">
-            <CardTitle className="text-lg font-semibold text-foreground">
-              Incoming Mail (IMAP)
-            </CardTitle>
-            {!selectedAccount.enable_imap && (
-              <CardDescription className="text-destructive mt-1 text-xs font-medium">
-                IMAP is not enabled for this account.
-              </CardDescription>
-            )}
-          </CardHeader>
-          <div className="space-y-3 text-sm">
-            <ServerRow label="Host" value={"mail.enjoys.in"} />
-            <ServerRow label="Port" value={`993} (secure: true)`} />
-            <ServerRow label="Username / Email" value={selectedAccount.email} />
-            <ServerRow
-              label="Password"
-              value={selectedAccount.password}
-              masked
-            />
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-medium">Incoming mail (IMAP)</h3>
+            {!selectedAccount.enable_imap && <Pill tone="red">Not enabled</Pill>}
           </div>
-        </Card>
+          <div className="divide-y divide-border/70 text-sm">
+            <ServerRow label="Host" value={"mail.enjoys.in"} />
+            <ServerRow label="Port" value={`993 (secure: true)`} />
+            <ServerRow label="Username / email" value={selectedAccount.email} />
+            <ServerRow label="Password" value={selectedAccount.password} masked />
+          </div>
+        </div>
 
         {/* Outgoing (SMTP) */}
-        <Card className="p-6 border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow">
-          <CardHeader className="p-0 mb-4">
-            <CardTitle className="text-lg font-semibold text-foreground">
-              Outgoing Mail (SMTP)
-            </CardTitle>
-            {!selectedAccount.enable_smtp && (
-              <CardDescription className="text-destructive mt-1 text-xs font-medium">
-                SMTP is not enabled for this account.
-              </CardDescription>
-            )}
-          </CardHeader>
-          <div className="space-y-3 text-sm">
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-medium">Outgoing mail (SMTP)</h3>
+            {!selectedAccount.enable_smtp && <Pill tone="red">Not enabled</Pill>}
+          </div>
+          <div className="divide-y divide-border/70 text-sm">
             <ServerRow label="Host" value={"mail.enjoys.in"} />
             <ServerRow label="Port" value={`587 (secure: false)`} />
-            <ServerRow label="Username / Email" value={selectedAccount.email} />
-            <ServerRow
-              label="Password"
-              value={selectedAccount.password}
-              masked
-            />
+            <ServerRow label="Username / email" value={selectedAccount.email} />
+            <ServerRow label="Password" value={selectedAccount.password} masked />
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* Footer Note */}
-      <div className="text-xs text-muted-foreground text-center md:text-left">
-        ⚙️ If your email client supports SSL/TLS, always enable secure
-        connections for better privacy and security.
-      </div>
-    </div>
+      <p className="mt-5 text-xs text-muted-foreground">
+        If your mail client supports SSL/TLS, always enable secure connections for better privacy and security.
+      </p>
+    </Section>
   );
 }
 
@@ -98,9 +62,9 @@ function ServerRow({
   masked?: boolean;
 }) {
   return (
-    <div className="flex justify-between items-center border-b border-border pb-1">
-      <span className="font-medium text-foreground/80">{label}</span>
-      <span className="font-mono text-foreground/70 text-right truncate max-w-[60%]">
+    <div className="flex items-center justify-between gap-4 py-2">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="max-w-[60%] truncate text-right font-mono text-xs">
         {masked ? "••••••••" : value}
       </span>
     </div>
