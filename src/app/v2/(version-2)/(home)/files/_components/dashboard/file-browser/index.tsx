@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	Archive,
 	ChevronDown,
@@ -25,16 +23,16 @@ import {
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@nimbus/_components/ui/table";
 import { DownloadProvider } from "@nimbus/_components/providers/download-provider";
-import { useNavigate, useSearch } from "@nimbus/_lib/router-shim";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { pointerIntersection } from "@dnd-kit/collision";
 import DragNDropUploader from "./drag-n-drop-uploader";
 import { useMemo, useState, type JSX } from "react";
 import { Button } from "@nimbus/_components/ui/button";
-import { formatFileSize } from "@nimbus/_lib/files-types";
+import { formatFileSize } from "@nimbus/_packages/shared";
 import { PdfIcon } from "@nimbus/_components/icons";
 import { FileActions } from "./file-actions";
-import type { File } from "@nimbus/_lib/files-types";
+import type { File } from "@nimbus/_packages/shared";
 import { useTags } from "@nimbus/_hooks/useTags";
 import { FileTags } from "./file-tags";
 import { format } from "date-fns";
