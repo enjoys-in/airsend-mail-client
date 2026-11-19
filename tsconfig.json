@@ -25,6 +25,9 @@
       "@nimbus/*": [
         "./src/app/v2/(version-2)/(home)/files/*"
       ],
+      "@tasks/*": [
+        "./src/app/v2/(version-2)/(home)/tasks/*"
+      ],
       "@/*": [
         "./src/*"
       ]
