@@ -1,0 +1,19 @@
+import { client } from "@tasks/_packages/libs";
+import { HttpError } from "@tasks/_lib/http-error";
+import type { SyncParams } from "./types";
+
+export default async function resumeSync(
+  param: SyncParams,
+  linkId: string,
+  token: string,
+  source: "kaneo" | "provider",
+) {
+  const response = await client["integration-sync"].project[":projectId"][
+    ":provider"
+  ].links[":linkId"].resume.$post({
+    param: { ...param, linkId },
+    json: { token, source },
+  });
+  if (!response.ok) throw await HttpError.fromResponse(response);
+  return response.json();
+}
