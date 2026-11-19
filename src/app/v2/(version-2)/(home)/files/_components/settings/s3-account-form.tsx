@@ -7,7 +7,7 @@ import { Button } from "@nimbus/_components/ui/button";
 import { Label } from "@nimbus/_components/ui/label";
 import { Input } from "@nimbus/_components/ui/input";
 import { Loader2 } from "lucide-react";
-import env from "@nimbus/_packages/env/client";
+import { useCreateS3Account } from "@nimbus/_hooks/useCreateAccount";
 import { useState } from "react";
 
 type S3AccountFormProps = {
@@ -16,7 +16,7 @@ type S3AccountFormProps = {
 };
 
 export function S3AccountForm({ onSuccess, onCancel }: S3AccountFormProps) {
-	const [isLoading, setIsLoading] = useState(false);
+	const { mutateAsync: createAccount, isPending: isLoading } = useCreateS3Account();
 	const [error, setError] = useState<string | null>(null);
 
 	const {
@@ -34,43 +34,12 @@ export function S3AccountForm({ onSuccess, onCancel }: S3AccountFormProps) {
 	});
 
 	const onSubmit = async (formData: CreateS3AccountSchema) => {
-		setIsLoading(true);
 		setError(null);
-
 		try {
-			// Transform the data before sending
-			const dataToSend = {
-				...formData,
-				endpoint: formData.endpoint || undefined, // Convert empty string to undefined
-				nickname: formData.nickname || null, // Ensure null for empty nickname
-			};
-
-			const backendUrl = env.VITE_BACKEND_URL;
-			if (!backendUrl) {
-				throw new Error("Backend URL is not configured");
-			}
-
-			const response = await fetch(`${backendUrl}/api/account/s3`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "include",
-				body: JSON.stringify(dataToSend),
-			});
-
-			if (!response.ok) {
-				const errorData = (await response.json().catch(() => ({ message: "Failed to add S3 account" }))) as {
-					message?: string;
-				};
-				throw new Error(errorData.message || "Failed to add S3 account");
-			}
-
+			await createAccount(formData);
 			onSuccess();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "An unexpected error occurred");
-		} finally {
-			setIsLoading(false);
 		}
 	};
 
@@ -154,7 +123,7 @@ export function S3AccountForm({ onSuccess, onCancel }: S3AccountFormProps) {
 					disabled={isLoading}
 				/>
 				<p className="text-muted-foreground text-xs">
-					Leave empty for AWS S3. Use for S3-compatible services like MinIO, DigitalOcean Spaces, etc.
+					Leave empty for AWS S3. Use for S3-compatible services like MinIO, Cloudflare R2, DigitalOcean Spaces, etc.
 				</p>
 				<FieldError error={errors.endpoint?.message} />
 			</div>
