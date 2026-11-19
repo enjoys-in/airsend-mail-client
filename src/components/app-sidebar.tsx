@@ -11,19 +11,18 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { MenuList } from "@/lib/data"
-import { Separator } from "./ui/separator"
+
 export function HPanelAppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="border-b border-border/70 px-2 py-0">
         <SideBarToggleButton />
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="gap-2 py-1">
         <NavMain items={MenuList.navMain} />
-        <Separator />
         <NavProjects projects={MenuList.projects} />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-border/70 p-2">
         <NavUser />
       </SidebarFooter>
       <SidebarRail />
