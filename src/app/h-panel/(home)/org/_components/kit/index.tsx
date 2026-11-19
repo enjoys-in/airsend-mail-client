@@ -8,13 +8,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 /**
  * The org section's small design kit. Every org page is built from these so the section looks like one product:
- * a 1200px content column, one header pattern, one card style (hairline border, soft radius, no shadow), calm type
+ * full-width content, one header pattern, one card style (hairline border, soft radius, no shadow), calm type
  * (regular body text, 500 for emphasis), muted secondary text and colour only where it carries meaning.
  */
 
-/** Page content column. */
+/** Page content: full width with a small edge gutter. `narrow` (forms only) keeps a readable column. */
 export function OrgPage({ children, className, narrow }: { children: React.ReactNode; className?: string; narrow?: boolean }) {
-    return <div className={cn("mx-auto w-full px-4 py-6 sm:px-6 lg:py-8", narrow ? "max-w-3xl" : "max-w-[1200px]", className)}>{children}</div>
+    return <div className={cn("w-full px-4 py-5", narrow && "max-w-3xl", className)}>{children}</div>
 }
 
 /** Title, one-line description and the page actions. `back` renders a quiet "back" link above the title. */
@@ -41,7 +41,7 @@ export function PageHeader({
             )}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 space-y-1">
-                    <h1 className="text-xl font-medium tracking-tight sm:text-2xl">{title}</h1>
+                    <h1 className="text-xl font-medium tracking-tight text-foreground sm:text-2xl">{title}</h1>
                     {description && <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>}
                 </div>
                 {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
