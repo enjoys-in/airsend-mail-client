@@ -1,7 +1,8 @@
 import { Drawer as DrawerPrimitive } from "vaul";
 import * as React from "react";
 
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
+import { nimbusPortalContainer } from "../../_lib/portal-container";
 
 function Drawer({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
 	return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
@@ -12,7 +13,7 @@ function DrawerTrigger({ ...props }: React.ComponentProps<typeof DrawerPrimitive
 }
 
 function DrawerPortal({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Portal>) {
-	return <DrawerPrimitive.Portal data-slot="drawer-portal" {...props} />;
+	return <DrawerPrimitive.Portal data-slot="drawer-portal" container={nimbusPortalContainer.current} {...props} />;
 }
 
 function DrawerClose({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Close>) {

@@ -13,14 +13,14 @@ import {
 	type ComponentProps,
 	type CSSProperties,
 } from "react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@nimbus/_components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@nimbus/_components/ui/tooltip";
-import { Separator } from "@nimbus/_components/ui/separator";
-import { Skeleton } from "@nimbus/_components/ui/skeleton";
-import { useIsMobile } from "@nimbus/_hooks/use-mobile";
-import { Button } from "@nimbus/_components/ui/button";
-import { Input } from "@nimbus/_components/ui/input";
-import { cn } from "@nimbus/_lib/utils";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/app/v2/(version-2)/(home)/files/_components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/v2/(version-2)/(home)/files/_components/ui/tooltip";
+import { Separator } from "@/app/v2/(version-2)/(home)/files/_components/ui/separator";
+import { Skeleton } from "@/app/v2/(version-2)/(home)/files/_components/ui/skeleton";
+import { useIsMobile } from "@/app/v2/(version-2)/(home)/files/_hooks/use-mobile";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { Input } from "@/app/v2/(version-2)/(home)/files/_components/ui/input";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;

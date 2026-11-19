@@ -1,7 +1,7 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
-import Profile from "@nimbus/_components/user-profile";
-import { Label } from "@nimbus/_components/ui/label";
-import { Input } from "@nimbus/_components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/v2/(version-2)/(home)/files/_components/ui/card";
+import Profile from "@/app/v2/(version-2)/(home)/files/_components/user-profile";
+import { Label } from "@/app/v2/(version-2)/(home)/files/_components/ui/label";
+import { Input } from "@/app/v2/(version-2)/(home)/files/_components/ui/input";
 
 interface ProfileSectionProps {
 	name: string;

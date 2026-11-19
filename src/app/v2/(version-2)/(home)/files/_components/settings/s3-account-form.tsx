@@ -1,21 +1,24 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@nimbus/_components/ui/select";
-import { AWS_REGIONS, createS3AccountSchema, type CreateS3AccountSchema } from "@nimbus/_packages/shared";
-import { FieldError } from "@nimbus/_components/ui/field-error";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/v2/(version-2)/(home)/files/_components/ui/select";
+import { AWS_REGIONS, createS3AccountSchema, type CreateS3AccountSchema } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { FieldError } from "@/app/v2/(version-2)/(home)/files/_components/ui/field-error";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
-import { Button } from "@nimbus/_components/ui/button";
-import { Label } from "@nimbus/_components/ui/label";
-import { Input } from "@nimbus/_components/ui/input";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { Label } from "@/app/v2/(version-2)/(home)/files/_components/ui/label";
+import { Input } from "@/app/v2/(version-2)/(home)/files/_components/ui/input";
 import { Loader2 } from "lucide-react";
-import { useCreateS3Account } from "@nimbus/_hooks/useCreateAccount";
+import { useCreateS3Account } from "@/app/v2/(version-2)/(home)/files/_hooks/useCreateAccount";
 import { useState } from "react";
+import { getS3Service, type S3Service } from "@/app/v2/(version-2)/(home)/files/_lib/s3-services";
 
 type S3AccountFormProps = {
+	/** The S3-compatible service being connected: sets the endpoint hints and whether the endpoint is required. */
+	service?: S3Service;
 	onSuccess: () => void;
 	onCancel: () => void;
 };
 
-export function S3AccountForm({ onSuccess, onCancel }: S3AccountFormProps) {
+export function S3AccountForm({ service = getS3Service("aws"), onSuccess, onCancel }: S3AccountFormProps) {
 	const { mutateAsync: createAccount, isPending: isLoading } = useCreateS3Account();
 	const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +38,10 @@ export function S3AccountForm({ onSuccess, onCancel }: S3AccountFormProps) {
 
 	const onSubmit = async (formData: CreateS3AccountSchema) => {
 		setError(null);
+		if (service.endpointRequired && !formData.endpoint) {
+			setError(`${service.label} needs the endpoint of the service.`);
+			return;
+		}
 		try {
 			await createAccount(formData);
 			onSuccess();
@@ -99,11 +106,12 @@ export function S3AccountForm({ onSuccess, onCancel }: S3AccountFormProps) {
 			</div>
 
 			<div className="space-y-2">
-				<Label htmlFor="endpoint">Custom Endpoint (Optional)</Label>
+				<Label htmlFor="endpoint">{service.endpointRequired ? "Endpoint" : "Custom Endpoint (Optional)"}</Label>
 				<Input
 					id="endpoint"
 					type="url"
-					placeholder="https://s3.amazonaws.com"
+					placeholder={service.endpointPlaceholder}
+					disabled={isLoading}
 					{...register("endpoint", {
 						setValueAs: value => (value === "" ? undefined : value),
 						validate: value => {
@@ -120,11 +128,8 @@ export function S3AccountForm({ onSuccess, onCancel }: S3AccountFormProps) {
 						const value = e.target.value === "" ? undefined : e.target.value;
 						setValue("endpoint", value, { shouldValidate: true });
 					}}
-					disabled={isLoading}
 				/>
-				<p className="text-muted-foreground text-xs">
-					Leave empty for AWS S3. Use for S3-compatible services like MinIO, Cloudflare R2, DigitalOcean Spaces, etc.
-				</p>
+				<p className="text-muted-foreground text-xs">{service.endpointHint}</p>
 				<FieldError error={errors.endpoint?.message} />
 			</div>
 

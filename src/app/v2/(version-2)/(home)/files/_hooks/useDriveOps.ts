@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreatePinnedFile, DriveInfo, PinnedFile } from "@nimbus/_packages/shared";
-import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
-import { handleUnauthorizedError } from "@nimbus/_utils/client";
+import type { CreatePinnedFile, DriveInfo, PinnedFile } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { useAccountProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/account-provider";
+import { handleUnauthorizedError } from "@/app/v2/(version-2)/(home)/files/_utils/client";
 
 export const useDriveInfo = () => {
 	const { clientPromise, providerId, accountId } = useAccountProvider();

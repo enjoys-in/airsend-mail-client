@@ -8,8 +8,8 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
-} from "@nimbus/_components/ui/sidebar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@nimbus/_components/ui/collapsible";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/app/v2/(version-2)/(home)/files/_components/ui/collapsible";
 import { ChevronDown, Folder, ImageIcon, Video, Music, Archive } from "lucide-react";
 
 const folders = [

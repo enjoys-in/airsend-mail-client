@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import env from "@nimbus/_packages/env/client";
-import { SESSION_QUERY_KEY } from "@nimbus/_lib/session";
+import env from "@/app/v2/(version-2)/(home)/files/_packages/env/client";
+import { SESSION_QUERY_KEY } from "@/app/v2/(version-2)/(home)/files/_lib/session";
 
 /** PUT /api/account/:id/default - makes a storage account the organization's default (owners and admins only). */
 export function useSetDefaultAccount() {

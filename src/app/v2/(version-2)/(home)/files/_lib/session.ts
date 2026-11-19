@@ -1,6 +1,6 @@
-import type { SessionUser } from "@nimbus/_packages/auth/auth";
+import type { SessionUser } from "@/app/v2/(version-2)/(home)/files/_packages/auth/auth";
 import { useQuery } from "@tanstack/react-query";
-import env from "@nimbus/_packages/env/client";
+import env from "@/app/v2/(version-2)/(home)/files/_packages/env/client";
 
 /**
  * The signed-in AirSend user, as the files backend sees them. There is no Nimbus sign-in: the backend verifies the AirSend

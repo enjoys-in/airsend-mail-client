@@ -1,14 +1,15 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@nimbus/_components/ui/table";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/app/v2/(version-2)/(home)/files/_components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/v2/(version-2)/(home)/files/_components/ui/table";
 import { AlertCircle, Check, Edit, Loader2, Plus, X } from "lucide-react";
-import { nicknameSchema, type DriveProvider } from "@nimbus/_packages/shared";
-import type { LimitedAccessAccount } from "@nimbus/_packages/shared";
+import { nicknameSchema, type DriveProvider } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import type { LimitedAccessAccount } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@nimbus/_components/ui/button";
-import { Input } from "@nimbus/_components/ui/input";
-import { Badge } from "@nimbus/_components/ui/badge";
-import { providerLabel } from "@nimbus/_lib/providers";
-import { cn } from "@nimbus/_lib/utils";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { Input } from "@/app/v2/(version-2)/(home)/files/_components/ui/input";
+import { Badge } from "@/app/v2/(version-2)/(home)/files/_components/ui/badge";
+import { providerLabel } from "@/app/v2/(version-2)/(home)/files/_lib/providers";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 interface OrgStorageSectionProps {
 	accounts: LimitedAccessAccount[] | null;
@@ -17,7 +18,6 @@ interface OrgStorageSectionProps {
 	/** Row id of the account being made the default, while the request runs. */
 	isSettingDefault: string | null;
 	onDisconnect: (provider: DriveProvider, accountId: string, tableAccountId: string) => void;
-	onAddAccount: () => void;
 	onSetDefault: (tableAccountId: string) => void;
 	onUpdateAccount: (
 		providerId: DriveProvider,
@@ -127,7 +127,6 @@ export function OrgStorageSection({
 	canManage,
 	isSettingDefault,
 	onDisconnect,
-	onAddAccount,
 	onSetDefault,
 	onUpdateAccount,
 }: OrgStorageSectionProps) {
@@ -317,9 +316,11 @@ export function OrgStorageSection({
 			</CardContent>
 			{canManage && (
 				<CardFooter className="flex justify-between">
-					<Button variant="outline" onClick={onAddAccount}>
-						<Plus className="mr-2 h-4 w-4" />
-						Add storage
+					<Button asChild variant="outline">
+						<Link to="/configure/storage/new">
+							<Plus className="mr-2 h-4 w-4" />
+							Add storage
+						</Link>
 					</Button>
 				</CardFooter>
 			)}

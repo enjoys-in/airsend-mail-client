@@ -1,9 +1,9 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@nimbus/_components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/app/v2/(version-2)/(home)/files/_components/ui/dialog";
 import { FileText, Filter, Folder, Search, Tag } from "lucide-react";
-import { Card, CardContent } from "@nimbus/_components/ui/card";
-import { Button } from "@nimbus/_components/ui/button";
-import { Input } from "@nimbus/_components/ui/input";
-import { Badge } from "@nimbus/_components/ui/badge";
+import { Card, CardContent } from "@/app/v2/(version-2)/(home)/files/_components/ui/card";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { Input } from "@/app/v2/(version-2)/(home)/files/_components/ui/input";
+import { Badge } from "@/app/v2/(version-2)/(home)/files/_components/ui/badge";
 import type { KeyboardEvent } from "react";
 import { useState } from "react";
 

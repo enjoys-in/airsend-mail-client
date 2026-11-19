@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, type ChangeEvent } from "react";
-import { Progress } from "@nimbus/_components/ui/progress";
-import { formatFileSize } from "@nimbus/_packages/shared";
-import { Label } from "@nimbus/_components/ui/label";
+import { Progress } from "@/app/v2/(version-2)/(home)/files/_components/ui/progress";
+import { formatFileSize } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { Label } from "@/app/v2/(version-2)/(home)/files/_components/ui/label";
 import { Folder, Upload } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 

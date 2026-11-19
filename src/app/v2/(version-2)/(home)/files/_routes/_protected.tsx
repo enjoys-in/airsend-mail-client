@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { FilesForbiddenError, getSession, ORG_ONLY_MESSAGE } from "@nimbus/_lib/session";
-import { OrgAccessDenied } from "@nimbus/_components/org-access-denied";
-import { withFilesBasePath } from "@nimbus/_lib/base-path";
+import { FilesForbiddenError, getSession, ORG_ONLY_MESSAGE } from "@/app/v2/(version-2)/(home)/files/_lib/session";
+import { OrgAccessDenied } from "@/app/v2/(version-2)/(home)/files/_components/org-access-denied";
+import { withFilesBasePath } from "@/app/v2/(version-2)/(home)/files/_lib/base-path";
 
 export const Route = createFileRoute("/_protected")({
 	beforeLoad: async ({ location }) => {

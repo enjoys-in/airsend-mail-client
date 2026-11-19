@@ -5,23 +5,23 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-} from "@nimbus/_components/ui/sidebar";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/sidebar";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@nimbus/_components/ui/dropdown-menu";
-import { UpdateTagDialog } from "@nimbus/_components/dialogs/update-tag-dialog";
-import { DeleteTagDialog } from "@nimbus/_components/dialogs/delete-tag-dialog";
-import { CreateTagDialog } from "@nimbus/_components/dialogs/create-tag-dialog";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dropdown-menu";
+import { UpdateTagDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/update-tag-dialog";
+import { DeleteTagDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/delete-tag-dialog";
+import { CreateTagDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/create-tag-dialog";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
-import { Skeleton } from "@nimbus/_components/ui/skeleton";
+import { Skeleton } from "@/app/v2/(version-2)/(home)/files/_components/ui/skeleton";
 import { ChevronDown, Plus } from "lucide-react";
-import { Button } from "@nimbus/_components/ui/button";
-import { useTags } from "@nimbus/_hooks/useTags";
-import type { Tag } from "@nimbus/_packages/shared";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { useTags } from "@/app/v2/(version-2)/(home)/files/_hooks/useTags";
+import type { Tag } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useState } from "react";
 
 const containerVariants: Variants = {

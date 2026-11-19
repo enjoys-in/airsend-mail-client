@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Button } from "@nimbus/_components/ui/button";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export function SettingsHeader() {

@@ -2,7 +2,8 @@ import { Close, Content, Description, Overlay, Portal, Root, Title, Trigger } fr
 import { ArrowLeftIcon, XIcon } from "lucide-react";
 
 import type { ComponentProps } from "react";
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
+import { nimbusPortalContainer } from "../../_lib/portal-container";
 
 function Dialog({ ...props }: ComponentProps<typeof Root>) {
 	return <Root data-slot="dialog" {...props} />;
@@ -13,7 +14,7 @@ function DialogTrigger({ ...props }: ComponentProps<typeof Trigger>) {
 }
 
 function DialogPortal({ ...props }: ComponentProps<typeof Portal>) {
-	return <Portal data-slot="dialog-portal" {...props} />;
+	return <Portal data-slot="dialog-portal" container={nimbusPortalContainer.current} {...props} />;
 }
 
 function DialogClose({ ...props }: ComponentProps<typeof Close>) {

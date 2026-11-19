@@ -7,11 +7,11 @@ import type {
 	MoveFileSchema,
 	UpdateFileSchema,
 	UploadFileSchema,
-} from "@nimbus/_packages/shared";
+} from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
-import type { DriveProviderClient } from "@nimbus/_utils/client";
-import { handleUnauthorizedError } from "@nimbus/_utils/client";
+import { useAccountProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/account-provider";
+import type { DriveProviderClient } from "@/app/v2/(version-2)/(home)/files/_utils/client";
+import { handleUnauthorizedError } from "@/app/v2/(version-2)/(home)/files/_utils/client";
 import { toast } from "sonner";
 
 export function useGetFiles({ parentId, pageSize, pageToken, returnedValues }: GetFilesSchema) {

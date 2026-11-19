@@ -1,6 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
-import type { Organization } from "@nimbus/_lib/session";
-import { Badge } from "@nimbus/_components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/v2/(version-2)/(home)/files/_components/ui/card";
+import type { Organization } from "@/app/v2/(version-2)/(home)/files/_lib/session";
+import { Badge } from "@/app/v2/(version-2)/(home)/files/_components/ui/badge";
 
 const ROLE_LABEL: Record<Organization["role"], string> = { owner: "Owner", admin: "Admin", member: "Member" };
 

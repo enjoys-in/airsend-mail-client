@@ -11,7 +11,15 @@
 import { Route as rootRouteImport } from "./_routes/__root"
 import { Route as ProtectedRouteImport } from "./_routes/_protected"
 import { Route as IndexRouteImport } from "./_routes/index"
+import { Route as ProtectedConfigureRouteImport } from "./_routes/_protected/configure"
 import { Route as ProtectedDashboardRouteImport } from "./_routes/_protected/dashboard"
+import { Route as ProtectedConfigureIndexRouteImport } from "./_routes/_protected/configure/index"
+import { Route as ProtectedConfigureStorageRouteImport } from "./_routes/_protected/configure/storage"
+import { Route as ProtectedConfigureStorageIndexRouteImport } from "./_routes/_protected/configure/storage/index"
+import { Route as ProtectedConfigureStorageNewRouteImport } from "./_routes/_protected/configure/storage/new"
+import { Route as ProtectedConfigureStorageNewIndexRouteImport } from "./_routes/_protected/configure/storage/new/index"
+import { Route as ProtectedConfigureStorageNewS3RouteImport } from "./_routes/_protected/configure/storage/new/s3"
+import { Route as ProtectedConfigureStorageNewTelegramRouteImport } from "./_routes/_protected/configure/storage/new/telegram"
 import { Route as ProtectedDashboardIndexRouteImport } from "./_routes/_protected/dashboard/index"
 import { Route as ProtectedDashboardSettingsRouteImport } from "./_routes/_protected/dashboard/settings"
 import { Route as ProtectedDashboardProviderSlugAccountIdRouteImport } from "./_routes/_protected/dashboard/$providerSlug.$accountId"
@@ -25,11 +33,57 @@ const IndexRoute = IndexRouteImport.update({
   path: "/",
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProtectedConfigureRoute = ProtectedConfigureRouteImport.update({
+  id: "/configure",
+  path: "/configure",
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   id: "/dashboard",
   path: "/dashboard",
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedConfigureIndexRoute = ProtectedConfigureIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => ProtectedConfigureRoute,
+} as any)
+const ProtectedConfigureStorageRoute =
+  ProtectedConfigureStorageRouteImport.update({
+    id: "/storage",
+    path: "/storage",
+    getParentRoute: () => ProtectedConfigureRoute,
+  } as any)
+const ProtectedConfigureStorageIndexRoute =
+  ProtectedConfigureStorageIndexRouteImport.update({
+    id: "/",
+    path: "/",
+    getParentRoute: () => ProtectedConfigureStorageRoute,
+  } as any)
+const ProtectedConfigureStorageNewRoute =
+  ProtectedConfigureStorageNewRouteImport.update({
+    id: "/new",
+    path: "/new",
+    getParentRoute: () => ProtectedConfigureStorageRoute,
+  } as any)
+const ProtectedConfigureStorageNewIndexRoute =
+  ProtectedConfigureStorageNewIndexRouteImport.update({
+    id: "/",
+    path: "/",
+    getParentRoute: () => ProtectedConfigureStorageNewRoute,
+  } as any)
+const ProtectedConfigureStorageNewS3Route =
+  ProtectedConfigureStorageNewS3RouteImport.update({
+    id: "/s3",
+    path: "/s3",
+    getParentRoute: () => ProtectedConfigureStorageNewRoute,
+  } as any)
+const ProtectedConfigureStorageNewTelegramRoute =
+  ProtectedConfigureStorageNewTelegramRouteImport.update({
+    id: "/telegram",
+    path: "/telegram",
+    getParentRoute: () => ProtectedConfigureStorageNewRoute,
+  } as any)
 const ProtectedDashboardIndexRoute = ProtectedDashboardIndexRouteImport.update({
   id: "/",
   path: "/",
@@ -50,48 +104,90 @@ const ProtectedDashboardProviderSlugAccountIdRoute =
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
+  "/configure": typeof ProtectedConfigureRouteWithChildren
   "/dashboard": typeof ProtectedDashboardRouteWithChildren
   "/dashboard/settings": typeof ProtectedDashboardSettingsRoute
   "/dashboard/": typeof ProtectedDashboardIndexRoute
   "/dashboard/$providerSlug/$accountId": typeof ProtectedDashboardProviderSlugAccountIdRoute
+  "/configure/": typeof ProtectedConfigureIndexRoute
+  "/configure/storage": typeof ProtectedConfigureStorageRouteWithChildren
+  "/configure/storage/": typeof ProtectedConfigureStorageIndexRoute
+  "/configure/storage/new": typeof ProtectedConfigureStorageNewRouteWithChildren
+  "/configure/storage/new/": typeof ProtectedConfigureStorageNewIndexRoute
+  "/configure/storage/new/s3": typeof ProtectedConfigureStorageNewS3Route
+  "/configure/storage/new/telegram": typeof ProtectedConfigureStorageNewTelegramRoute
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
   "/dashboard/settings": typeof ProtectedDashboardSettingsRoute
   "/dashboard": typeof ProtectedDashboardIndexRoute
   "/dashboard/$providerSlug/$accountId": typeof ProtectedDashboardProviderSlugAccountIdRoute
+  "/configure": typeof ProtectedConfigureIndexRoute
+  "/configure/storage": typeof ProtectedConfigureStorageIndexRoute
+  "/configure/storage/new": typeof ProtectedConfigureStorageNewIndexRoute
+  "/configure/storage/new/s3": typeof ProtectedConfigureStorageNewS3Route
+  "/configure/storage/new/telegram": typeof ProtectedConfigureStorageNewTelegramRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   "/": typeof IndexRoute
   "/_protected": typeof ProtectedRouteWithChildren
+  "/_protected/configure": typeof ProtectedConfigureRouteWithChildren
   "/_protected/dashboard": typeof ProtectedDashboardRouteWithChildren
   "/_protected/dashboard/settings": typeof ProtectedDashboardSettingsRoute
   "/_protected/dashboard/": typeof ProtectedDashboardIndexRoute
   "/_protected/dashboard/$providerSlug/$accountId": typeof ProtectedDashboardProviderSlugAccountIdRoute
+  "/_protected/configure/": typeof ProtectedConfigureIndexRoute
+  "/_protected/configure/storage": typeof ProtectedConfigureStorageRouteWithChildren
+  "/_protected/configure/storage/": typeof ProtectedConfigureStorageIndexRoute
+  "/_protected/configure/storage/new": typeof ProtectedConfigureStorageNewRouteWithChildren
+  "/_protected/configure/storage/new/": typeof ProtectedConfigureStorageNewIndexRoute
+  "/_protected/configure/storage/new/s3": typeof ProtectedConfigureStorageNewS3Route
+  "/_protected/configure/storage/new/telegram": typeof ProtectedConfigureStorageNewTelegramRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | "/"
+    | "/configure"
     | "/dashboard"
     | "/dashboard/settings"
     | "/dashboard/"
     | "/dashboard/$providerSlug/$accountId"
+    | "/configure/"
+    | "/configure/storage"
+    | "/configure/storage/"
+    | "/configure/storage/new"
+    | "/configure/storage/new/"
+    | "/configure/storage/new/s3"
+    | "/configure/storage/new/telegram"
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/"
     | "/dashboard/settings"
     | "/dashboard"
     | "/dashboard/$providerSlug/$accountId"
+    | "/configure"
+    | "/configure/storage"
+    | "/configure/storage/new"
+    | "/configure/storage/new/s3"
+    | "/configure/storage/new/telegram"
   id:
     | "__root__"
     | "/"
     | "/_protected"
+    | "/_protected/configure"
     | "/_protected/dashboard"
     | "/_protected/dashboard/settings"
     | "/_protected/dashboard/"
     | "/_protected/dashboard/$providerSlug/$accountId"
+    | "/_protected/configure/"
+    | "/_protected/configure/storage"
+    | "/_protected/configure/storage/"
+    | "/_protected/configure/storage/new"
+    | "/_protected/configure/storage/new/"
+    | "/_protected/configure/storage/new/s3"
+    | "/_protected/configure/storage/new/telegram"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -114,6 +210,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/"
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    "/_protected/configure": {
+      id: "/_protected/configure"
+      path: "/configure"
+      fullPath: "/configure"
+      preLoaderRoute: typeof ProtectedConfigureRouteImport
+      parentRoute: typeof ProtectedRoute
     }
     "/_protected/dashboard": {
       id: "/_protected/dashboard"
@@ -143,8 +246,107 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ProtectedDashboardProviderSlugAccountIdRouteImport
       parentRoute: typeof ProtectedDashboardRoute
     }
+    "/_protected/configure/": {
+      id: "/_protected/configure/"
+      path: "/"
+      fullPath: "/configure/"
+      preLoaderRoute: typeof ProtectedConfigureIndexRouteImport
+      parentRoute: typeof ProtectedConfigureRoute
+    }
+    "/_protected/configure/storage": {
+      id: "/_protected/configure/storage"
+      path: "/storage"
+      fullPath: "/configure/storage"
+      preLoaderRoute: typeof ProtectedConfigureStorageRouteImport
+      parentRoute: typeof ProtectedConfigureRoute
+    }
+    "/_protected/configure/storage/": {
+      id: "/_protected/configure/storage/"
+      path: "/"
+      fullPath: "/configure/storage/"
+      preLoaderRoute: typeof ProtectedConfigureStorageIndexRouteImport
+      parentRoute: typeof ProtectedConfigureStorageRoute
+    }
+    "/_protected/configure/storage/new": {
+      id: "/_protected/configure/storage/new"
+      path: "/new"
+      fullPath: "/configure/storage/new"
+      preLoaderRoute: typeof ProtectedConfigureStorageNewRouteImport
+      parentRoute: typeof ProtectedConfigureStorageRoute
+    }
+    "/_protected/configure/storage/new/": {
+      id: "/_protected/configure/storage/new/"
+      path: "/"
+      fullPath: "/configure/storage/new/"
+      preLoaderRoute: typeof ProtectedConfigureStorageNewIndexRouteImport
+      parentRoute: typeof ProtectedConfigureStorageNewRoute
+    }
+    "/_protected/configure/storage/new/s3": {
+      id: "/_protected/configure/storage/new/s3"
+      path: "/s3"
+      fullPath: "/configure/storage/new/s3"
+      preLoaderRoute: typeof ProtectedConfigureStorageNewS3RouteImport
+      parentRoute: typeof ProtectedConfigureStorageNewRoute
+    }
+    "/_protected/configure/storage/new/telegram": {
+      id: "/_protected/configure/storage/new/telegram"
+      path: "/telegram"
+      fullPath: "/configure/storage/new/telegram"
+      preLoaderRoute: typeof ProtectedConfigureStorageNewTelegramRouteImport
+      parentRoute: typeof ProtectedConfigureStorageNewRoute
+    }
   }
 }
+
+interface ProtectedConfigureStorageNewRouteChildren {
+  ProtectedConfigureStorageNewIndexRoute: typeof ProtectedConfigureStorageNewIndexRoute
+  ProtectedConfigureStorageNewS3Route: typeof ProtectedConfigureStorageNewS3Route
+  ProtectedConfigureStorageNewTelegramRoute: typeof ProtectedConfigureStorageNewTelegramRoute
+}
+
+const ProtectedConfigureStorageNewRouteChildren: ProtectedConfigureStorageNewRouteChildren =
+  {
+    ProtectedConfigureStorageNewIndexRoute:
+      ProtectedConfigureStorageNewIndexRoute,
+    ProtectedConfigureStorageNewS3Route: ProtectedConfigureStorageNewS3Route,
+    ProtectedConfigureStorageNewTelegramRoute:
+      ProtectedConfigureStorageNewTelegramRoute,
+  }
+
+const ProtectedConfigureStorageNewRouteWithChildren =
+  ProtectedConfigureStorageNewRoute._addFileChildren(
+    ProtectedConfigureStorageNewRouteChildren,
+  )
+
+interface ProtectedConfigureStorageRouteChildren {
+  ProtectedConfigureStorageIndexRoute: typeof ProtectedConfigureStorageIndexRoute
+  ProtectedConfigureStorageNewRoute: typeof ProtectedConfigureStorageNewRouteWithChildren
+}
+
+const ProtectedConfigureStorageRouteChildren: ProtectedConfigureStorageRouteChildren =
+  {
+    ProtectedConfigureStorageIndexRoute: ProtectedConfigureStorageIndexRoute,
+    ProtectedConfigureStorageNewRoute:
+      ProtectedConfigureStorageNewRouteWithChildren,
+  }
+
+const ProtectedConfigureStorageRouteWithChildren =
+  ProtectedConfigureStorageRoute._addFileChildren(
+    ProtectedConfigureStorageRouteChildren,
+  )
+
+interface ProtectedConfigureRouteChildren {
+  ProtectedConfigureIndexRoute: typeof ProtectedConfigureIndexRoute
+  ProtectedConfigureStorageRoute: typeof ProtectedConfigureStorageRouteWithChildren
+}
+
+const ProtectedConfigureRouteChildren: ProtectedConfigureRouteChildren = {
+  ProtectedConfigureIndexRoute: ProtectedConfigureIndexRoute,
+  ProtectedConfigureStorageRoute: ProtectedConfigureStorageRouteWithChildren,
+}
+
+const ProtectedConfigureRouteWithChildren =
+  ProtectedConfigureRoute._addFileChildren(ProtectedConfigureRouteChildren)
 
 interface ProtectedDashboardRouteChildren {
   ProtectedDashboardSettingsRoute: typeof ProtectedDashboardSettingsRoute
@@ -163,10 +365,12 @@ const ProtectedDashboardRouteWithChildren =
   ProtectedDashboardRoute._addFileChildren(ProtectedDashboardRouteChildren)
 
 interface ProtectedRouteChildren {
+  ProtectedConfigureRoute: typeof ProtectedConfigureRouteWithChildren
   ProtectedDashboardRoute: typeof ProtectedDashboardRouteWithChildren
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
+  ProtectedConfigureRoute: ProtectedConfigureRouteWithChildren,
   ProtectedDashboardRoute: ProtectedDashboardRouteWithChildren,
 }
 

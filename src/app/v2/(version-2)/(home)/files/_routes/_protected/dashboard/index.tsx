@@ -1,11 +1,9 @@
-import { useUserInfoProvider } from "@nimbus/_components/providers/user-info-provider";
-import { ConnectAccountDialog } from "@nimbus/_components/dialogs/connect-account-dialog";
-import { LoadingStatePage } from "@nimbus/_components/loading-state-page";
-import { createFileRoute } from "@tanstack/react-router";
-import { Button } from "@nimbus/_components/ui/button";
-import { useOrganization } from "@nimbus/_lib/session";
+import { useUserInfoProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/user-info-provider";
+import { LoadingStatePage } from "@/app/v2/(version-2)/(home)/files/_components/loading-state-page";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { useOrganization } from "@/app/v2/(version-2)/(home)/files/_lib/session";
 import { HardDrive, Plus } from "lucide-react";
-import { useState } from "react";
 
 export const Route = createFileRoute("/_protected/dashboard/")({
 	component: DashboardPage,
@@ -14,7 +12,6 @@ export const Route = createFileRoute("/_protected/dashboard/")({
 function DashboardPage() {
 	const { error, accounts, isLoading } = useUserInfoProvider();
 	const { canManageStorage } = useOrganization();
-	const [isConnectOpen, setIsConnectOpen] = useState(false);
 
 	const title = "Loading your dashboard";
 	const description = "Opening your organization's storage...";
@@ -25,7 +22,7 @@ function DashboardPage() {
 	// set it up here; everyone else is told whom to ask.
 	if (!isLoading && !error && accounts && accounts.length === 0) {
 		return (
-			<div className="flex min-h-screen items-center justify-center p-6">
+			<div className="flex h-full items-center justify-center p-6">
 				<div className="flex max-w-sm flex-col items-center gap-4 text-center">
 					<HardDrive className="text-muted-foreground h-12 w-12" />
 					{canManageStorage ? (
@@ -35,9 +32,11 @@ function DashboardPage() {
 								Files are stored in your organization&apos;s own S3-compatible bucket or Telegram chat. Add it once and everyone in
 								the organization uses it.
 							</p>
-							<Button onClick={() => setIsConnectOpen(true)}>
-								<Plus className="mr-2 h-4 w-4" />
-								Add storage
+							<Button asChild>
+								<Link to="/configure/storage/new">
+									<Plus className="mr-2 h-4 w-4" />
+									Add storage
+								</Link>
 							</Button>
 						</>
 					) : (
@@ -46,10 +45,12 @@ function DashboardPage() {
 							<p className="text-muted-foreground text-sm">
 								Your organization has not connected storage yet. Ask an owner or admin.
 							</p>
+							<Button asChild variant="outline">
+								<Link to="/configure/storage">See storage details</Link>
+							</Button>
 						</>
 					)}
 				</div>
-				{canManageStorage && <ConnectAccountDialog open={isConnectOpen} onOpenChange={setIsConnectOpen} />}
 			</div>
 		);
 	}

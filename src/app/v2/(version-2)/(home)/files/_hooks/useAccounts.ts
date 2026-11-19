@@ -1,6 +1,6 @@
-import type { ApiResponse, LimitedAccessAccount } from "@nimbus/_packages/shared";
+import type { ApiResponse, LimitedAccessAccount } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useQuery } from "@tanstack/react-query";
-import { protectedClient } from "@nimbus/_utils/client";
+import { protectedClient } from "@/app/v2/(version-2)/(home)/files/_utils/client";
 
 const fetchAccounts = async (): Promise<LimitedAccessAccount[]> => {
 	const response = await protectedClient.api.account.$get();

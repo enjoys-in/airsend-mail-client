@@ -2,7 +2,8 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import * as React from "react";
 
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
+import { nimbusPortalContainer } from "../../_lib/portal-container";
 
 function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
 	return <SelectPrimitive.Root data-slot="select" {...props} />;
@@ -49,7 +50,7 @@ function SelectContent({
 	...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
 	return (
-		<SelectPrimitive.Portal>
+		<SelectPrimitive.Portal container={nimbusPortalContainer.current}>
 			<SelectPrimitive.Content
 				data-slot="select-content"
 				className={cn(

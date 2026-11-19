@@ -21,22 +21,22 @@ import {
 	type Row,
 	type SortingState,
 } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@nimbus/_components/ui/table";
-import { DownloadProvider } from "@nimbus/_components/providers/download-provider";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/v2/(version-2)/(home)/files/_components/ui/table";
+import { DownloadProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/download-provider";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { pointerIntersection } from "@dnd-kit/collision";
 import DragNDropUploader from "./drag-n-drop-uploader";
 import { useMemo, useState, type JSX } from "react";
-import { Button } from "@nimbus/_components/ui/button";
-import { formatFileSize } from "@nimbus/_packages/shared";
-import { PdfIcon } from "@nimbus/_components/icons";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { formatFileSize } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { PdfIcon } from "@/app/v2/(version-2)/(home)/files/_components/icons";
 import { FileActions } from "./file-actions";
-import type { File } from "@nimbus/_packages/shared";
-import { useTags } from "@nimbus/_hooks/useTags";
+import type { File } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { useTags } from "@/app/v2/(version-2)/(home)/files/_hooks/useTags";
 import { FileTags } from "./file-tags";
 import { format } from "date-fns";
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 // Utility function for date formatting
 const formatDate = (dateString: string | null): string => {

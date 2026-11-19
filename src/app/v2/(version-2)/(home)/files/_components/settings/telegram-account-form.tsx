@@ -1,10 +1,10 @@
-import { createTelegramAccountSchema, type CreateTelegramAccountSchema } from "@nimbus/_packages/shared";
-import { useCreateTelegramAccount } from "@nimbus/_hooks/useCreateAccount";
-import { FieldError } from "@nimbus/_components/ui/field-error";
+import { createTelegramAccountSchema, type CreateTelegramAccountSchema } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { useCreateTelegramAccount } from "@/app/v2/(version-2)/(home)/files/_hooks/useCreateAccount";
+import { FieldError } from "@/app/v2/(version-2)/(home)/files/_components/ui/field-error";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@nimbus/_components/ui/button";
-import { Label } from "@nimbus/_components/ui/label";
-import { Input } from "@nimbus/_components/ui/input";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { Label } from "@/app/v2/(version-2)/(home)/files/_components/ui/label";
+import { Input } from "@/app/v2/(version-2)/(home)/files/_components/ui/input";
 import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";

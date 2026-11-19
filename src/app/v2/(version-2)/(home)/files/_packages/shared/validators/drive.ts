@@ -15,4 +15,4 @@ export const deletePinnedFileSchema = z.object({
 
 export type CreatePinnedFile = z.infer<typeof createPinnedFileSchema>;
 export type DeletePinnedFile = z.infer<typeof deletePinnedFileSchema>;
-export type { PinnedFileTableSelect as PinnedFile } from "@nimbus/_packages/db/schema";
+export type { PinnedFileTableSelect as PinnedFile } from "@/app/v2/(version-2)/(home)/files/_packages/db/schema";

@@ -3,12 +3,12 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@nimbus/_components/ui/dropdown-menu";
-import { CreateTagDialog } from "@nimbus/_components/dialogs/create-tag-dialog";
-import { Button } from "@nimbus/_components/ui/button";
-import type { File, Tag } from "@nimbus/_packages/shared";
-import { Badge } from "@nimbus/_components/ui/badge";
-import { useTags } from "@nimbus/_hooks/useTags";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dropdown-menu";
+import { CreateTagDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/create-tag-dialog";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import type { File, Tag } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { Badge } from "@/app/v2/(version-2)/(home)/files/_components/ui/badge";
+import { useTags } from "@/app/v2/(version-2)/(home)/files/_hooks/useTags";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";

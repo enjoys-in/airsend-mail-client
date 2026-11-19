@@ -5,11 +5,11 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@nimbus/_components/ui/dialog";
-import { UploadZone } from "@nimbus/_components/upload/upload-zone";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dialog";
+import { UploadZone } from "@/app/v2/(version-2)/(home)/files/_components/upload/upload-zone";
 import { useEffect, useState, type FormEvent } from "react";
-import type { UploadFileDialogProps } from "@nimbus/_lib/types";
-import { Button } from "@nimbus/_components/ui/button";
+import type { UploadFileDialogProps } from "@/app/v2/(version-2)/(home)/files/_lib/types";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
 import { toast } from "sonner";
 
 export function UploadFolderDialog({ open, onOpenChange }: UploadFileDialogProps) {

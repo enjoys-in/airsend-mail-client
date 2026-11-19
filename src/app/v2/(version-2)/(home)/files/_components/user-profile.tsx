@@ -1,7 +1,7 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@nimbus/_components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/app/v2/(version-2)/(home)/files/_components/ui/avatar";
 import { cva, type VariantProps } from "class-variance-authority";
-import { useIsMounted } from "@nimbus/_hooks/useIsMounted";
-import { cn } from "@nimbus/_lib/utils";
+import { useIsMounted } from "@/app/v2/(version-2)/(home)/files/_hooks/useIsMounted";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 import { useMemo } from "react";
 
 const iconvVariants = cva("rounded-full border flex items-center justify-center", {

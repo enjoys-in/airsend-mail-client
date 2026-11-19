@@ -18,14 +18,15 @@ import {
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
+import { nimbusPortalContainer } from "../../_lib/portal-container";
 
 function DropdownMenu({ ...props }: ComponentProps<typeof Root>) {
 	return <Root data-slot="dropdown-menu" {...props} />;
 }
 
 function DropdownMenuPortal({ ...props }: ComponentProps<typeof Portal>) {
-	return <Portal data-slot="dropdown-menu-portal" {...props} />;
+	return <Portal data-slot="dropdown-menu-portal" container={nimbusPortalContainer.current} {...props} />;
 }
 
 function DropdownMenuTrigger({ ...props }: ComponentProps<typeof Trigger>) {
@@ -34,7 +35,7 @@ function DropdownMenuTrigger({ ...props }: ComponentProps<typeof Trigger>) {
 
 function DropdownMenuContent({ className, sideOffset = 4, ...props }: ComponentProps<typeof Content>) {
 	return (
-		<Portal>
+		<Portal container={nimbusPortalContainer.current}>
 			<Content
 				data-slot="dropdown-menu-content"
 				sideOffset={sideOffset}

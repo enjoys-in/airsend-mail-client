@@ -3,13 +3,13 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@nimbus/_components/ui/dropdown-menu";
-import { UploadFolderDialog } from "@nimbus/_components/dialogs/upload-folder-dialog";
-import { CreateFolderDialog } from "@nimbus/_components/dialogs/create-folder-dialog";
-import { UploadFileDialog } from "@nimbus/_components/dialogs/upload-files-dialog";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dropdown-menu";
+import { UploadFolderDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/upload-folder-dialog";
+import { CreateFolderDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/create-folder-dialog";
+import { UploadFileDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/upload-files-dialog";
 import { FolderPlus, Plus, Upload } from "lucide-react";
 import { useSearch } from "@tanstack/react-router";
-import { Button } from "@nimbus/_components/ui/button";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
 import { useState } from "react";
 
 export function UploadButton({ name }: { name: string }) {

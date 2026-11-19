@@ -1,6 +1,6 @@
 import type { ClientRequestOptions } from "hono/client";
-import type { AppType } from "@nimbus/_packages/server";
-import env from "@nimbus/_packages/env/client";
+import type { AppType } from "@/app/v2/(version-2)/(home)/files/_packages/server";
+import env from "@/app/v2/(version-2)/(home)/files/_packages/env/client";
 import { hc } from "hono/client";
 
 const createClient = (options?: ClientRequestOptions) => {

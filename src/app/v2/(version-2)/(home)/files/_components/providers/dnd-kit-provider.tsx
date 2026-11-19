@@ -1,5 +1,5 @@
 import { DragDropProvider, KeyboardSensor, PointerSensor } from "@dnd-kit/react";
-import { useMoveFile } from "@nimbus/_hooks/useFileOperations";
+import { useMoveFile } from "@/app/v2/(version-2)/(home)/files/_hooks/useFileOperations";
 
 export default function DndKitProvider({ children, parentId }: { children: React.ReactNode; parentId: string }) {
 	const { mutate: moveFile } = useMoveFile();

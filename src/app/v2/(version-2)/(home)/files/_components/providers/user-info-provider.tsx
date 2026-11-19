@@ -1,8 +1,8 @@
-import type { LimitedAccessAccount } from "@nimbus/_packages/shared";
+import type { LimitedAccessAccount } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { createContext, useContext, useMemo } from "react";
-import type { SessionUser } from "@nimbus/_packages/auth/auth";
-import { useAccounts } from "@nimbus/_hooks/useAccounts";
-import { useSession } from "@nimbus/_lib/session";
+import type { SessionUser } from "@/app/v2/(version-2)/(home)/files/_packages/auth/auth";
+import { useAccounts } from "@/app/v2/(version-2)/(home)/files/_hooks/useAccounts";
+import { useSession } from "@/app/v2/(version-2)/(home)/files/_lib/session";
 
 interface DriveProviderState {
 	user: SessionUser | null;

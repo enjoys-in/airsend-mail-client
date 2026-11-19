@@ -1,11 +1,12 @@
-import { SidebarFooter, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@nimbus/_components/ui/sidebar";
-import { Progress } from "@nimbus/_components/ui/progress";
-import { useDriveInfo } from "@nimbus/_hooks/useDriveOps";
-import { Moon, Settings, Sun } from "lucide-react";
-import { formatFileSize } from "@nimbus/_packages/shared";
+import { SidebarFooter, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/app/v2/(version-2)/(home)/files/_components/ui/sidebar";
+import { Progress } from "@/app/v2/(version-2)/(home)/files/_components/ui/progress";
+import { useDriveInfo } from "@/app/v2/(version-2)/(home)/files/_hooks/useDriveOps";
+import { HardDrive, Moon, Settings, Sun } from "lucide-react";
+import { formatFileSize } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 
 export default function StorageFooter() {
 	const { data, error, isError, isPending } = useDriveInfo();
@@ -14,33 +15,13 @@ export default function StorageFooter() {
 	const [usagePercent, setUsagePercent] = useState<number>(0);
 	const [isMounted, setIsMounted] = useState(false);
 
-	// Simple theme state management
-	const [theme, setTheme] = useState<"light" | "dark">("light");
+	// Theme belongs to AirSend (next-themes, set up by the host layout); this only reads and flips it. Nimbus used to
+	// force the <html> class from localStorage on every mount, which fought the host's theme.
+	const { resolvedTheme, setTheme } = useTheme();
+	const theme = resolvedTheme === "dark" ? "dark" : "light";
+	useEffect(() => setIsMounted(true), []);
 
-	useEffect(() => {
-		// Check for saved theme preference or default to light mode
-		const savedTheme = localStorage.getItem("theme");
-		if (savedTheme === "dark" || (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-			document.documentElement.classList.add("dark");
-			setTheme("dark");
-		} else {
-			document.documentElement.classList.remove("dark");
-			setTheme("light");
-		}
-		setIsMounted(true);
-	}, []);
-
-	const toggleTheme = () => {
-		if (theme === "light") {
-			document.documentElement.classList.add("dark");
-			localStorage.setItem("theme", "dark");
-			setTheme("dark");
-		} else {
-			document.documentElement.classList.remove("dark");
-			localStorage.setItem("theme", "light");
-			setTheme("light");
-		}
-	};
+	const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
 	useEffect(() => {
 		if (isError && error) {
@@ -63,7 +44,7 @@ export default function StorageFooter() {
 	}, [data]);
 
 	return (
-		<SidebarFooter className="flex flex-col items-start gap-2 self-stretch p-2 pb-0 transition-all duration-300 ease-linear dark:bg-neutral-800">
+		<SidebarFooter className="flex flex-col items-start gap-2 self-stretch p-2 pb-0 transition-all duration-300 ease-linear">
 			<SidebarMenu>
 				<SidebarMenuItem>
 					<div className="flex flex-col items-start self-stretch rounded-lg border border-neutral-200 bg-neutral-200 dark:border-0 dark:border-transparent dark:bg-neutral-700">
@@ -105,6 +86,15 @@ export default function StorageFooter() {
 					<Link to="/dashboard/settings">
 						<Settings className="size-4" />
 						<span>Settings</span>
+					</Link>
+				</SidebarMenuButton>
+				<SidebarMenuButton
+					asChild
+					className="transition-all duration-200 ease-linear hover:bg-neutral-200 dark:hover:bg-neutral-700"
+				>
+					<Link to="/configure/storage">
+						<HardDrive className="size-4" />
+						<span>Storage</span>
 					</Link>
 				</SidebarMenuButton>
 			</SidebarMenu>

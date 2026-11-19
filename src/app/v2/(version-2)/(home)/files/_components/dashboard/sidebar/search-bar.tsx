@@ -1,5 +1,5 @@
-import { SearchDialog } from "@nimbus/_components/search/search-dialog";
-import { Button } from "@nimbus/_components/ui/button";
+import { SearchDialog } from "@/app/v2/(version-2)/(home)/files/_components/search/search-dialog";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
 import { Search } from "lucide-react";
 import { useState } from "react";
 

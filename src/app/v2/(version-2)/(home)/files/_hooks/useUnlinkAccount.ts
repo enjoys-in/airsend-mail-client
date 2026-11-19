@@ -1,6 +1,6 @@
-import { useDefaultAccountProvider } from "@nimbus/_components/providers/default-account-provider";
-import type { ApiResponse, DriveProvider } from "@nimbus/_packages/shared";
-import env from "@nimbus/_packages/env/client";
+import { useDefaultAccountProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/default-account-provider";
+import type { ApiResponse, DriveProvider } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import env from "@/app/v2/(version-2)/(home)/files/_packages/env/client";
 import { toast } from "sonner";
 
 export const useUnlinkAccount = () => {

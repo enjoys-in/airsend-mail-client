@@ -4,12 +4,12 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@nimbus/_components/ui/dropdown-menu";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@nimbus/_components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@nimbus/_components/ui/avatar";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dropdown-menu";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/app/v2/(version-2)/(home)/files/_components/ui/sidebar";
+import { Avatar, AvatarFallback } from "@/app/v2/(version-2)/(home)/files/_components/ui/avatar";
 import { ArrowLeft, ChevronsUpDown } from "lucide-react";
-import { useSession } from "@nimbus/_lib/session";
-import Profile from "@nimbus/_components/user-profile";
+import { useSession } from "@/app/v2/(version-2)/(home)/files/_lib/session";
+import Profile from "@/app/v2/(version-2)/(home)/files/_components/user-profile";
 
 export default function UserAccount() {
 	const { data: session, isPending } = useSession();

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
-import type { DriveProvider, DriveProviderSlug } from "@nimbus/_packages/shared";
+import type { DriveProvider, DriveProviderSlug } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useNavigate, useLocation } from "@tanstack/react-router";
-import { providerToSlug } from "@nimbus/_packages/shared";
+import { providerToSlug } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useUserInfoProvider } from "./user-info-provider";
 
 interface AccountProvider {

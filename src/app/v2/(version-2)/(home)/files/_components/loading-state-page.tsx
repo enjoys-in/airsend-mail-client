@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 import { toast } from "sonner";
 
 interface LoadingStatePageProps {
@@ -25,7 +25,7 @@ export function LoadingStatePage({
 	}, [error]);
 
 	return (
-		<div className="flex min-h-screen items-center justify-center">
+		<div className="flex h-full items-center justify-center">
 			<div className="text-center">
 				<div className="dark:bg-background bg-background/80 flex flex-col items-center justify-center p-8 text-center">
 					{error ? (

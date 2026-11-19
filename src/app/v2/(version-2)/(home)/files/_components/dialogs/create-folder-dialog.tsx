@@ -5,13 +5,13 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@nimbus/_components/ui/dialog";
-import { useCreateFolder } from "@nimbus/_hooks/useFileOperations";
-import type { CreateFolderDialogProps } from "@nimbus/_lib/types";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dialog";
+import { useCreateFolder } from "@/app/v2/(version-2)/(home)/files/_hooks/useFileOperations";
+import type { CreateFolderDialogProps } from "@/app/v2/(version-2)/(home)/files/_lib/types";
 import { useState, type FormEvent } from "react";
-import { Button } from "@nimbus/_components/ui/button";
-import { Label } from "@nimbus/_components/ui/label";
-import { Input } from "@nimbus/_components/ui/input";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { Label } from "@/app/v2/(version-2)/(home)/files/_components/ui/label";
+import { Input } from "@/app/v2/(version-2)/(home)/files/_components/ui/input";
 import { toast } from "sonner";
 
 export function CreateFolderDialog({ open, onOpenChange, parentId }: CreateFolderDialogProps) {

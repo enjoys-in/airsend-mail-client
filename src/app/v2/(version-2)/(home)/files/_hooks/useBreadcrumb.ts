@@ -1,8 +1,8 @@
 //  TODO: Find a better implementation of this that provides instant breadcrumb fetching
 
-import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
-import type { DriveProviderClient } from "@nimbus/_utils/client";
-import { handleUnauthorizedError } from "@nimbus/_utils/client";
+import { useAccountProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/account-provider";
+import type { DriveProviderClient } from "@/app/v2/(version-2)/(home)/files/_utils/client";
+import { handleUnauthorizedError } from "@/app/v2/(version-2)/(home)/files/_utils/client";
 import { useQuery } from "@tanstack/react-query";
 
 export interface BreadcrumbItem {

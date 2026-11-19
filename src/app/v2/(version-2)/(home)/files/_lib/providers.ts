@@ -1,4 +1,4 @@
-import type { DriveProvider } from "@nimbus/_packages/shared";
+import type { DriveProvider } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 
 /** Display names for the storage providers the files app supports. */
 export const PROVIDER_LABELS: Record<DriveProvider, string> = {

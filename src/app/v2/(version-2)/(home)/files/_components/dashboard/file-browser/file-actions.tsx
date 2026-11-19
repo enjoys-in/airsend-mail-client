@@ -8,16 +8,16 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@nimbus/_components/ui/dropdown-menu";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dropdown-menu";
 import { Copy, Download, ExternalLink, MoreVertical, Pin } from "lucide-react";
-import { useDeleteFile, useDownloadFile, useUpdateFile } from "@nimbus/_hooks/useFileOperations";
-import { useDownloadContext } from "@nimbus/_components/providers/download-provider";
-import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
-import { RenameFileDialog } from "@nimbus/_components/dialogs/rename-file-dialog";
-import { DeleteFileDialog } from "@nimbus/_components/dialogs/delete-file-dialog";
-import { usePinFile } from "@nimbus/_hooks/useDriveOps";
-import { Button } from "@nimbus/_components/ui/button";
-import type { File } from "@nimbus/_packages/shared";
+import { useDeleteFile, useDownloadFile, useUpdateFile } from "@/app/v2/(version-2)/(home)/files/_hooks/useFileOperations";
+import { useDownloadContext } from "@/app/v2/(version-2)/(home)/files/_components/providers/download-provider";
+import { useAccountProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/account-provider";
+import { RenameFileDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/rename-file-dialog";
+import { DeleteFileDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/delete-file-dialog";
+import { usePinFile } from "@/app/v2/(version-2)/(home)/files/_hooks/useDriveOps";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import type { File } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 

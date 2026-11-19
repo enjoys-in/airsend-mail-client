@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { Loader2 } from "lucide-react";
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 export function Loader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 	return (

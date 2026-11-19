@@ -2,7 +2,8 @@ import { Description, Root, Trigger, Close, Portal, Overlay, Title, Content } fr
 import type { ComponentProps } from "react";
 import { XIcon } from "lucide-react";
 
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
+import { nimbusPortalContainer } from "../../_lib/portal-container";
 
 function Sheet({ ...props }: ComponentProps<typeof Root>) {
 	return <Root data-slot="sheet" {...props} />;
@@ -17,7 +18,7 @@ function SheetClose({ ...props }: ComponentProps<typeof Close>) {
 }
 
 function SheetPortal({ ...props }: ComponentProps<typeof Portal>) {
-	return <Portal data-slot="sheet-portal" {...props} />;
+	return <Portal data-slot="sheet-portal" container={nimbusPortalContainer.current} {...props} />;
 }
 
 function SheetOverlay({ className, ...props }: ComponentProps<typeof Overlay>) {

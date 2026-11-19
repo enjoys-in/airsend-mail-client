@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { Sheet, SheetContent } from "@nimbus/_components/ui/sheet";
+import { Sheet, SheetContent } from "@/app/v2/(version-2)/(home)/files/_components/ui/sheet";
 
 export function FilePreview() {
 	const navigate = useNavigate({ from: "/dashboard/$providerSlug/$accountId" });

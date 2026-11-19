@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import { DownloadProgress } from "@nimbus/_components/ui/download-progress";
+import { DownloadProgress } from "@/app/v2/(version-2)/(home)/files/_components/ui/download-progress";
 
 interface DownloadState {
 	id: string;

@@ -5,8 +5,8 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@nimbus/_components/ui/dialog";
-import { Button } from "@nimbus/_components/ui/button";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dialog";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
 

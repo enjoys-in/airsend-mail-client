@@ -1,6 +1,6 @@
 import { Corner, Root, ScrollAreaScrollbar, ScrollAreaThumb, Viewport } from "@radix-ui/react-scroll-area";
 import type { ComponentProps } from "react";
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 function ScrollArea({ className, children, ...props }: ComponentProps<typeof Root>) {
 	return (

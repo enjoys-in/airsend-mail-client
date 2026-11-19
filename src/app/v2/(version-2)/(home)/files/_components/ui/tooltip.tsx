@@ -1,7 +1,8 @@
 import { Provider, Root, Trigger, Content, Portal, Arrow } from "@radix-ui/react-tooltip";
 
 import type { ComponentProps } from "react";
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
+import { nimbusPortalContainer } from "../../_lib/portal-container";
 
 function TooltipProvider({ delayDuration = 0, ...props }: ComponentProps<typeof Provider>) {
 	return <Provider data-slot="tooltip-provider" delayDuration={delayDuration} {...props} />;
@@ -21,7 +22,7 @@ function TooltipTrigger({ ...props }: ComponentProps<typeof Trigger>) {
 
 function TooltipContent({ className, sideOffset = 0, children, ...props }: ComponentProps<typeof Content>) {
 	return (
-		<Portal>
+		<Portal container={nimbusPortalContainer.current}>
 			<Content
 				data-slot="tooltip-content"
 				sideOffset={sideOffset}

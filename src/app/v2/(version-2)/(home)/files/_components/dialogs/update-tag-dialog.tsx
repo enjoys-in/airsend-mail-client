@@ -5,15 +5,15 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@nimbus/_components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@nimbus/_components/ui/select";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/v2/(version-2)/(home)/files/_components/ui/select";
 import { useEffect, useState, type ReactNode } from "react";
-import { FieldError } from "@nimbus/_components/ui/field-error";
-import { updateTagSchema } from "@nimbus/_packages/shared";
-import { Button } from "@nimbus/_components/ui/button";
-import { Label } from "@nimbus/_components/ui/label";
-import { Input } from "@nimbus/_components/ui/input";
-import type { Tag } from "@nimbus/_packages/shared";
+import { FieldError } from "@/app/v2/(version-2)/(home)/files/_components/ui/field-error";
+import { updateTagSchema } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { Label } from "@/app/v2/(version-2)/(home)/files/_components/ui/label";
+import { Input } from "@/app/v2/(version-2)/(home)/files/_components/ui/input";
+import type { Tag } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 
 function getDescendantIds(tag: Tag): string[] {
 	if (!tag.children) return [];

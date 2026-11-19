@@ -4,20 +4,20 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@nimbus/_components/ui/dropdown-menu";
-import { LogoIcon, S3Icon, TelegramIcon } from "@nimbus/_components/icons";
-import { useUserInfoProvider } from "@nimbus/_components/providers/user-info-provider";
-import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
-import type { LimitedAccessAccount } from "@nimbus/_packages/shared";
-import { ScrollArea } from "@nimbus/_components/ui/scroll-area";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/dropdown-menu";
+import { LogoIcon, S3Icon, TelegramIcon } from "@/app/v2/(version-2)/(home)/files/_components/icons";
+import { useUserInfoProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/user-info-provider";
+import { useAccountProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/account-provider";
+import type { LimitedAccessAccount } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { ScrollArea } from "@/app/v2/(version-2)/(home)/files/_components/ui/scroll-area";
 import { useNavigate } from "@tanstack/react-router";
-import { Skeleton } from "@nimbus/_components/ui/skeleton";
-import { ChevronsUpDown, Plus } from "lucide-react";
-import { Button } from "@nimbus/_components/ui/button";
+import { Skeleton } from "@/app/v2/(version-2)/(home)/files/_components/ui/skeleton";
+import { ChevronsUpDown, Plus, Settings2 } from "lucide-react";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
 import { useEffect, useState } from "react";
-import { providerLabel } from "@nimbus/_lib/providers";
-import { useOrganization } from "@nimbus/_lib/session";
-import { cn } from "@nimbus/_lib/utils";
+import { providerLabel } from "@/app/v2/(version-2)/(home)/files/_lib/providers";
+import { useOrganization } from "@/app/v2/(version-2)/(home)/files/_lib/session";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 export function providerToIcon(providerId: string) {
 	switch (providerId) {
@@ -110,23 +110,23 @@ export function SourceSelector() {
 							)}
 						</div>
 					</ScrollArea>
+					<DropdownMenuSeparator />
 					{canManageStorage && (
-						<>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								onClick={() =>
-									navigate({
-										replace: true,
-										search: prev => ({ ...prev, connectAccount: true }),
-									})
-								}
-								className="flex cursor-pointer items-center gap-2 font-medium"
-							>
-								<Plus className="h-4 w-4" />
-								<span>Add storage</span>
-							</DropdownMenuItem>
-						</>
+						<DropdownMenuItem
+							onClick={() => navigate({ to: "/configure/storage/new" })}
+							className="flex cursor-pointer items-center gap-2 font-medium"
+						>
+							<Plus className="h-4 w-4" />
+							<span>Add storage</span>
+						</DropdownMenuItem>
 					)}
+					<DropdownMenuItem
+						onClick={() => navigate({ to: "/configure/storage" })}
+						className="flex cursor-pointer items-center gap-2 font-medium"
+					>
+						<Settings2 className="h-4 w-4" />
+						<span>{canManageStorage ? "Manage storage" : "Storage details"}</span>
+					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</>

@@ -1,5 +1,5 @@
-import { UploadButton } from "@nimbus/_components/upload-button";
-// import { SidebarTrigger } from "@nimbus/_components/ui/sidebar";
+import { UploadButton } from "@/app/v2/(version-2)/(home)/files/_components/upload-button";
+// import { SidebarTrigger } from "@/app/v2/(version-2)/(home)/files/_components/ui/sidebar";
 import { FileBreadcrumb } from "./file-path";
 
 export function Header() {

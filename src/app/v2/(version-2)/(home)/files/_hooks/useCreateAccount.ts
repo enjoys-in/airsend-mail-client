@@ -1,8 +1,8 @@
-import type { CreateS3AccountSchema, CreateTelegramAccountSchema, DriveProvider } from "@nimbus/_packages/shared";
-import { providerToSlug } from "@nimbus/_packages/shared";
+import type { CreateS3AccountSchema, CreateTelegramAccountSchema, DriveProvider } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { providerToSlug } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import env from "@nimbus/_packages/env/client";
-import { SESSION_QUERY_KEY } from "@nimbus/_lib/session";
+import env from "@/app/v2/(version-2)/(home)/files/_packages/env/client";
+import { SESSION_QUERY_KEY } from "@/app/v2/(version-2)/(home)/files/_lib/session";
 import { useNavigate } from "@tanstack/react-router";
 
 type CreatedAccount = { id: string; accountId: string; providerId: DriveProvider; nickname?: string | null };

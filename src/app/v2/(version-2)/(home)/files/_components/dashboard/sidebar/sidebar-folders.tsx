@@ -5,15 +5,15 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-} from "@nimbus/_components/ui/sidebar";
+} from "@/app/v2/(version-2)/(home)/files/_components/ui/sidebar";
 import { ChevronDown, FileText, Folder, PinOff } from "lucide-react";
-import { providerToSlug, type DriveProvider } from "@nimbus/_packages/shared";
-import { usePinnedFiles, useUnpinFile } from "@nimbus/_hooks/useDriveOps";
+import { providerToSlug, type DriveProvider } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { usePinnedFiles, useUnpinFile } from "@/app/v2/(version-2)/(home)/files/_hooks/useDriveOps";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { Skeleton } from "@nimbus/_components/ui/skeleton";
-import type { PinnedFile } from "@nimbus/_packages/shared";
-import { Button } from "@nimbus/_components/ui/button";
-import { cn } from "@nimbus/_lib/utils";
+import { Skeleton } from "@/app/v2/(version-2)/(home)/files/_components/ui/skeleton";
+import type { PinnedFile } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 import { useState } from "react";
 
 // Helper to get a custom icon based on file type

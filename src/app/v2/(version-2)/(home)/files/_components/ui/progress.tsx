@@ -1,7 +1,7 @@
 import { Indicator, Root } from "@radix-ui/react-progress";
 import type { ComponentProps } from "react";
 
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 function Progress({ className, value, ...props }: ComponentProps<typeof Root>) {
 	return (

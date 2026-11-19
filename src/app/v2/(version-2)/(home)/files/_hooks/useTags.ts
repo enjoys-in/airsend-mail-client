@@ -1,10 +1,10 @@
-import { createTagSchema, updateTagSchema, type CreateTagSchema, type UpdateTagSchema } from "@nimbus/_packages/shared";
-import { useUserInfoProvider } from "@nimbus/_components/providers/user-info-provider";
+import { createTagSchema, updateTagSchema, type CreateTagSchema, type UpdateTagSchema } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
+import { useUserInfoProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/user-info-provider";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
-import type { DriveProviderClient } from "@nimbus/_utils/client";
-import { handleUnauthorizedError } from "@nimbus/_utils/client";
-import type { File, Tag } from "@nimbus/_packages/shared";
+import { useAccountProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/account-provider";
+import type { DriveProviderClient } from "@/app/v2/(version-2)/(home)/files/_utils/client";
+import { handleUnauthorizedError } from "@/app/v2/(version-2)/(home)/files/_utils/client";
+import type { File, Tag } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { toast } from "sonner";
 
 const TAGS_QUERY_KEY = "tags";

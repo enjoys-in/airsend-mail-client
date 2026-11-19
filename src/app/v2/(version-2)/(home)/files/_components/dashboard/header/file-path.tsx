@@ -1,13 +1,13 @@
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList } from "@nimbus/_components/ui/breadcrumb";
-import { type BreadcrumbItem as BreadcrumbItemType } from "@nimbus/_hooks/useBreadcrumb";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList } from "@/app/v2/(version-2)/(home)/files/_components/ui/breadcrumb";
+import { type BreadcrumbItem as BreadcrumbItemType } from "@/app/v2/(version-2)/(home)/files/_hooks/useBreadcrumb";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useBreadcrumbPath } from "@nimbus/_hooks/useBreadcrumb";
+import { useBreadcrumbPath } from "@/app/v2/(version-2)/(home)/files/_hooks/useBreadcrumb";
 import { pointerIntersection } from "@dnd-kit/collision";
 import { SourceSelector } from "./source-selector";
 import { useDroppable } from "@dnd-kit/react";
 import { HomeIcon } from "lucide-react";
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 // Define animation variants for slide-in/slide-out
 const variants: Variants = {

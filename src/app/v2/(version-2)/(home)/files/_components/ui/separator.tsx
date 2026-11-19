@@ -1,7 +1,7 @@
 import { Root } from "@radix-ui/react-separator";
 import type { ComponentProps } from "react";
 
-import { cn } from "@nimbus/_lib/utils";
+import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 function Separator({
 	className,
