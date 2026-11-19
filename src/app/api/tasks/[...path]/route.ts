@@ -57,6 +57,13 @@ function onlyWorkspace(data: any, workspaceId: string): any {
   return data;
 }
 
+// Kaneo's auth (better-auth) sets session cookies; pass them through to the browser.
+function forwardSetCookies(from: Response, to: NextResponse) {
+  for (const cookie of from.headers.getSetCookie()) {
+    to.headers.append("set-cookie", cookie);
+  }
+}
+
 async function handleProxy(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
@@ -71,7 +78,7 @@ async function handleProxy(
   }
 
   const token = userToken(request);
-  let workspaceId = process.env.TASKS_DEFAULT_WORKSPACE_ID || "QLgzDfOu35H0B5B4p6qWHC22JLlvoNNQ";
+  let workspaceId: string | null = null;
 
   if (token) {
     let bodyJson: unknown;
@@ -85,9 +92,11 @@ async function handleProxy(
   }
 
   const params = new URLSearchParams(request.nextUrl.search);
+  const dynamicWorkspaceId = params.get("workspaceId") || workspaceId;
+
   if (targetPath === "project" || targetPath === "task/assigned") {
-    if (!params.has("workspaceId")) {
-      params.set("workspaceId", workspaceId);
+    if (dynamicWorkspaceId && !params.has("workspaceId")) {
+      params.set("workspaceId", dynamicWorkspaceId);
     }
   }
   const search = params.toString() ? `?${params.toString()}` : "";
@@ -96,6 +105,11 @@ async function handleProxy(
   const headers: Record<string, string> = {
     "Content-Type": request.headers.get("Content-Type") || "application/json",
   };
+  const cookie = request.headers.get("cookie");
+  if (cookie) headers["cookie"] = cookie;
+  const authHeader = request.headers.get("authorization");
+  if (authHeader) headers["authorization"] = authHeader;
+
   const serviceKey = process.env.TASKS_API_KEY;
   if (serviceKey) headers["x-api-key"] = serviceKey;
 
@@ -109,17 +123,21 @@ async function handleProxy(
 
     if (contentType.includes("application/json")) {
       let data = await backendRes.json();
-      if (targetPath === "workspace" && backendRes.ok) {
-        data = onlyWorkspace(data, workspaceId);
+      if (targetPath === "workspace" && backendRes.ok && dynamicWorkspaceId) {
+        data = onlyWorkspace(data, dynamicWorkspaceId);
       }
-      return NextResponse.json(data, { status: backendRes.status });
+      const jsonRes = NextResponse.json(data, { status: backendRes.status });
+      forwardSetCookies(backendRes, jsonRes);
+      return jsonRes;
     }
 
     const text = await backendRes.text();
-    return new NextResponse(text, {
+    const textRes = new NextResponse(text, {
       status: backendRes.status,
       headers: { "Content-Type": contentType || "text/plain" },
     });
+    forwardSetCookies(backendRes, textRes);
+    return textRes;
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error?.message || "Failed to reach tasks backend", backendOffline: true },
