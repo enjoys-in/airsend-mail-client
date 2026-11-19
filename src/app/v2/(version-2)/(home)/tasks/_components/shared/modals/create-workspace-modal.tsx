@@ -1,0 +1,158 @@
+import { useNavigate } from "@tanstack/react-router";
+import { SquarePlusIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@tasks/_components/ui/breadcrumb";
+import { Button } from "@tasks/_components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@tasks/_components/ui/dialog";
+import { Input } from "@tasks/_components/ui/input";
+import useCreateWorkspace from "@tasks/_hooks/queries/workspace/use-create-workspace";
+import { authClient } from "@tasks/_lib/auth-client";
+import { toast } from "@tasks/_lib/toast";
+
+type CreateWorkspaceModalProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+function CreateWorkspaceModal({ open, onClose }: CreateWorkspaceModalProps) {
+  const { t } = useTranslation();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const { mutateAsync } = useCreateWorkspace();
+
+  useEffect(() => {
+    if (open && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [open]);
+
+  const handleClose = () => {
+    setName("");
+    setDescription("");
+    onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const createdWorkspace = await mutateAsync({ name, description });
+
+      await authClient.organization.setActive({
+        organizationId: createdWorkspace.id,
+      });
+
+      await navigate({
+        to: "/dashboard/workspace/$workspaceId",
+        params: {
+          workspaceId: createdWorkspace.id,
+        },
+      });
+
+      toast.success(t("common:modals.createWorkspace.successToast"), {
+        icon: SquarePlusIcon,
+      });
+      handleClose();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("common:modals.createWorkspace.errorToast"),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle asChild>
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="text-muted-foreground font-semibold tracking-wider text-sm">
+                  {t("common:modals.createWorkspace.breadcrumbKaneo")}
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem className="text-foreground font-medium text-sm">
+                  {t("common:modals.createWorkspace.title")}
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {t("common:modals.createWorkspace.description")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4 px-6">
+            <Input
+              ref={inputRef}
+              unstyled
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("common:modals.createWorkspace.namePlaceholder")}
+              className="w-full [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-2 [&_[data-slot=input]]:text-2xl [&_[data-slot=input]]:leading-tight [&_[data-slot=input]]:font-semibold [&_[data-slot=input]]:tracking-tight [&_[data-slot=input]]:text-foreground [&_[data-slot=input]]:placeholder:text-muted-foreground [&_[data-slot=input]]:outline-none"
+              required
+            />
+
+            <Input
+              unstyled
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t(
+                "common:modals.createWorkspace.descriptionPlaceholder",
+              )}
+              className="w-full [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:py-2 [&_[data-slot=input]]:text-base [&_[data-slot=input]]:leading-relaxed [&_[data-slot=input]]:text-foreground [&_[data-slot=input]]:placeholder:text-muted-foreground [&_[data-slot=input]]:outline-none"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={handleClose}
+              variant="outline"
+              size="sm"
+              className="border-border text-foreground hover:bg-accent"
+            >
+              {t("common:actions.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              disabled={!name.trim()}
+              loading={isSubmitting}
+              size="sm"
+              className="disabled:opacity-50"
+            >
+              {t("common:modals.createWorkspace.createButton")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default CreateWorkspaceModal;
