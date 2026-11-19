@@ -24,6 +24,8 @@ import type {
   WorkspaceFile,
   Workflow,
   WorkflowRun,
+  MessageAttachment,
+  PendingUpload,
 } from "./chat-types";
 import {
   MOCK_TEAMS,
@@ -53,7 +55,71 @@ import {
   toCallRecord,
   toWorkspaceFile,
   toChatTask,
+  toDMMessage,
+  toAttachment,
+  apiErrorMessage,
+  type AttachmentRef,
 } from "./api";
+import { uploadWorkspaceFile, filesErrorMessage, type WorkspaceFileMeta } from "./files-api";
+import { categoryFor, extensionOf, fileKind } from "./file-utils";
+import { toast } from "sonner";
+
+// ---------------------------------------------------------------------------
+// File sending helpers
+// ---------------------------------------------------------------------------
+
+/** Abort handles of the uploads in flight, by pending-upload id. */
+const uploadControllers = new Map<string, AbortController>();
+
+/** Adds an attachment, replacing one with the same id or the same files-service file id (e.g. the local placeholder). */
+function upsertAttachment(list: MessageAttachment[], att: MessageAttachment): MessageAttachment[] {
+  const rest = list.filter((a) => a.id !== att.id && !(att.fileId && a.fileId === att.fileId));
+  return [...rest, att];
+}
+
+function withAttachment(m: ChatMessage, messageId: string, att: MessageAttachment): ChatMessage {
+  return m.id === messageId ? { ...m, type: "file", attachments: upsertAttachment(m.attachments ?? [], att) } : m;
+}
+
+/** The attachment shown right after sending, before the workspace server has confirmed the reference. */
+function localAttachment(meta: WorkspaceFileMeta, fileName: string): MessageAttachment {
+  return {
+    id: `local-${meta.id}`,
+    name: meta.name || fileName,
+    url: "",
+    mimeType: meta.mimeType,
+    size: meta.size,
+    fileId: meta.id,
+    extension: meta.extension || extensionOf(fileName) || undefined,
+  };
+}
+
+/** The /ref call can 404 for a moment while the server flushes the just-sent message; retry once after ~1s. */
+async function withRefRetry<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (err) {
+    if (err instanceof Error && (err as { status?: number }).status === 404) {
+      await new Promise((r) => setTimeout(r, 1000));
+      return call();
+    }
+    throw err;
+  }
+}
+
+/** Merge the server's DM page with what we already show (in-flight temp messages, attachments not yet confirmed). */
+function mergeDMMessages(local: ChatMessage[], server: ChatMessage[]): ChatMessage[] {
+  const localById = new Map(local.map((m) => [m.id, m]));
+  const merged = server.map((m) => {
+    const prev = localById.get(m.id);
+    if (!prev) return m;
+    const missing = prev.attachments.filter((a) => a.fileId && !m.attachments.some((x) => x.fileId === a.fileId));
+    return missing.length ? { ...m, attachments: [...m.attachments, ...missing] } : m;
+  });
+  const serverIds = new Set(server.map((m) => m.id));
+  const extra = local.filter((m) => !serverIds.has(m.id) && (m.id.startsWith("temp-") || m.attachments.some((a) => a.fileId)));
+  return [...merged, ...extra].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
 
 // ---------------------------------------------------------------------------
 // Store shape
@@ -70,6 +136,14 @@ interface ChatStore {
   isLoadingOlder: boolean;
   threadReplies: ChatMessage[];
   directMessages: DirectMessage[];
+  /** Messages of each DM conversation (channelId holds the conversation id), oldest first. */
+  dmMessages: Record<string, ChatMessage[]>;
+  /** Files currently uploading to the files service (chat attachments and team Files). */
+  pendingUploads: PendingUpload[];
+  /** Messages of each DM conversation (channelId holds the conversation id), oldest first. */
+  dmMessages: Record<string, ChatMessage[]>;
+  /** Files currently uploading to the files service (chat attachments and team Files). */
+  pendingUploads: PendingUpload[];
   notifications: ChatNotification[];
   tasks: ChatTask[];
   typingIndicators: TypingIndicator[];
@@ -160,6 +234,26 @@ interface ChatStore {
 
   // Actions — DMs
   setActiveDm: (dmId: string) => void;
+  fetchDMMessages: (dmId: string) => Promise<void>;
+  sendDMText: (content: string) => void;
+
+  // Actions — Files (bytes go to the files service first, then the message / Files tab references the file id)
+  sendFiles: (files: File[], caption?: string) => Promise<void>;
+  uploadTeamFile: (file: File, opts?: { channelId?: string }) => Promise<boolean>;
+  cancelUpload: (uploadId: string) => void;
+  dismissUpload: (uploadId: string) => void;
+  /** Add (or replace by id / file id) an attachment on a channel or DM message. */
+  addMessageAttachment: (messageId: string, attachment: MessageAttachment) => void;
+  fetchDMMessages: (dmId: string) => Promise<void>;
+  sendDMText: (content: string) => void;
+
+  // Actions — Files (bytes go to the files service first, then the message / Files tab references the file id)
+  sendFiles: (files: File[], caption?: string) => Promise<void>;
+  uploadTeamFile: (file: File, opts?: { channelId?: string }) => Promise<boolean>;
+  cancelUpload: (uploadId: string) => void;
+  dismissUpload: (uploadId: string) => void;
+  /** Add (or replace by id / file id) an attachment on a channel or DM message. */
+  addMessageAttachment: (messageId: string, attachment: MessageAttachment) => void;
 
   // Actions — Polls (channels only)
   polls: Poll[];
@@ -250,6 +344,8 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   isLoadingOlder: false,
   threadReplies: [],
   directMessages: [],
+  dmMessages: {},
+  pendingUploads: [],
   notifications: [],
   tasks: [],
   typingIndicators: [],
@@ -654,6 +750,240 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       activeThreadMessageId: null,
       sidePanelView: null,
     }),
+
+  fetchDMMessages: async (dmId) => {
+    const email = get().currentUserId;
+    if (!isValidUUID(dmId) || !email) return;
+    try {
+      const page = await workspaceApi.listDMMessages(dmId, email);
+      const server = (page?.items ?? []).map(toDMMessage);
+      set((s) => ({
+        dmMessages: { ...s.dmMessages, [dmId]: mergeDMMessages(s.dmMessages[dmId] ?? [], server) },
+      }));
+    } catch {
+      // Silent: the DM view keeps what it has and retries on the next poll.
+    }
+  },
+
+  sendDMText: (content) => {
+    const { activeDmId, currentUserId } = get();
+    const text = content.trim();
+    if (!activeDmId || !isValidUUID(activeDmId) || !text || !currentUserId) return;
+    const dmId = activeDmId;
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: ChatMessage = {
+      id: tempId,
+      channelId: dmId,
+      authorId: currentUserId,
+      authorName: "You",
+      content: text,
+      type: "text",
+      priority: "normal",
+      createdAt: new Date().toISOString(),
+      isEdited: false,
+      isPinned: false,
+      isPinnedPublic: false,
+      mentions: [],
+      reactions: [],
+      attachments: [],
+      threadReplyCount: 0,
+      isDeleted: false,
+    };
+    set((s) => ({ dmMessages: { ...s.dmMessages, [dmId]: [...(s.dmMessages[dmId] ?? []), optimistic] } }));
+    workspaceApi
+      .sendDMMessage(dmId, text, currentUserId)
+      .then((serverMsg) => {
+        const real = toDMMessage(serverMsg);
+        set((s) => ({
+          dmMessages: {
+            ...s.dmMessages,
+            [dmId]: (s.dmMessages[dmId] ?? []).map((m) => (m.id === tempId ? real : m)),
+          },
+        }));
+      })
+      .catch((err) => {
+        set((s) => ({
+          dmMessages: { ...s.dmMessages, [dmId]: (s.dmMessages[dmId] ?? []).filter((m) => m.id !== tempId) },
+          apiError: apiErrorMessage(err, "Failed to send message"),
+        }));
+      });
+  },
+
+  // -----------------------------------------------------------------------
+  // Files: upload to the files service first, then reference the file id
+  // -----------------------------------------------------------------------
+
+  addMessageAttachment: (messageId, attachment) =>
+    set((s) => ({
+      messages: s.messages.map((m) => withAttachment(m, messageId, attachment)),
+      threadReplies: s.threadReplies.map((m) => withAttachment(m, messageId, attachment)),
+      dmMessages: Object.fromEntries(
+        Object.entries(s.dmMessages).map(([id, list]) => [id, list.map((m) => withAttachment(m, messageId, attachment))]),
+      ),
+    })),
+
+  cancelUpload: (uploadId) => {
+    uploadControllers.get(uploadId)?.abort();
+    uploadControllers.delete(uploadId);
+    set((s) => ({ pendingUploads: s.pendingUploads.filter((u) => u.id !== uploadId) }));
+  },
+
+  dismissUpload: (uploadId) => {
+    uploadControllers.delete(uploadId);
+    set((s) => ({ pendingUploads: s.pendingUploads.filter((u) => u.id !== uploadId) }));
+  },
+
+  sendFiles: async (files, caption) => {
+    const { activeChannelId, activeDmId, currentUserId } = get();
+    const target =
+      activeChannelId && isValidUUID(activeChannelId)
+        ? ({ type: "channel", id: activeChannelId } as const)
+        : activeDmId && isValidUUID(activeDmId)
+          ? ({ type: "dm", id: activeDmId } as const)
+          : null;
+    if (!target || !currentUserId) return;
+
+    let first = true;
+    for (const file of files) {
+      const uploadId = `up-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const controller = new AbortController();
+      uploadControllers.set(uploadId, controller);
+      const patch = (p: Partial<PendingUpload>) =>
+        set((s) => ({ pendingUploads: s.pendingUploads.map((u) => (u.id === uploadId ? { ...u, ...p } : u)) }));
+      set((s) => ({
+        pendingUploads: [
+          ...s.pendingUploads,
+          { id: uploadId, contextType: target.type, contextId: target.id, name: file.name, size: file.size, progress: 0, status: "uploading" },
+        ],
+      }));
+
+      // 1) bytes -> files service (direct, no workspace proxy)
+      let meta: WorkspaceFileMeta;
+      try {
+        meta = await uploadWorkspaceFile(file, target.type, target.id, {
+          onProgress: (progress) => patch({ progress }),
+          signal: controller.signal,
+        });
+      } catch (err) {
+        if (!uploadControllers.has(uploadId)) continue; // cancelled by the user
+        const message = filesErrorMessage(err, "Upload failed");
+        patch({ status: "error", error: message });
+        toast.error(`${file.name}: ${message}`);
+        continue;
+      }
+
+      // 2) message -> workspace server ("this message is a file"), 3) reference the file id on it
+      patch({ progress: 100, status: "sending" });
+      const text = (first ? caption?.trim() : "") || file.name;
+      first = false;
+      const ref: AttachmentRef = {
+        file_id: meta.id,
+        file_name: meta.name || file.name,
+        file_type: meta.mimeType,
+        file_size: meta.size,
+        file_extension: meta.extension,
+      };
+      const local = localAttachment(meta, file.name);
+      let messageId: string | null = null;
+      try {
+        if (target.type === "channel") {
+          const serverMsg = await workspaceApi.sendMessage(target.id, { content: text, type: "file" }, currentUserId);
+          messageId = serverMsg.id;
+          const real: ChatMessage = { ...toMessage(serverMsg), type: "file", attachments: [local] };
+          set((s) =>
+            s.activeChannelId !== target.id || s.messages.some((m) => m.id === real.id)
+              ? s
+              : { messages: [...s.messages, real] },
+          );
+          const att = await withRefRetry(() => workspaceApi.addAttachmentRef(real.id, ref, currentUserId));
+          get().addMessageAttachment(real.id, toAttachment(att));
+        } else {
+          const serverMsg = await workspaceApi.sendDMMessage(target.id, text, currentUserId);
+          messageId = serverMsg.id;
+          const real: ChatMessage = { ...toDMMessage(serverMsg), type: "file", attachments: [local] };
+          set((s) => ({
+            dmMessages: {
+              ...s.dmMessages,
+              [target.id]: (s.dmMessages[target.id] ?? []).some((m) => m.id === real.id)
+                ? s.dmMessages[target.id]
+                : [...(s.dmMessages[target.id] ?? []), real],
+            },
+          }));
+          const att = await withRefRetry(() => workspaceApi.addDMAttachmentRef(target.id, real.id, ref, currentUserId));
+          get().addMessageAttachment(real.id, toAttachment(att));
+        }
+        set((s) => ({ pendingUploads: s.pendingUploads.filter((u) => u.id !== uploadId) }));
+        uploadControllers.delete(uploadId);
+      } catch (err) {
+        const message = apiErrorMessage(err, "Could not send the file");
+        // The file is stored but the message / reference failed: drop the placeholder so nothing looks attached.
+        if (messageId) {
+          set((s) => ({
+            messages: s.messages.map((m) => (m.id === messageId ? { ...m, attachments: m.attachments.filter((a) => a.id !== local.id) } : m)),
+            dmMessages: Object.fromEntries(
+              Object.entries(s.dmMessages).map(([id, list]) => [
+                id,
+                list.map((m) => (m.id === messageId ? { ...m, attachments: m.attachments.filter((a) => a.id !== local.id) } : m)),
+              ]),
+            ),
+          }));
+        }
+        patch({ status: "error", error: message });
+        toast.error(`${file.name}: ${message}`);
+      }
+    }
+  },
+
+  uploadTeamFile: async (file, opts) => {
+    const { activeTeamId, currentUserId } = get();
+    if (!activeTeamId || !isValidUUID(activeTeamId) || !currentUserId) return false;
+    const teamId = activeTeamId;
+    const uploadId = `up-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const controller = new AbortController();
+    uploadControllers.set(uploadId, controller);
+    const patch = (p: Partial<PendingUpload>) =>
+      set((s) => ({ pendingUploads: s.pendingUploads.map((u) => (u.id === uploadId ? { ...u, ...p } : u)) }));
+    set((s) => ({
+      pendingUploads: [
+        ...s.pendingUploads,
+        { id: uploadId, contextType: "team", contextId: teamId, name: file.name, size: file.size, progress: 0, status: "uploading" },
+      ],
+    }));
+
+    try {
+      const meta = await uploadWorkspaceFile(file, "team", teamId, {
+        onProgress: (progress) => patch({ progress }),
+        signal: controller.signal,
+      });
+      patch({ progress: 100, status: "sending" });
+      const created = await workspaceApi.addTeamFileRef(
+        teamId,
+        {
+          file_id: meta.id,
+          name: meta.name || file.name,
+          size: meta.size,
+          mime_type: meta.mimeType,
+          extension: meta.extension,
+          category: categoryFor(fileKind(meta.extension, meta.mimeType)),
+          channel_id: opts?.channelId && isValidUUID(opts.channelId) ? opts.channelId : undefined,
+        },
+        currentUserId,
+      );
+      const f = toWorkspaceFile(created);
+      set((s) => ({
+        files: s.files.some((x) => x.id === f.id) ? s.files : [f, ...s.files],
+        pendingUploads: s.pendingUploads.filter((u) => u.id !== uploadId),
+      }));
+      uploadControllers.delete(uploadId);
+      return true;
+    } catch (err) {
+      if (!uploadControllers.has(uploadId)) return false; // cancelled
+      const message = err instanceof Error && err.name === "FilesApiError" ? filesErrorMessage(err, "Upload failed") : apiErrorMessage(err, "Upload failed");
+      patch({ status: "error", error: message });
+      toast.error(`${file.name}: ${message}`);
+      return false;
+    }
+  },
 
   // -----------------------------------------------------------------------
   // Polls
