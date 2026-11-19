@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
 import {
   FolderOpen,
   FileText,
@@ -21,6 +23,9 @@ import {
   HardDrive,
   Eye,
   Hash,
+  Loader2,
+  AlertTriangle,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +52,15 @@ import {
 import { useChatStore } from "../_lib/chat-store";
 import WorkspaceErrorBoundary from "../_components/WorkspaceErrorBoundary";
 import type { WorkspaceFile } from "../_lib/chat-types";
+import { workspaceApi, isValidUUID } from "../_lib/api";
+import {
+  downloadWorkspaceFile,
+  filesErrorMessage,
+  getTeamStorage,
+  type TeamStorage,
+} from "../_lib/files-api";
+import { formatBytes } from "../_lib/file-utils";
+import { settingsPath } from "../_lib/use-access";
 
 export default function FilesPage() {
   return (
@@ -59,11 +73,14 @@ export default function FilesPage() {
 function FilesHubContent() {
   const {
     files,
-    addFile,
     deleteFile,
     channels,
     activeTeamId,
     currentUserId,
+    uploadTeamFile,
+    pendingUploads,
+    cancelUpload,
+    dismissUpload,
   } = useChatStore();
 
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -73,10 +90,40 @@ function FilesHubContent() {
   const [previewFile, setPreviewFile] = useState<WorkspaceFile | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Form states
-  const [fileName, setFileName] = useState("");
-  const [fileCategory, setFileCategory] = useState<WorkspaceFile["category"]>("document");
-  const [fileChannelId, setFileChannelId] = useState<string>("ch-1");
+  // Upload form
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileChannelId, setFileChannelId] = useState<string>("none");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // The storage account the team's workspace uploads go to (undefined = still loading, null = not configured)
+  const [storage, setStorage] = useState<TeamStorage | null | undefined>(undefined);
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!activeTeamId || !isValidUUID(activeTeamId)) {
+      setStorage(undefined);
+      return;
+    }
+    let cancelled = false;
+    setStorage(undefined);
+    setStorageError(null);
+    getTeamStorage(activeTeamId)
+      .then((s) => !cancelled && setStorage(s))
+      .catch((err) => {
+        if (cancelled) return;
+        setStorage(null);
+        setStorageError(filesErrorMessage(err, "Could not check this team's storage"));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTeamId]);
+
+  const teamUploads = pendingUploads.filter((u) => u.contextType === "team" && u.contextId === activeTeamId);
+  const channelsInTeam = channels.filter((c) => isValidUUID(c.id) && (!activeTeamId || c.teamId === activeTeamId));
+  const noStorage = storage === null;
 
   const filteredFiles = files.filter((f) => {
     if (activeCategory !== "all" && f.category !== activeCategory) return false;
@@ -92,7 +139,6 @@ function FilesHubContent() {
   });
 
   const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
-  const totalMB = (totalBytes / 1024 / 1024).toFixed(1);
 
   const getFileIcon = (category: WorkspaceFile["category"]) => {
     switch (category) {
@@ -111,29 +157,40 @@ function FilesHubContent() {
     }
   };
 
-  const handleUploadSubmit = () => {
-    if (!fileName.trim()) return;
-    const channel = channels.find((c) => c.id === fileChannelId);
-
-    addFile({
-      name: fileName.trim(),
-      size: Math.floor(Math.random() * 3000000) + 500000,
-      mimeType: fileCategory === "document" ? "application/pdf" : "application/octet-stream",
-      extension: fileName.split(".").pop() || "doc",
-      category: fileCategory,
-      uploadedBy: currentUserId || "u-self",
-      uploaderName: "You",
-      teamId: activeTeamId || "t-1",
-      channelId: fileChannelId,
-      channelName: channel?.name || "general",
-      url: `/files/${encodeURIComponent(fileName.trim())}`,
-    });
-
-    setFileName("");
-    setUploadDialogOpen(false);
+  // Bytes go to the files service first; the workspace server then only stores the reference (file id + metadata).
+  const handleUploadSubmit = async () => {
+    if (!selectedFile || isUploading) return;
+    setIsUploading(true);
+    const ok = await uploadTeamFile(selectedFile, { channelId: fileChannelId === "none" ? undefined : fileChannelId });
+    setIsUploading(false);
+    if (ok) {
+      toast.success(`${selectedFile.name} uploaded`);
+      setSelectedFile(null);
+      setFileChannelId("none");
+      setUploadDialogOpen(false);
+    }
   };
 
+  // Files in the files service download by file id; older files (no file id) use the workspace server's URL.
+  const handleDownload = async (file: WorkspaceFile) => {
+    if (downloadingId) return;
+    if (!file.fileId) {
+      window.open(file.url || workspaceApi.getFileDownloadUrl(file.id), "_blank", "noopener,noreferrer");
+      return;
+    }
+    setDownloadingId(file.id);
+    try {
+      await downloadWorkspaceFile(file.fileId, file.name);
+    } catch (err) {
+      toast.error(filesErrorMessage(err, "Could not download the file"));
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  // Files stored by the workspace server have a stable URL to copy; files-service files are private (no public link).
   const handleCopyLink = (file: WorkspaceFile) => {
+    if (file.fileId) return;
     const url = typeof window !== "undefined" ? `${window.location.origin}${file.url}` : file.url;
     navigator.clipboard?.writeText(url);
     setCopiedId(file.id);
@@ -179,6 +236,7 @@ function FilesHubContent() {
           <Button
             size="sm"
             onClick={() => setUploadDialogOpen(true)}
+            disabled={noStorage}
             className="gap-1.5 text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Upload className="size-3.5" />
@@ -212,8 +270,10 @@ function FilesHubContent() {
         <div className="flex items-center gap-3">
           <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground">
             <HardDrive className="size-3.5 text-primary" />
-            <span>{totalMB} MB used of 15 GB</span>
-            <Progress value={24} className="h-1.5 w-16" />
+            <span>
+              {formatBytes(totalBytes)} used
+              {storage ? ` · ${storage.nickname || storage.providerId}` : ""}
+            </span>
           </div>
 
           <div className="relative w-full sm:w-56">
@@ -228,6 +288,62 @@ function FilesHubContent() {
         </div>
       </div>
 
+      {/* ── Storage not configured ── */}
+      {noStorage && (
+        <div className="mx-4 mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400 md:mx-6">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium">{storageError ?? "This team has no storage connected yet."}</p>
+            <p className="mt-0.5 opacity-90">
+              Uploads (here and in chats) need a storage account. A team owner or admin can connect one in{" "}
+              {activeTeamId ? (
+                <Link href={settingsPath.team(activeTeamId, "storage")} className="font-semibold underline underline-offset-2">
+                  team settings → Storage
+                </Link>
+              ) : (
+                "team settings → Storage"
+              )}
+              .
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Files uploading to the files service ── */}
+      {teamUploads.length > 0 && (
+        <div className="mx-4 mt-3 space-y-1.5 md:mx-6">
+          {teamUploads.map((u) => (
+            <div
+              key={u.id}
+              className={
+                u.status === "error"
+                  ? "flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs text-destructive"
+                  : "flex items-center gap-2 rounded-md border border-border/50 bg-accent/40 px-3 py-1.5 text-xs"
+              }
+            >
+              {u.status === "error" ? <AlertTriangle className="size-3.5 shrink-0" /> : <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">
+                  {u.name} <span className="font-normal opacity-70">· {formatBytes(u.size)}</span>
+                </p>
+                {u.status === "error" ? (
+                  <p className="truncate text-[11px]">{u.error ?? "Upload failed"}</p>
+                ) : (
+                  <Progress value={u.progress} className="mt-1 h-1" />
+                )}
+              </div>
+              <button
+                onClick={() => (u.status === "error" ? dismissUpload(u.id) : cancelUpload(u.id))}
+                className="shrink-0 opacity-70 hover:opacity-100"
+                aria-label={u.status === "error" ? "Dismiss" : "Cancel upload"}
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── Main Files Content: List or Grid ── */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="max-w-6xl mx-auto">
@@ -238,7 +354,7 @@ function FilesHubContent() {
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 Upload files to share with your team across channels and calls.
               </p>
-              <Button size="sm" onClick={() => setUploadDialogOpen(true)} className="mt-4 gap-1.5 text-xs">
+              <Button size="sm" onClick={() => setUploadDialogOpen(true)} disabled={noStorage} className="mt-4 gap-1.5 text-xs">
                 <Upload className="size-3.5" />
                 Upload New File
               </Button>
@@ -299,7 +415,7 @@ function FilesHubContent() {
 
                     {/* Size */}
                     <div className="col-span-3 sm:col-span-2 text-muted-foreground text-[11px]">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                      {formatBytes(file.size)}
                     </div>
 
                     {/* Actions */}
@@ -307,16 +423,28 @@ function FilesHubContent() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleCopyLink(file)}
+                        onClick={() => handleDownload(file)}
+                        disabled={downloadingId === file.id}
                         className="size-7"
-                        title="Copy file link"
+                        title="Download"
                       >
-                        {copiedId === file.id ? (
-                          <Check className="size-3.5 text-emerald-500" />
-                        ) : (
-                          <Copy className="size-3.5" />
-                        )}
+                        {downloadingId === file.id ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
                       </Button>
+                      {!file.fileId && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleCopyLink(file)}
+                          className="size-7"
+                          title="Copy file link"
+                        >
+                          {copiedId === file.id ? (
+                            <Check className="size-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="size-3.5" />
+                          )}
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -370,7 +498,7 @@ function FilesHubContent() {
                       {file.name}
                     </h4>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {(file.size / 1024 / 1024).toFixed(1)} MB • {file.uploaderName}
+                      {formatBytes(file.size)} • {file.uploaderName}
                     </p>
                   </div>
 
@@ -379,10 +507,12 @@ function FilesHubContent() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setPreviewFile(file)}
-                      className="h-6 text-[10px] px-2"
+                      onClick={() => handleDownload(file)}
+                      disabled={downloadingId === file.id}
+                      className="h-6 text-[10px] px-2 gap-1"
                     >
-                      View
+                      {downloadingId === file.id ? <Loader2 className="size-3 animate-spin" /> : <Download className="size-3" />}
+                      Download
                     </Button>
                   </div>
                 </div>
@@ -407,39 +537,39 @@ function FilesHubContent() {
 
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="upload-file-name">File Name</Label>
-              <Input
-                id="upload-file-name"
-                placeholder="e.g. Q1_Marketing_Sprint_Deck.pdf"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
+              <Label>File</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
               />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-border/60 px-4 py-6 text-center text-xs transition-colors hover:border-primary/40 hover:bg-accent/30"
+              >
+                <Upload className="size-5 text-muted-foreground" />
+                {selectedFile ? (
+                  <>
+                    <span className="max-w-full truncate font-medium text-foreground">{selectedFile.name}</span>
+                    <span className="text-muted-foreground">{formatBytes(selectedFile.size)} · click to change</span>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">Click to choose a file</span>
+                )}
+              </button>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Category</Label>
-              <Select value={fileCategory} onValueChange={(v) => setFileCategory(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="document">Document (PDF/DOC)</SelectItem>
-                  <SelectItem value="spreadsheet">Spreadsheet (XLS/CSV)</SelectItem>
-                  <SelectItem value="media">Image & Media</SelectItem>
-                  <SelectItem value="code">Source Code / Script</SelectItem>
-                  <SelectItem value="archive">Archive (ZIP/TAR)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Channel</Label>
+              <Label>Channel (optional)</Label>
               <Select value={fileChannelId} onValueChange={setFileChannelId}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {channels.map((c) => (
+                  <SelectItem value="none">No channel</SelectItem>
+                  {channelsInTeam.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       #{c.name}
                     </SelectItem>
@@ -450,15 +580,16 @@ function FilesHubContent() {
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setUploadDialogOpen(false)}>
+            <Button variant="ghost" onClick={() => setUploadDialogOpen(false)} disabled={isUploading}>
               Cancel
             </Button>
             <Button
               onClick={handleUploadSubmit}
-              disabled={!fileName.trim()}
+              disabled={!selectedFile || isUploading || noStorage}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              Upload Document
+              {isUploading && <Loader2 className="size-3.5 animate-spin" />}
+              Upload File
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -473,7 +604,7 @@ function FilesHubContent() {
               <span className="truncate">{previewFile?.name}</span>
             </DialogTitle>
             <DialogDescription>
-              {(previewFile?.size ? (previewFile.size / 1024 / 1024).toFixed(2) : "0")} MB • Uploaded by {previewFile?.uploaderName}
+              {formatBytes(previewFile?.size)} • Uploaded by {previewFile?.uploaderName}
             </DialogDescription>
           </DialogHeader>
 
@@ -486,12 +617,23 @@ function FilesHubContent() {
               Channel: #{previewFile?.channelName || "general"}
             </p>
             <p className="text-xs text-muted-foreground mt-3 bg-background border border-border/40 px-3 py-1.5 rounded-lg max-w-sm">
-              Document securely encrypted in workspace cloud storage.
+              Stored in your team&apos;s connected storage.
             </p>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
             {previewFile && (
+              <Button
+                variant="outline"
+                onClick={() => handleDownload(previewFile)}
+                disabled={downloadingId === previewFile.id}
+                className="gap-1.5"
+              >
+                {downloadingId === previewFile.id ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                Download
+              </Button>
+            )}
+            {previewFile && !previewFile.fileId && (
               <Button
                 variant="outline"
                 onClick={() => handleCopyLink(previewFile)}
