@@ -19,7 +19,7 @@ import z from "zod";
 const formSchema = emailObjectSchema;
 type FormSchema = z.infer<typeof formSchema>;
 
-// API functions for Hono backend
+// API functions for Files backend
 async function getWaitlistCount(): Promise<WaitlistCount> {
 	const response = await publicClient.api.waitlist.count.$get();
 	if (!response.ok) {

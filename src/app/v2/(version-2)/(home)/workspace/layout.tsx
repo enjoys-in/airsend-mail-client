@@ -6,7 +6,6 @@ import ThreadPanel from "./_components/ThreadPanel";
 import SidePanel from "./_components/SidePanel";
 import WorkspaceInit from "./_components/WorkspaceInit";
 import ConfirmHost from "./_components/ConfirmHost";
-import TeamsNavBar from "./_components/TeamsNavBar";
 import WorkspaceErrorBoundary from "./_components/WorkspaceErrorBoundary";
 import { WorkspaceHomeSkeleton } from "./_components/WorkspaceSkeletons";
 import { MobileBottomActions } from "./_components/MobileBottomActions";
@@ -56,11 +55,8 @@ const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Shared confirmation dialog (moderation, deletes) */}
       <ConfirmHost />
 
-      {/* Main content column with Teams Navigation Bar */}
+      {/* Main content column */}
       <main className="flex flex-1 flex-col min-h-0 overflow-hidden">
-        {/* Render Teams Header Bar (except when full-screen call room is active) */}
-        {!isLiveCallRoom && <TeamsNavBar />}
-
         {/* Route content with Error Boundary and Suspense Skeleton */}
         <WorkspaceErrorBoundary fallbackTitle="Workspace Section Unavailable">
           <Suspense fallback={<WorkspaceHomeSkeleton />}>
