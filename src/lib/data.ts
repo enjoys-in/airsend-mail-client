@@ -343,7 +343,7 @@ export const MenuList = {
         },
         {
             title: "Webhooks",
-            url: "/h-panel/webhooks",
+            url: "/h-panel/webhook",
             icon: Command,
             isActive: false,
             enabled: false,
