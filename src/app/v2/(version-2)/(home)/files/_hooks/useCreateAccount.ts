@@ -1,3 +1,4 @@
+import { serviceFetch } from "@/app/v2/(version-2)/(home)/files/_lib/service-unavailable";
 import type { CreateS3AccountSchema, CreateTelegramAccountSchema, DriveProvider } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { providerToSlug } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +9,7 @@ import { useNavigate } from "@tanstack/react-router";
 type CreatedAccount = { id: string; accountId: string; providerId: DriveProvider; nickname?: string | null };
 
 async function postAccount(path: "s3" | "telegram", body: unknown, fallbackMessage: string): Promise<CreatedAccount> {
-	const response = await fetch(`${env.VITE_BACKEND_URL}/api/account/${path}`, {
+	const response = await serviceFetch(`${env.VITE_BACKEND_URL}/api/account/${path}`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		credentials: "include",

@@ -1,4 +1,6 @@
 import { Loader2 } from "lucide-react";
+import { ServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_components/service-unavailable";
+import { isServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_lib/service-unavailable";
 import { useEffect } from "react";
 import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 import { toast } from "sonner";
@@ -9,6 +11,7 @@ interface LoadingStatePageProps {
 	errorTitle?: string;
 	errorDescription?: string;
 	error: Error | null;
+	onRetry?: () => void;
 }
 
 export function LoadingStatePage({
@@ -17,12 +20,18 @@ export function LoadingStatePage({
 	errorTitle = "Something went wrong",
 	errorDescription = "Please try again.",
 	error,
+	onRetry,
 }: LoadingStatePageProps) {
+	const unavailable = !!error && isServiceUnavailable(error);
+
 	useEffect(() => {
-		if (error) {
+		// The page already says the service is down; a toast with the raw error would only repeat it.
+		if (error && !unavailable) {
 			toast.error(error.message);
 		}
-	}, [error]);
+	}, [error, unavailable]);
+
+	if (unavailable) return <ServiceUnavailable onRetry={onRetry} />;
 
 	return (
 		<div className="flex h-full items-center justify-center">

@@ -1,6 +1,8 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { FilesForbiddenError, getSession, ORG_ONLY_MESSAGE } from "@/app/v2/(version-2)/(home)/files/_lib/session";
 import { OrgAccessDenied } from "@/app/v2/(version-2)/(home)/files/_components/org-access-denied";
+import { ServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_components/service-unavailable";
+import { isServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_lib/service-unavailable";
 import { withFilesBasePath } from "@/app/v2/(version-2)/(home)/files/_lib/base-path";
 
 export const Route = createFileRoute("/_protected")({
@@ -30,5 +32,6 @@ function ProtectedLayout() {
 
 function ProtectedError({ error, reset }: { error: Error; reset: () => void }) {
 	if (error instanceof FilesForbiddenError) return <OrgAccessDenied message={error.message} />;
+	if (isServiceUnavailable(error)) return <ServiceUnavailable onRetry={reset} />;
 	return <OrgAccessDenied title="Couldn't open files" message={error.message || "The files service could not be reached."} onRetry={reset} />;
 }

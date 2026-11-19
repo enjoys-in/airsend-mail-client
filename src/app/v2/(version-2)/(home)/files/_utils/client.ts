@@ -2,13 +2,14 @@ import type { ClientRequestOptions } from "hono/client";
 import type { AppType } from "@/app/v2/(version-2)/(home)/files/_packages/server";
 import env from "@/app/v2/(version-2)/(home)/files/_packages/env/client";
 import { hc } from "hono/client";
+import { serviceFetch } from "@/app/v2/(version-2)/(home)/files/_lib/service-unavailable";
 
 const createClient = (options?: ClientRequestOptions) => {
 	if (!env.VITE_BACKEND_URL) {
 		throw new Error("VITE_BACKEND_URL is not configured");
 	}
 	// Typed as `any`: the backend `AppType` lives in its own repo (see _packages/server).
-	return hc<AppType>(env.VITE_BACKEND_URL, options) as any;
+	return hc<AppType>(env.VITE_BACKEND_URL, { fetch: serviceFetch, ...options }) as any;
 };
 export const publicClient = createClient();
 

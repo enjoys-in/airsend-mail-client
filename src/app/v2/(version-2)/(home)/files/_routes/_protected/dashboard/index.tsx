@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_protected/dashboard/")({
 });
 
 function DashboardPage() {
-	const { error, accounts, isLoading } = useUserInfoProvider();
+	const { error, accounts, isLoading, refreshAccounts } = useUserInfoProvider();
 	const { canManageStorage } = useOrganization();
 
 	const title = "Loading your dashboard";
@@ -58,6 +58,7 @@ function DashboardPage() {
 	return (
 		<LoadingStatePage
 			error={error}
+			onRetry={() => void refreshAccounts()}
 			title={title}
 			description={description}
 			errorTitle={errorTitle}

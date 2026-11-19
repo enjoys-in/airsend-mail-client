@@ -5,6 +5,8 @@ import { createRootRoute, Outlet, useRouterState } from "@tanstack/react-router"
 import { geistSans, geistMono, manrope } from "@/app/v2/(version-2)/(home)/files/_utils/fonts";
 import { Toaster } from "sonner";
 import { Suspense, useEffect } from "react";
+import { ServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_components/service-unavailable";
+import { isServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_lib/service-unavailable";
 import { setFilesSidebarReady } from "../_lib/sidebar-slot";
 
 export const Route = createRootRoute({
@@ -57,7 +59,8 @@ function RootComponent() {
 	);
 }
 
-function RootErrorComponent({ error }: { error: Error }) {
+function RootErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+	if (isServiceUnavailable(error)) return <ServiceUnavailable onRetry={reset} />;
 	return (
 		<div className="flex h-full items-center justify-center p-4">
 			<div className="max-w-md text-center">

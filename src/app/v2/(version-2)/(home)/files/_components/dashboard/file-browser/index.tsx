@@ -1,3 +1,5 @@
+import { ServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_components/service-unavailable";
+import { isServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_lib/service-unavailable";
 import {
 	Archive,
 	ChevronDown,
@@ -283,6 +285,12 @@ export function FileTable({ files, isLoading, refetch, error }: FileTableProps) 
 
 	return (
 		<div className="relative flex h-full w-full flex-col justify-start">
+			{error ? (
+				<ServiceUnavailable
+					onRetry={refetch}
+					{...(isServiceUnavailable(error) ? {} : { message: "We couldn't load this folder. Please try again." })}
+				/>
+			) : (
 			<DragNDropUploader>
 				{/* h-0 is required to make the table scrollable */}
 				<div className="scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-accent/70 scrollbar-track-transparent scrollbar-hover:scrollbar-thumb-accent scrollbar-w-2 scrollbar-h-2 h-0 min-h-full w-full overflow-auto overflow-y-scroll pb-5">
@@ -315,6 +323,7 @@ export function FileTable({ files, isLoading, refetch, error }: FileTableProps) 
 					</Table>
 				</div>
 			</DragNDropUploader>
+			)}
 		</div>
 	);
 }

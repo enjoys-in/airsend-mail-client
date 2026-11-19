@@ -4,6 +4,8 @@ import { Check, HardDrive, Minus, Plus } from "lucide-react";
 import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/v2/(version-2)/(home)/files/_components/ui/card";
 import { Skeleton } from "@/app/v2/(version-2)/(home)/files/_components/ui/skeleton";
+import { ServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_components/service-unavailable";
+import { isServiceUnavailable } from "@/app/v2/(version-2)/(home)/files/_lib/service-unavailable";
 import { OrgAccessDenied } from "@/app/v2/(version-2)/(home)/files/_components/org-access-denied";
 import { OrgStorageSection } from "@/app/v2/(version-2)/(home)/files/_components/settings/org-storage-section";
 import { useUserInfoProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/user-info-provider";
@@ -29,6 +31,7 @@ function StoragePage() {
 	const { isSettingDefault, disconnect, makeDefault, rename } = useStorageActions();
 
 	if (error) {
+		if (isServiceUnavailable(error)) return <ServiceUnavailable onRetry={() => void refreshAccounts()} />;
 		return (
 			<OrgAccessDenied
 				title="Couldn't load the storage"

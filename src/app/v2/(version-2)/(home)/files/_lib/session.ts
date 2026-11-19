@@ -1,5 +1,6 @@
 import type { SessionUser } from "@/app/v2/(version-2)/(home)/files/_packages/auth/auth";
 import { useQuery } from "@tanstack/react-query";
+import { serviceFetch } from "@/app/v2/(version-2)/(home)/files/_lib/service-unavailable";
 import env from "@/app/v2/(version-2)/(home)/files/_packages/env/client";
 
 /**
@@ -36,11 +37,11 @@ export class FilesForbiddenError extends Error {
 }
 
 /**
- * Fetches the session. Resolves `null` when signed out (401); throws `FilesForbiddenError` on 403 and a plain Error when the
- * backend cannot be reached or errors.
+ * Fetches the session. Resolves `null` when signed out (401); throws `FilesForbiddenError` on 403, `ServiceUnavailableError`
+ * when the backend cannot be reached, and a plain Error for any other failure.
  */
 export async function getSession(): Promise<Session | null> {
-	const response = await fetch(`${env.VITE_BACKEND_URL}/api/auth/get-session`, { credentials: "include" });
+	const response = await serviceFetch(`${env.VITE_BACKEND_URL}/api/auth/get-session`, { credentials: "include" });
 	if (response.status === 401) return null;
 	if (response.status === 403) {
 		const body = (await response.json().catch(() => null)) as { message?: string } | null;

@@ -1,3 +1,4 @@
+import { serviceFetch } from "@/app/v2/(version-2)/(home)/files/_lib/service-unavailable";
 import { useDefaultAccountProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/default-account-provider";
 import type { ApiResponse, DriveProvider } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import env from "@/app/v2/(version-2)/(home)/files/_packages/env/client";
@@ -12,7 +13,7 @@ export const useUnlinkAccount = () => {
 			toast.error("Cannot remove the default storage. Make another storage the default first.");
 			return;
 		}
-		const response = await fetch(`${env.VITE_BACKEND_URL}/api/account/${encodeURIComponent(tableAccountId)}`, {
+		const response = await serviceFetch(`${env.VITE_BACKEND_URL}/api/account/${encodeURIComponent(tableAccountId)}`, {
 			method: "DELETE",
 			credentials: "include",
 		});
