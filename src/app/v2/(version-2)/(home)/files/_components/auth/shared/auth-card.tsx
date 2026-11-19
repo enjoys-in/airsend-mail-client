@@ -2,7 +2,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@nimbus/_c
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { AuthCardProps } from "@nimbus/_lib/types";
 import { Button } from "@nimbus/_components/ui/button";
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 import { cn } from "@nimbus/_lib/utils";
 
 export function AuthCard({ title, navigationType, children, className, ...props }: AuthCardProps) {
