@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	Dialog,
 	DialogContent,
@@ -8,7 +6,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@nimbus/_components/ui/dialog";
-import { getFileExtension } from "@nimbus/_lib/files-types";
+import { getFileExtension } from "@nimbus/_packages/shared";
 import { Button } from "@nimbus/_components/ui/button";
 import { Label } from "@nimbus/_components/ui/label";
 import { Input } from "@nimbus/_components/ui/input";
@@ -16,27 +14,20 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface RenameFileDialogProps {
-	isOpen?: boolean;
-	open?: boolean;
-	onClose?: () => void;
-	onOpenChange?: (open: boolean) => void;
+	isOpen: boolean;
+	onClose: () => void;
 	onRename: (newName: string) => Promise<void>;
 	currentName: string;
-	fileType?: "file" | "folder";
+	fileType: "file" | "folder";
 }
 
-export function RenameFileDialog({ isOpen, open, onClose, onOpenChange, onRename, currentName, fileType = "file" }: RenameFileDialogProps) {
+export function RenameFileDialog({ isOpen, onClose, onRename, currentName, fileType }: RenameFileDialogProps) {
 	const [newName, setNewName] = useState("");
 	const [isRenaming, setIsRenaming] = useState(false);
-	const isVisible = open !== undefined ? open : isOpen ?? false;
-	const handleClose = () => {
-		onClose?.();
-		onOpenChange?.(false);
-	};
 
 	// Initialize the input field when dialog opens
 	useEffect(() => {
-		if (isVisible) {
+		if (isOpen) {
 			if (fileType === "file") {
 				// For files, pre-select name without extension
 				const extension = getFileExtension(currentName);
@@ -58,7 +49,7 @@ export function RenameFileDialog({ isOpen, open, onClose, onOpenChange, onRename
 		}
 
 		if (newName.trim() === getCurrentNameWithoutExtension()) {
-			handleClose();
+			onClose();
 			return;
 		}
 
@@ -76,7 +67,7 @@ export function RenameFileDialog({ isOpen, open, onClose, onOpenChange, onRename
 
 			await onRename(finalName);
 			toast.success(`${fileType === "folder" ? "Folder" : "File"} renamed successfully`);
-			handleClose();
+			onClose();
 		} catch (error) {
 			console.error("Error renaming file:", error);
 			toast.error(`Failed to rename ${fileType}`);
@@ -101,7 +92,7 @@ export function RenameFileDialog({ isOpen, open, onClose, onOpenChange, onRename
 	};
 
 	return (
-		<Dialog open={isVisible} onOpenChange={(open) => !open && handleClose()}>
+		<Dialog open={isOpen} onOpenChange={onClose}>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Rename {fileType === "folder" ? "Folder" : "File"}</DialogTitle>
