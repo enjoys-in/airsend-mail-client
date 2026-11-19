@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	SidebarGroup,
 	SidebarGroupContent,
@@ -9,11 +7,11 @@ import {
 	SidebarMenuItem,
 } from "@nimbus/_components/ui/sidebar";
 import { ChevronDown, FileText, Folder, PinOff } from "lucide-react";
-import { providerToSlug, type DriveProvider } from "@nimbus/_lib/files-types";
+import { providerToSlug, type DriveProvider } from "@nimbus/_packages/shared";
 import { usePinnedFiles, useUnpinFile } from "@nimbus/_hooks/useDriveOps";
-import { useNavigate, useSearch } from "@nimbus/_lib/router-shim";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Skeleton } from "@nimbus/_components/ui/skeleton";
-import type { PinnedFile } from "@nimbus/_lib/files-types";
+import type { PinnedFile } from "@nimbus/_packages/shared";
 import { Button } from "@nimbus/_components/ui/button";
 import { cn } from "@nimbus/_lib/utils";
 import { useState } from "react";
@@ -44,8 +42,8 @@ export default function SidebarPinnedFiles() {
 			navigate({
 				to: "/dashboard/$providerSlug/$accountId",
 				params: {
-					providerSlug: providerToSlug((file.provider ?? "google") as DriveProvider) || "google",
-					accountId: file.accountId || "",
+					providerSlug: providerToSlug(file.provider as DriveProvider),
+					accountId: file.accountId,
 				},
 				search: { ...searchParams, folderId: file.fileId },
 			});
@@ -88,7 +86,7 @@ export default function SidebarPinnedFiles() {
 												className="pr-8 transition-all duration-200 dark:hover:bg-neutral-700" // Add right padding to make space
 											>
 												<div className="relative flex w-full cursor-pointer items-center gap-2">
-													{getFileIcon(file.type || "folder")}
+													{getFileIcon(file.type)}
 													<span className="truncate">{file.name}</span>
 												</div>
 											</SidebarMenuButton>
