@@ -33,7 +33,7 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import type { IRole, OrgService } from "../_lib/types"
-import { Section } from "./kit"
+import { FormActions, NextSteps, Section, SplitForm } from "./kit"
 import {
     INHERIT_ALL,
     ServiceRolePicker,
@@ -175,8 +175,45 @@ export function CreateInternalMemberForm({
         }
     }
 
+    const aside = (
+        <>
+            <NextSteps
+                steps={[
+                    "The mailbox is created right away on the domain you picked.",
+                    "They sign in with that address and the password you set (webmail, IMAP and SMTP).",
+                    "Their role applies in Files, Tasks and Workspace; override a service under Advanced if needed.",
+                ]}
+            />
+            <FormActions>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onCancel || (() => router.push("/h-panel/org/members"))}
+                    disabled={submitting}
+                >
+                    Cancel
+                </Button>
+
+                <Button type="submit" disabled={submitting || !name || !username || !password} className="flex-1 gap-2">
+                    {submitting ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Creating
+                        </>
+                    ) : (
+                        <>
+                            <UserPlus className="h-4 w-4" />
+                            Create mailbox
+                        </>
+                    )}
+                </Button>
+            </FormActions>
+        </>
+    )
+
     return (
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit}>
+            <SplitForm aside={aside}>
             <Section title="Account" description="The person and the address of their new mailbox.">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* Full Name */}
@@ -324,31 +361,7 @@ export function CreateInternalMemberForm({
                 </Collapsible>
             </Section>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onCancel || (() => router.push("/h-panel/org/members"))}
-                    disabled={submitting}
-                >
-                    Cancel
-                </Button>
-
-                <Button type="submit" disabled={submitting || !name || !username || !password} className="min-w-[150px] gap-2">
-                    {submitting ? (
-                        <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Creating
-                        </>
-                    ) : (
-                        <>
-                            <UserPlus className="h-4 w-4" />
-                            Create mailbox
-                        </>
-                    )}
-                </Button>
-            </div>
+            </SplitForm>
         </form>
     )
 }

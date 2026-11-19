@@ -39,7 +39,7 @@ export default function AddMemberPage() {
     }, [])
 
     return (
-        <OrgPage narrow>
+        <OrgPage>
             <PageHeader
                 back={{ href: "/h-panel/org/members", label: "Members" }}
                 title="Add a member"
