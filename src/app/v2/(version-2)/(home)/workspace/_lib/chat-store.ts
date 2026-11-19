@@ -58,6 +58,7 @@ import {
   toDMMessage,
   toAttachment,
   apiErrorMessage,
+  WorkspaceApiError,
   type AttachmentRef,
 } from "./api";
 import { uploadWorkspaceFile, deleteWorkspaceFile, filesErrorMessage, type WorkspaceFileMeta } from "./files-api";
@@ -99,7 +100,7 @@ async function withRefRetry<T>(call: () => Promise<T>): Promise<T> {
   try {
     return await call();
   } catch (err) {
-    if (err instanceof Error && (err as { status?: number }).status === 404) {
+    if (err instanceof WorkspaceApiError && err.status === 404) {
       await new Promise((r) => setTimeout(r, 1000));
       return call();
     }
@@ -182,7 +183,6 @@ interface ChatStore {
   toggleHandRaise: () => void;
 
   // Actions — Files
-  addFile: (file: Omit<WorkspaceFile, "id" | "createdAt" | "updatedAt" | "downloadCount">) => void;
   deleteFile: (fileId: string) => void;
 
   // WebSocket reference for sending messages
@@ -1277,18 +1277,6 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       }
       return { isMyHandRaised: next };
     }),
-
-  addFile: (fileInput) => {
-    const now = new Date().toISOString();
-    const newFile: WorkspaceFile = {
-      ...fileInput,
-      id: `file-${Date.now()}`,
-      createdAt: now,
-      updatedAt: now,
-      downloadCount: 0,
-    };
-    set((s) => ({ files: [newFile, ...s.files] }));
-  },
 
   deleteFile: (fileId) => {
     const removed = get().files.find((f) => f.id === fileId);
