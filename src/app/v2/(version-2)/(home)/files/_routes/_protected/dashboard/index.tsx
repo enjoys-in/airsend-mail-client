@@ -1,12 +1,11 @@
-import { useDefaultAccountProvider } from "@nimbus/_components/providers/default-account-provider";
 import { useUserInfoProvider } from "@nimbus/_components/providers/user-info-provider";
 import { ConnectAccountDialog } from "@nimbus/_components/dialogs/connect-account-dialog";
 import { LoadingStatePage } from "@nimbus/_components/loading-state-page";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { providerToSlug, type DriveProvider } from "@nimbus/_packages/shared";
+import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@nimbus/_components/ui/button";
+import { useOrganization } from "@nimbus/_lib/session";
 import { HardDrive, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_protected/dashboard/")({
 	component: DashboardPage,
@@ -14,45 +13,43 @@ export const Route = createFileRoute("/_protected/dashboard/")({
 
 function DashboardPage() {
 	const { error, accounts, isLoading } = useUserInfoProvider();
-	const { defaultAccountId } = useDefaultAccountProvider();
-	const navigate = useNavigate();
+	const { canManageStorage } = useOrganization();
 	const [isConnectOpen, setIsConnectOpen] = useState(false);
 
 	const title = "Loading your dashboard";
-	const description = "Opening your storage...";
+	const description = "Opening your organization's storage...";
 	const errorTitle = "Error loading your dashboard";
 	const errorDescription = "Please try again later.";
 
-	// DefaultAccountProvider navigates to the default account /dashboard/:providerSlug/:accountId. When there is no
-	// default yet (nothing marks one after a connect) open the first connected account instead.
-	const firstAccount = accounts?.[0];
-	useEffect(() => {
-		if (isLoading || defaultAccountId || !firstAccount) return;
-		const providerSlug = providerToSlug(firstAccount.providerId as DriveProvider);
-		if (!providerSlug) return;
-		navigate({
-			to: "/dashboard/$providerSlug/$accountId",
-			params: { providerSlug, accountId: firstAccount.accountId },
-			replace: true,
-		});
-	}, [isLoading, defaultAccountId, firstAccount, navigate]);
-
-	// Nothing connected yet: ask the user to add a source.
+	// DefaultAccountProvider opens the organization's default storage as soon as there is one. With none, owners and admins
+	// set it up here; everyone else is told whom to ask.
 	if (!isLoading && !error && accounts && accounts.length === 0) {
 		return (
 			<div className="flex min-h-screen items-center justify-center p-6">
 				<div className="flex max-w-sm flex-col items-center gap-4 text-center">
 					<HardDrive className="text-muted-foreground h-12 w-12" />
-					<h2 className="text-lg font-semibold">No storage connected</h2>
-					<p className="text-muted-foreground text-sm">
-						Connect an S3-compatible bucket or a Telegram chat to start managing your files.
-					</p>
-					<Button onClick={() => setIsConnectOpen(true)}>
-						<Plus className="mr-2 h-4 w-4" />
-						Add a storage source
-					</Button>
+					{canManageStorage ? (
+						<>
+							<h2 className="text-lg font-semibold">Connect your organization&apos;s storage</h2>
+							<p className="text-muted-foreground text-sm">
+								Files are stored in your organization&apos;s own S3-compatible bucket or Telegram chat. Add it once and everyone in
+								the organization uses it.
+							</p>
+							<Button onClick={() => setIsConnectOpen(true)}>
+								<Plus className="mr-2 h-4 w-4" />
+								Add storage
+							</Button>
+						</>
+					) : (
+						<>
+							<h2 className="text-lg font-semibold">No storage yet</h2>
+							<p className="text-muted-foreground text-sm">
+								Your organization has not connected storage yet. Ask an owner or admin.
+							</p>
+						</>
+					)}
 				</div>
-				<ConnectAccountDialog open={isConnectOpen} onOpenChange={setIsConnectOpen} />
+				{canManageStorage && <ConnectAccountDialog open={isConnectOpen} onOpenChange={setIsConnectOpen} />}
 			</div>
 		);
 	}
