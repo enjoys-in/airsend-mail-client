@@ -115,18 +115,18 @@ export function APIKeyForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [watchDomain])
     return (
-        <div className="w-full max-w-2xl mx-auto mt-2 rounded-none">
+        <div className="w-full">
 
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                     <FormField
                         control={form.control}
                         name="name"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>API Key Name</FormLabel>
+                                <FormLabel className="text-sm">API key name</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="My API Key" className="rounded-none" {...field} />
+                                    <Input placeholder="My API key" className="h-9" {...field} />
                                 </FormControl>
                                 <FormDescription>
                                     A friendly name to identify this API key.
@@ -140,14 +140,14 @@ export function APIKeyForm() {
                         name="domain"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Domain</FormLabel>
+                                <FormLabel className="text-sm">Domain</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}   >
                                     <FormControl>
-                                        <SelectTrigger className="rounded-none">
+                                        <SelectTrigger className="h-9">
                                             <SelectValue placeholder="Select a domain" />
                                         </SelectTrigger>
                                     </FormControl>
-                                    <SelectContent className="rounded-none">
+                                    <SelectContent>
                                         {myDomains.map((domain: any) => (
                                             <SelectItem value={domain.id} key={domain.id}>{domain.domain_name}</SelectItem>
                                         ))}
@@ -166,9 +166,9 @@ export function APIKeyForm() {
                             name="selected_emails"
                             render={({ field }) => (
                                 <FormItem>
+                                    <FormLabel className="text-sm">Linked mailboxes</FormLabel>
                                     <MultipleSelector
 
-                                        className="rounded-none"
                                         maxSelected={3}
                                         onMaxSelected={(maxLimit) => {
                                             toast({
@@ -179,15 +179,15 @@ export function APIKeyForm() {
                                         defaultOptions={domainAccounts}
                                         placeholder="Select emails"
                                         emptyIndicator={
-                                            <p className="text-center  items-center text-sm leading-10 text-gray-600 dark:text-gray-400">
+                                            <p className="text-center text-sm leading-10 text-muted-foreground">
                                                 no results found.
                                             </p>
                                         }
                                     />
                                     <FormDescription>
-                                        Select Email Accounts that you want to link with this API key
+                                        Select up to 3 mailboxes to link with this API key.
                                     </FormDescription>
-                                    <FormMessage className="mt-2 text-red-500" />
+                                    <FormMessage className="mt-2 text-red-600 dark:text-red-400" />
                                 </FormItem>
                             )}
                         />
@@ -206,14 +206,14 @@ export function APIKeyForm() {
                                     />
                                 </FormControl>
                                 <FormDescription>
-                                    Enable Tracing to tracking mail sending via APIs
+                                    Track mail sent through the API (coming soon).
                                 </FormDescription>
-                                <FormMessage className="mt-2 text-red-500" />
+                                <FormMessage className="mt-2 text-red-600 dark:text-red-400" />
                             </FormItem>
                         )}
                     />
 
-                    <Button type="submit" disabled={isLocked} className="w-full rounded-none">Generate API Credentials</Button>
+                    <Button type="submit" disabled={isLocked} className="w-full">Generate API credentials</Button>
                 </form>
             </Form>
 
