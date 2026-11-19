@@ -1,10 +1,8 @@
-"use client";
-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@nimbus/_components/ui/dialog";
 import { AuthProviderButtons } from "@nimbus/_components/auth/shared/auth-provider-buttons";
 import { CheckCircle2, Sparkles, Zap } from "lucide-react";
-import { authClient } from "@nimbus/_lib/auth-shim";
-import { useLocation } from "@nimbus/_lib/router-shim";
+import { authClient } from "@nimbus/_packages/auth/auth-client";
+import { useLocation } from "@tanstack/react-router";
 import { useIsMounted } from "@nimbus/_hooks/useIsMounted";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@nimbus/_components/ui/button";
@@ -23,15 +21,18 @@ async function upgradePlan() {
 	const response = await authClient.checkout({
 		slug: "pro",
 	});
-	if ((response as any)?.error) {
-		toast.error((response as any).error?.message || "Error");
+	if (response.error) {
+		toast.error(response.error.message);
 	}
 }
 
 export function SigninAccountDialog({ open, onOpenChange }: SigninAccountDialogProps) {
 	const isMounted = useIsMounted();
-	const location = useLocation();
-	const pathname = location?.pathname || "/v2/files";
+
+	// Build callback URL safely after mount
+	const pathname = useLocation({
+		select: location => location.pathname,
+	});
 
 	const [callbackURL, setCallbackURL] = useState<string>("");
 	const [viewMode, setViewMode] = useState<ViewMode>("select");
