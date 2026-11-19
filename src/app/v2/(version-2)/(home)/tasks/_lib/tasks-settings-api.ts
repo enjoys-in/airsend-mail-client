@@ -1,3 +1,4 @@
+import { TASKS_BASE_URL, tasksFetch } from "./tasks-http";
 import {
   type CreateProjectInput,
   type TaskColumn,
@@ -6,11 +7,11 @@ import {
   type TaskProject,
 } from "./tasks-types";
 
-const BASE_URL = "/api/tasks";
+const BASE_URL = TASKS_BASE_URL;
 
 export async function createProject(input: CreateProjectInput): Promise<TaskProject | null> {
   try {
-    const res = await fetch(`${BASE_URL}/project`, {
+    const res = await tasksFetch(`${BASE_URL}/project`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -36,7 +37,7 @@ export async function updateProject(
   data: Partial<CreateProjectInput & { isPublic?: boolean }>
 ): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/project/${id}`, {
+    const res = await tasksFetch(`${BASE_URL}/project/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -49,7 +50,7 @@ export async function updateProject(
 
 export async function deleteProject(id: string): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/project/${id}`, { method: "DELETE" });
+    const res = await tasksFetch(`${BASE_URL}/project/${id}`, { method: "DELETE" });
     return res.ok;
   } catch {
     return false;
@@ -58,7 +59,7 @@ export async function deleteProject(id: string): Promise<boolean> {
 
 export async function fetchLabels(workspaceId: string): Promise<TaskLabel[]> {
   try {
-    const res = await fetch(`${BASE_URL}/label/workspace/${workspaceId}`, { cache: "no-store" });
+    const res = await tasksFetch(`${BASE_URL}/label/workspace/${workspaceId}`, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : [];
@@ -69,7 +70,7 @@ export async function fetchLabels(workspaceId: string): Promise<TaskLabel[]> {
 
 export async function createLabel(name: string, color: string, workspaceId: string): Promise<TaskLabel | null> {
   try {
-    const res = await fetch(`${BASE_URL}/label`, {
+    const res = await tasksFetch(`${BASE_URL}/label`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, color, workspaceId }),
@@ -83,7 +84,7 @@ export async function createLabel(name: string, color: string, workspaceId: stri
 
 export async function deleteLabel(id: string): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/label/${id}`, { method: "DELETE" });
+    const res = await tasksFetch(`${BASE_URL}/label/${id}`, { method: "DELETE" });
     return res.ok;
   } catch {
     return false;
@@ -97,7 +98,7 @@ export async function createColumn(
   position: number
 ): Promise<TaskColumn | null> {
   try {
-    const res = await fetch(`${BASE_URL}/column/${projectId}`, {
+    const res = await tasksFetch(`${BASE_URL}/column/${projectId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, slug, position, icon: "Circle" }),
@@ -111,7 +112,7 @@ export async function createColumn(
 
 export async function deleteColumn(id: string): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/column/${id}`, { method: "DELETE" });
+    const res = await tasksFetch(`${BASE_URL}/column/${id}`, { method: "DELETE" });
     return res.ok;
   } catch {
     return false;
@@ -120,7 +121,7 @@ export async function deleteColumn(id: string): Promise<boolean> {
 
 export async function fetchWorkspaceMembers(workspaceId: string): Promise<TaskMember[]> {
   try {
-    const res = await fetch(`${BASE_URL}/workspace/${workspaceId}/members`, { cache: "no-store" });
+    const res = await tasksFetch(`${BASE_URL}/workspace/${workspaceId}/members`, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
     if (!Array.isArray(data)) return [];

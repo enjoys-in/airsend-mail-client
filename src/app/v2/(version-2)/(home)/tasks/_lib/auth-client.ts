@@ -12,31 +12,19 @@ import {
 } from "better-auth/client/plugins";
 import type { AccessControl } from "better-auth/plugins/access";
 import { createAuthClient } from "better-auth/react";
+import { resolveApiBaseUrl } from "@tasks/_packages/libs/api-url";
 import { ac, admin, member, owner, viewer } from "./permissions";
 
-// Auth requests go through the same-origin Next.js proxy (/api/tasks/auth/*),
-// which forwards to the Kaneo backend's /api/auth/*. An absolute
-// NEXT_PUBLIC_TASKS_API_URL (direct backend access) is also supported.
-const publicApiUrl = process.env.NEXT_PUBLIC_TASKS_API_URL || "/api/tasks";
-const isAbsoluteApiUrl = /^https?:\/\//.test(publicApiUrl);
-
-const getBaseURL = () => {
-  if (!isAbsoluteApiUrl) {
-    return typeof window === "undefined"
-      ? "http://localhost"
-      : window.location.origin;
-  }
-  const url = new URL(publicApiUrl);
-  return `${url.protocol}//${url.host}`;
-};
-
-const authBasePath = isAbsoluteApiUrl
-  ? "/api/auth"
-  : `${publicApiUrl.replace(/\/+$/, "")}/auth`;
+// Session and workspace calls go straight to the Kaneo backend (/api/auth/*). It reads the AirSend `access_token`
+// cookie, which the browser sends because credentials are included and the backend is on the same site.
+const apiUrl = new URL(resolveApiBaseUrl(process.env.NEXT_PUBLIC_TASKS_API_URL));
+const getBaseURL = () => apiUrl.origin;
+const authBasePath = `${apiUrl.pathname.replace(/\/+$/, "")}/auth`;
 
 export const authClient = createAuthClient({
   baseURL: getBaseURL(),
   basePath: authBasePath,
+  fetchOptions: { credentials: "include" },
   plugins: [
     anonymousClient(),
     lastLoginMethodClient(),

@@ -1,3 +1,4 @@
+import { TASKS_BASE_URL, tasksFetch } from "./tasks-http";
 import {
   type CreateTaskInput,
   type TaskItem,
@@ -6,11 +7,11 @@ import {
   normalizeTaskStatus,
 } from "./tasks-types";
 
-const BASE_URL = "/api/tasks";
+const BASE_URL = TASKS_BASE_URL;
 
 export async function createTask(input: CreateTaskInput): Promise<TaskItem | null> {
   try {
-    const res = await fetch(`${BASE_URL}/task/${input.projectId}`, {
+    const res = await tasksFetch(`${BASE_URL}/task/${input.projectId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -46,7 +47,7 @@ export async function createTask(input: CreateTaskInput): Promise<TaskItem | nul
 
 export async function updateTask(taskId: string, input: UpdateTaskInput): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/task/${taskId}`, {
+    const res = await tasksFetch(`${BASE_URL}/task/${taskId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -71,7 +72,7 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
 
 export async function deleteTask(taskId: string): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/task/${taskId}`, { method: "DELETE" });
+    const res = await tasksFetch(`${BASE_URL}/task/${taskId}`, { method: "DELETE" });
     return res.ok;
   } catch {
     return false;

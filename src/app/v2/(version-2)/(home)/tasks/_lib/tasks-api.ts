@@ -1,3 +1,4 @@
+import { TASKS_BASE_URL, tasksFetch } from "./tasks-http";
 import {
   type TaskColumn,
   type TaskItem,
@@ -14,7 +15,7 @@ import {
 export * from "./tasks-settings-api";
 export * from "./tasks-crud-api";
 
-const BASE_URL = "/api/tasks";
+const BASE_URL = TASKS_BASE_URL;
 
 let workspaceIdPromise: Promise<string | null> | null = null;
 
@@ -25,7 +26,7 @@ let workspaceIdPromise: Promise<string | null> | null = null;
 function resolveWorkspaceId(): Promise<string | null> {
   workspaceIdPromise ??= (async () => {
     try {
-      const res = await fetch(`${BASE_URL}/auth/organization/list`, { cache: "no-store" });
+      const res = await tasksFetch(`${BASE_URL}/auth/organization/list`, { cache: "no-store" });
       if (!res.ok) return null;
       const list = await res.json();
       return Array.isArray(list) && list[0]?.id ? String(list[0].id) : null;
@@ -43,7 +44,7 @@ export async function fetchProjects(workspaceId?: string): Promise<TaskProject[]
   try {
     const ws = workspaceId ?? (await resolveWorkspaceId());
     if (!ws) return [];
-    const res = await fetch(`${BASE_URL}/project?workspaceId=${encodeURIComponent(ws)}`, { cache: "no-store" });
+    const res = await tasksFetch(`${BASE_URL}/project?workspaceId=${encodeURIComponent(ws)}`, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
     if (!Array.isArray(data)) return [];
@@ -68,7 +69,7 @@ export async function fetchProjectTasks(projectId: string): Promise<{
   tasks: TaskItem[];
 }> {
   try {
-    const res = await fetch(`${BASE_URL}/task/tasks/${projectId}`, { cache: "no-store" });
+    const res = await tasksFetch(`${BASE_URL}/task/tasks/${projectId}`, { cache: "no-store" });
     if (!res.ok) return { project: null, columns: [], tasks: [] };
     const json = await res.json();
     const data = json?.data || json;
@@ -133,7 +134,7 @@ export async function fetchAssignedTasks(workspaceId?: string): Promise<TaskItem
   try {
     const ws = workspaceId ?? (await resolveWorkspaceId());
     if (!ws) return [];
-    const res = await fetch(`${BASE_URL}/task/assigned?workspaceId=${encodeURIComponent(ws)}`, { cache: "no-store" });
+    const res = await tasksFetch(`${BASE_URL}/task/assigned?workspaceId=${encodeURIComponent(ws)}`, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
     const rawList = Array.isArray(data?.tasks) ? data.tasks : [];

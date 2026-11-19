@@ -4,10 +4,7 @@ export function getApiUrl(path: string) {
   const trimmedBase = (
     process.env.NEXT_PUBLIC_TASKS_API_URL || DEFAULT_TASKS_API_URL
   ).replace(/\/+$/, "");
-  const apiUrl =
-    trimmedBase.endsWith("/api") || trimmedBase.endsWith("/api/tasks")
-      ? trimmedBase
-      : `${trimmedBase}/api`;
+  const apiUrl = trimmedBase.endsWith("/api") ? trimmedBase : `${trimmedBase}/api`;
   const normalizedPath = `/${path.replace(/^\/+/, "")}`;
 
   return `${apiUrl}${normalizedPath}`;
