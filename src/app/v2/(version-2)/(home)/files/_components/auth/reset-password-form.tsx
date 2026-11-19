@@ -1,16 +1,14 @@
-"use client";
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
-import { resetPasswordSchema, type ResetPasswordFormData } from "@nimbus/_lib/files-types";
+import { resetPasswordSchema, type ResetPasswordFormData } from "@nimbus/_packages/shared";
 import { AuthErrorCard } from "@nimbus/_components/auth/shared/auth-error-card";
 import { ArrowLeft, Eye, EyeClosed, Loader2 } from "lucide-react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { FieldError } from "@nimbus/_components/ui/field-error";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSearch } from "@nimbus/_lib/router-shim";
+import { useSearch } from "@tanstack/react-router";
 import { useResetPassword } from "@nimbus/_hooks/useAuth";
 import { Button } from "@nimbus/_components/ui/button";
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 import { Label } from "@nimbus/_components/ui/label";
 import { Input } from "@nimbus/_components/ui/input";
 import type { ComponentProps } from "react";
@@ -39,7 +37,7 @@ export function ResetPasswordForm({ ...props }: ComponentProps<"div">) {
 		if (!token) {
 			throw new Error("Reset token is missing");
 		}
-		await (mutate as any)({ data, token });
+		await mutate(data, token);
 	};
 
 	if (error === "invalid_token" || !token) {
