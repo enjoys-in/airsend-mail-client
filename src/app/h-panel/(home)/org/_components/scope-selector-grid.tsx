@@ -1,17 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-    Mail,
-    Calendar,
-    ListTodo,
-    Boxes,
-    FileText,
-    Users,
-    Shield,
-    Check,
-} from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Mail, Calendar, ListTodo, Boxes, FileText, Users } from "lucide-react"
 import {
     SCOPE_FEATURES,
     type ScopeFeature,
@@ -35,59 +25,21 @@ interface FeatureMetadata {
 }
 
 const FEATURE_META: Record<ScopeFeature, FeatureMetadata> = {
-    mail: {
-        label: "Mail",
-        description: "Webmail, IMAP & SMTP sending",
-        icon: Mail,
-    },
-    calendar: {
-        label: "Calendar",
-        description: "Events, bookings & RSVP tracking",
-        icon: Calendar,
-    },
-    tasks: {
-        label: "Tasks",
-        description: "Boards, checklists & task assignees",
-        icon: ListTodo,
-    },
-    workspace: {
-        label: "Workspace",
-        description: "Team channels, chats & mentions",
-        icon: Boxes,
-    },
-    files: {
-        label: "Files",
-        description: "Cloud drive, sharing & attachments",
-        icon: FileText,
-    },
-    contacts: {
-        label: "Contacts",
-        description: "Address book & organization directory",
-        icon: Users,
-    },
+    mail: { label: "Mail", description: "Webmail, IMAP and SMTP sending", icon: Mail },
+    calendar: { label: "Calendar", description: "Events, bookings and RSVPs", icon: Calendar },
+    tasks: { label: "Tasks", description: "Boards, checklists and assignees", icon: ListTodo },
+    workspace: { label: "Workspace", description: "Team channels, chats and mentions", icon: Boxes },
+    files: { label: "Files", description: "Cloud drive, sharing and attachments", icon: FileText },
+    contacts: { label: "Contacts", description: "Address book and directory", icon: Users },
 }
 
-const PERMISSION_OPTIONS: { value: PermissionLevel; label: string; short: string; badge: string }[] = [
-    {
-        value: "rw",
-        label: "Read & Write",
-        short: "Full Access",
-        badge: "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800",
-    },
-    {
-        value: "ro",
-        label: "Read Only",
-        short: "View Only",
-        badge: "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800",
-    },
-    {
-        value: "none",
-        label: "No Access",
-        short: "Disabled",
-        badge: "text-muted-foreground bg-muted/40 border-border",
-    },
+const PERMISSION_OPTIONS: { value: PermissionLevel; label: string }[] = [
+    { value: "rw", label: "Read and write" },
+    { value: "ro", label: "Read only" },
+    { value: "none", label: "No access" },
 ]
 
+/** Per-feature access level: one quiet card per feature with a three-way segmented control. */
 export const ScopeSelectorGrid = React.memo(function ScopeSelectorGrid({
     scopes,
     onChange,
@@ -95,44 +47,32 @@ export const ScopeSelectorGrid = React.memo(function ScopeSelectorGrid({
     className,
 }: ScopeSelectorGridProps) {
     return (
-        <div className={cn("space-y-3", className)}>
-            <div className="flex items-center justify-between">
-                <div>
-                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5 text-primary" />
-                        Feature Scopes & Permissions
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                        Grant granular read/write rights for this member across workspace modules.
-                    </p>
-                </div>
-
-                <div className="hidden sm:flex items-center gap-2">
+        <div className={cn("space-y-4", className)}>
+            <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">
+                    Choose what this member can use in each module of the workspace.
+                </p>
+                <div className="hidden shrink-0 items-center gap-3 sm:flex">
                     <button
                         type="button"
                         disabled={disabled}
-                        onClick={() => {
-                            SCOPE_FEATURES.forEach((f) => onChange(f, "rw"))
-                        }}
-                        className="text-[11px] font-medium text-primary hover:underline transition-colors disabled:opacity-50"
+                        onClick={() => SCOPE_FEATURES.forEach((f) => onChange(f, "rw"))}
+                        className="text-xs text-foreground underline-offset-4 hover:underline disabled:opacity-50"
                     >
-                        Grant All
+                        Allow all
                     </button>
-                    <span className="text-muted-foreground text-xs">•</span>
                     <button
                         type="button"
                         disabled={disabled}
-                        onClick={() => {
-                            SCOPE_FEATURES.forEach((f) => onChange(f, "ro"))
-                        }}
-                        className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                        onClick={() => SCOPE_FEATURES.forEach((f) => onChange(f, "ro"))}
+                        className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
                     >
-                        View Only All
+                        Read only for all
                     </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {SCOPE_FEATURES.map((feature) => {
                     const meta = FEATURE_META[feature]
                     const currentPerm = scopes[feature] || "none"
@@ -141,53 +81,42 @@ export const ScopeSelectorGrid = React.memo(function ScopeSelectorGrid({
                     return (
                         <div
                             key={feature}
-                            className="p-3.5 rounded-xl border bg-card/60 hover:bg-card transition-colors flex flex-col justify-between gap-3 shadow-xs"
+                            className="flex flex-col justify-between gap-3 rounded-lg border border-border/70 bg-card p-3.5"
                         >
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
-                                        <Icon className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-semibold text-foreground">
-                                            {meta.label}
-                                        </div>
-                                        <div className="text-[11px] text-muted-foreground leading-tight">
-                                            {meta.description}
-                                        </div>
-                                    </div>
+                            <div className="flex items-start gap-2.5">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                                    <Icon className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-sm font-medium">{meta.label}</div>
+                                    <div className="text-xs leading-tight text-muted-foreground">{meta.description}</div>
                                 </div>
                             </div>
 
-                            {/* Segmented Pill Selector (No truncation, zero lag, instant feedback) */}
-                            <div className="grid grid-cols-3 gap-1 p-1 bg-muted/50 rounded-lg border border-border/50">
+                            <div role="radiogroup" aria-label={`${meta.label} access`} className="grid grid-cols-3 gap-0.5 rounded-md bg-muted/60 p-0.5">
                                 {PERMISSION_OPTIONS.map((opt) => {
                                     const isSelected = currentPerm === opt.value
                                     return (
                                         <button
                                             key={opt.value}
                                             type="button"
+                                            role="radio"
+                                            aria-checked={isSelected}
                                             disabled={disabled}
                                             onClick={() => onChange(feature, opt.value)}
                                             className={cn(
-                                                "py-1 px-1.5 rounded-md text-[11px] font-medium transition-all text-center flex items-center justify-center gap-1 select-none",
+                                                "select-none rounded px-1 py-1 text-center text-[11px] leading-4 transition-colors disabled:opacity-60",
                                                 isSelected
                                                     ? cn(
-                                                          "shadow-xs border",
-                                                          opt.value === "rw" &&
-                                                              "bg-background text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 font-semibold",
-                                                          opt.value === "ro" &&
-                                                              "bg-background text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-800 font-semibold",
-                                                          opt.value === "none" &&
-                                                              "bg-background text-muted-foreground border-border font-normal"
+                                                          "bg-background font-medium shadow-sm",
+                                                          opt.value === "rw" && "text-emerald-700 dark:text-emerald-400",
+                                                          opt.value === "ro" && "text-blue-700 dark:text-blue-400",
+                                                          opt.value === "none" && "text-foreground"
                                                       )
-                                                    : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+                                                    : "text-muted-foreground hover:text-foreground"
                                             )}
                                         >
-                                            {isSelected && opt.value !== "none" && (
-                                                <Check className="w-3 h-3 shrink-0" />
-                                            )}
-                                            <span className="truncate">{opt.short}</span>
+                                            {opt.value === "rw" ? "Read/write" : opt.value === "ro" ? "Read" : "None"}
                                         </button>
                                     )
                                 })}
