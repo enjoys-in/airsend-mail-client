@@ -1,0 +1,332 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import useAuth from "@tasks/_components/providers/auth-provider/hooks/use-auth";
+import { Spinner } from "@tasks/_components/ui/spinner";
+import {
+  DEFAULT_WORKSPACE_USAGE,
+  type WorkspaceUsage,
+} from "@tasks/_constants/onboarding";
+import { getBilling } from "@tasks/_fetchers/billing/get-billing";
+import { useCreateCheckout } from "@tasks/_hooks/mutations/billing/use-billing-actions";
+import useSignOut from "@tasks/_hooks/mutations/use-sign-out";
+import useGetConfig from "@tasks/_hooks/queries/config/use-get-config";
+import { prefetchBoard } from "@tasks/_hooks/queries/task/prefetch-board";
+import useCreateWorkspace from "@tasks/_hooks/queries/workspace/use-create-workspace";
+import useWorkspaceCreationAccess from "@tasks/_hooks/use-workspace-creation-access";
+import { track } from "@tasks/_lib/analytics/track";
+import { authClient } from "@tasks/_lib/auth-client";
+import {
+  getTrialState,
+  recommendedPlanFor,
+  type TrialState,
+} from "@tasks/_lib/billing";
+import { clearCheckoutIntent, readCheckoutIntent } from "@tasks/_lib/checkout-intent";
+import generateProjectSlug from "@tasks/_lib/generate-project-id";
+import {
+  createStarterProject,
+  FALLBACK_PROJECT_SLUG,
+} from "@tasks/_lib/onboarding/create-starter-project";
+import { starterTasks } from "@tasks/_lib/onboarding/starter-tasks";
+import { toast } from "@tasks/_lib/toast";
+import { InviteStep } from "./invite-step";
+import { OnboardingRestricted } from "./onboarding-restricted";
+import { OnboardingShell } from "./onboarding-shell";
+import {
+  getNextStep,
+  getOnboardingSteps,
+  getStepProgress,
+  type OnboardingStepId,
+} from "./onboarding-steps";
+import { PlanStep } from "./plan-step";
+import { WorkspacePreview } from "./preview/workspace-preview";
+import { ProjectStep } from "./project-step";
+import { ReadyStep } from "./ready-step";
+import { UsageStep } from "./usage-step";
+import { WorkspaceStep } from "./workspace-step";
+
+type CreatedWorkspace = { workspaceId: string; projectId: string | null };
+
+export function OnboardingFlow() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { mutateAsync: createWorkspace } = useCreateWorkspace();
+  const { isCreationRestricted, isDecided: isAccessDecided } =
+    useWorkspaceCreationAccess();
+  const { data: config, isPending: isConfigPending } = useGetConfig();
+  const { mutateAsync: signOut } = useSignOut(config?.customOAuthLogoutUrl);
+  const isDecided = isAccessDecided && !isConfigPending;
+  const isCloud = config?.isCloud === true;
+
+  const [step, setStep] = useState<OnboardingStepId>("workspace");
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [usage, setUsage] = useState<WorkspaceUsage>(DEFAULT_WORKSPACE_USAGE);
+  const [projectName, setProjectName] = useState(() =>
+    t("auth:onboarding.projectNameDefault"),
+  );
+  const [invitedCount, setInvitedCount] = useState(0);
+  const [created, setCreated] = useState<CreatedWorkspace | null>(null);
+  const [trial, setTrial] = useState<TrialState | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [intent] = useState(readCheckoutIntent);
+  const checkout = useCreateCheckout(created?.workspaceId);
+
+  const canInvite = isCloud || config?.hasSmtp === true;
+  const offersPlan = trial
+    ? trial.kind !== "none"
+    : isCloud && config?.billingEnabled === true;
+  const steps = getOnboardingSteps({ usage, canInvite, offersPlan });
+  const name = workspaceName.trim();
+  const projectKey = generateProjectSlug(projectName) || FALLBACK_PROJECT_SLUG;
+  const stepIndex = steps.indexOf(step);
+  const reachedProject = stepIndex >= steps.indexOf("project");
+  const tasks = useMemo(
+    () =>
+      starterTasks(t, usage).map((task, position) => ({
+        id: `task-${position}`,
+        ticket: `${projectKey}-${position + 1}`,
+        title: task.title,
+      })),
+    [t, usage, projectKey],
+  );
+
+  const goToWorkspace = useCallback(() => {
+    if (!created) return;
+    if (created.projectId) {
+      navigate({
+        to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
+        params: {
+          workspaceId: created.workspaceId,
+          projectId: created.projectId,
+        },
+        replace: true,
+      });
+      return;
+    }
+    navigate({
+      to: "/dashboard/workspace/$workspaceId",
+      params: { workspaceId: created.workspaceId },
+      replace: true,
+    });
+  }, [created, navigate]);
+
+  const createWorkspaceAndProject = async () => {
+    setIsCreating(true);
+    try {
+      const workspace = await createWorkspace({
+        name,
+        description: "",
+        userId: user?.id,
+      });
+      track("Workspace Created", { props: { usage } });
+      await authClient.organization.setActive({ organizationId: workspace.id });
+      const projectId = await createStarterProject({
+        workspaceId: workspace.id,
+        name: projectName.trim(),
+        tasks: starterTasks(t, usage),
+      }).catch(() => null);
+      if (projectId) {
+        void router
+          .preloadRoute({
+            to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
+            params: { workspaceId: workspace.id, projectId },
+          })
+          .catch(() => undefined);
+        void prefetchBoard(queryClient, projectId);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+
+      let trialState: TrialState = { kind: "none" };
+      if (isCloud) {
+        try {
+          const billing = await queryClient.fetchQuery({
+            queryKey: ["billing", workspace.id],
+            queryFn: () => getBilling(workspace.id),
+          });
+          trialState = getTrialState(billing);
+        } catch {}
+      }
+
+      setCreated({ workspaceId: workspace.id, projectId });
+      setTrial(trialState);
+      setStep(
+        getNextStep(
+          getOnboardingSteps({
+            usage,
+            canInvite,
+            offersPlan: trialState.kind !== "none",
+          }),
+          "project",
+        ),
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : t("auth:onboarding.toast.createFailed"),
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const startTrial = () => {
+    clearCheckoutIntent();
+    setOpening(true);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("navigation:userMenu.signOutFailed"),
+      );
+    }
+  };
+
+  if (step === "workspace" && !isDecided) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-background">
+        <Spinner className="size-6 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (step === "workspace" && isCreationRestricted) {
+    return <OnboardingRestricted />;
+  }
+
+  const stepContent = () => {
+    switch (step) {
+      case "workspace":
+        return (
+          <WorkspaceStep
+            value={workspaceName}
+            onChange={setWorkspaceName}
+            onContinue={() => setStep("usage")}
+          />
+        );
+      case "usage":
+        return (
+          <UsageStep
+            value={usage}
+            onChange={setUsage}
+            onContinue={() => setStep("project")}
+          />
+        );
+      case "project":
+        return (
+          <ProjectStep
+            value={projectName}
+            projectKey={projectKey}
+            isSubmitting={isCreating}
+            onChange={setProjectName}
+            onContinue={createWorkspaceAndProject}
+          />
+        );
+      case "invite":
+        return created ? (
+          <InviteStep
+            workspaceId={created.workspaceId}
+            onDone={(sent) => {
+              setInvitedCount(sent);
+              setStep(getNextStep(steps, "invite"));
+            }}
+          />
+        ) : null;
+      case "plan":
+        return (
+          <PlanStep
+            canTrial={trial?.kind === "active"}
+            recommended={recommendedPlanFor(usage)}
+            intent={intent}
+            isStartingCheckout={checkout.isPending}
+            onStartTrial={startTrial}
+            onSubscribe={(choice) => {
+              clearCheckoutIntent();
+              checkout.mutate(choice);
+            }}
+          />
+        );
+      default:
+        return (
+          <ReadyStep
+            workspaceName={name}
+            projectName={projectName.trim()}
+            taskCount={tasks.length}
+            invitedCount={invitedCount}
+            opening={opening}
+            onOpen={() => setOpening(true)}
+          />
+        );
+    }
+  };
+
+  const headings: Record<
+    OnboardingStepId,
+    { title: string; description?: string }
+  > = {
+    workspace: {
+      title: t("auth:onboarding.workspace.title"),
+      description: t("auth:onboarding.workspace.description"),
+    },
+    usage: {
+      title: t("auth:onboarding.usage.title"),
+      description: t("auth:onboarding.usage.description", { name }),
+    },
+    project: {
+      title: t("auth:onboarding.project.title"),
+      description: t("auth:onboarding.project.description"),
+    },
+    invite: {
+      title: t("auth:onboarding.invite.title"),
+      description: t("auth:onboarding.invite.description", { name }),
+    },
+    plan: {
+      title: t("auth:onboarding.plan.title"),
+      description:
+        trial?.kind === "active"
+          ? t("auth:onboarding.plan.descriptionTrial", {
+              name,
+              count: trial.daysLeft,
+            })
+          : t("auth:onboarding.cloud.plan.trialUsed"),
+    },
+    ready: {
+      title: t("auth:onboarding.ready.title", { name }),
+      description: t("auth:onboarding.ready.description"),
+    },
+  };
+  const heading = headings[step];
+  const progress = step === "ready" ? null : getStepProgress(steps, step);
+
+  return (
+    <OnboardingShell
+      stepKey={step}
+      progress={progress}
+      title={heading.title}
+      description={heading.description}
+      email={user?.email}
+      opening={opening}
+      onOpened={goToWorkspace}
+      onSignOut={handleSignOut}
+      preview={
+        <WorkspacePreview
+          workspaceName={name || t("auth:onboarding.preview.untitled")}
+          projectName={reachedProject ? projectName.trim() || null : null}
+          tasks={reachedProject ? tasks : null}
+        />
+      }
+    >
+      {stepContent()}
+    </OnboardingShell>
+  );
+}
