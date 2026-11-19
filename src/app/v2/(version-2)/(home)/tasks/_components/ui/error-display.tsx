@@ -29,7 +29,12 @@ export function ErrorDisplay({
 }: ErrorDisplayProps) {
   const { t } = useTranslation();
   const parsedError = parseApiError(error);
-  const resolvedTitle = title ?? t("common:error.title");
+  const unavailable = parsedError.type === "unavailable";
+  const resolvedTitle = unavailable
+    ? t("common:error.serviceUnavailable.title", {
+        defaultValue: "Something went wrong",
+      })
+    : (title ?? t("common:error.title"));
 
   const getTroubleshootingSteps = () => {
     switch (parsedError.type) {
@@ -55,7 +60,11 @@ export function ErrorDisplay({
           </div>
           <CardTitle className="text-lg">{resolvedTitle}</CardTitle>
           <CardDescription className="text-sm">
-            {t(parsedError.message)}
+            {unavailable
+              ? t("common:error.serviceUnavailable.message", {
+                  defaultValue: "Service is not available right now. Please try again in a moment.",
+                })
+              : t(parsedError.message)}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

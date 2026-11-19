@@ -50,15 +50,18 @@ function SessionError({
             <AlertTriangle className="size-6 text-destructive-foreground" />
           </div>
           <CardTitle className="text-lg">
-            {t("common:error.session.title", {
-              defaultValue: "Couldn't open Tasks",
-            })}
+            {unreachable
+              ? t("common:error.serviceUnavailable.title", {
+                  defaultValue: "Something went wrong",
+                })
+              : t("common:error.session.title", {
+                  defaultValue: "Couldn't open Tasks",
+                })}
           </CardTitle>
           <CardDescription className="text-sm">
             {unreachable
-              ? t("common:error.session.unreachable", {
-                  defaultValue:
-                    "The tasks service isn't responding. Check that it is running and try again.",
+              ? t("common:error.serviceUnavailable.message", {
+                  defaultValue: "Service is not available right now. Please try again in a moment.",
                 })
               : t("common:error.session.rejected", {
                   defaultValue:

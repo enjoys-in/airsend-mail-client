@@ -1,11 +1,37 @@
 export type ApiError = {
   message: string;
-  type: "network" | "cors" | "auth" | "server" | "unknown";
+  type: "unavailable" | "network" | "cors" | "auth" | "server" | "unknown";
   status?: number;
   originalError?: Error;
 };
 
+// What browsers throw from fetch() when the request never reached a server.
+const NETWORK_FAILURE =
+  /failed to fetch|networkerror|load failed|fetch failed|network request failed|network error/i;
+// Statuses a gateway or proxy answers with when the service behind it is down.
+const GATEWAY_DOWN_STATUSES = new Set([502, 503, 504]);
+
+/** The tasks backend is down: the request never reached it, or a gateway answered for it. */
+export function isServiceUnavailable(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const status = (error as { status?: unknown }).status;
+  if (typeof status === "number" && GATEWAY_DOWN_STATUSES.has(status)) {
+    return true;
+  }
+  if (error.name === "SessionBootstrapError") {
+    return (error as { reason?: unknown }).reason === "unreachable";
+  }
+  return NETWORK_FAILURE.test(error.message);
+}
+
 export function parseApiError(error: unknown): ApiError {
+  if (isServiceUnavailable(error)) {
+    return {
+      message: "common:error.serviceUnavailable.message",
+      type: "unavailable",
+      originalError: error as Error,
+    };
+  }
   if (error instanceof Error) {
     if (
       error.message.includes("Failed to fetch") ||
