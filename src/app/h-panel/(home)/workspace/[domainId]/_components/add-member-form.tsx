@@ -47,10 +47,10 @@ export function AddMemberForm({ domainId, availableAccounts, existingEmails, onM
     }
 
     return (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select value={selectedEmail} onValueChange={setSelectedEmail}>
-                <SelectTrigger className="w-[280px]">
-                    <SelectValue placeholder="Select account to add" />
+                <SelectTrigger className="h-9 w-full text-sm sm:max-w-md">
+                    <SelectValue placeholder="Select an account to add" />
                 </SelectTrigger>
                 <SelectContent>
                     {addableAccounts.map((account) => (
@@ -60,9 +60,9 @@ export function AddMemberForm({ domainId, availableAccounts, existingEmails, onM
                     ))}
                 </SelectContent>
             </Select>
-            <Button onClick={handleAdd} disabled={!selectedEmail || loading} size="sm" className="rounded-none">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4 mr-1" />}
-                Add
+            <Button onClick={handleAdd} disabled={!selectedEmail || loading} size="sm" className="h-9 gap-1.5">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                Add member
             </Button>
         </div>
     )

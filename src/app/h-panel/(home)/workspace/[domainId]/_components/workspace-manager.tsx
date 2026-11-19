@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { AvailableAccount, WorkspaceMember } from "@/lib/types/workspace.interface"
+import { Pill, Section } from "@/components/h-panel/kit"
 import { AddMemberForm } from "./add-member-form"
 import { MembersTable } from "./members-table"
 
@@ -24,31 +24,24 @@ export function WorkspaceManager({ domainId, workspaceName, initialMembers, avai
     }
 
     return (
-        <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">Add Member</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <AddMemberForm
-                        domainId={domainId}
-                        availableAccounts={availableAccounts}
-                        existingEmails={members.map(m => m.email)}
-                        onMemberAdded={handleMemberAdded}
-                    />
-                </CardContent>
-            </Card>
+        <div className="space-y-5">
+            <Section title="Add member" description={`Give an account on this domain access to ${workspaceName}. New members start with the default scopes; change them in the list below.`}>
+                <AddMemberForm
+                    domainId={domainId}
+                    availableAccounts={availableAccounts}
+                    existingEmails={members.map(m => m.email)}
+                    onMemberAdded={handleMemberAdded}
+                />
+            </Section>
 
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">Members ({members.length})</CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <MembersTable members={members} onMembersChange={setMembers} />
-                </CardContent>
-            </Card>
+            <Section
+                title="Members"
+                description="Who can use this workspace and what each person can do in every module."
+                actions={<Pill>{members.length}</Pill>}
+                flush
+            >
+                <MembersTable members={members} onMembersChange={setMembers} />
+            </Section>
         </div>
     )
 }
