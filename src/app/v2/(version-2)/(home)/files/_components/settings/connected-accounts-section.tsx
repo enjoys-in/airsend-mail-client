@@ -1,10 +1,8 @@
-"use client";
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@nimbus/_components/ui/table";
 import { AlertCircle, Check, Edit, Loader2, Plus, X } from "lucide-react";
-import { nicknameSchema, type DriveProvider } from "@nimbus/_lib/files-types";
-import type { LimitedAccessAccount } from "@nimbus/_lib/files-types";
+import { nicknameSchema, type DriveProvider } from "@nimbus/_packages/shared";
+import type { LimitedAccessAccount } from "@nimbus/_packages/shared";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@nimbus/_components/ui/button";
 import { Input } from "@nimbus/_components/ui/input";
