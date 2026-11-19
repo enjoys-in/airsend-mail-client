@@ -1,4 +1,4 @@
-import { resolveApiBaseUrl } from "@tasks/_packages/libs";
+import { getTasksApiUrl, resolveApiBaseUrl } from "@tasks/_packages/libs/api-url";
 import { HttpError } from "@tasks/_lib/http-error";
 
 export type InstanceStatus = {
@@ -7,7 +7,7 @@ export type InstanceStatus = {
 };
 
 export async function getInstanceStatus(): Promise<InstanceStatus> {
-  const baseUrl = resolveApiBaseUrl(process.env.NEXT_PUBLIC_TASKS_API_URL);
+  const baseUrl = resolveApiBaseUrl(getTasksApiUrl());
   const response = await fetch(`${baseUrl}/instance/status`, {
     credentials: "include",
   });

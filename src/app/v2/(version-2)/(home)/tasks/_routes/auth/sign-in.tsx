@@ -72,7 +72,7 @@ function SignIn() {
   const destination =
     redirectPath ??
     (invitationId ? `/invitation/accept/${invitationId}` : "/dashboard");
-  const baseUrl = process.env.NEXT_PUBLIC_TASKS_CLIENT_URL;
+  const baseUrl = window.location.origin;
   const providers = getProviders(config);
   const emailMethod = getEmailMethod(config);
   const getName = useProviderName(config?.customOAuthName);

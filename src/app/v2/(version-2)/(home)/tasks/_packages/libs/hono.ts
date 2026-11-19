@@ -1,8 +1,8 @@
 import type { AppType } from "@tasks/_packages/api";
 import { hc } from "hono/client";
-import { resolveApiBaseUrl } from "./api-url";
+import { getTasksApiUrl, resolveApiBaseUrl } from "./api-url";
 
-const apiUrl = resolveApiBaseUrl(process.env.NEXT_PUBLIC_TASKS_API_URL);
+const apiUrl = resolveApiBaseUrl(getTasksApiUrl());
 
 // Generate once per tab load
 export const windowId = Math.random().toString(36).substring(2, 11);

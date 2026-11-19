@@ -39,6 +39,7 @@ export default async function RootLayout({
     WORKSPACE_API_URL: process.env.WORKSPACE_API_URL || "",
     TASKS_API_URL: process.env.TASKS_API_URL || "http://localhost:1337",
     FILES_API_URL: process.env.FILES_API_URL || "http://localhost:1284",
+    TASKS_TURNSTILE_SITE_KEY: process.env.TASKS_TURNSTILE_SITE_KEY || "",
     MEET_API_URL: process.env.MEET_API_URL || "http://localhost:8085",
     MEET_URL: process.env.MEET_URL || "https://meet.airsend.in",
     TENOR_API_KEY: process.env.TENOR_API_KEY || "",

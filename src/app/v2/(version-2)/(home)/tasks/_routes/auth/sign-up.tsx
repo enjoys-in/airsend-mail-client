@@ -80,7 +80,7 @@ function SignUp() {
   const destination = invitationId
     ? `/invitation/accept/${invitationId}`
     : "/dashboard";
-  const baseUrl = process.env.NEXT_PUBLIC_TASKS_CLIENT_URL ?? window.location.origin;
+  const baseUrl = window.location.origin;
   const selfServiceAllowed =
     !config?.disableRegistration ||
     Boolean(invitationId) ||

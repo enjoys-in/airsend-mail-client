@@ -35,7 +35,6 @@ export function getWorkspaceApiUrl(): string {
   }
   if (!url) {
     url =
-      process.env.NEXT_PUBLIC_WORKSPACE_API_URL ||
       process.env.WORKSPACE_API_URL ||
       "http://localhost:8090";
   }

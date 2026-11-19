@@ -12,12 +12,12 @@ import {
 } from "better-auth/client/plugins";
 import type { AccessControl } from "better-auth/plugins/access";
 import { createAuthClient } from "better-auth/react";
-import { resolveApiBaseUrl } from "@tasks/_packages/libs/api-url";
+import { getTasksApiUrl, resolveApiBaseUrl } from "@tasks/_packages/libs/api-url";
 import { ac, admin, member, owner, viewer } from "./permissions";
 
 // Session and workspace calls go straight to the Kaneo backend (/api/auth/*). It reads the AirSend `access_token`
 // cookie, which the browser sends because credentials are included and the backend is on the same site.
-const apiUrl = new URL(resolveApiBaseUrl(process.env.NEXT_PUBLIC_TASKS_API_URL));
+const apiUrl = new URL(resolveApiBaseUrl(getTasksApiUrl()));
 const getBaseURL = () => apiUrl.origin;
 const authBasePath = `${apiUrl.pathname.replace(/\/+$/, "")}/auth`;
 
