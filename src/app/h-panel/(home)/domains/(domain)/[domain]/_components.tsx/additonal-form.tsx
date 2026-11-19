@@ -63,8 +63,8 @@ export function AdditonalForm({ domainId, data }: { domainId: string, data: any 
         }
     }, [])
     return (
-        <form className="space-y-6" onSubmit={handleSubmit(saveChanges)}>
-            <div className="flex items-center space-x-2">
+        <form className="space-y-5" onSubmit={handleSubmit(saveChanges)}>
+            <div className="flex items-center gap-2.5">
                 <Controller
                     name="listAsPublic"
                     control={control}
@@ -76,13 +76,13 @@ export function AdditonalForm({ domainId, data }: { domainId: string, data: any 
                         />
                     )}
                 />
-                <Label htmlFor="listAsPublic" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <Label htmlFor="listAsPublic" className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     List As Public
                 </Label>
             </div>
 
             {listAsPublic && (
-                <div className="space-y-4">
+                <div className="space-y-4 rounded-lg border border-border/70 bg-muted/30 p-4">
                     <Controller
                         name="pricingOption"
                         control={control}
@@ -94,19 +94,19 @@ export function AdditonalForm({ domainId, data }: { domainId: string, data: any 
                             >
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="free" id="free" />
-                                    <Label htmlFor="free" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    <Label htmlFor="free" className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                         Is Free
                                     </Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="premium" id="premium" />
-                                    <Label htmlFor="premium" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    <Label htmlFor="premium" className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                         Is Premium
                                     </Label>
                                 </div>
                                 {pricingOption === "premium" && (
                                     <div className="flex items-center space-x-2">
-                                        <Label htmlFor="premiumAmount" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        <Label htmlFor="premiumAmount" className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                             Premium Amount:
                                         </Label>
                                         <Controller
@@ -131,17 +131,11 @@ export function AdditonalForm({ domainId, data }: { domainId: string, data: any 
                     />
                 </div>
             )}
-            <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
-                {
-                    listAsPublic && <Button
-                        className="bg-indigo-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center gap-2 hover:scale-105 active:scale-95"
-
-                    >
-
-                        <span>Save Changes</span>
-                    </Button>
-                }
-            </div>
+            {listAsPublic && (
+                <div className="flex justify-end border-t border-border/70 pt-4">
+                    <Button size="sm">Save changes</Button>
+                </div>
+            )}
         </form>
     )
 }
