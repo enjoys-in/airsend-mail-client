@@ -10,8 +10,13 @@
 
 import { authHeaders } from "./api"
 
+/** The files backend, from the runtime config the root layout injects (server env `FILES_API_URL`). */
 export function getFilesApiUrl(): string {
-  return (process.env.NEXT_PUBLIC_FILES_API_URL || "http://localhost:1284").trim().replace(/\/+$/, "")
+  const runtime =
+    typeof window !== "undefined"
+      ? (window as { __RUNTIME_CONFIG__?: Record<string, string> }).__RUNTIME_CONFIG__?.FILES_API_URL
+      : undefined
+  return (runtime || process.env.FILES_API_URL || "http://localhost:1284").trim().replace(/\/+$/, "")
 }
 
 export type WorkspaceFileContext = "channel" | "dm" | "team"
