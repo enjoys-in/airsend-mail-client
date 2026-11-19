@@ -232,6 +232,10 @@ export class API {
     static updateMember(id: string, data: any) {
         return instance.put(adminRoutes(`/member/${id}`), data)
     }
+    /** Per-service roles (Files / Tasks / Workspace) of one member; `null` for a service means "same as the org role". */
+    static updateMemberServiceRoles(id: string, service_roles: Record<string, "admin" | "member" | null>) {
+        return instance.put(adminRoutes(`/member/${id}`), { service_roles })
+    }
     static removeMember(id: string) {
         return instance.delete(adminRoutes(`/member/${id}`))
     }
