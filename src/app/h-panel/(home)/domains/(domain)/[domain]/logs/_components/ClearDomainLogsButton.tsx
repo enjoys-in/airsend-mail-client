@@ -49,7 +49,7 @@ export function ClearDomainLogsButton({ domainId, disabled }: { domainId: string
     return (
         <AlertDialog open={open} onOpenChange={setOpen}>
             <AlertDialogTrigger asChild>
-                <Button variant="outline" className="rounded-none" disabled={disabled}>
+                <Button variant="outline" size="sm" disabled={disabled}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Clear domain logs
                 </Button>
