@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { tasksDenialReason, type WorkspaceAccessResult } from "@/lib/tasks-access";
 
 // Tickets and tasks proxy for Kaneo service (../tasks).
-// Authorizes via airsend-api and falls back gracefully to default workspace.
+// Access is decided by airsend-api (scopes + org membership); the request is refused here with the
+// real reason when the user may not use tasks, instead of an opaque error from the tasks service.
 
 function stripTrailingSlashes(url: string): string {
   return url.replace(/\/+$/, "");
@@ -21,6 +23,34 @@ function userToken(request: NextRequest): string | null {
 type Authorization =
   | { ok: true; workspaceId: string }
   | { ok: false; status: number; message: string; backendOffline?: boolean };
+
+const ACCESS_TTL_MS = 30_000;
+const accessCache = new Map<string, { at: number; access: WorkspaceAccessResult | null }>();
+
+/** The scopes airsend-api allows this user (cached briefly). null when airsend-api is unreachable. */
+async function getAccess(token: string): Promise<WorkspaceAccessResult | null> {
+  const hit = accessCache.get(token);
+  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit.access;
+  let access: WorkspaceAccessResult | null = null;
+  try {
+    const res = await fetch(`${airsendApiUrl()}/api/v1/workspace-access`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const json = await res.json().catch(() => null);
+    if (res.ok && json?.result) access = json.result as WorkspaceAccessResult;
+    else if (res.status === 401 || res.status === 403) {
+      access = { allowed: false, reason: json?.message };
+    }
+  } catch {
+    access = null;
+  }
+  if (access) {
+    if (accessCache.size > 500) accessCache.clear();
+    accessCache.set(token, { at: Date.now(), access });
+  }
+  return access;
+}
 
 async function authorize(
   token: string,
@@ -79,6 +109,14 @@ async function handleProxy(
 
   const token = userToken(request);
   let workspaceId: string | null = null;
+
+  if (!token) {
+    return NextResponse.json({ success: false, error: "Sign in to use tasks." }, { status: 401 });
+  }
+  const denial = tasksDenialReason(await getAccess(token), method);
+  if (denial) {
+    return NextResponse.json({ success: false, error: denial, message: denial }, { status: 403 });
+  }
 
   if (token) {
     let bodyJson: unknown;
