@@ -33,6 +33,7 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import type { IRole, OrgService } from "../_lib/types"
+import { Section } from "./kit"
 import {
     INHERIT_ALL,
     ServiceRolePicker,
@@ -99,7 +100,7 @@ export function CreateInternalMemberForm({
         setShowPassword(true)
         toast({
             title: "Password generated",
-            description: "Strong 16-character password generated. Make sure to copy it.",
+            description: "A strong 16-character password was generated. Copy it before you leave this page.",
         })
     }
 
@@ -154,7 +155,7 @@ export function CreateInternalMemberForm({
             }).catch(() => {})
 
             toast({
-                title: "Mailbox created successfully!",
+                title: "Mailbox created",
                 description: `${fullEmail} has been provisioned and is ready for login.`,
             })
 
@@ -175,100 +176,86 @@ export function CreateInternalMemberForm({
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="rounded-xl border bg-card p-5 sm:p-6 space-y-5 shadow-xs">
-                <div className="flex items-center gap-2 border-b pb-3">
-                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                        <UserPlus className="w-4 h-4" />
-                    </div>
-                    <div>
-                        <div className="text-sm font-semibold text-foreground">
-                            Internal Enterprise Mailbox
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                            Provision an account directly under your verified corporate domain.
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+            <Section title="Account" description="The person and the address of their new mailbox.">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* Full Name */}
-                    <div className="space-y-2">
-                        <Label htmlFor="internal-name" className="text-xs font-semibold">
-                            Full Name <span className="text-destructive">*</span>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="internal-name" className="text-sm">
+                            Full name <span className="text-destructive">*</span>
                         </Label>
                         <div className="relative">
-                            <User className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+                            <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 id="internal-name"
                                 placeholder="e.g. Sarah Connor"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="pl-9 text-xs sm:text-sm"
+                                className="h-9 pl-9 text-sm"
                                 required
                             />
                         </div>
                     </div>
 
                     {/* Email / Username */}
-                    <div className="space-y-2">
-                        <Label htmlFor="internal-username" className="text-xs font-semibold">
-                            Mailbox Username & Domain <span className="text-destructive">*</span>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="internal-username" className="text-sm">
+                            Username and domain <span className="text-destructive">*</span>
                         </Label>
                         <div className="flex gap-2">
                             <div className="relative flex-1">
-                                <AtSign className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+                                <AtSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     id="internal-username"
                                     placeholder="sconnor"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    className="pl-9 text-xs sm:text-sm font-mono"
+                                    className="h-9 pl-9 font-mono text-sm"
                                     required
                                 />
                             </div>
 
                             <Select value={domainId} onValueChange={setDomainId}>
-                                <SelectTrigger className="w-[180px] text-xs h-9 font-mono">
+                                <SelectTrigger className="h-9 w-[170px] font-mono text-xs">
                                     <SelectValue placeholder="Domain" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {domains.map((dom) => (
-                                        <SelectItem key={dom.id} value={String(dom.id)} className="text-xs font-mono">
+                                        <SelectItem key={dom.id} value={String(dom.id)} className="font-mono text-xs">
                                             @{dom.domain_name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
-                        <p className="text-[11px] text-muted-foreground font-mono">
-                            Full address: <strong className="text-foreground">{fullEmailPreview}</strong>
+                        <p className="text-xs text-muted-foreground">
+                            Address: <span className="font-mono text-foreground">{fullEmailPreview}</span>
                         </p>
                     </div>
 
                     {/* Password */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5 md:col-span-2">
                         <div className="flex items-center justify-between">
-                            <Label htmlFor="internal-password" className="text-xs font-semibold">
-                                Mailbox Password <span className="text-destructive">*</span>
+                            <Label htmlFor="internal-password" className="text-sm">
+                                Mailbox password <span className="text-destructive">*</span>
                             </Label>
                             <button
                                 type="button"
                                 onClick={handleGeneratePassword}
-                                className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                                className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
                             >
-                                <RefreshCw className="w-3 h-3" /> Auto-generate
+                                <RefreshCw className="h-3 w-3" /> Generate
                             </button>
                         </div>
                         <div className="relative">
-                            <Lock className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+                            <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 id="internal-password"
                                 type={showPassword ? "text" : "password"}
                                 placeholder="••••••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="pl-9 pr-9 text-xs sm:text-sm font-mono"
+                                className="h-9 pl-9 pr-9 font-mono text-sm"
                                 required
                             />
                             <button
@@ -276,53 +263,54 @@ export function CreateInternalMemberForm({
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
                             >
-                                {showPassword ? (
-                                    <EyeOff className="w-4 h-4" />
-                                ) : (
-                                    <Eye className="w-4 h-4" />
-                                )}
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
-                            Used for webmail, IMAP, and SMTP authentication.
-                        </p>
+                        <p className="text-xs text-muted-foreground">Used for webmail, IMAP and SMTP sign-in.</p>
                     </div>
+                </div>
+            </Section>
 
-                    {/* Role */}
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold">Assigned Role</Label>
-                        <Select value={role} onValueChange={setRole}>
-                            <SelectTrigger className="text-xs h-9">
-                                <SelectValue placeholder="Select Role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="member" className="text-xs">Member</SelectItem>
-                                <SelectItem value="admin" className="text-xs">Administrator</SelectItem>
-                                <SelectItem value="viewer" className="text-xs">Viewer</SelectItem>
-                                {roles.map((r) => (
-                                    <SelectItem key={r.id} value={r.name} className="text-xs">
-                                        {r.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <p className="text-[11px] text-muted-foreground">
-                            Governs access rights in the H-Panel dashboard.
-                        </p>
-                    </div>
+            <Section title="Access" description="What this person can do in the organization.">
+                <div className="max-w-sm space-y-1.5">
+                    <Label className="text-sm">Organization role</Label>
+                    <Select value={role} onValueChange={setRole}>
+                        <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="member" className="text-sm">Member</SelectItem>
+                            <SelectItem value="admin" className="text-sm">Administrator</SelectItem>
+                            <SelectItem value="viewer" className="text-sm">Viewer</SelectItem>
+                            {roles.map((r) => (
+                                <SelectItem key={r.id} value={r.name} className="text-sm">
+                                    {r.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Governs access rights in the h-panel and is the default in every service.</p>
+                </div>
+            </Section>
 
-                    {/* Advanced: per-service roles */}
-                    <Collapsible className="space-y-3 md:col-span-2">
-                        <CollapsibleTrigger asChild>
-                            <button
-                                type="button"
-                                className="group flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
-                            >
-                                <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-180" />
-                                Advanced: per-service roles
-                            </button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
+            <Section>
+                <Collapsible className="space-y-3">
+                    <CollapsibleTrigger asChild>
+                        <button
+                            type="button"
+                            className="group flex w-full items-center justify-between gap-2 text-left"
+                        >
+                            <span>
+                                <span className="block text-sm font-medium">Advanced: per-service roles</span>
+                                <span className="block text-xs text-muted-foreground">
+                                    Optional. Give a different role in Files, Tasks or Workspace.
+                                </span>
+                            </span>
+                            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                        </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <div className="border-t border-border/70 pt-4">
                             <ServiceRolePicker
                                 value={serviceChoices}
                                 orgRole={role}
@@ -331,13 +319,13 @@ export function CreateInternalMemberForm({
                                     setServiceChoices((prev) => ({ ...prev, [service]: choice }))
                                 }
                             />
-                        </CollapsibleContent>
-                    </Collapsible>
-                </div>
-            </div>
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
+            </Section>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2">
                 <Button
                     type="button"
                     variant="outline"
@@ -347,20 +335,16 @@ export function CreateInternalMemberForm({
                     Cancel
                 </Button>
 
-                <Button
-                    type="submit"
-                    disabled={submitting || !name || !username || !password}
-                    className="min-w-[170px] gap-2 shadow-xs"
-                >
+                <Button type="submit" disabled={submitting || !name || !username || !password} className="min-w-[150px] gap-2">
                     {submitting ? (
                         <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Creating Mailbox...
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Creating
                         </>
                     ) : (
                         <>
-                            <UserPlus className="w-4 h-4" />
-                            Create Mailbox
+                            <UserPlus className="h-4 w-4" />
+                            Create mailbox
                         </>
                     )}
                 </Button>
