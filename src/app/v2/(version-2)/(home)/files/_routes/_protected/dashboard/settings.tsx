@@ -1,18 +1,15 @@
-import { FILES_BASE_PATH } from "@nimbus/_lib/base-path";
 import { type ApiResponse, type DriveProvider } from "@nimbus/_packages/shared";
-import { useEffect, useState, type ChangeEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { authClient } from "@nimbus/_packages/auth/auth-client";
-import env from "@nimbus/_packages/env/client";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { useDefaultAccountProvider } from "@nimbus/_components/providers/default-account-provider";
 import { useUserInfoProvider } from "@nimbus/_components/providers/user-info-provider";
+import { ConnectAccountDialog } from "@nimbus/_components/dialogs/connect-account-dialog";
 import { useUnlinkAccount } from "@nimbus/_hooks/useUnlinkAccount";
 import { protectedClient } from "@nimbus/_utils/client";
 
 import { ConnectedAccountsSection } from "@nimbus/_components/settings/connected-accounts-section";
-// import { SecuritySection } from "@nimbus/_components/settings/security-section";
 import { ProfileSection } from "@nimbus/_components/settings/profile-section";
 import { SettingsHeader } from "@nimbus/_components/settings/header";
 
@@ -20,82 +17,25 @@ export const Route = createFileRoute("/_protected/dashboard/settings")({
 	component: SettingsPage,
 });
 
-// TODO(feat): back button in header goes to a callbackUrl
-
 function SettingsPage() {
-	const { user, accounts, refreshUser, refreshAccounts } = useUserInfoProvider();
+	const { user, accounts, refreshAccounts } = useUserInfoProvider();
 	const { defaultAccountId } = useDefaultAccountProvider();
 	const { unlinkAccount } = useUnlinkAccount();
-	const [name, setName] = useState(user?.name || "");
-	const [email, setEmail] = useState(user?.email || "");
-	const [isSaving, setIsSaving] = useState(false);
 	const [isSettingDefault, setIsSettingDefault] = useState<string | null>(null);
-	const [previewUrl, setPreviewUrl] = useState<string | null>(user?.image || null);
+	const [isConnectOpen, setIsConnectOpen] = useState(false);
 
-	useEffect(() => {
-		if (user) {
-			// Batch state updates to avoid race conditions
-			const newName = user.name || "";
-			const newEmail = user.email || "";
-			const newPreviewUrl = user.image || null;
-
-			setName(newName);
-			setEmail(newEmail);
-			setPreviewUrl(newPreviewUrl);
-		}
-	}, [user]);
-
-	// TODO(feat): change profile image
-	const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (file) {
-			setPreviewUrl(URL.createObjectURL(file));
-		}
-	};
-
-	const handleSaveProfile = async () => {
-		try {
-			setIsSaving(true);
-			let isUpdated = false;
-
-			if (user?.email !== email) {
-				await authClient.changeEmail({
-					newEmail: email,
-					callbackURL: `${env.VITE_FRONTEND_URL}${FILES_BASE_PATH}/dashboard/settings`,
-				});
-				isUpdated = true;
-			}
-
-			if (user?.name !== name || user?.image !== previewUrl) {
-				await authClient.updateUser({
-					name,
-					image: previewUrl,
-				});
-				isUpdated = true;
-			}
-
-			if (isUpdated) {
-				await refreshUser();
-				toast.success("Profile updated successfully");
-			}
-		} catch (error) {
-			console.error("Failed to update profile:", error);
-			toast.error("Failed to update profile. Please try again.");
-		} finally {
-			setIsSaving(false);
-		}
-	};
-
-	const handleDisconnectAccount = async (provider: DriveProvider, accountId: string) => {
+	const handleDisconnectAccount = async (provider: DriveProvider, accountId: string, tableAccountId: string) => {
 		const toastErrorMessage = `Failed to disconnect account. Account ID: ${accountId}`;
 
 		try {
-			const response = await unlinkAccount(provider, accountId);
+			const response = await unlinkAccount(provider, accountId, tableAccountId);
 			if (response?.error) {
 				throw new Error(response.error.message || toastErrorMessage);
 			}
-			await refreshAccounts();
-			toast.success(`Disconnected account`);
+			if (response) {
+				await refreshAccounts();
+				toast.success(`Disconnected account`);
+			}
 		} catch (error) {
 			console.error(`Failed to disconnect account`, error);
 			toast.error(toastErrorMessage);
@@ -160,29 +100,20 @@ function SettingsPage() {
 		<div className="flex flex-1 flex-col">
 			<SettingsHeader />
 			<div className="container mx-auto w-200 flex-1 space-y-6 p-6">
-				<ProfileSection
-					name={name}
-					email={email}
-					previewUrl={previewUrl}
-					onNameChange={setName}
-					onEmailChange={setEmail}
-					onFileChange={handleFileChange}
-					onSave={handleSaveProfile}
-					isSaving={isSaving}
-				/>
+				<ProfileSection name={user?.name || ""} email={user?.email || ""} previewUrl={user?.image || null} />
 
 				<ConnectedAccountsSection
 					accounts={accounts}
 					defaultAccountId={defaultAccountId}
 					isSettingDefault={isSettingDefault}
 					onDisconnect={handleDisconnectAccount}
+					onAddAccount={() => setIsConnectOpen(true)}
 					onSetDefault={handleSetDefaultAccount}
 					onUpdateAccount={handleUpdateAccount}
 				/>
-
-				{/*<SecuritySection />*/}
 			</div>
 
+			<ConnectAccountDialog open={isConnectOpen} onOpenChange={setIsConnectOpen} />
 		</div>
 	);
 }
