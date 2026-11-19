@@ -1,17 +1,14 @@
-import { Separator } from "@/components/ui/separator";
+import { PageHeader } from "@/components/h-panel/kit";
 import React from "react";
 import { DisplayForm } from "./display-form";
 
 function DisplayPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-2xl font-bold tracking-tight">Display</h3>
-        <p className="text-sm text-muted-foreground">
-          Turn items on or off to control what&apos;s displayed in the app.
-        </p>
-      </div>
-      <Separator />
+    <div className="max-w-3xl">
+      <PageHeader
+        title="Display"
+        description="Turn items on or off to control what's displayed in the app."
+      />
       <DisplayForm />
     </div>
   );

@@ -9,15 +9,16 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
 import { toast } from "@/components/ui/use-toast"
- 
- 
+import { Section } from "@/components/h-panel/kit"
+import { FormFooter } from "../../../_components/settings-shell"
+
+
 const items = [
   {
     id: "folders",
@@ -93,56 +94,57 @@ export function DisplayForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="items"
-          render={() => (
-            <FormItem>
-              <div className="mb-4">
-                <FormLabel className="text-base">Sidebar</FormLabel>
-                <FormDescription>
-                  Select the items you want to display in the sidebar.
-                </FormDescription>
-              </div>
-              {items.map((item) => (
-                <FormField
-                  key={item.id}
-                  control={form.control}
-                  name="items"
-                  render={({ field }) => {
-                    return (
-                      <FormItem
-                        key={item.id}
-                        className="flex flex-row items-start space-x-3 space-y-0"
-                      >
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value?.includes(item.id)}
-                            onCheckedChange={(checked) => {
-                              return checked
-                                ? field.onChange([...field.value, item.id])
-                                : field.onChange(
-                                    field.value?.filter(
-                                      (value) => value !== item.id
-                                    )
-                                  )
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          {item.label}
-                        </FormLabel>
-                      </FormItem>
-                    )
-                  }}
-                />
-              ))}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit">Update display</Button>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <Section title="Sidebar" description="Select the items you want to display in the sidebar.">
+          <FormField
+            control={form.control}
+            name="items"
+            render={() => (
+              <FormItem>
+                <div className="grid gap-x-6 sm:grid-cols-2">
+                  {items.map((item, index) => (
+                    <FormField
+                      key={`${item.id}-${index}`}
+                      control={form.control}
+                      name="items"
+                      render={({ field }) => {
+                        return (
+                          <FormItem
+                            key={item.id}
+                            className="flex flex-row items-center space-x-3 space-y-0 border-b border-border/70 py-3 last:border-b-0 sm:[&:nth-last-child(2):nth-child(odd)]:border-b-0"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(item.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...field.value, item.id])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== item.id
+                                        )
+                                      )
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="cursor-pointer font-normal">
+                              {item.label}
+                            </FormLabel>
+                          </FormItem>
+                        )
+                      }}
+                    />
+                  ))}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </Section>
+
+        <FormFooter>
+          <Button type="submit">Update display</Button>
+        </FormFooter>
       </form>
     </Form>
   )
