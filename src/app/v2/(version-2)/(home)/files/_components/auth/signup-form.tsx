@@ -1,9 +1,7 @@
-"use client";
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
 import { AuthProviderButtons } from "@nimbus/_components/auth/shared/auth-provider-buttons";
 import { SegmentedProgress } from "@nimbus/_components/ui/segmented-progress";
-import { signUpSchema, type SignUpFormData } from "@nimbus/_lib/files-types";
+import { signUpSchema, type SignUpFormData } from "@nimbus/_packages/shared";
 import { ArrowLeft, Eye, EyeClosed, Loader2 } from "lucide-react";
 import { useCheckEmailExists, useSignUp } from "@nimbus/_hooks/useAuth";
 import { FieldError } from "@nimbus/_components/ui/field-error";
@@ -11,7 +9,7 @@ import { Separator } from "@nimbus/_components/ui/separator";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, type ComponentProps } from "react";
 import { Button } from "@nimbus/_components/ui/button";
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 import { Label } from "@nimbus/_components/ui/label";
 import { Input } from "@nimbus/_components/ui/input";
 import { useForm } from "react-hook-form";
