@@ -7,6 +7,7 @@ import type {
   Channel,
   TeamMember,
   ChatMessage,
+  MessageAttachment,
   DirectMessage,
   Poll,
   PollOption,
@@ -23,6 +24,7 @@ import type {
   PermissionKey,
   MemberRole,
 } from "./chat-types"
+import { extensionOf } from "./file-utils"
 
 export function getWorkspaceApiUrl(): string {
   let url = "";
@@ -116,7 +118,7 @@ export interface ServerMessage {
   is_deleted: boolean
   mentions: string[]
   reactions: { emoji: string; count: number; users: string[] }[]
-  attachments: { id: string; message_id: string; file_name: string; file_url: string; file_type?: string; file_size: number; created_at: string }[]
+  attachments: ServerAttachment[]
   reply_count: number
   created_at: string
   updated_at: string
@@ -218,6 +220,26 @@ export interface ServerAuthzCatalog {
   system_roles: { name: string; position: number; administrator: boolean; permissions: string[] }[]
 }
 
+/** Body of the attachment "ref" endpoints: points a message at a file in the files service. */
+export interface AttachmentRef {
+  file_id: string
+  file_name: string
+  file_type?: string
+  file_size?: number
+  file_extension?: string
+}
+
+/** Body of POST /teams/:teamId/files/ref. */
+export interface TeamFileRef {
+  file_id: string
+  name: string
+  size?: number
+  mime_type?: string
+  extension?: string
+  category?: string
+  channel_id?: string
+}
+
 export interface ServerDMConversation {
   id: string
   participants: { email: string; display_name?: string; status: string; account_name?: string }[]
@@ -235,6 +257,7 @@ export interface ServerDMMessage {
   content: string
   is_edited: boolean
   is_deleted: boolean
+  attachments?: ServerAttachment[]
   created_at: string
   updated_at: string
 }
@@ -267,10 +290,13 @@ export interface ServerPoll {
 export interface ServerAttachment {
   id: string
   message_id: string
+  /** Id in the files service; absent on attachments stored by the workspace server itself (legacy). */
+  file_id?: string
   file_name: string
-  file_url: string
+  file_url?: string
   file_type?: string
   file_size: number
+  file_extension?: string
   created_at: string
 }
 
@@ -372,6 +398,8 @@ export interface ServerWorkspaceFile {
   channel_id?: string
   channel_name?: string
   url: string
+  /** Id in the files service; absent on files stored by the workspace server itself (legacy). */
+  file_id?: string
   download_count: number
   created_at: string
   updated_at: string
@@ -634,6 +662,41 @@ export function toPermissionCatalog(s: ServerAuthzCatalog): PermissionCatalog {
   }
 }
 
+export function toAttachment(a: ServerAttachment): MessageAttachment {
+  return {
+    id: a.id,
+    name: a.file_name,
+    url: a.file_url ?? "",
+    mimeType: a.file_type ?? "application/octet-stream",
+    size: a.file_size ?? 0,
+    fileId: a.file_id || undefined,
+    extension: (a.file_extension ?? extensionOf(a.file_name)).replace(/^\./, "").toLowerCase() || undefined,
+  }
+}
+
+/** A DM message in the same shape as a channel message (channelId holds the conversation id). */
+export function toDMMessage(s: ServerDMMessage): ChatMessage {
+  return {
+    id: s.id,
+    channelId: s.conversation_id,
+    authorId: s.sender_email,
+    authorName: s.sender_name ?? s.sender_email,
+    content: s.content,
+    type: (s.attachments?.length ? "file" : "text") as ChatMessage["type"],
+    priority: "normal",
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+    isEdited: s.is_edited,
+    isPinned: false,
+    isPinnedPublic: false,
+    mentions: [],
+    reactions: [],
+    attachments: (s.attachments ?? []).map(toAttachment),
+    threadReplyCount: 0,
+    isDeleted: s.is_deleted,
+  }
+}
+
 export function toMessage(s: ServerMessage): ChatMessage {
   return {
     id: s.id,
@@ -650,13 +713,7 @@ export function toMessage(s: ServerMessage): ChatMessage {
     isPinnedPublic: false,
     mentions: s.mentions ?? [],
     reactions: (s.reactions ?? []).map(r => ({ emoji: r.emoji, count: r.count, userIds: r.users })),
-    attachments: (s.attachments ?? []).map(a => ({
-      id: a.id,
-      name: a.file_name,
-      url: a.file_url,
-      mimeType: a.file_type ?? "application/octet-stream",
-      size: a.file_size,
-    })),
+    attachments: (s.attachments ?? []).map(toAttachment),
     threadReplyCount: s.reply_count ?? 0,
     isDeleted: s.is_deleted,
     replyTo: s.parent_id ? { messageId: s.parent_id, authorId: "", authorName: "", content: "" } : undefined,
@@ -802,6 +859,7 @@ export function toWorkspaceFile(s: ServerWorkspaceFile): WorkspaceFile {
     channelId: s.channel_id,
     channelName: s.channel_name,
     url: s.url,
+    fileId: s.file_id || undefined,
     downloadCount: s.download_count,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
@@ -1123,31 +1181,30 @@ export const workspaceApi = {
   },
 
   // ── Attachments ──
-  uploadAttachment: (messageId: string, file: File, email: string) => {
-    if (!isValidUUID(messageId)) return Promise.reject(new Error("Invalid message UUID"))
-    const formData = new FormData()
-    formData.append("file", file)
-    return fetch(`${getWorkspaceApiUrl()}/api/v1/messages/${messageId}/attachments`, {
-      method: "POST",
-      credentials: "include",
-      headers: authHeaders(),
-      body: formData,
-    }).then(async (res) => {
-      const json: APIResponse<ServerAttachment> = await res.json()
-      if (!json.success) throw new Error(json.error ?? json.message)
-      return json.result!
-    })
-  },
+  // The bytes live in the files service (see files-api.ts). The workspace server only stores a reference:
+  // the file id plus the name/type/size/extension shown on the message. The byte-upload endpoints are gone (410).
 
-  uploadAttachmentBase64: (messageId: string, fileName: string, fileType: string, base64Data: string, email: string) => {
+  /** Attach an already-uploaded file to a channel message. */
+  addAttachmentRef: (messageId: string, ref: AttachmentRef, email: string) => {
     if (!isValidUUID(messageId)) return Promise.reject(new Error("Invalid message UUID"))
-    return apiFetch<ServerAttachment>(`/api/v1/messages/${messageId}/attachments`, {
+    return apiFetch<ServerAttachment>(`/api/v1/messages/${messageId}/attachments/ref`, {
       method: "POST",
-      body: JSON.stringify({ file_name: fileName, file_type: fileType, data: base64Data }),
+      body: JSON.stringify(ref),
       email,
     })
   },
 
+  /** Attach an already-uploaded file to a DM message. */
+  addDMAttachmentRef: (dmId: string, messageId: string, ref: AttachmentRef, email: string) => {
+    if (!isValidUUID(dmId) || !isValidUUID(messageId)) return Promise.reject(new Error("Invalid DM or message UUID"))
+    return apiFetch<ServerAttachment>(`/api/v1/dm/${dmId}/messages/${messageId}/attachments/ref`, {
+      method: "POST",
+      body: JSON.stringify(ref),
+      email,
+    })
+  },
+
+  /** Legacy: download URL for an attachment stored by the workspace server (no file_id). */
   getAttachmentUrl: (attachmentId: string) =>
     `${getWorkspaceApiUrl()}/api/v1/attachments/${attachmentId}`,
 
@@ -1396,21 +1453,13 @@ export const workspaceApi = {
     return apiFetch<ServerWorkspaceFile[]>(`/api/v1/teams/${teamId}/files${qs}`, { email })
   },
 
-  uploadFile: (teamId: string, file: File, email: string, category?: string, channelId?: string) => {
+  /** Register a file already uploaded to the files service in the team's Files tab. */
+  addTeamFileRef: (teamId: string, ref: TeamFileRef, email: string) => {
     if (!isValidUUID(teamId)) return Promise.reject(new Error("Invalid team UUID"))
-    const formData = new FormData()
-    formData.append("file", file)
-    if (category) formData.append("category", category)
-    if (channelId && isValidUUID(channelId)) formData.append("channel_id", channelId)
-    return fetch(`${getWorkspaceApiUrl()}/api/v1/teams/${teamId}/files`, {
+    return apiFetch<ServerWorkspaceFile>(`/api/v1/teams/${teamId}/files/ref`, {
       method: "POST",
-      credentials: "include",
-      headers: authHeaders(),
-      body: formData,
-    }).then(async (res) => {
-      const json: APIResponse<ServerWorkspaceFile> = await res.json()
-      if (!json.success) throw new Error(json.error ?? json.message)
-      return json.result!
+      body: JSON.stringify(ref),
+      email,
     })
   },
 
@@ -1427,6 +1476,7 @@ export const workspaceApi = {
     return apiFetch<{ deleted: boolean }>(`/api/v1/files/${fileId}`, { method: "DELETE", email })
   },
 
+  /** Legacy: download URL for a team file stored by the workspace server (no file_id). */
   getFileDownloadUrl: (fileId: string) =>
     `${getWorkspaceApiUrl()}/api/v1/files/${fileId}/download`,
 
