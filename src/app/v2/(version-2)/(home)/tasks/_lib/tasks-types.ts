@@ -9,7 +9,16 @@ export type TaskStatus =
   | "canceled"
   | "archived";
 
-export type TasksViewMode = "board" | "list" | "my-tasks" | "calendar" | "gantt" | "settings";
+export type TasksViewMode =
+  | "board"
+  | "list"
+  | "my-tasks"
+  | "calendar"
+  | "gantt"
+  | "settings"
+  | "home"
+  | "inbox"
+  | "members";
 
 export type MyTasksGroupBy = "dueDate" | "project";
 

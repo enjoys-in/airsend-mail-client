@@ -9,6 +9,9 @@ import { ListView } from "./list/ListView";
 import { MyTasksView } from "./my-tasks/MyTasksView";
 import { CalendarView } from "./calendar/CalendarView";
 import { GanttView } from "./gantt/GanttView";
+import { HomeView } from "./home/HomeView";
+import { InboxView } from "./inbox/InboxView";
+import { MembersView } from "./members/MembersView";
 import { TaskDetailDialog } from "./task/TaskDetailDialog";
 import { TaskCreateDialog } from "./task/TaskCreateDialog";
 import { ProjectCreateDialog } from "./project/ProjectCreateDialog";
@@ -27,21 +30,27 @@ function TasksMainContent() {
 
   return (
     <div className="flex flex-1 flex-col h-[calc(100svh-3.5rem)] md:h-[calc(100svh-3rem)] overflow-hidden bg-background">
-      <TasksHeader />
+      {["board", "list", "calendar", "gantt", "my-tasks"].includes(viewMode) && <TasksHeader />}
       {isLoading ? (
         <div className="flex flex-1 items-center justify-center">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
-      ) : viewMode === "board" ? (
-        <BoardView />
-      ) : viewMode === "list" ? (
-        <ListView />
+      ) : viewMode === "home" ? (
+        <HomeView />
+      ) : viewMode === "inbox" ? (
+        <InboxView />
+      ) : viewMode === "members" ? (
+        <MembersView />
       ) : viewMode === "my-tasks" ? (
         <MyTasksView />
+      ) : viewMode === "list" ? (
+        <ListView />
       ) : viewMode === "calendar" ? (
         <CalendarView />
-      ) : (
+      ) : viewMode === "gantt" ? (
         <GanttView />
+      ) : (
+        <BoardView />
       )}
 
       <TaskDetailDialog />

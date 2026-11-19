@@ -3,22 +3,27 @@
 import React, { useState } from "react";
 import {
   ArrowLeft, Settings, Shield, Tag, FolderKanban,
-  Columns3, Globe, KeyRound, SlidersHorizontal,
-  ChevronDown, LayoutDashboard, Type,
+  Columns3, Globe, SlidersHorizontal, ChevronDown,
+  LayoutDashboard, Type, User, KeyRound, Code,
+  Import, CreditCard, Webhook, Calendar, ScrollText,
 } from "lucide-react";
 import { useTasks } from "../_lib/tasks-context";
 import { cn } from "@/lib/utils";
 import { Sidebar, SidebarContent, SidebarHeader } from "@/components/ui/sidebar";
 
 const ACCOUNT_LINKS = [
+  { id: "account-information", label: "Information", icon: User },
   { id: "account-preferences", label: "Preferences", icon: SlidersHorizontal },
-  { id: "account-apikeys", label: "API Keys", icon: KeyRound },
+  { id: "account-security", label: "Security", icon: KeyRound },
+  { id: "account-apikeys", label: "API Keys", icon: Code },
 ];
 
 const WORKSPACE_LINKS = [
   { id: "workspace-general", label: "General", icon: Settings },
-  { id: "workspace-members", label: "Roles & Members", icon: Shield },
+  { id: "workspace-roles", label: "Roles", icon: Shield },
   { id: "workspace-labels", label: "Labels", icon: Tag },
+  { id: "workspace-import", label: "Import", icon: Import },
+  { id: "workspace-billing", label: "Billing", icon: CreditCard },
 ];
 
 const PROJECT_SECTIONS = [
@@ -26,6 +31,13 @@ const PROJECT_SECTIONS = [
   { id: "project-workflow", label: "Workflow", icon: Columns3 },
   { id: "project-custom-fields", label: "Custom Fields", icon: Type },
   { id: "project-visibility", label: "Visibility", icon: Globe },
+  { id: "project-integrations", label: "Integrations", icon: Webhook },
+  { id: "project-calendar", label: "Calendar Feeds", icon: Calendar },
+];
+
+const ADMIN_LINKS = [
+  { id: "admin-overview", label: "Overview", icon: LayoutDashboard },
+  { id: "admin-audit-log", label: "Audit Log", icon: ScrollText },
 ];
 
 export function SettingsSidebar() {
@@ -104,7 +116,7 @@ export function SettingsSidebar() {
               <div key={proj.id} className="space-y-0.5">
                 <button
                   onClick={() => { toggle(proj.id); setSelectedProjectId(proj.id); }}
-                  className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs font-medium text-foreground hover:bg-muted/40 transition-colors text-left"
+                  className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs font-medium text-foreground hover:bg-muted/40 transition-colors text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-2 truncate">
                     <FolderKanban className="size-3.5 text-primary shrink-0" />
@@ -143,16 +155,19 @@ export function SettingsSidebar() {
           <span className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             Administration
           </span>
-          <button
-            onClick={() => setSettingsSection("admin-overview")}
-            className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors text-left cursor-pointer",
-              settingsSection === "admin-overview" ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-            )}
-          >
-            <LayoutDashboard className="size-3.5" />
-            <span>Overview</span>
-          </button>
+          {ADMIN_LINKS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setSettingsSection(id)}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors text-left cursor-pointer",
+                settingsSection === id ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+            >
+              <Icon className="size-3.5" />
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
       </SidebarContent>
     </Sidebar>

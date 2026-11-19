@@ -1,0 +1,16 @@
+export { TasksProvider, useTasks } from "./_lib/tasks-context";
+export * from "./_lib/tasks-types";
+export { BoardView } from "./board/BoardView";
+export { ListView } from "./list/ListView";
+export { CalendarView } from "./calendar/CalendarView";
+export { GanttView } from "./gantt/GanttView";
+export { MyTasksView } from "./my-tasks/MyTasksView";
+export { HomeView } from "./home/HomeView";
+export { InboxView } from "./inbox/InboxView";
+export { MembersView } from "./members/MembersView";
+export { TasksHeader } from "./navigation/TasksHeader";
+export { TasksSidebar } from "./navigation/TasksSidebar";
+export { SettingsShell } from "./settings/SettingsShell";
+export { TaskDetailDialog } from "./task/TaskDetailDialog";
+export { TaskCreateDialog } from "./task/TaskCreateDialog";
+export { ProjectCreateDialog } from "./project/ProjectCreateDialog";
