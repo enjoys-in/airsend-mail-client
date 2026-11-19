@@ -8,7 +8,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@nimbus/_components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@nimbus/_components/ui/avatar";
 import { ChevronsUpDown, LogOut, Sparkles } from "lucide-react";
-import { authClient } from "@nimbus/_lib/auth-shim";
+import { authClient } from "@nimbus/_packages/auth/auth-client";
 import Profile from "@nimbus/_components/user-profile";
 import { useSignOut } from "@nimbus/_hooks/useAuth";
 import { toast } from "sonner";
@@ -17,8 +17,8 @@ async function upgradePlan() {
 	const response = await authClient.checkout({
 		slug: "pro",
 	});
-	if ((response as any)?.error) {
-		toast.error((response as any).error?.message || "Failed to upgrade");
+	if (response.error) {
+		toast.error(response.error.message);
 	}
 }
 
