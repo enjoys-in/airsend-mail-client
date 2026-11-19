@@ -2,7 +2,7 @@ import { DiscordIcon, GitHubIcon, LogoIcon, XPlatformIcon } from "@nimbus/_compo
 import { Tooltip, TooltipContent, TooltipTrigger } from "@nimbus/_components/ui/tooltip";
 import { ModeToggle } from "@nimbus/_components/mode-toggle";
 import { Button } from "@nimbus/_components/ui/button";
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 import { Users } from "lucide-react";
 
 export default function Header() {
