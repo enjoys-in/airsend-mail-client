@@ -1,14 +1,12 @@
-"use client";
-
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@nimbus/_components/ui/drawer";
 import { CircleAlert, CircleCheckBig, CloudUpload, RefreshCcw } from "lucide-react";
 import { uploadMutationKey, useUploadFile } from "@nimbus/_hooks/useFileOperations";
 import { useMutationState, type MutationState } from "@tanstack/react-query";
-import { MAX_FILE_SIZE, type UploadFileSchema } from "@nimbus/_lib/files-types";
+import { MAX_FILE_SIZE, type UploadFileSchema } from "@nimbus/_packages/shared";
 import { AnimatePresence, motion } from "motion/react";
-import { useSearch } from "@nimbus/_lib/router-shim";
+import { useSearch } from "@tanstack/react-router";
 import { useDropzone } from "react-dropzone";
-import { getModernFileIcon } from ".";
+import { getModernFileIcon } from "./";
 import { cn } from "@nimbus/_lib/utils";
 import { useState } from "react";
 import { toast } from "sonner";
