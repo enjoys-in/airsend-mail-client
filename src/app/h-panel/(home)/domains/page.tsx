@@ -1,5 +1,5 @@
 "use client";
-import { Loader2, Search, Trash2 } from "lucide-react";
+import { Globe, MoreHorizontal, Plus, ScrollText, Search, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -30,22 +30,32 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { motion } from "framer-motion";
-import Badge from "@/components/common/badges";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DOMAIN_STATUS } from "@/lib/types/mail.interface";
 import Link from "next/link";
 import { useAppDispatch } from "@/store/hooks";
 import { setMyDomains } from "@/store/slices/account";
 import { dnsRecordsValue } from "@/lib/utils";
+import CopyToClipboard from "@/components/common/copyToClipboard";
+import { EmptyState, PageHeader, PageShell, Pill, RowsSkeleton, Section, Stat, StatGrid } from "@/components/h-panel/kit";
+import { DomainStatusPill } from "./_components/domain-status";
+
 export default function DomainDashboard() {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
   const [query, setQuery] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState("all");
   const [domains, setDomains] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedDomain, setSelectedDomain] = React.useState<Record<string, any> | null>(null)
+  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null)
 
   const fetchAllDomains = React.useCallback(async () => {
     try {
@@ -135,216 +145,268 @@ export default function DomainDashboard() {
   }, [fetchAllDomains]);
   const filteredDomains = React.useMemo(() => {
     return domains.filter((domain) => {
-      return domain.domain_name.toLowerCase().includes(query.toLowerCase());
+      const matchesQuery = domain.domain_name.toLowerCase().includes(query.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || String(domain.status).toLowerCase() === statusFilter;
+      return matchesQuery && matchesStatus;
     });
-  }, [query, domains]);
+  }, [query, statusFilter, domains]);
+
+  const counts = React.useMemo(
+    () => ({
+      verified: domains.filter((d) => d.status === DOMAIN_STATUS.VERIFIED).length,
+      pending: domains.filter((d) => d.status === DOMAIN_STATUS.PENDING).length,
+      notStarted: domains.filter((d) => d.status === DOMAIN_STATUS.NOT_STARTED).length,
+    }),
+    [domains]
+  );
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-300">My Domains</h1>
-          <Link href="/h-panel/domains/create" className="btn btn-primary"> <Button className="rounded-none">Add New Domain</Button></Link>
+    <PageShell>
+      <PageHeader
+        title="Domains"
+        description="The domains you send and receive mail on. Verify ownership, then add DNS records to start sending."
+        actions={
+          <Button asChild size="sm">
+            <Link href="/h-panel/domains/create">
+              <Plus className="mr-2 h-4 w-4" />
+              Add domain
+            </Link>
+          </Button>
+        }
+      />
 
-        </div>
+      <StatGrid className="mb-6">
+        <Stat label="Total domains" value={domains.length} icon={Globe} loading={isLoading} />
+        <Stat label="Verified" value={counts.verified} icon={ShieldCheck} loading={isLoading} />
+        <Stat label="Pending" value={counts.pending} loading={isLoading} />
+        <Stat label="Not started" value={counts.notStarted} loading={isLoading} />
+      </StatGrid>
 
+      <Section flush>
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-4 py-3">
+          <div className="relative min-w-[200px] max-w-sm flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search..."
-              className="pl-8 bg-background"
+              placeholder="Search domains"
+              className="h-9 pl-8"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 sm:w-auto w-full">
-            <Select defaultValue="all">
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="verified">Verified</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-9 w-[150px]">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="verified">Verified</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="not started">Not started</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="ml-auto text-xs text-muted-foreground">
+            {filteredDomains.length} domain{filteredDomains.length !== 1 ? "s" : ""}
+          </span>
         </div>
-        <div className="h-[300px] w-full overflow-auto rounded-md border">
-          <Table>
-            <TableHeader className="sticky top-0 bg-background z-10">
-              <TableRow>
-                <TableHead>Domain Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead>More</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-[240px]">
-                    <div className="flex items-center justify-center h-full">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{
-                          duration: 1,
-                          repeat: Infinity,
-                          ease: "linear",
-                        }}
-                      >
-                        <Loader2 className="w-12 h-12 text-primary" />
-                      </motion.div>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredDomains.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-[240px]">
-                    <div className="  rounded-lg h-full flex flex-col items-center justify-center p-6 text-center">
-                      <h2 className="text-xl font-semibold mb-2">
-                        No results found
-                      </h2>
-                      {query.length > 0 ? (
-                        <p className="text-gray-500 mb-4">
-                          <span className="text-muted-foreground">
-                            Try searching or filtering for a different term or
-                            contact support.
-                          </span>
-                        </p>
-                      ) : (
-                        <p className="text-gray-500 mb-4">
-                          Add your first domain
-                        </p>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredDomains.map((domain) => (
-                  <TableRow key={domain.id}>
-                    {domain.status === DOMAIN_STATUS.NOT_STARTED ? (
-                      <TableCell className="font-medium underline">
-                        {domain.domain_name}
-                      </TableCell>
-                    ) : (
-                      <TableCell className="font-medium underline text-blue-500">
-                        {" "}
-                        <Link href={`domains/${domain.id}`}>
-                          {domain.domain_name}
-                        </Link>
-                      </TableCell>
-                    )}
 
-                    <TableCell>
-                      <Badge
-                        text={domain.status}
-                        variant={
-                          domain.status === DOMAIN_STATUS.VERIFIED
-                            ? "teal"
-                            : domain.status === DOMAIN_STATUS.PENDING
-                              ? "yellow"
-                              : "red"
-                        }
-                      />
+        {isLoading ? (
+          <RowsSkeleton rows={4} />
+        ) : filteredDomains.length === 0 ? (
+          <EmptyState
+            icon={Globe}
+            title="No domains found"
+            description={
+              query.length > 0 || statusFilter !== "all"
+                ? "Try a different search or filter, or contact support."
+                : "Add your first domain to get started."
+            }
+            action={
+              query.length === 0 && statusFilter === "all" ? (
+                <Button asChild size="sm">
+                  <Link href="/h-panel/domains/create">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add domain
+                  </Link>
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-5">Domain</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden sm:table-cell">Created</TableHead>
+                  <TableHead className="pr-4 text-right">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredDomains.map((domain) => (
+                  <TableRow key={domain.id}>
+                    <TableCell className="pl-5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                          <Globe className="h-4 w-4" />
+                        </span>
+                        {domain.status === DOMAIN_STATUS.NOT_STARTED ? (
+                          <span className="truncate text-sm font-medium">{domain.domain_name}</span>
+                        ) : (
+                          <Link
+                            href={`domains/${domain.id}`}
+                            className="truncate text-sm font-medium hover:underline"
+                          >
+                            {domain.domain_name}
+                          </Link>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
+                      <DomainStatusPill status={domain.status} />
+                    </TableCell>
+                    <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
                       {format(new Date(domain.created_at), "PPP")}
                     </TableCell>
-                    <TableCell className="font-medium underline text-blue-500 flex items-center">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+                    <TableCell className="pr-4">
+                      <div className="flex items-center justify-end gap-1">
+                        {domain.status === DOMAIN_STATUS.NOT_STARTED && (
                           <Button
-
-                            variant="ghost"
-                            size="icon"
-                            title="Delete"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            title="Verify"
+                            onClick={() => handleVerifyDomain(domain.id)}
                           >
-                            <Trash2 className="h-4 w-4" color="red" />
+                            Verify domain
                           </Button>
-
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action will delete the domain.
-                              Do you want to continue?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="rounded-none">Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteDomain(domain.id)}
-                              className="bg-red-500 text-primary-foreground hover:bg-primary/90 rounded-none"
-
+                        )}
+                        {domain.status === DOMAIN_STATUS.VERIFIED && (
+                          <Button asChild variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground">
+                            <Link title="Logs" href={`/h-panel/domains/${domain.id}/logs`}>
+                              <ScrollText className="mr-1.5 h-4 w-4" />
+                              Logs
+                            </Link>
+                          </Button>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="More">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {domain.status !== DOMAIN_STATUS.NOT_STARTED && (
+                              <DropdownMenuItem asChild>
+                                <Link href={`domains/${domain.id}`}>Open domain</Link>
+                              </DropdownMenuItem>
+                            )}
+                            {domain.status === DOMAIN_STATUS.VERIFIED && (
+                              <DropdownMenuItem asChild>
+                                <Link href={`/h-panel/domains/${domain.id}/logs`}>View logs</Link>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onSelect={() => setDeleteTarget(domain)}
                             >
-                              Continue
-                            </AlertDialogAction>
-
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-
-                      </AlertDialog>
-
-                      {domain.status === DOMAIN_STATUS.NOT_STARTED && (
-                        <div className="font-medium underline text-blue-500 cursor-pointer">
-                          <span title="Verify" onClick={() => handleVerifyDomain(domain.id)}>Verify Domain</span>
-                        </div>
-                      )}
-                      {domain.status === DOMAIN_STATUS.VERIFIED && <div className="font-medium underline text-blue-500">
-                        <Link title="Logs" href={`/h-panel/domains/${domain.id}/logs`}>
-                          see logs
-                        </Link>
-                      </div>}
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        {selectedDomain && <ShowVerifyDomain data={selectedDomain} handleClaimDomainOwnership={handleClaimDomainOwnership} />}
-      </div>
-    </div>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Section>
+
+      {selectedDomain && (
+        <ShowVerifyDomain data={selectedDomain} handleClaimDomainOwnership={handleClaimDomainOwnership} />
+      )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will delete {deleteTarget?.domain_name ? <span className="font-medium text-foreground">{deleteTarget.domain_name}</span> : "the domain"}.
+              Do you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget) handleDeleteDomain(deleteTarget.id)
+                setDeleteTarget(null)
+              }}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </PageShell>
   );
 }
 function ShowVerifyDomain({ data, handleClaimDomainOwnership }: { data: any, handleClaimDomainOwnership: (data: any) => void }) {
 
   return (
-    <div className="mt-6">
-      <div className="mb-4 flex items-center gap-2 justify-between">
-        <span><h3 className="text-lg font-semibold">Verify Domain</h3></span>
-        <Button variant="outline" className="bg-orange-400" onClick={() => handleClaimDomainOwnership(data.id)} >  Verify Domain</Button>
-
-      </div>
-      <div className="rounded-lg border">
-
+    <Section
+      className="mt-6"
+      title="Verify domain"
+      description="Prove you own this domain by publishing one TXT record, then confirm."
+      actions={
+        <Button size="sm" onClick={() => handleClaimDomainOwnership(data.id)}>
+          Verify domain
+        </Button>
+      }
+      flush
+    >
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Type</TableHead>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="pl-5">Type</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Server / Content / Target</TableHead>
-              <TableHead>TTL</TableHead>
+              <TableHead className="pr-5">TTL</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow>
-              <TableCell>{dnsRecordsValue[data.records?.type]}</TableCell>
-              <TableCell>{data.records?.name}</TableCell>
-              <TableCell className="font-mono">{data.records?.data}</TableCell>
-              <TableCell>{data.records?.TTL}</TableCell>
+              <TableCell className="pl-5">
+                <Pill>{dnsRecordsValue[data.records?.type]}</Pill>
+              </TableCell>
+              <TableCell className="font-mono text-sm">{data.records?.name}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  <code className="break-all font-mono text-sm">{data.records?.data}</code>
+                  <CopyToClipboard text={String(data.records?.data ?? "")} />
+                </div>
+              </TableCell>
+              <TableCell className="pr-5 text-sm text-muted-foreground">{data.records?.TTL}</TableCell>
             </TableRow>
           </TableBody>
         </Table>
       </div>
-      <p> Create a TXT record for <span className="font-semibold underline text-yellow-200">{data.records?.name}</span> with the value <span className="font-semibold underline text-orange-300">{data.records?.data}</span></p>
-    </div>
-
+      <p className="border-t border-border/70 px-5 py-3 text-sm text-muted-foreground">
+        Create a TXT record for <span className="font-mono text-foreground">{data.records?.name}</span> with the value{" "}
+        <span className="break-all font-mono text-foreground">{data.records?.data}</span>
+      </p>
+    </Section>
   )
 }
