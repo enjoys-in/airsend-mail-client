@@ -99,13 +99,9 @@ export function FileTable({ files, isLoading, refetch, error }: FileTableProps) 
 
 			switch (searchType) {
 				case "folder":
-					return mimeType === "application/vnd.google-apps.folder" || mimeType === "folder";
+					return mimeType === "folder";
 				case "document":
 					return (
-						// Google Docs
-						mimeType.includes("application/vnd.google-apps.document") ||
-						mimeType.includes("application/vnd.google-apps.spreadsheet") ||
-						mimeType.includes("application/vnd.google-apps.presentation") ||
 						// Microsoft Office
 						mimeType.includes("officedocument") ||
 						mimeType.includes("msword") ||
@@ -409,17 +405,6 @@ export function getModernFileIcon(mimeType?: string, filename?: string) {
 	// Audio
 	if (mimeType.startsWith("audio/")) {
 		return <Music className="h-4 w-4 text-purple-500" />;
-	}
-
-	// Google Workspace files
-	if (mimeType === "application/vnd.google-apps.document") {
-		return <FileText className="h-4 w-4 text-blue-600" />;
-	}
-	if (mimeType === "application/vnd.google-apps.spreadsheet") {
-		return <FileSpreadsheet className="h-4 w-4 text-green-600" />;
-	}
-	if (mimeType === "application/vnd.google-apps.presentation") {
-		return <Presentation className="h-4 w-4 text-orange-500" />;
 	}
 
 	// Archive files
