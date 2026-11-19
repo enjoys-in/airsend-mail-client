@@ -1,8 +1,6 @@
-"use client";
-
 import { useCallback, useRef, useState, type ChangeEvent } from "react";
 import { Progress } from "@nimbus/_components/ui/progress";
-import { formatFileSize } from "@nimbus/_lib/files-types";
+import { formatFileSize } from "@nimbus/_packages/shared";
 import { Label } from "@nimbus/_components/ui/label";
 import { Folder, Upload } from "lucide-react";
 import { useDropzone } from "react-dropzone";
