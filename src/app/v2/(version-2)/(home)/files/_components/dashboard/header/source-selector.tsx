@@ -16,6 +16,7 @@ import { ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "@nimbus/_components/ui/button";
 import { useEffect, useState } from "react";
 import { providerLabel } from "@nimbus/_lib/providers";
+import { useOrganization } from "@nimbus/_lib/session";
 import { cn } from "@nimbus/_lib/utils";
 
 export function providerToIcon(providerId: string) {
@@ -31,6 +32,7 @@ export function providerToIcon(providerId: string) {
 
 export function SourceSelector() {
 	const { accounts, isLoading } = useUserInfoProvider();
+	const { canManageStorage } = useOrganization();
 	const { providerId, accountId, setDriveProviderById } = useAccountProvider();
 	const [selectedAccountNickname, setSelectedAccountNickname] = useState(null);
 	const [selectedIcon, setSelectedIcon] = useState(<LogoIcon className="h-5 w-5" />);
@@ -108,19 +110,23 @@ export function SourceSelector() {
 							)}
 						</div>
 					</ScrollArea>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem
-						onClick={() =>
-							navigate({
-								replace: true,
-								search: prev => ({ ...prev, connectAccount: true }),
-							})
-						}
-						className="flex cursor-pointer items-center gap-2 font-medium"
-					>
-						<Plus className="h-4 w-4" />
-						<span>Add source</span>
-					</DropdownMenuItem>
+					{canManageStorage && (
+						<>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								onClick={() =>
+									navigate({
+										replace: true,
+										search: prev => ({ ...prev, connectAccount: true }),
+									})
+								}
+								className="flex cursor-pointer items-center gap-2 font-medium"
+							>
+								<Plus className="h-4 w-4" />
+								<span>Add storage</span>
+							</DropdownMenuItem>
+						</>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</>

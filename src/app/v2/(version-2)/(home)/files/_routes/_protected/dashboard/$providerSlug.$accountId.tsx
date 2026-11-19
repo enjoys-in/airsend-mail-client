@@ -6,6 +6,7 @@ import DndKitProvider from "@nimbus/_components/providers/dnd-kit-provider";
 import { FileTable } from "@nimbus/_components/dashboard/file-browser";
 import { AppSidebar } from "@nimbus/_components/dashboard/sidebar";
 import { useGetFiles } from "@nimbus/_hooks/useFileOperations";
+import { useOrganization } from "@nimbus/_lib/session";
 import { Header } from "@nimbus/_components/dashboard/header";
 import { Suspense } from "react";
 
@@ -32,6 +33,7 @@ function DrivePage() {
 	const { folderId, connectAccount } = Route.useSearch();
 	const navigate = useNavigate({ from: "/dashboard/$providerSlug/$accountId" });
 	const currentFolderId = folderId ?? "root";
+	const { canManageStorage } = useOrganization();
 
 	const handleConnectOpenChange = (open: boolean) => {
 		navigate({
@@ -66,7 +68,7 @@ function DrivePage() {
 							<Header />
 							<FileTable files={data || []} isLoading={isLoading} refetch={refetch} error={error} />
 						</DndKitProvider>
-						<ConnectAccountDialog open={!!connectAccount} onOpenChange={handleConnectOpenChange} />
+						{canManageStorage && <ConnectAccountDialog open={!!connectAccount} onOpenChange={handleConnectOpenChange} />}
 					</SidebarInset>
 				</SidebarProvider>
 			</Suspense>
