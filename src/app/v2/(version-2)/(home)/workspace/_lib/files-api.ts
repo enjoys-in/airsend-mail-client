@@ -33,17 +33,22 @@ export interface WorkspaceFileMeta {
   createdAt?: string
 }
 
-export interface TeamStorage {
-  accountId: string
-  providerId: string
-  nickname?: string | null
-}
-
+/** One of the ORGANIZATION's storage accounts (S3-compatible or Telegram), as GET /api/account lists them. */
 export interface StorageAccount {
   id: string
   providerId: string
   accountId: string
   nickname?: string | null
+  isDefault?: boolean
+}
+
+/** The signed-in user's organization as the files service reports it (GET /api/auth/get-session). */
+export interface FilesOrganization {
+  id: string
+  name: string
+  role: "owner" | "admin" | "member"
+  /** Owners and admins configure the organization's storage in Files. */
+  canManageStorage: boolean
 }
 
 /** Error from the files service; `message` is the server's own text when it sent one. */
@@ -54,14 +59,14 @@ export class FilesApiError extends Error {
     this.name = "FilesApiError"
     this.status = status
   }
-  /** The team has no storage account yet (409 from the files service). */
+  /** The organization has not configured storage yet (409 from the files service). */
   get isNoStorage() {
     return this.status === 409
   }
 }
 
 /** Friendly, user-facing text for a failed files call (toast / inline error). */
-export function filesErrorMessage(err: unknown, fallback = "Something went wrong with the file", context?: WorkspaceFileContext): string {
+export function filesErrorMessage(err: unknown, fallback = "Something went wrong with the file", _context?: WorkspaceFileContext): string {
   if (err instanceof FilesApiError) {
     switch (err.status) {
       case 0:
@@ -75,11 +80,7 @@ export function filesErrorMessage(err: unknown, fallback = "Something went wrong
       case 404:
         return "That file no longer exists."
       case 409:
-        // Channel and team uploads go to the team's storage; DM uploads go to the sender's own account.
-        if (context === "dm") {
-          return "Connect a storage account in Files first. Files you send in direct messages are stored in your own account."
-        }
-        return err.message || "No storage is configured for this team. Ask a team admin to connect a storage account."
+        return noStorageMessage()
       case 413:
         return err.message || "That file is too large for this storage."
       default:
@@ -102,6 +103,8 @@ async function readError(res: Response): Promise<FilesApiError> {
   } catch {
     /* no body */
   }
+  // "No storage configured": find out whether this user may set it up, so the message can point to Files or to an admin.
+  if (res.status === 409) await getFilesOrganization().catch(() => null)
   return new FilesApiError(message || res.statusText || `HTTP ${res.status}`, res.status)
 }
 
@@ -146,7 +149,7 @@ function normalizeMeta(raw: any): WorkspaceFileMeta {
 // ── Upload ──
 
 /**
- * Uploads one file to the team's storage through the files service.
+ * Uploads one file to the organization's storage through the files service.
  * Uses XMLHttpRequest so the UI can show real upload progress (fetch has none).
  */
 export function uploadWorkspaceFile(
@@ -241,33 +244,64 @@ export async function deleteWorkspaceFile(fileId: string): Promise<void> {
   await filesFetch(`/api/workspace/files/${encodeURIComponent(fileId)}`, { method: "DELETE" })
 }
 
-// ── Team storage ──
+// ── Organization storage ──
+//
+// Storage is configured once per ORGANIZATION (S3-compatible bucket or Telegram bot), by an owner or admin in Files
+// (/v2/files). Workspace uploads always go to the organization's default storage, so there is nothing to pick per team.
 
-/** The storage account a team's workspace uploads go to, or null when none is configured. */
-export async function getTeamStorage(teamId: string): Promise<TeamStorage | null> {
-  try {
-    const res = await filesJson<TeamStorage | null>(`/api/workspace/teams/${encodeURIComponent(teamId)}/storage`)
-    return res && (res as TeamStorage).accountId ? (res as TeamStorage) : null
-  } catch (err) {
-    if (err instanceof FilesApiError && err.status === 404) return null
-    throw err
+const ORG_TTL_MS = 60_000
+let orgCache: { at: number; value: FilesOrganization | null } | null = null
+let orgInFlight: Promise<FilesOrganization | null> | null = null
+
+/** The user's organization and whether they can manage its storage (cached for a minute). null when unknown or none. */
+export function getFilesOrganization(): Promise<FilesOrganization | null> {
+  if (orgCache && Date.now() - orgCache.at < ORG_TTL_MS) return Promise.resolve(orgCache.value)
+  orgInFlight ??= (async () => {
+    try {
+      const res = await fetch(`${getFilesApiUrl()}/api/auth/get-session`, {
+        credentials: "include",
+        headers: authHeaders(),
+      })
+      const json = res.ok ? await res.json().catch(() => null) : null
+      const raw = json?.organization
+      const value: FilesOrganization | null = raw
+        ? {
+            id: String(raw.id),
+            name: String(raw.name ?? ""),
+            role: raw.role === "owner" || raw.role === "admin" ? raw.role : "member",
+            canManageStorage: !!raw.canManageStorage,
+          }
+        : null
+      orgCache = { at: Date.now(), value }
+      return value
+    } catch {
+      return null
+    } finally {
+      orgInFlight = null
+    }
+  })()
+  return orgInFlight
+}
+
+/** Where to send people when uploads fail because the organization has no storage. */
+export const FILES_SETUP_PATH = "/v2/files"
+
+/** Message for "the organization has no storage yet", written for this user's role (uses the cached organization). */
+export function noStorageMessage(): string {
+  if (orgCache?.value?.canManageStorage) {
+    return "Your organization has not set up file storage yet. Connect it in Files."
   }
+  return "Your organization has not set up file storage yet. Ask an organization owner or admin to set it up."
 }
 
-export async function setTeamStorage(teamId: string, accountId: string): Promise<void> {
-  await filesFetch(`/api/workspace/teams/${encodeURIComponent(teamId)}/storage`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ accountId }),
-  })
-}
-
-export async function clearTeamStorage(teamId: string): Promise<void> {
-  await filesFetch(`/api/workspace/teams/${encodeURIComponent(teamId)}/storage`, { method: "DELETE" })
-}
-
-/** The caller's own connected storage accounts (S3-compatible / Telegram), to pick a team storage from. */
+/** The organization's storage accounts (any member can list them). */
 export async function listStorageAccounts(): Promise<StorageAccount[]> {
   const res = await filesJson<StorageAccount[]>("/api/account")
   return Array.isArray(res) ? res : []
+}
+
+/** The organization's default storage (or its first account), or null when none is configured. */
+export async function getOrgStorage(): Promise<StorageAccount | null> {
+  const accounts = await listStorageAccounts()
+  return accounts.find((a) => a.isDefault) ?? accounts[0] ?? null
 }
