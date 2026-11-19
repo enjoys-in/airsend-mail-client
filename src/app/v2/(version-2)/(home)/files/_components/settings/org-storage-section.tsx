@@ -10,13 +10,15 @@ import { Badge } from "@nimbus/_components/ui/badge";
 import { providerLabel } from "@nimbus/_lib/providers";
 import { cn } from "@nimbus/_lib/utils";
 
-interface ConnectedAccountsSectionProps {
+interface OrgStorageSectionProps {
 	accounts: LimitedAccessAccount[] | null;
-	defaultAccountId: string | null;
+	/** Owners and admins only: add, rename, remove and change the default. Everyone else sees a read-only list. */
+	canManage: boolean;
+	/** Row id of the account being made the default, while the request runs. */
 	isSettingDefault: string | null;
 	onDisconnect: (provider: DriveProvider, accountId: string, tableAccountId: string) => void;
 	onAddAccount: () => void;
-	onSetDefault: (provider: DriveProvider, accountId: string) => void;
+	onSetDefault: (tableAccountId: string) => void;
 	onUpdateAccount: (
 		providerId: DriveProvider,
 		accountId: string,
@@ -120,15 +122,15 @@ const NicknameInput = ({
 	);
 };
 
-export function ConnectedAccountsSection({
+export function OrgStorageSection({
 	accounts,
-	defaultAccountId,
+	canManage,
 	isSettingDefault,
 	onDisconnect,
 	onAddAccount,
 	onSetDefault,
 	onUpdateAccount,
-}: ConnectedAccountsSectionProps) {
+}: OrgStorageSectionProps) {
 	const [editing, setEditing] = useState<EditingState | null>(null);
 	const [validationError, setValidationError] = useState<string | null>(null);
 	const [isSaving, setIsSaving] = useState(false);
@@ -212,8 +214,12 @@ export function ConnectedAccountsSection({
 	return (
 		<Card id="accounts" className="py-6">
 			<CardHeader>
-				<CardTitle>Connected Accounts</CardTitle>
-				<CardDescription>Manage your connected storage accounts</CardDescription>
+				<CardTitle>Organization storage</CardTitle>
+				<CardDescription>
+					{canManage
+						? "The S3-compatible buckets and Telegram chats your organization stores files in"
+						: "Where your organization stores files. Only an owner or admin can change this."}
+				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<Table>
@@ -222,7 +228,7 @@ export function ConnectedAccountsSection({
 							<TableHead>Provider</TableHead>
 							<TableHead>Nickname</TableHead>
 							<TableHead>Date Added</TableHead>
-							<TableHead className="text-right">Actions</TableHead>
+							{canManage && <TableHead className="text-right">Actions</TableHead>}
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -231,7 +237,7 @@ export function ConnectedAccountsSection({
 								<TableCell className="font-medium">
 									<div className="flex items-center gap-2">
 										{providerLabel(account.providerId)}
-										{defaultAccountId === account.accountId && (
+										{account.isDefault && (
 											<Badge variant="default" className="text-xs">
 												<Check className="mr-1 h-3 w-3" /> Default
 											</Badge>
@@ -252,65 +258,71 @@ export function ConnectedAccountsSection({
 									) : (
 										<div className="flex items-center justify-between">
 											<span>{account.nickname || "—"}</span>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="h-8 w-8 opacity-0 group-hover:opacity-100"
-												onClick={() => handleEdit(account)}
-												aria-label={`Edit ${account.nickname || "unnamed account"}`}
-											>
-												<Edit className="h-4 w-4" />
-											</Button>
+											{canManage && (
+												<Button
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 opacity-0 group-hover:opacity-100"
+													onClick={() => handleEdit(account)}
+													aria-label={`Edit ${account.nickname || "unnamed account"}`}
+												>
+													<Edit className="h-4 w-4" />
+												</Button>
+											)}
 										</div>
 									)}
 								</TableCell>
 								<TableCell>{account.createdAt ? new Date(account.createdAt).toLocaleDateString() : "N/A"}</TableCell>
-								<TableCell className="text-right">
-									<div className="flex justify-end gap-2">
-										{defaultAccountId !== account.accountId && (
+								{canManage && (
+									<TableCell className="text-right">
+										<div className="flex justify-end gap-2">
+											{!account.isDefault && (
+												<Button
+													variant="outline"
+													size="sm"
+													disabled={isSettingDefault === account.id}
+													onClick={() => onSetDefault(account.id)}
+												>
+													{isSettingDefault === account.id ? (
+														<>
+															<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+															Setting...
+														</>
+													) : (
+														<>
+															<Check className="mr-2 h-4 w-4" />
+															Make default
+														</>
+													)}
+													<span className="sr-only">Make {account.nickname || "this storage"} the default</span>
+												</Button>
+											)}
+
 											<Button
 												variant="outline"
 												size="sm"
-												disabled={isSettingDefault === account.accountId}
-												onClick={() => onSetDefault(account.providerId as DriveProvider, account.accountId)}
+												disabled={account.isDefault || isSettingDefault === account.id}
+												onClick={() => onDisconnect(account.providerId as DriveProvider, account.accountId, account.id)}
 											>
-												{isSettingDefault === account.accountId ? (
-													<>
-														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-														Setting...
-													</>
-												) : (
-													<>
-														<Check className="mr-2 h-4 w-4" />
-														Set as Default
-													</>
-												)}
-												<span className="sr-only">Set {account.nickname || "this account"} as default</span>
+												Remove
+												<span className="sr-only">Remove {account.nickname || "unnamed storage"}</span>
 											</Button>
-										)}
-
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={defaultAccountId === account.accountId || isSettingDefault === account.accountId}
-											onClick={() => onDisconnect(account.providerId as DriveProvider, account.accountId, account.id)}
-										>
-											{isSaving ? "Disconnecting..." : "Disconnect"}
-											<span className="sr-only">Disconnect {account.nickname || "unnamed account"}</span>
-										</Button>
-									</div>
-								</TableCell>
+										</div>
+									</TableCell>
+								)}
 							</TableRow>
 						))}
 					</TableBody>
 				</Table>
 			</CardContent>
-			<CardFooter className="flex justify-between">
-				<Button variant="outline" onClick={onAddAccount}>
-					<Plus className="mr-2 h-4 w-4" />
-					Add Account
-				</Button>
-			</CardFooter>
+			{canManage && (
+				<CardFooter className="flex justify-between">
+					<Button variant="outline" onClick={onAddAccount}>
+						<Plus className="mr-2 h-4 w-4" />
+						Add storage
+					</Button>
+				</CardFooter>
+			)}
 		</Card>
 	);
 }
