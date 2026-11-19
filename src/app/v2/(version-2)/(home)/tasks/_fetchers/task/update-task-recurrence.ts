@@ -1,0 +1,21 @@
+import { client } from "@tasks/_packages/libs";
+import { HttpError } from "@tasks/_lib/http-error";
+import type { TaskRecurrence } from "@tasks/_types/task/recurrence";
+
+async function updateTaskRecurrence(
+  taskId: string,
+  recurrence: TaskRecurrence | null,
+) {
+  const response = await client.task.recurrence[":id"].$put({
+    param: { id: taskId },
+    json: { recurrence },
+  });
+
+  if (!response.ok) {
+    throw new HttpError(response.status, await response.text());
+  }
+
+  return response.json();
+}
+
+export default updateTaskRecurrence;
