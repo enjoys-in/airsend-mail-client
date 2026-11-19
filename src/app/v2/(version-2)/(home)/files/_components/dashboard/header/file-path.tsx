@@ -1,7 +1,7 @@
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList } from "@nimbus/_components/ui/breadcrumb";
 import { type BreadcrumbItem as BreadcrumbItemType } from "@nimbus/_hooks/useBreadcrumb";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
-import { useNavigate, useSearch } from "@nimbus/_lib/router-shim";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useBreadcrumbPath } from "@nimbus/_hooks/useBreadcrumb";
 import { pointerIntersection } from "@dnd-kit/collision";
 import { SourceSelector } from "./source-selector";
