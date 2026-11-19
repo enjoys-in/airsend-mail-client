@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Activity, ArchiveX, CalendarDays, File, Mail, Send, Settings, Layers, CheckSquare } from "lucide-react"
+import { Activity, ArchiveX, CalendarDays, File, Mail, Send, Settings, Layers, CheckSquare, Video } from "lucide-react"
 
 import {
     Sidebar,
@@ -82,6 +82,13 @@ const navMain: NavItem[] = [
         matchPath: "/v2/tasks",
         featureKey: "canAccessTasks",
     },
+    {
+        title: "Meet",
+        url: "/v2/workspace/calls",
+        icon: Video,
+        matchPath: "/v2/workspace/calls",
+        featureKey: "canAccessWorkspace",
+    },
     // {
     //     title: "Teams",
     //     url: "#",
@@ -138,8 +145,8 @@ const SidebarSecondaryPanel = React.memo(({ pathname }: { pathname: string }) =>
     if (pathname.includes("/v2/u/settings")) return <SettingsMenuSidebar />
     if (pathname.includes("/v2/u/mail") || pathname.includes("/v2/u/compose")) return <Mailboxes />
     if (pathname === "/v2/calender") return <SidebarCalendar />
-    // Workspace nested sidebar — team switcher + channels + DMs
-    if (pathname.startsWith("/v2/workspace")) return <WorkspaceSidebar />
+    // Workspace & Meet nested sidebar — team switcher + channels + DMs + calls
+    if (pathname.startsWith("/v2/workspace") || pathname.startsWith("/v2/meet")) return <WorkspaceSidebar />
     // Kaneo (tasks) renders its sidebar content into this panel; see tasks-sidebar.tsx.
     if (pathname.startsWith("/v2/tasks")) return <TasksSidebar />
     // Nimbus (files) renders its sidebar content into this panel; see files-sidebar-panel.tsx.
@@ -192,13 +199,23 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                         </SidebarMenuItem>
                     </SidebarMenu>
                     <SidebarMenu>
-                        {visibleNav.map((item) => (
-                            <NavIconItem
-                                key={item.title}
-                                item={item}
-                                isActive={pathname.includes(item.matchPath)}
-                            />
-                        ))}
+                        {visibleNav.map((item) => {
+                            const isMeet = item.matchPath === "/v2/workspace/calls"
+                            const isWorkspace = item.matchPath === "/v2/workspace"
+                            const isActive = isMeet
+                                ? pathname.startsWith("/v2/workspace/calls") || pathname.startsWith("/v2/meet")
+                                : isWorkspace
+                                ? pathname.startsWith("/v2/workspace") && !pathname.startsWith("/v2/workspace/calls")
+                                : pathname.includes(item.matchPath)
+
+                            return (
+                                <NavIconItem
+                                    key={item.title}
+                                    item={item}
+                                    isActive={isActive}
+                                />
+                            )
+                        })}
                         {showSkeletons && Array.from({ length: gatedCount }, (_, i) => (
                             <NavIconSkeleton key={`skel-${i}`} />
                         ))}

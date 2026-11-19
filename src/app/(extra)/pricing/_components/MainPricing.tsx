@@ -1,40 +1,42 @@
-import React from 'react'
-import { PricingCard } from './PricingCard'
+import React from "react";
+import { PricingCard } from "./PricingCard";
+import { Badge } from "@/components/ui/badge";
 
 const MainPricing = () => {
   return (
-    <div className="overflow-hidden">
-      <div className="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
-        <div className="mx-auto max-w-2xl mb-8 lg:mb-14 text-center">
-          <h1 className="text-black dark:text-white text-4xl font-semibold max-w-xs sm:max-w-none md:text-6xl !leading-tight">
-            Pay As You Go
-          </h1>
+    <section className="relative overflow-hidden py-16 md:py-24 bg-white dark:bg-[#0c0e12]">
+      {/* Background ambient lighting */}
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
+
+      <div className="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto relative z-10">
+        <div className="mx-auto max-w-2xl mb-12 text-center">
+          <Badge
+            variant="outline"
+            className="mb-3 px-3 py-1 text-xs font-semibold tracking-wider uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+          >
+            Flexible Capacity
+          </Badge>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-neutral-900 dark:text-white">
+            Pay As You Grow
+          </h2>
+          <p className="mt-3 text-base text-neutral-600 dark:text-neutral-400">
+            Need dedicated capacity, specialized SLA support, or on-demand scale without upfront lock-in? Choose our flexible billing packages.
+          </p>
         </div>
+
         <div className="relative xl:w-10/12 xl:mx-auto">
           <PricingCard />
-          <div className="hidden md:block absolute top-0 end-0 translate-y-16 translate-x-16">
-            <svg className="w-16 h-auto text-orange-500" width="121" height="135" viewBox="0 0 121 135" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 16.4754C11.7688 27.4499 21.2452 57.3224 5 89.0164" stroke="currentColor" strokeWidth="10" strokeLinecap="round" />
-              <path d="M33.6761 112.104C44.6984 98.1239 74.2618 57.6776 83.4821 5" stroke="currentColor" strokeWidth="10" strokeLinecap="round" />
-              <path d="M50.5525 130C68.2064 127.495 110.731 117.541 116 78.0874" stroke="currentColor" strokeWidth="10" strokeLinecap="round" />
-            </svg>
-          </div>
-
-          <div className="hidden md:block absolute bottom-0 start-0 translate-y-16 -translate-x-16">
-            <svg className="w-56 h-auto text-cyan-500" width="347" height="188" viewBox="0 0 347 188" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 82.4591C54.7956 92.8751 30.9771 162.782 68.2065 181.385C112.642 203.59 127.943 78.57 122.161 25.5053C120.504 2.2376 93.4028 -8.11128 89.7468 25.5053C85.8633 61.2125 130.186 199.678 180.982 146.248L214.898 107.02C224.322 95.4118 242.9 79.2851 258.6 107.02C274.299 134.754 299.315 125.589 309.861 117.539L343 93.4426" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
-            </svg>
-          </div>
         </div>
-        <div className="mt-7 text-center">
-          <p className="text-xs text-gray-400">
-            Prices in INR. Taxes may apply.
+
+        <div className="mt-10 text-center">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            Prices in INR. Applicable local taxes may apply. 14-day money-back satisfaction guarantee on paid subscriptions.
           </p>
         </div>
       </div>
-    </div>
-  )
-}
+    </section>
+  );
+};
 
-
-export default MainPricing
+export default MainPricing;

@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Users,
   ExternalLink,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -281,6 +282,15 @@ export default function GoogleMeetLobby({
                   No one else is in this call yet. Be the first to join!
                 </p>
               )}
+            </div>
+
+            {/* Meeting Bot Auto-Attend Notice */}
+            <div className="flex items-center gap-2.5 p-3 rounded-xl border border-purple-500/20 bg-purple-950/20 text-xs text-purple-300">
+              <Bot className="size-4 text-purple-400 shrink-0" />
+              <div className="flex-1">
+                <span className="font-semibold block text-white text-[11px]">AI Meeting Bot Standby</span>
+                <span className="text-[10px] text-purple-300/80">Bot will attend, record audio, and generate transcript & minutes.</span>
+              </div>
             </div>
 
             {/* Action buttons */}

@@ -25,6 +25,7 @@ import {
   Edit3,
   LayoutGrid,
   Smile,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +78,7 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
 
   // Pre-join lobby state
   const [isLobbyJoined, setIsLobbyJoined] = useState(false);
+  const [isMeetingBotActive, setIsMeetingBotActive] = useState(true);
 
   // Ensure call is active in store
   useEffect(() => {
@@ -201,8 +203,21 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
     role: "host",
   };
 
+  const meetingBotParticipant: LiveCallParticipant = {
+    id: "airsend-meeting-bot",
+    name: "Meeting Bot (AI Assistant)",
+    email: "bot@airsend.io",
+    isAudioMuted: false,
+    isVideoOff: true,
+    isScreenSharing: false,
+    isHandRaised: false,
+    isSpeaking: false,
+    role: "attendee",
+  };
+
   const allParticipants = [
     selfParticipant,
+    ...(isMeetingBotActive ? [meetingBotParticipant] : []),
     ...callParticipants.filter((p) => p.email !== selfParticipant.email && p.id !== selfParticipant.id),
   ];
 
@@ -244,6 +259,12 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
             <span className="size-1.5 rounded-full bg-red-500" />
             REC
           </Badge>
+          {isMeetingBotActive && (
+            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/40 text-[10px] gap-1 hidden sm:flex">
+              <Bot className="size-3 text-purple-400 animate-pulse" />
+              Bot Attending
+            </Badge>
+          )}
           <div className="space-y-0.5">
             <h2 className="text-xs sm:text-sm font-semibold truncate max-w-[200px] sm:max-w-md text-white">
               {title}
@@ -678,6 +699,21 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
             title="Meeting Notes & Whiteboard"
           >
             <Edit3 className="size-4" />
+          </Button>
+
+          {/* Meeting Bot Attend & Transcribe Button */}
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => setIsMeetingBotActive(!isMeetingBotActive)}
+            className={`size-10 rounded-full border transition-all ${
+              isMeetingBotActive
+                ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30"
+                : "bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white"
+            }`}
+            title={isMeetingBotActive ? "Meeting Bot Active (Recording & Transcribing)" : "Invite Meeting Bot to Attend"}
+          >
+            <Bot className="size-4" />
           </Button>
 
           {/* Chat Toggle Button */}

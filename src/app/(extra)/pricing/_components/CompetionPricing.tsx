@@ -1,211 +1,209 @@
-import React from "react";
+"use client";
 
-const ProvidersPricingCompare = [
+import React from "react";
+import { Check, X, Sparkles, Zap, Shield, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+interface Competitor {
+  name: string;
+  badge?: string;
+  plan_name: string;
+  monthlyCost: string;
+  domains: string;
+  mailboxes: string;
+  perDayEmail: string;
+  storage: string;
+  suiteCollab: string;
+  workflows: string;
+  highlight?: boolean;
+}
+
+const COMPARISON_DATA: Competitor[] = [
   {
-    name: "Zoho",
-    price: "$0.00",
-    plan_name: "Free",
-    features: [
-      { service: "Domains", text: "1", icon: "check",available: true },
-      { service: "Per Day Email", text: "300", icon: "check" },
-      { service: "Mailboxes", text: "Up to 5", icon: "check" },
-      { service: "Storage", text: "5 GB", icon: "check" },
-    ],
-  },
-  {
-    name: "Resend",
-    price: "$0.00",
-    plan_name: "Free",
-    features: [
-      { service: "Domains", text: "1", icon: "check",available: true },
-      { service: "Per Day Email", text: "300", icon: "check" },
-      { service: "Mailboxes", text: "Up to 5", icon: "check" },
-      { service: "Storage", text: "5 GB", icon: "check" },
-    ],
-  },
-  {
-    name: "MS Office 365",
-    price: "$0.00",
-    plan_name: "Free",
-    features: [
-      { service: "Domains", text: "1", icon: "check",available: true },
-      { service: "Per Day Email", text: "300", icon: "check" },
-      { service: "Mailboxes", text: "Up to 5", icon: "check" },
-      { service: "Storage", text: "5 GB", icon: "check" },
-    ],
-  },
-  {
-    name: "GoDaddy",
-    price: "$0.00",
-    plan_name: "Free",
-    features: [
-      { service: "Domains", text: "1", icon: "check",available: true },
-      { service: "Per Day Email", text: "300", icon: "check" },
-      { service: "Mailboxes", text: "Up to 5", icon: "check" },
-      { service: "Storage", text: "5 GB", icon: "check" },
-    ],
+    name: "Airsend Suite",
+    badge: "All-in-One",
+    plan_name: "Startup / Scaler",
+    monthlyCost: "₹29 / mo",
+    domains: "Up to 50",
+    mailboxes: "Unlimited",
+    perDayEmail: "600 – 1,000+",
+    storage: "25 – 50 GB+",
+    suiteCollab: "Included (Workspace + Meet + Tasks + Files)",
+    workflows: "Upcoming (Included)",
+    highlight: true,
   },
   {
     name: "Google Workspace",
-    price: "$0.00",
-    plan_name: "Free",
-    features: [
-      { service: "Domains", text: "1", icon: "check",available: true },
-      { service: "Per Day Email", text: "300", icon: "check" },
-      { service: "Mailboxes", text: "Up to 5", icon: "check" },
-      { service: "Storage", text: "5 GB", icon: "check" },
-    ],
+    plan_name: "Business Starter",
+    monthlyCost: "₹650+ / user/mo",
+    domains: "1",
+    mailboxes: "1 per user seat",
+    perDayEmail: "2,000",
+    storage: "30 GB pooled",
+    suiteCollab: "Separate licensing",
+    workflows: "Scripting / add-on",
   },
   {
-    name: "Hostinger",
-    price: "$0.00",
-    plan_name: "Free",
-    features: [
-      { service: "Domains", text: "1", icon: "check",available: true },
-      { service: "Per Day Email", text: "300", icon: "check" },
-      { service: "Mailboxes", text: "Up to 5", icon: "check" },
-      { service: "Storage", text: "5 GB", icon: "check" },
-    ],
+    name: "MS Office 365",
+    plan_name: "Business Basic",
+    monthlyCost: "₹500+ / user/mo",
+    domains: "1",
+    mailboxes: "1 per user seat",
+    perDayEmail: "10,000 (Internal)",
+    storage: "50 GB",
+    suiteCollab: "Teams bundled",
+    workflows: "Power Automate (Complex)",
+  },
+  {
+    name: "Zoho Mail",
+    plan_name: "Mail Lite",
+    monthlyCost: "₹99+ / user/mo",
+    domains: "1",
+    mailboxes: "Up to 5",
+    perDayEmail: "300",
+    storage: "5 GB",
+    suiteCollab: "Add-on fees",
+    workflows: "Zoho Flow (Separate)",
+  },
+  {
+    name: "Resend",
+    plan_name: "Hobby / Pro",
+    monthlyCost: "$20+ (₹1,600+)",
+    domains: "1 – 5",
+    mailboxes: "API only (No Webmail)",
+    perDayEmail: "100 / day (Hobby)",
+    storage: "Log storage only",
+    suiteCollab: "None (Developer API only)",
+    workflows: "Webhooks only",
+  },
+  {
+    name: "Hostinger / GoDaddy",
+    plan_name: "Business Email",
+    monthlyCost: "₹150+ / user/mo",
+    domains: "1",
+    mailboxes: "Per mailbox cost",
+    perDayEmail: "250 – 500",
+    storage: "10 GB",
+    suiteCollab: "Basic webmail only",
+    workflows: "Not supported",
   },
 ];
-const CompetionPricing = () => {
-  const featureNames = ProvidersPricingCompare[0].features.map(f => f.service);
 
+export const CompetionPricing = () => {
   return (
-    <div className="relative">
-      <div className="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 md:py-14 lg:py-20 mx-auto">
-        <div className="max-w-2xl mx-auto text-center mb-10 lg:mb-14">
-          <h2 className="text-2xl font-bold md:text-3xl md:leading-tight dark:text-white">
-            Simple, transparent pricing
+    <section className="relative py-16 md:py-24 bg-white dark:bg-[#0c0e12] overflow-hidden">
+      {/* Background glow for SaaS aesthetic */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-blue-600/5 blur-[120px] pointer-events-none rounded-full" />
+
+      <div className="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto relative z-10">
+        {/* Section Heading */}
+        <div className="max-w-3xl mx-auto text-center mb-14">
+          <Badge
+            variant="outline"
+            className="mb-3 px-3 py-1 text-xs font-semibold tracking-wider uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+          >
+            Market Comparison
+          </Badge>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-neutral-900 dark:text-white">
+            Why teams choose Airsend over legacy providers
           </h2>
-          <p className="mt-1 text-gray-600 dark:text-neutral-400">
-            Increase your teams productivity. Get things done in rapid time.
+          <p className="mt-3 text-base text-neutral-600 dark:text-neutral-400">
+            Stop paying per-seat tax across 5 different subscriptions. Get mail delivery, Slack-style workspace, Google Meet-grade calls, tasks, files, and upcoming workflows in one unified hub.
           </p>
         </div>
-        <div className="relative overflow-x-auto">
-          <div className="hidden lg:block sticky top-0 start-0 py-2 bg-white dark:bg-neutral-900">
-            <div className="grid grid-cols-8 gap-6">
-              <div className="col-span-2">
-                <div className="h-full"></div>
-              </div>
-              {ProvidersPricingCompare.map((plan, index) => (
-                <div className="col-span-1" key={index}>
-                  <div className="h-full p-4 flex flex-col justify-between bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-800">
-                    <div>
-                      <span className="font-semibold text-lg text-gray-800 dark:text-neutral-200">
-                        {plan.name}
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <div className="w-full py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-2xs hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none focus:outline-hidden focus:bg-gray-50 dark:bg-transparent dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:focus:bg-neutral-800">
-                        {plan.plan_name}
-                      </div>
+
+        {/* Matrix comparison cards grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {COMPARISON_DATA.map((item, idx) => (
+            <div
+              key={idx}
+              className={`relative rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between ${
+                item.highlight
+                  ? "bg-gradient-to-b from-blue-600/10 via-[#11141c] to-[#0e1015] border-2 border-blue-500/40 shadow-2xl shadow-blue-500/10 ring-1 ring-blue-500/20"
+                  : "bg-white/80 dark:bg-[#111317]/80 backdrop-blur-md border border-neutral-200 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 shadow-sm"
+              }`}
+            >
+              {item.highlight && (
+                <div className="absolute -top-3 left-6">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider bg-blue-600 text-white px-3 py-1 rounded-full shadow-md">
+                    <Sparkles className="size-3" /> {item.badge}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2 mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      {item.name}
+                    </h3>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Tier: {item.plan_name}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-base font-bold ${item.highlight ? "text-blue-500 dark:text-blue-400" : "text-neutral-900 dark:text-white"}`}>
+                      {item.monthlyCost}
                     </div>
                   </div>
                 </div>
-              ))}
+
+                {/* Features breakdown */}
+                <div className="space-y-3 pt-3 border-t border-neutral-100 dark:border-white/5 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-neutral-500 dark:text-neutral-400">Custom Domains</span>
+                    <span className="font-medium text-neutral-900 dark:text-neutral-200">{item.domains}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-neutral-500 dark:text-neutral-400">Mailboxes</span>
+                    <span className="font-medium text-neutral-900 dark:text-neutral-200">{item.mailboxes}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-neutral-500 dark:text-neutral-400">Daily Email Volume</span>
+                    <span className="font-medium text-neutral-900 dark:text-neutral-200">{item.perDayEmail}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-neutral-500 dark:text-neutral-400">Storage Included</span>
+                    <span className="font-medium text-neutral-900 dark:text-neutral-200">{item.storage}</span>
+                  </div>
+                  <div className="flex justify-between items-start gap-2 pt-2 border-t border-neutral-100 dark:border-white/5">
+                    <span className="text-neutral-500 dark:text-neutral-400">Team Collab Suite</span>
+                    <span className={`text-right font-medium ${item.highlight ? "text-emerald-500 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-300"}`}>
+                      {item.suiteCollab}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-neutral-500 dark:text-neutral-400">Workflows &amp; Automation</span>
+                    <span className={`text-right font-medium ${item.highlight ? "text-amber-500 dark:text-amber-400" : "text-neutral-500 dark:text-neutral-400"}`}>
+                      {item.workflows}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom CTA / Status */}
+              <div className="mt-6 pt-4 border-t border-neutral-100 dark:border-white/5">
+                {item.highlight ? (
+                  <Button asChild className="w-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25">
+                    <Link href="/auth/register">
+                      Get Started with Airsend <ArrowRight className="size-4 ml-1.5" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <div className="text-center text-xs text-neutral-400 dark:text-neutral-500 py-1">
+                    Requires multiple separate add-ons
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-
-          <div className="space-y-4 lg:space-y-0">
-            <ul className="grid lg:grid-cols-8 lg:gap-6">
-              <li className="lg:col-span-2 lg:py-3">
-                <span className="text-lg font-semibold text-gray-800 dark:text-neutral-200">
-                  General
-                </span>
-              </li>
-              {ProvidersPricingCompare.map((_, i) => (
-                <li key={i} className="hidden lg:block lg:col-span-1 py-1.5 lg:py-3 px-4 lg:px-0 lg:text-center"></li>
-              ))}
-            </ul>
-            {featureNames.map((featureName, fIndex) => (
-              <ul className="grid lg:grid-cols-8 lg:gap-6" key={fIndex}>
-                <li className="lg:col-span-2 pb-1.5 lg:py-3">
-                  <span className="text-sm text-gray-800 dark:text-neutral-200">
-                    {featureName}
-                  </span>
-                </li>
-                {ProvidersPricingCompare.map((plan, pIndex) => (
-                  <li key={pIndex} className="col-span-1 py-1.5 lg:py-3 px-4 lg:px-0 lg:text-center bg-gray-100 dark:bg-neutral-800">
-                    <div className="grid grid-cols-6 lg:block">
-                      <span className="lg:hidden col-span-2 font-semibold text-sm text-gray-800 dark:text-neutral-200">
-                        {plan.name}
-                      </span>
-                      <span className="text-sm text-gray-800 dark:text-neutral-200">
-                        {plan.features[fIndex].text}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ))}
-          </div>
+          ))}
         </div>
-
-        <div className="mt-8 text-center">
-          <button
-            type="button"
-            className="hs-collapse-toggle hs-collapse-open:rounded-full hs-collapse-open:px-3 group py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-full border border-gray-200 bg-white text-gray-800 shadow-2xs hover:bg-gray-50 focus:outline-hidden focus:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-800 dark:focus:bg-neutral-800"
-            id="view-all-features"
-            aria-expanded="false"
-            aria-controls="view-all-features-button"
-            data-hs-collapse="#view-all-features-button"
-          >
-            <span className="hs-collapse-open:hidden">View all features</span>
-            <svg
-              className="hidden hs-collapse-open:block group-hover:rotate-180 transition duration-300 shrink-0 size-4"
-              xmlns="http://www.w3.org/2000/svg"
-              width={24}
-              height={24}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
-        </div>
-
       </div>
-    </div>
+    </section>
   );
 };
-
-export const NotAvailable = () => (
-  <svg
-    className="shrink-0 lg:mx-auto size-5 text-gray-400 dark:text-neutral-600"
-    xmlns="http://www.w3.org/2000/svg"
-    width={24}
-    height={24}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M5 12h14" />
-  </svg>
-);
-export const Available = () => (
-  <svg
-    className="shrink-0 lg:mx-auto size-5 text-blue-600 dark:text-blue-500"
-    xmlns="http://www.w3.org/2000/svg"
-    width={24}
-    height={24}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
 
 export default CompetionPricing;

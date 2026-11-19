@@ -8,6 +8,7 @@ const PREFIXES: { prefix: string; feature: GatedFeature }[] = [
     { prefix: "/v2/tasks", feature: "tasks" },
     { prefix: "/v2/files", feature: "files" },
     { prefix: "/v2/workspace", feature: "workspace" },
+    { prefix: "/v2/meet", feature: "workspace" },
 ]
 
 /** The feature a page path belongs to, or null when the path is not gated. */

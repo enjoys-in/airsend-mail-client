@@ -14,6 +14,11 @@ import {
   Sparkles,
   Shield,
   ArrowUpRight,
+  CheckSquare,
+  FolderSync,
+  MessagesSquare,
+  Video,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,12 +35,78 @@ export interface ProductItem {
 
 export const PRODUCTS: ProductItem[] = [
   {
+    id: "tasks",
+    title: "Task & Ticket Management",
+    tag: "TICKETS",
+    description:
+      "Manage tickets, agile Kanban boards, issue workflows, priorities, and custom tags.",
+    route: "/v2/tasks",
+    icon: CheckSquare,
+    iconBg: "bg-emerald-500/10 border-emerald-500/20",
+    iconColor: "text-emerald-400",
+  },
+  {
+    id: "files",
+    title: "Files & Cloud Storage",
+    tag: "STORAGE",
+    description:
+      "Upload and organize files, instant media previews, tagging, and secure sharing.",
+    route: "/v2/files",
+    icon: FolderSync,
+    iconBg: "bg-amber-500/10 border-amber-500/20",
+    iconColor: "text-amber-400",
+  },
+  {
+    id: "workspace",
+    title: "Workspace (Slack + Teams)",
+    tag: "COLLAB",
+    description:
+      "Real-time channels, direct messages, voice lounges, threads, and team presence.",
+    route: "/v2/workspace",
+    icon: MessagesSquare,
+    iconBg: "bg-indigo-500/10 border-indigo-500/20",
+    iconColor: "text-indigo-400",
+  },
+  {
+    id: "meet",
+    title: "Airsend Meet",
+    tag: "GOOGLE MEET",
+    description:
+      "Google Meet-grade HD video calling, screen sharing, lobby room, and dynamic tiles.",
+    route: "/v2/workspace/calls",
+    icon: Video,
+    iconBg: "bg-rose-500/10 border-rose-500/20",
+    iconColor: "text-rose-400",
+  },
+  {
+    id: "meeting-bot",
+    title: "Meeting Bot",
+    tag: "AI ASSISTANT",
+    description:
+      "Autonomous bot to attend meetings, transcribe live audio & record action items.",
+    route: "/v2/workspace/calls",
+    icon: Bot,
+    iconBg: "bg-purple-500/10 border-purple-500/20",
+    iconColor: "text-purple-400",
+  },
+  {
+    id: "calendar",
+    title: "Calendar & Scheduling",
+    tag: "CALDAV",
+    description:
+      "CalDAV-synced schedules, event invites, inbox RSVPs, and timezone coordination.",
+    route: "/v2/calender",
+    icon: Calendar,
+    iconBg: "bg-pink-500/10 border-pink-500/20",
+    iconColor: "text-pink-400",
+  },
+  {
     id: "webmail",
     title: "Webmail Client",
     tag: "ENCRYPTED",
     description:
       "End-to-end encrypted inbox, sieve filters, smart categorization & custom aliases.",
-    route: "/v2",
+    route: "/v2/u/mail",
     icon: Mail,
     iconBg: "bg-blue-500/10 border-blue-500/20",
     iconColor: "text-blue-400",
@@ -48,52 +119,8 @@ export const PRODUCTS: ProductItem[] = [
       "High-deliverability REST API, webhooks, and custom SMTP relay for transactional emails.",
     route: "/docs/getting-started",
     icon: Terminal,
-    iconBg: "bg-emerald-500/10 border-emerald-500/20",
-    iconColor: "text-emerald-400",
-  },
-  {
-    id: "campaigns",
-    title: "Email Campaigns",
-    tag: "MARKETING",
-    description:
-      "Drag-and-drop template designer, automated drip sequences, and deliverability insights.",
-    route: "/features",
-    icon: Send,
-    iconBg: "bg-amber-500/10 border-amber-500/20",
-    iconColor: "text-amber-400",
-  },
-  {
-    id: "disposable",
-    title: "Disposable Mail",
-    tag: "PRIVACY",
-    description:
-      "Instant temporary inboxes and custom domain hosting for burner email addresses.",
-    route: "/features",
-    icon: ShieldCheck,
-    iconBg: "bg-purple-500/10 border-purple-500/20",
-    iconColor: "text-purple-400",
-  },
-  {
-    id: "workspaces",
-    title: "Workspaces & Teams",
-    tag: "TEAMS",
-    description:
-      "Multi-domain management, ReBAC permissions, and shared team mailboxes.",
-    route: "/features",
-    icon: Users,
     iconBg: "bg-cyan-500/10 border-cyan-500/20",
     iconColor: "text-cyan-400",
-  },
-  {
-    id: "calendar",
-    title: "Calendar & Scheduling",
-    tag: "CALDAV",
-    description:
-      "CalDAV integrated calendar, event reminders, and team meeting scheduling.",
-    route: "/docs/calendar",
-    icon: Calendar,
-    iconBg: "bg-pink-500/10 border-pink-500/20",
-    iconColor: "text-pink-400",
   },
 ];
 
@@ -120,7 +147,7 @@ export const ProductsMegaMenu = ({
           transition={{ duration: 0.18, ease: "easeOut" }}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
-          className="hidden md:block absolute top-full left-1/2 -translate-x-1/2 pt-3 z-50 w-[740px] max-w-[94vw]"
+          className="hidden md:block absolute top-full left-1/2 -translate-x-1/2 pt-3 z-50 w-[800px] max-w-[95vw]"
         >
           {/* Card Container with solid opaque background */}
           <div
@@ -227,7 +254,7 @@ export const MobileProductsAccordion = ({
         <span className="flex items-center gap-2">
           <span>Products</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-            6 Apps
+            8 Apps
           </span>
         </span>
         <ChevronDown

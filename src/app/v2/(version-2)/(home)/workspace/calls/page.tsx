@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   ChevronDown,
   Globe,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -217,10 +218,14 @@ function CallsHubContent() {
         <div className="max-w-6xl mx-auto rounded-3xl border border-blue-500/20 bg-gradient-to-r from-blue-900/15 via-indigo-900/10 to-transparent p-6 md:p-8 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
             <div className="md:col-span-7 space-y-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge className="bg-blue-600/15 text-blue-500 border-blue-500/30 text-xs gap-1 font-semibold">
                   <Globe className="size-3" />
                   meet.airsend.in
+                </Badge>
+                <Badge className="bg-purple-600/15 text-purple-400 border-purple-500/30 text-xs gap-1 font-semibold">
+                  <Bot className="size-3" />
+                  Meeting Bot Active
                 </Badge>
                 <span className="text-xs text-muted-foreground">• Real-time WebRTC</span>
               </div>
@@ -319,8 +324,29 @@ function CallsHubContent() {
 
         {/* ── Main Calls Split View ── */}
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Speed Dial / Contacts */}
+          {/* Left Column: Speed Dial & Meeting Bot */}
           <div className="space-y-4">
+            {/* Meeting Bot Assistant Card */}
+            <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-900/15 via-indigo-900/10 to-transparent p-4 shadow-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-purple-500/15 text-purple-400">
+                    <Bot className="size-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-foreground">AI Meeting Bot</h4>
+                    <span className="text-[10px] text-purple-400 font-medium">Auto-Attend & Notes</span>
+                  </div>
+                </div>
+                <Badge className="bg-purple-600/20 text-purple-300 border-purple-500/30 text-[10px]">
+                  Enabled
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Automatically attends your scheduled calls, transcribes live speech, and delivers structured meeting summaries to your team.
+              </p>
+            </div>
+
             <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">

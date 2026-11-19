@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
   BookOpen,
   Mail,
@@ -18,17 +18,73 @@ import {
   ChevronDown,
   ChevronRight,
   MonitorSmartphone,
-} from "lucide-react"
-import { useState } from "react"
+  CheckSquare,
+  FileText,
+  Layers,
+  Video,
+  Bot,
+  Workflow,
+  Sparkles,
+} from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 interface NavItem {
-  title: string
-  href: string
-  icon: React.ReactNode
-  children?: { title: string; href: string }[]
+  title: string;
+  href: string;
+  icon: React.ReactNode;
+  badge?: string;
+  badgeVariant?: "blue" | "amber" | "emerald";
+  external?: boolean;
+  children?: { title: string; href: string }[];
 }
 
-const navigation: NavItem[] = [
+const SUITE_NAV_ITEMS: NavItem[] = [
+  {
+    title: "Tasks & Tickets",
+    href: "/v2/tasks",
+    icon: <CheckSquare className="h-4 w-4 text-emerald-400" />,
+    badge: "v2.9",
+    badgeVariant: "emerald",
+  },
+  {
+    title: "Files & Storage",
+    href: "/v2/files",
+    icon: <FileText className="h-4 w-4 text-amber-400" />,
+    badge: "v2.9",
+    badgeVariant: "emerald",
+  },
+  {
+    title: "Workspace Chat",
+    href: "/v2/workspace",
+    icon: <Layers className="h-4 w-4 text-indigo-400" />,
+    badge: "v2.9",
+    badgeVariant: "emerald",
+  },
+  {
+    title: "Airsend Meet",
+    href: "/v2/workspace/calls",
+    icon: <Video className="h-4 w-4 text-rose-400" />,
+    badge: "v2.9",
+    badgeVariant: "emerald",
+  },
+  {
+    title: "AI Meeting Bot",
+    href: "/v2/workspace/calls",
+    icon: <Bot className="h-4 w-4 text-cyan-400" />,
+    badge: "v2.9",
+    badgeVariant: "emerald",
+  },
+  {
+    title: "Workflows & DAG",
+    href: "/features#workflows",
+    icon: <Workflow className="h-4 w-4 text-amber-400" />,
+    badge: "Upcoming",
+    badgeVariant: "amber",
+  },
+];
+
+const DOCS_NAV_ITEMS: NavItem[] = [
   {
     title: "Overview",
     href: "/docs",
@@ -152,71 +208,115 @@ const navigation: NavItem[] = [
       { title: "5xx Permanent", href: "/docs/smtp-codes#5xx" },
     ],
   },
-]
+];
 
 export default function DocsSidebar() {
-  const pathname = usePathname()
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const pathname = usePathname();
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const toggleExpand = (href: string) => {
-    setExpanded((prev) => ({ ...prev, [href]: !prev[href] }))
-  }
+    setExpanded((prev) => ({ ...prev, [href]: !prev[href] }));
+  };
 
   const isActive = (href: string) => {
-    if (href === "/docs") return pathname === "/docs"
-    return pathname.startsWith(href)
-  }
+    if (href === "/docs") return pathname === "/docs";
+    return pathname.startsWith(href);
+  };
 
   return (
-    <aside className="hidden md:block w-64 shrink-0 border-r border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-100/80 dark:bg-[#201B39]/80 backdrop-blur-sm overflow-y-auto h-[calc(100vh-4rem)] sticky top-16">
-      <nav className="p-4 space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-3 px-2">
-          Documentation
-        </p>
-        {navigation.map((item) => (
-          <div key={item.href}>
-            <div className="flex items-center">
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2 px-2 py-1.5 text-sm rounded-md flex-1 transition-colors",
-                  isActive(item.href)
-                    ? "bg-blue-500/10 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 font-medium"
-                    : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200/50 dark:hover:bg-white/5"
-                )}
-              >
-                {item.icon}
-                {item.title}
-              </Link>
-              {item.children && (
-                <button
-                  onClick={() => toggleExpand(item.href)}
-                  className="p-1 rounded hover:bg-neutral-200/50 dark:hover:bg-white/5"
-                >
-                  {expanded[item.href] || isActive(item.href) ? (
-                    <ChevronDown className="h-3 w-3 text-neutral-500" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3 text-neutral-500" />
-                  )}
-                </button>
-              )}
-            </div>
-            {item.children && (expanded[item.href] || isActive(item.href)) && (
-              <div className="ml-6 mt-1 space-y-0.5 border-l border-neutral-300/50 dark:border-neutral-700/50 pl-2">
-                {item.children.map((child) => (
-                  <Link
-                    key={child.href}
-                    href={child.href}
-                    className="block px-2 py-1 text-xs text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                  >
-                    {child.title}
-                  </Link>
-                ))}
-              </div>
-            )}
+    <aside className="hidden md:block w-72 shrink-0 border-r border-neutral-200/70 dark:border-white/10 bg-white/80 dark:bg-[#0e1015]/95 backdrop-blur-md overflow-y-auto h-[calc(100vh-4rem)] sticky top-16 custom-scrollbar">
+      <nav className="p-4 space-y-6">
+        {/* Section 1: Suite Products */}
+        <div>
+          <div className="flex items-center justify-between px-2 mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Suite Products
+            </span>
+            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-blue-500/30 text-blue-500">
+              v2.9
+            </Badge>
           </div>
-        ))}
+          <div className="space-y-0.5">
+            {SUITE_NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5"
+              >
+                <div className="flex items-center gap-2.5">
+                  {item.icon}
+                  <span>{item.title}</span>
+                </div>
+                {item.badge && (
+                  <span
+                    className={cn(
+                      "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border",
+                      item.badgeVariant === "amber"
+                        ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                        : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    )}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 2: Core Documentation */}
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2 px-2">
+            Documentation &amp; API
+          </p>
+          <div className="space-y-0.5">
+            {DOCS_NAV_ITEMS.map((item) => (
+              <div key={item.href}>
+                <div className="flex items-center">
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-2.5 px-2.5 py-1.5 text-xs rounded-lg flex-1 transition-colors",
+                      isActive(item.href)
+                        ? "bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-medium"
+                        : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5"
+                    )}
+                  >
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </Link>
+                  {item.children && (
+                    <button
+                      onClick={() => toggleExpand(item.href)}
+                      className="p-1 rounded hover:bg-neutral-200/50 dark:hover:bg-white/5"
+                      aria-label="Toggle Subsections"
+                    >
+                      {expanded[item.href] || isActive(item.href) ? (
+                        <ChevronDown className="h-3 w-3 text-neutral-400" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3 text-neutral-400" />
+                      )}
+                    </button>
+                  )}
+                </div>
+                {item.children && (expanded[item.href] || isActive(item.href)) && (
+                  <div className="ml-5 mt-1 space-y-0.5 border-l border-neutral-200 dark:border-white/10 pl-2">
+                    {item.children.map((child) => (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className="block px-2 py-1 text-[11px] text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded"
+                      >
+                        {child.title}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </nav>
     </aside>
-  )
+  );
 }

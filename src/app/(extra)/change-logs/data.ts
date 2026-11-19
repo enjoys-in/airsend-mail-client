@@ -1,5 +1,26 @@
 export const CHANGE_LOGS = [
     {
+        date: "November 20, 2026",
+        version: "2",
+        color: "from-blue-600 via-indigo-600 to-violet-600",
+        versionNumber: "2.9.0",
+        improvements: [
+            "Tasks & Ticket Management — Full-featured ticket tracking with Kaneo-powered Kanban boards, lists, ticket priorities, statuses, tags, and issue workflows right inside Airsend",
+            "Files & Cloud Storage — Integrated file management to upload, organize, preview, tag, and securely share documents, media, and attachments with multi-provider storage",
+            "Unified Workspaces — Slack + Microsoft Teams combo: real-time collaborative workspace featuring channels, direct messages, voice rooms, message threads, reactions, and team presence",
+            "Airsend Meet — Google Meet-grade video conferencing with high-definition video/audio, screen sharing, green room lobby, dynamic participant grid, whiteboard, and instant room generation",
+            "Meeting Bot — Intelligent automated meeting assistant that attends scheduled or instant calls, transcribes discussions, summarizes key points, and records action items",
+            "Calendar & Event Scheduling — CalDAV-integrated event manager with day/week/month views, time zone conversion, meeting links, and inbox RSVP integration",
+            "Revamped Unified Suite Design — Polished, consistent modern theme across all modules (Mail, Calendar, Files, Tasks, Workspace, Meet) with unified navigation, faster switcher, and full dark/light mode refinement",
+            "Products & Suite Linking — All core apps and tools are now linked seamlessly across the landing mega menu, app switcher, and top-level navigation",
+        ],
+        bugfixes: [
+            "Fixed cross-module navigation state persistence and theme synchronization",
+            "Improved sidebar responsiveness and secondary panel loading across all screen sizes",
+            "Fixed status indicator rendering across voice channels and live call rooms",
+        ]
+    },
+    {
         date: "November 18, 2026",
         version: "2",
         color: "from-sky-500 to-indigo-600",

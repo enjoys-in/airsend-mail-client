@@ -1,17 +1,17 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import styles from './pricing.module.css';
-
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Zap, Workflow } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 export interface PricingTierFrequency {
   id: string;
   value: string;
   label: string;
   priceSuffix: string;
+  discount?: string;
 }
 
 export interface PricingTier {
@@ -26,12 +26,13 @@ export interface PricingTier {
   highlighted?: boolean;
   cta: string;
   soldOut?: boolean;
+  tag?: string;
 }
 
 export const frequencies: PricingTierFrequency[] = [
-  { id: '1', value: '1', label: 'Monthly', priceSuffix: '/month' },
-  { id: '2', value: '2', label: 'Quarterly', priceSuffix: '/quarter' },
-  { id: '3', value: '3', label: 'Annually', priceSuffix: '/year' },
+  { id: '1', value: '1', label: 'Monthly', priceSuffix: '/mo' },
+  { id: '2', value: '2', label: 'Quarterly', priceSuffix: '/qtr', discount: 'Save 10%' },
+  { id: '3', value: '3', label: 'Annually', priceSuffix: '/yr', discount: 'Save 20%' },
 ];
 
 export const tiers: PricingTier[] = [
@@ -41,289 +42,304 @@ export const tiers: PricingTier[] = [
     href: '/h-panel',
     price: { '1': '₹0', '2': '₹0', '3': '₹0' },
     discountPrice: { '1': '', '2': '', '3': '' },
-    description: `Get all goodies for free, no credit card required.`,
+    description: 'Get all essentials for free, no credit card required.',
     features: [
       '5 Domains',
-      `300 emails per day`,
-      `10 Mailboxes`,
-      `1 GB of storage per mailbox`,
-      `100 Mb Email Attachments`,
-      `10 Email Templates`,
-      `Basic Analytics`,
-      `24/7 Support`,
-      `Only SMTP & Web Client`,
-      'API Access with Rate Limits',
-      '3-10 reqs/min on Get/Post',
-      `Queued Delivery`,
+      '300 emails per day',
+      '10 Mailboxes',
+      '1 GB of storage per mailbox',
+      '100 MB Email Attachments',
+      '10 Email Templates',
+      'Basic Analytics & 24/7 Support',
+      'SMTP & Web Client Access',
+      'API Access (3-10 reqs/min)',
+      'Queued Delivery',
+      'Tasks & Cloud Files Access',
+      'Workflows & Automations (Upcoming)',
     ],
     featured: false,
     highlighted: false,
     soldOut: false,
-    cta: `Sign up`,
+    cta: 'Sign Up Free',
   },
   {
     name: 'Startup',
     id: '1',
-    href: '/subscribe',
+    href: '/h-panel',
     price: { '1': '₹29.9', '2': '₹99', '3': '₹225' },
-    discountPrice: { '1': '', '2': '', '3': '' },
-    description: `When you grow, need more power and flexibility.`,
+    discountPrice: { '1': '₹49', '2': '₹149', '3': '₹349' },
+    description: 'When you grow and need more power, domains, and speed.',
+    tag: 'MOST POPULAR',
     features: [
       'Unlimited Domains',
-      `600 emails per day`,
-      `25 Mailboxes`,
-      `25 GB of storage per mailbox`,
-      `500 Mb Email Attachments`,
-      `25 Email Templates`,
-      `Incoming & Outgoing Logs`,      
-      `Only SMTP & Web Client`,
-      'API Access with Rate Limits',
-      '25-50 reqs/min on Post/Get',
-      `Realtime Mail Incoming/Outgoing`,
-      `Queued Delivery`,
+      '600 emails per day',
+      '25 Mailboxes',
+      '25 GB storage per mailbox',
+      '500 MB Email Attachments',
+      '25 Email Templates',
+      'Incoming & Outgoing Delivery Logs',
+      'Full SMTP & Web Client',
+      'API Access (25-50 reqs/min)',
+      'Real-Time Mail Delivery',
+      'Airsend Meet & Workspace Channels',
+      'Workflows & Automations (Upcoming)',
     ],
     featured: true,
     highlighted: true,
     soldOut: false,
-    cta: `Get started`,
+    cta: 'Get Started with Startup',
   },
   {
     name: 'Scaler',
     id: '2',
-    href: '/contact-us',
-    price: { '1': '₹44.99', '2': '₹179.88', '3': '' },
-    discountPrice: { '1': '', '2': '', '3': '' },
-    description: `When you grow, need more power and flexibility.`,
+    href: '/h-panel',
+    price: { '1': '₹44.99', '2': '₹179.88', '3': '₹499' },
+    discountPrice: { '1': '₹79', '2': '₹299', '3': '₹799' },
+    description: 'Higher volume, complete IMAP sync, and analytics.',
     features: [
       'Unlimited Domains',
-      `850 emails per day`,
-      `50 Mailboxes`,
-      `50 GB of storage per mailbox`,
-      `No limit on Attachments`,
-      `Unlimited Email Templates`,
-      `Mail Event & Tracking Analytics`,
-      `Incoming & Outgoing Logs`,
-      `SMTP & IMAP Support`,
-      'API Access with No Limit',
-      `Realtime Mail Incoming/Outgoing`,
-      `Queued/Realtime Delivery`,
+      '850 emails per day',
+      '50 Mailboxes',
+      '50 GB storage per mailbox',
+      'No Limit on Attachments',
+      'Unlimited Email Templates',
+      'Mail Event & Tracking Analytics',
+      'Incoming & Outgoing Audit Logs',
+      'Full SMTP & IMAP Client Support',
+      'High-Throughput API Access',
+      'Airsend Meet with Meeting Bot',
+      'Workflows & Automations (Upcoming)',
     ],
     featured: false,
-    highlighted: true,
+    highlighted: false,
     soldOut: false,
-    cta: `Get started`,
+    cta: 'Upgrade to Scaler',
+  },
+  {
+    name: 'Professional',
+    id: '3',
+    href: '/h-panel',
+    price: { '1': '₹149.99', '2': '₹449', '3': '₹1,499' },
+    discountPrice: { '1': '₹249', '2': '₹749', '3': '₹2,499' },
+    description: 'Complete workspace power for teams & high-deliverability ops.',
+    tag: 'PRO SUITE',
+    features: [
+      'Unlimited Domains & Mailboxes',
+      'Unlimited Storage Quota',
+      'Calendar & Multi-User Scheduling',
+      'Workspace Team Chat & Voice Lounges',
+      'Dedicated IP & Bounce Isolation',
+      'DKIM, DMARC & BIMI Verification',
+      'ReBAC Roles & Permissions',
+      'Airsend Meet + Meeting Bot Included',
+      'Priority Support SLA',
+      'Workflows & Automations (Upcoming)',
+    ],
+    featured: false,
+    highlighted: false,
+    soldOut: false,
+    cta: 'Start Pro Trial',
   },
 ];
 
 export const CheckIcon = ({ className }: { className?: string }) => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={cn('w-6 h-6', className)}
-    >
-      <path
-        fillRule="evenodd"
-        d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
+  return <CheckCircle2 className={cn('size-4 shrink-0', className)} />;
 };
 
 export default function PricingPage() {
   const [frequency, setFrequency] = useState(frequencies[0]);
 
-  const bannerText = 'Set Up Your Email Hosting in a Few Clicks';
-
   return (
-    <div
-      className={cn('flex flex-col w-full items-center', styles.fancyOverlay)}
-    >
-      <div className="w-full flex flex-col items-center">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8 flex flex-col items-center">
-          <div className="w-full lg:w-auto mx-auto max-w-4xl lg:text-center">
-            <h1 className="text-black dark:text-white text-4xl font-semibold max-w-xs sm:max-w-none md:text-6xl !leading-tight">
-              Pricing
-            </h1>
-
+    <div className="w-full flex flex-col items-center">
+      <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+        {/* ── Top Header ── */}
+        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-semibold text-blue-400 mb-4 shadow-sm">
+            <Sparkles className="size-3.5" />
+            <span>Transparent Pricing • All Features Included</span>
           </div>
 
-          {bannerText ? (
-            <div className="w-full lg:w-auto flex justify-center my-4">
-              <p className="w-full px-4 py-3 text-xs bg-blue-100 text-black dark:bg-blue-300/30 dark:text-white/80 rounded-xl">
-                {bannerText}
-              </p>
-            </div>
-          ) : null}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-4 leading-tight">
+            Simple, Predictable Plans for{' '}
+            <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              Every Team
+            </span>
+          </h1>
 
-          {frequencies.length > 1 ? (
-            <div className="mt-16 flex justify-center">
-              <RadioGroup
-                defaultValue={frequency.value}
-                onValueChange={(value: string) => {
-                  setFrequency(frequencies.find((f) => f.value === value)!);
-                }}
-                className="grid gap-x-1 rounded-full p-1 text-center text-xs font-semibold leading-5 bg-white dark:bg-black ring-1 ring-inset ring-gray-200/30 dark:ring-gray-800"
-                style={{
-                  gridTemplateColumns: `repeat(${frequencies.length}, minmax(0, 1fr))`,
-                }}
-              >
-                <Label className="sr-only">Payment frequency</Label>
-                {frequencies.map((option) => (
-                  <Label
-                    className={cn(
-                      frequency.value === option.value
-                        ? 'bg-blue-500/90 text-white dark:bg-blue-900/70 dark:text-white/70'
-                        : 'bg-transparent text-gray-500 hover:bg-blue-500/10',
-                      'cursor-pointer rounded-full px-2.5 py-2 transition-all',
-                    )}
-                    key={option.value}
-                    htmlFor={option.value}
-                  >
-                    {option.label}
+          <p className="text-sm sm:text-base text-neutral-300 max-w-2xl mx-auto leading-relaxed">
+            From solo creators to fast-scaling engineering teams. Full access to Webmail, Tasks, Files, Workspace, Airsend Meet, and our upcoming Workflow Automation engine.
+          </p>
 
-                    <RadioGroupItem
-                      value={option.value}
-                      id={option.value}
-                      className="hidden"
-                    />
-                  </Label>
-                ))}
-              </RadioGroup>
-            </div>
-          ) : (
-            <div className="mt-12" aria-hidden="true"></div>
-          )}
+          {/* ── Frequency Toggle ── */}
+          <div className="mt-8 inline-flex items-center p-1 rounded-2xl bg-[#14161f] border border-white/10 shadow-lg">
+            {frequencies.map((option) => {
+              const isSelected = frequency.value === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFrequency(option)}
+                  className={cn(
+                    'relative px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5',
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                      : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                  )}
+                >
+                  <span>{option.label}</span>
+                  {option.discount && (
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold px-1.5 py-0.2 rounded-full border',
+                        isSelected
+                          ? 'bg-white/20 text-white border-white/30'
+                          : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      )}
+                    >
+                      {option.discount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-          <div
-            className={cn(
-              'isolate mx-auto mt-4 mb-28 grid max-w-md grid-cols-1 gap-8 lg:mx-0 lg:max-w-none',
-              tiers.length === 2 ? 'lg:grid-cols-2' : '',
-              tiers.length === 3 ? 'lg:grid-cols-3' : '',
-            )}
-          >
-            {tiers.map((tier) => (
+        {/* ── Pricing Cards Grid ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+          {tiers.map((tier) => {
+            const currentPrice =
+              typeof tier.price === 'string'
+                ? tier.price
+                : tier.price[frequency.value] || tier.price['1'];
+            const currentDiscount =
+              typeof tier.discountPrice === 'object'
+                ? tier.discountPrice[frequency.value]
+                : tier.discountPrice;
+
+            return (
               <div
                 key={tier.id}
                 className={cn(
-                  tier.featured
-                    ? '!bg-gray-900 ring-gray-900 dark:!bg-gray-100 dark:ring-gray-100'
-                    : 'bg-white dark:bg-gray-900/80 ring-gray-300/70 dark:ring-gray-700',
-                  'max-w-xs ring-1 rounded-3xl p-8 xl:p-10',
-                  tier.highlighted ? styles.fancyGlassContrast : '',
+                  'relative flex flex-col justify-between rounded-3xl p-6 sm:p-7 backdrop-blur-xl transition-all duration-300 shadow-xl',
+                  tier.highlighted
+                    ? 'border-2 border-blue-500/60 bg-gradient-to-b from-[#181d2e]/95 via-[#13151f]/95 to-[#0f1118]/95 shadow-blue-950/40 ring-1 ring-blue-500/30 -translate-y-1'
+                    : 'border border-white/10 bg-[#12141a]/90 hover:border-white/20 hover:bg-[#151720]/95'
                 )}
               >
-                <h3
-                  id={tier.id}
-                  className={cn(
-                    tier.featured ? 'text-white dark:text-black' : 'text-black dark:text-white',
-                    'text-2xl font-bold tracking-tight',
-                  )}
-                >
-                  {tier.name}
-                </h3>
-                <p
-                  className={cn(
-                    tier.featured
-                      ? 'text-gray-300 dark:text-gray-500'
-                      : 'text-gray-600 dark:text-gray-400',
-                    'mt-4 text-sm leading-6',
-                  )}
-                >
-                  {tier.description}
-                </p>
-                <p className="mt-6 flex items-baseline gap-x-1">
-                  <span
-                    className={cn(
-                      tier.featured ? 'text-white dark:text-black' : 'text-black dark:text-white',
-                      'text-4xl font-bold tracking-tight',
-                      tier.discountPrice && typeof tier.discountPrice === 'object' && tier.discountPrice[frequency.value as string]
-                        ? 'line-through'
-                        : '',
-                    )}
-                  >
-                    {typeof tier.price === 'string'
-                      ? tier.price
-                      : tier.price[frequency.value]}
-                  </span>
+                {/* Popular Pill */}
+                {tier.tag && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-[10px] tracking-wider uppercase px-3 py-0.5 shadow-md shadow-blue-600/30 border border-blue-400/40">
+                      {tier.tag}
+                    </Badge>
+                  </div>
+                )}
 
-                  <span
-                    className={cn(
-                      tier.featured ? 'text-white dark:text-black' : 'text-black dark:text-white',
-                    )}
-                  >
-                    {typeof tier.discountPrice === 'string'
-                      ? tier.discountPrice
-                      : tier.discountPrice[frequency.value]}
-                  </span>
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h3 className="text-xl font-bold text-white tracking-tight">
+                      {tier.name}
+                    </h3>
+                  </div>
 
-                  {typeof tier.price !== 'string' ? (
-                    <span
-                      className={cn(
-                        tier.featured
-                          ? 'text-gray-300 dark:text-gray-500'
-                          : 'dark:text-gray-400 text-gray-600',
-                        'text-sm font-semibold leading-6',
+                  <p className="text-xs text-neutral-400 min-h-[36px] leading-relaxed">
+                    {tier.description}
+                  </p>
+
+                  {/* Price */}
+                  <div className="my-5 pt-4 border-t border-white/10">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+                        {currentPrice}
+                      </span>
+                      {currentDiscount && (
+                        <span className="text-xs text-neutral-500 line-through">
+                          {currentDiscount}
+                        </span>
                       )}
-                    >
-                      {frequency.priceSuffix}
+                      <span className="text-xs text-neutral-400 font-medium">
+                        {tier.price === '₹0' ? 'forever' : frequency.priceSuffix}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-neutral-500 block mt-0.5">
+                      Billed {frequency.label.toLowerCase()} in INR
                     </span>
-                  ) : null}
-                </p>
-                <a
-                  href={tier.href}
-                  aria-describedby={tier.id}
-                  className={cn(
-                    'flex mt-6 shadow-sm',
-                    tier.soldOut ? 'pointer-events-none' : '',
-                  )}
-                >
+                  </div>
+
+                  {/* CTA Button */}
                   <Button
-                    size="lg"
-                    disabled={tier.soldOut}
+                    asChild
                     className={cn(
-                      'w-full text-black dark:text-white',
-                      !tier.highlighted && !tier.featured
-                        ? 'bg-gray-100 dark:bg-gray-600'
-                        : 'bg-blue-300 hover:bg-blue-400 dark:bg-blue-600 dark:hover:bg-blue-700',
-                      tier.featured || tier.soldOut ? 'bg-white dark:bg-neutral-900 hover:bg-gray-200 dark:hover:bg-black' : 'hover:opacity-80 transition-opacity',
+                      'w-full h-11 rounded-xl text-xs font-semibold shadow-md transition-all',
+                      tier.highlighted
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/30'
+                        : 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
                     )}
-                    variant={tier.highlighted ? 'default' : 'outline'}
                   >
-                    {tier.soldOut ? 'Sold out' : tier.cta}
+                    <Link href={tier.href}>
+                      {tier.cta}
+                      <ArrowRight className="size-3.5 ml-1.5" />
+                    </Link>
                   </Button>
-                </a>
 
-                <ul
-                  className={cn(
-                    tier.featured
-                      ? 'text-gray-300 dark:text-gray-500'
-                      : 'text-gray-700 dark:text-gray-400',
-                    'mt-8 space-y-3 text-sm leading-6 xl:mt-10',
-                  )}
-                >
-                  {tier.features.map((feature) => (
-                    <li key={feature} className="flex gap-x-3">
-                      <CheckIcon
-                        className={cn(
-                          tier.featured ? 'text-white dark:text-black' : '',
-                          tier.highlighted
-                            ? 'text-blue-500'
-                            : 'text-gray-500',
+                  {/* Feature Checklist */}
+                  <div className="mt-6 pt-5 border-t border-white/[0.08] space-y-2.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 block mb-3">
+                      Included in {tier.name}
+                    </span>
+                    {tier.features.map((feature) => {
+                      const isUpcoming = feature.toLowerCase().includes('upcoming');
+                      return (
+                        <div
+                          key={feature}
+                          className="flex items-start gap-2 text-xs text-neutral-300 leading-relaxed"
+                        >
+                          <CheckCircle2 className="size-3.5 text-blue-400 shrink-0 mt-0.5" />
+                          <span className={cn(isUpcoming && 'text-purple-300 font-medium')}>
+                            {feature}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                          'h-6 w-5 flex-none',
-                        )}
-                        aria-hidden="true"
-                      />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-neutral-500">
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="size-3 text-emerald-400" />
+                    <span>No hidden fees</span>
+                  </span>
+                  <span>Instant setup</span>
+                </div>
               </div>
-            ))}
+            );
+          })}
+        </div>
+
+        {/* ── Enterprise Custom Note ── */}
+        <div className="mt-12 rounded-2xl border border-white/10 bg-[#14161f]/80 p-6 sm:p-8 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="space-y-1 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2">
+              <Badge className="bg-purple-500/15 text-purple-300 border-purple-500/30 text-[10px]">
+                Teams & Custom Volume
+              </Badge>
+              <span className="text-xs text-neutral-400">• Dedicated Infrastructure</span>
+            </div>
+            <h4 className="text-lg font-bold text-white">
+              Need custom limits, multi-tenant setups, or on-premise relay?
+            </h4>
+            <p className="text-xs text-neutral-400 max-w-xl">
+              We offer bespoke plans with dedicated IP pools, custom rate limits, custom SLA guarantees, and enterprise webhook integrations.
+            </p>
           </div>
+          <Button
+            asChild
+            variant="outline"
+            className="h-11 px-6 rounded-xl border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold shrink-0"
+          >
+            <Link href="/contact-us">Talk to Sales</Link>
+          </Button>
         </div>
       </div>
     </div>
