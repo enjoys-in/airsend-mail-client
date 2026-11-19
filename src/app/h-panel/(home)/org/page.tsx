@@ -1,8 +1,10 @@
-import { OrganizationsTable } from "./_components/organizations-table"
-import { Button } from "@/components/ui/button"
-import { Plus, Building2 } from "lucide-react"
 import Link from "next/link"
+import { Plus } from "lucide-react"
 import serverAxios from "@/lib/api/serverAxios"
+import { Button } from "@/components/ui/button"
+import { OrganizationsTable } from "./_components/organizations-table"
+import { OverviewStats } from "./_components/overview-stats"
+import { OrgPage, PageHeader } from "./_components/kit"
 
 export default async function OrganizationsPage() {
     let organizations: any[] = []
@@ -15,27 +17,31 @@ export default async function OrganizationsPage() {
         organizations = []
     }
 
+    // Everything below comes from the organizations already fetched (no extra requests).
+    const domains = organizations.flatMap((org) => org.domains || [])
+    const verified = domains.filter((d: any) => d.dns_verified === true || String(d.status).toLowerCase() === "verified").length
+    const counts = domains.map((d: any) => d.accounts_count).filter((n: unknown): n is number => typeof n === "number")
+    const mailboxes = counts.length ? counts.reduce((sum: number, n: number) => sum + n, 0) : null
+
     return (
-        <div className="flex flex-col h-full bg-background">
-            <header className="flex h-14 shrink-0 items-center justify-between border-b px-6 bg-card">
-                <div className="flex items-center gap-2.5">
-                    <Building2 className="w-5 h-5 text-primary" />
-                    <h1 className="text-base font-semibold">Organizations Overview</h1>
-                </div>
-                <div>
-                    <Button asChild size="sm" className="gap-1.5 shadow-sm">
+        <OrgPage>
+            <PageHeader
+                title="Organizations"
+                description="Group your domains and members, and decide who can do what in Files, Tasks and Workspace."
+                actions={
+                    <Button asChild size="sm">
                         <Link href="/h-panel/org/create">
-                            <Plus className="h-4 w-4" />
-                            Create Organization
+                            <Plus className="mr-1.5 h-4 w-4" />
+                            Create organization
                         </Link>
                     </Button>
-                </div>
-            </header>
-            <div className="flex-1 p-6 min-w-0 overflow-auto">
-                <div className="container max-w-6xl mx-auto space-y-6">
-                    <OrganizationsTable data={organizations} />
-                </div>
+                }
+            />
+
+            <div className="space-y-6">
+                <OverviewStats organizations={organizations.length} domains={domains.length} verified={verified} mailboxes={mailboxes} />
+                <OrganizationsTable data={organizations} />
             </div>
-        </div>
+        </OrgPage>
     )
 }
