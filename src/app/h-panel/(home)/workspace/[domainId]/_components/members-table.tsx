@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -12,14 +12,18 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { API } from "@/lib/api/handler"
-import { Trash2 } from "lucide-react"
+import { Trash2, Users } from "lucide-react"
 import type { Scope, WorkspaceMember } from "@/lib/types/workspace.interface"
+import { EmptyState, Initials, Pill, type Tone } from "@/components/h-panel/kit"
 import { ScopeEditor } from "./scope-editor"
 
 interface MembersTableProps {
     members: WorkspaceMember[]
     onMembersChange: (members: WorkspaceMember[]) => void
 }
+
+const PERMISSION_LABEL: Record<string, string> = { ro: "read", w: "write", rw: "read & write" }
+const PERMISSION_TONE: Record<string, Tone> = { ro: "neutral", w: "amber", rw: "blue" }
 
 export function MembersTable({ members, onMembersChange }: MembersTableProps) {
     const { toast } = useToast()
@@ -43,58 +47,81 @@ export function MembersTable({ members, onMembersChange }: MembersTableProps) {
 
     if (members.length === 0) {
         return (
-            <div className="flex items-center justify-center h-[200px] text-muted-foreground border rounded-md">
-                No members yet. Add accounts from the dropdown above.
-            </div>
+            <EmptyState
+                icon={Users}
+                title="No members yet"
+                description="Add an account with the form above to give it access to this workspace."
+            />
         )
     }
 
     return (
-        <div className="border rounded-md overflow-auto max-h-[400px]">
+        <div className="max-h-[520px] overflow-auto">
             <Table>
-                <TableHeader className="sticky top-0 bg-background z-10">
-                    <TableRow>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Scopes</TableHead>
-                        <TableHead className="w-[60px]">Action</TableHead>
+                <TableHeader className="sticky top-0 z-10 bg-card">
+                    <TableRow className="hover:bg-transparent">
+                        <TableHead>Member</TableHead>
+                        <TableHead>Access</TableHead>
+                        <TableHead className="w-[1%] text-right" />
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {members.map((member) => (
                         <TableRow key={member.id}>
-                            <TableCell className="font-medium">{member.email}</TableCell>
                             <TableCell>
-                                <ScopeEditor
-                                    memberId={member.id}
-                                    scopes={member.scopes}
-                                    onScopesUpdated={handleScopesUpdated}
-                                />
+                                <div className="flex items-center gap-3">
+                                    <Initials text={member.email} />
+                                    <span className="text-sm">{member.email}</span>
+                                </div>
                             </TableCell>
                             <TableCell>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                            <Trash2 className="h-4 w-4" color="red" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Remove member?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This will remove {member.email} from the workspace. Their cached profile will be invalidated immediately.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel className="rounded-none">Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                onClick={() => handleRemove(member.id)}
-                                                className="bg-red-500 text-primary-foreground hover:bg-red-600 rounded-none"
-                                            >
-                                                Remove
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                {member.scopes.length === 0 ? (
+                                    <span className="text-xs text-muted-foreground">No access</span>
+                                ) : (
+                                    <div className="flex flex-wrap gap-1">
+                                        {member.scopes.map((scope) => {
+                                            const [feature, permission] = scope.split(":")
+                                            return (
+                                                <Pill key={scope} tone={PERMISSION_TONE[permission] ?? "neutral"} className="capitalize">
+                                                    {feature} · {PERMISSION_LABEL[permission] ?? permission}
+                                                </Pill>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex items-center justify-end gap-1">
+                                    <ScopeEditor
+                                        memberId={member.id}
+                                        scopes={member.scopes}
+                                        onScopesUpdated={handleScopesUpdated}
+                                    />
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600" aria-label={`Remove ${member.email}`}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Remove member?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will remove {member.email} from the workspace. Their cached profile will be invalidated immediately.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    onClick={() => handleRemove(member.id)}
+                                                    className="bg-red-600 text-white hover:bg-red-700"
+                                                >
+                                                    Remove
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))}
