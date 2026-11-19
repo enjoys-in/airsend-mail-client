@@ -19,6 +19,7 @@ import {
   Lock,
   BarChart3,
   Shield,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +29,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
-import { workspaceApi } from "../_lib/api";
 import { canUserPerformInChannel, getUserRoleInTeam } from "../_lib/permissions";
 import { useAccessStore } from "../_lib/access-store";
 import { isTimedOut } from "../_lib/use-access";
@@ -38,6 +38,7 @@ import EmojiPicker from "./EmojiPicker";
 import GifPicker from "./GifPicker";
 import { PollCreatorDialog } from "./PollCreatorDialog";
 import type { MessagePriority } from "../_lib/chat-types";
+import { formatBytes } from "../_lib/file-utils";
 
 // ---------------------------------------------------------------------------
 // MessageInput — rich text input with mentions, replies, emoji, GIF, files
@@ -63,6 +64,11 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     setReplyingTo,
     setEditingMessage,
     currentUserId,
+    sendDMText,
+    sendFiles,
+    pendingUploads,
+    cancelUpload,
+    dismissUpload,
   } = useChatStore();
 
   // Props from URL take priority
@@ -142,13 +148,18 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
           return member?.userId;
         })
         .filter((id): id is string => !!id);
-      sendMessage(content, mentionIds, [], priority);
+      if (dm && !channel) {
+        // Direct message: plain text through the DM endpoint.
+        sendDMText(content);
+      } else {
+        sendMessage(content, mentionIds, [], priority);
+      }
       setContent("");
       setPriority("normal");
     }
 
     textareaRef.current?.focus();
-  }, [content, editingMessageId, editMessage, sendMessage]);
+  }, [content, editingMessageId, editMessage, sendMessage, sendDMText, dm, channel]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Send on Enter (but Shift+Enter for newline)
@@ -219,30 +230,19 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     }
   };
 
-  // File upload — sends a message then attaches files to it
+  // File upload (channel or DM): the bytes go to the files service first, then the message carrying the returned
+  // file id is sent to the workspace server (see chat-store sendFiles). Text typed in the box becomes the caption.
   const handleFileUpload = async (files: File[]) => {
-    if (!effectiveChannelId || !currentUserId) return;
-
-    for (const file of files) {
-      // Send a file message
-      try {
-        const serverMsg = await workspaceApi.sendMessage(
-          effectiveChannelId,
-          { content: `📎 ${file.name}`, type: "file" },
-          currentUserId,
-        );
-
-        // Upload attachment to the message
-        await workspaceApi.uploadAttachment(serverMsg.id, file, currentUserId);
-
-        // Refetch messages to show the attachment
-        const { fetchMessages } = useChatStore.getState();
-        fetchMessages(effectiveChannelId, currentUserId);
-      } catch {
-        // Could show error toast
-      }
-    }
+    if ((!effectiveChannelId && !effectiveDmId) || !currentUserId || !canAttach || !canSend) return;
+    const caption = editingMessageId ? "" : content.trim();
+    if (caption) setContent("");
+    await sendFiles(files, caption);
   };
+
+  // Uploads in flight (or failed) for the open conversation
+  const myUploads = pendingUploads.filter(
+    (u) => u.contextType !== "team" && (u.contextId === effectiveChannelId || u.contextId === effectiveDmId),
+  );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -392,6 +392,53 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
           >
             <X className="size-3.5" />
           </button>
+        </div>
+      )}
+
+      {/* Files uploading to the files service */}
+      {myUploads.length > 0 && (
+        <div className="mb-2 flex flex-col gap-1.5">
+          {myUploads.map((u) => (
+            <div
+              key={u.id}
+              className={cn(
+                "flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs",
+                u.status === "error"
+                  ? "border-destructive/30 bg-destructive/10 text-destructive"
+                  : "border-border/50 bg-accent/40",
+              )}
+            >
+              {u.status === "error" ? (
+                <AlertTriangle className="size-3.5 shrink-0" />
+              ) : (
+                <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">
+                  {u.name} <span className="font-normal opacity-70">· {formatBytes(u.size)}</span>
+                </p>
+                {u.status === "error" ? (
+                  <p className="truncate text-[11px]">{u.error ?? "Upload failed"}</p>
+                ) : (
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="h-1 flex-1 overflow-hidden rounded-full bg-border/60">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${u.progress}%` }} />
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      {u.status === "sending" ? "Sending…" : `${u.progress}%`}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => (u.status === "error" ? dismissUpload(u.id) : cancelUpload(u.id))}
+                className="shrink-0 opacity-70 hover:opacity-100"
+                aria-label={u.status === "error" ? "Dismiss" : "Cancel upload"}
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
