@@ -3,7 +3,6 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Building2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
@@ -27,11 +26,7 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex min-h-full w-full flex-col bg-background">
             <div className="border-b border-border/70 bg-card/40">
-                <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-3 px-4 pt-4 sm:px-6">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Building2 className="h-4 w-4" />
-                        <span>Organizations</span>
-                    </div>
+                <div className="mx-auto flex w-full max-w-[1200px] px-4 sm:px-6">
                     <nav aria-label="Organization sections" className="-mb-px flex gap-1 overflow-x-auto">
                         {TABS.map((tab) => {
                             const active = tab.match(pathname)
