@@ -16,7 +16,6 @@ import SentMailToast from "@/components/common/sent-mail";
 import CustomWidget from "@/components/common/custom-widget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePathname } from "next/navigation";
-import { TasksProvider } from "./(home)/tasks/_lib/tasks-context";
 import { FilesProvider } from "./(home)/files/_lib/files-provider";
 
 // NOTE: this must be a layout (not a template). A template remounts on every
@@ -66,11 +65,9 @@ function MainLayout({ children }: { children: ReactNode }) {
   );
 
   // Providers that must sit above both sidebar and page:
-  const needsTasks = pathname.startsWith("/v2/tasks");
   const needsFiles = pathname.startsWith("/v2/files");
 
   let wrapped = content;
-  if (needsTasks) wrapped = <TasksProvider>{wrapped}</TasksProvider>;
   if (needsFiles) wrapped = <Suspense fallback={<Spinner />}><FilesProvider>{wrapped}</FilesProvider></Suspense>;
   return wrapped;
 }
