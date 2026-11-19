@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	Dialog,
 	DialogContent,
@@ -11,11 +9,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@nimbus/_components/ui/select";
 import { useEffect, useState, type ReactNode } from "react";
 import { FieldError } from "@nimbus/_components/ui/field-error";
-import { createTagSchema } from "@nimbus/_lib/files-types";
+import { createTagSchema } from "@nimbus/_packages/shared";
 import { Button } from "@nimbus/_components/ui/button";
 import { Label } from "@nimbus/_components/ui/label";
 import { Input } from "@nimbus/_components/ui/input";
-import type { Tag } from "@nimbus/_lib/files-types";
+import type { Tag } from "@nimbus/_packages/shared";
 
 function renderTagSelectItems(tags: Tag[], level = 0): ReactNode[] {
 	return tags.flatMap(tag => [
@@ -30,29 +28,21 @@ function renderTagSelectItems(tags: Tag[], level = 0): ReactNode[] {
 }
 
 interface CreateTagDialogProps {
-	isOpen?: boolean;
-	open?: boolean;
-	onClose?: () => void;
-	onOpenChange?: (open: boolean) => void;
-	onCreate?: (data: { name: string; color: string; parentId?: string }) => void;
-	onCreateTag?: (data: { name: string; color: string; parentId?: string | null }) => void;
-	tags?: Tag[];
+	isOpen: boolean;
+	onClose: () => void;
+	onCreate: (data: { name: string; color: string; parentId?: string }) => void;
+	tags: Tag[];
 	initialParentId?: string;
 }
 
-export function CreateTagDialog({ isOpen, open, onClose, onOpenChange, onCreate, onCreateTag, tags = [], initialParentId }: CreateTagDialogProps) {
+export function CreateTagDialog({ isOpen, onClose, onCreate, tags, initialParentId }: CreateTagDialogProps) {
 	const [name, setName] = useState("");
 	const [color, setColor] = useState("#808080");
 	const [parentId, setParentId] = useState<string | undefined>(undefined);
 	const [errors, setErrors] = useState<{ name?: string; color?: string }>({});
-	const isVisible = open !== undefined ? open : isOpen ?? false;
-	const handleClose = () => {
-		onClose?.();
-		onOpenChange?.(false);
-	};
 
 	useEffect(() => {
-		if (isVisible) {
+		if (isOpen) {
 			setParentId(initialParentId);
 		} else {
 			// Batch state updates to avoid race conditions
@@ -98,14 +88,12 @@ export function CreateTagDialog({ isOpen, open, onClose, onOpenChange, onCreate,
 			parentId: parentId === "none" ? undefined : parentId,
 		});
 		if (validationResult.success) {
-			const data = {
+			onCreate({
 				name: validationResult.data.name,
 				color: validationResult.data.color,
 				parentId: validationResult.data.parentId ?? undefined,
-			};
-			onCreate?.(data);
-			onCreateTag?.(data);
-			handleClose();
+			});
+			onClose();
 		} else {
 			// Update errors for final validation
 			const newErrors: { name?: string; color?: string } = {};
@@ -124,7 +112,7 @@ export function CreateTagDialog({ isOpen, open, onClose, onOpenChange, onCreate,
 	const isValid = Object.keys(errors).length === 0 && name.trim().length > 0;
 
 	return (
-		<Dialog open={isVisible} onOpenChange={(open) => !open && handleClose()}>
+		<Dialog open={isOpen} onOpenChange={onClose}>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Create New Tag</DialogTitle>
