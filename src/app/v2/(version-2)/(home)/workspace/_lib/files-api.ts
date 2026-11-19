@@ -56,7 +56,7 @@ export class FilesApiError extends Error {
 }
 
 /** Friendly, user-facing text for a failed files call (toast / inline error). */
-export function filesErrorMessage(err: unknown, fallback = "Something went wrong with the file"): string {
+export function filesErrorMessage(err: unknown, fallback = "Something went wrong with the file", context?: WorkspaceFileContext): string {
   if (err instanceof FilesApiError) {
     switch (err.status) {
       case 0:
@@ -70,6 +70,10 @@ export function filesErrorMessage(err: unknown, fallback = "Something went wrong
       case 404:
         return "That file no longer exists."
       case 409:
+        // Channel and team uploads go to the team's storage; DM uploads go to the sender's own account.
+        if (context === "dm") {
+          return "Connect a storage account in Files first. Files you send in direct messages are stored in your own account."
+        }
         return err.message || "No storage is configured for this team. Ask a team admin to connect a storage account."
       case 413:
         return err.message || "That file is too large for this storage."
@@ -224,6 +228,12 @@ export function saveBlob(blob: Blob, filename: string) {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
+}
+
+/** Removes the stored bytes of a workspace file (best effort; the workspace record is deleted separately). */
+export async function deleteWorkspaceFile(fileId: string): Promise<void> {
+  if (!FILE_ID.test(fileId)) return
+  await filesFetch(`/api/workspace/files/${encodeURIComponent(fileId)}`, { method: "DELETE" })
 }
 
 // ── Team storage ──
