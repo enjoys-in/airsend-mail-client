@@ -48,8 +48,8 @@ export function ClearLogsButton({ disabled }: { disabled?: boolean }) {
     return (
         <AlertDialog open={open} onOpenChange={setOpen}>
             <AlertDialogTrigger asChild>
-                <Button variant="outline" className="rounded-none" disabled={disabled}>
-                    <Trash2 className="mr-2 h-4 w-4" />
+                <Button variant="outline" size="sm" disabled={disabled}>
+                    <Trash2 className="mr-2 h-4 w-4 text-muted-foreground" />
                     Clear logs
                 </Button>
             </AlertDialogTrigger>
