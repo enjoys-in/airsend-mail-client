@@ -1,4 +1,4 @@
-import { SigninAccountDialog } from "@nimbus/_components/auth/signin-account-dialog";
+import { ConnectAccountDialog } from "@nimbus/_components/dialogs/connect-account-dialog";
 import { AccountProvider } from "@nimbus/_components/providers/account-provider";
 import { SidebarInset, SidebarProvider } from "@nimbus/_components/ui/sidebar";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -33,7 +33,7 @@ function DrivePage() {
 	const navigate = useNavigate({ from: "/dashboard/$providerSlug/$accountId" });
 	const currentFolderId = folderId ?? "root";
 
-	const handleSigninOpenChange = (open: boolean) => {
+	const handleConnectOpenChange = (open: boolean) => {
 		navigate({
 			replace: true,
 			search: prev => {
@@ -66,7 +66,7 @@ function DrivePage() {
 							<Header />
 							<FileTable files={data || []} isLoading={isLoading} refetch={refetch} error={error} />
 						</DndKitProvider>
-						<SigninAccountDialog open={!!connectAccount} onOpenChange={handleSigninOpenChange} />
+						<ConnectAccountDialog open={!!connectAccount} onOpenChange={handleConnectOpenChange} />
 					</SidebarInset>
 				</SidebarProvider>
 			</Suspense>
