@@ -1,4 +1,4 @@
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 
 const WarningBanner = () => {
 	return (
