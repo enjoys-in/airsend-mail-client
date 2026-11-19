@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@nimbus/_components/ui/card";
 import { Star, GitFork, Calendar } from "lucide-react";
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 
 export function ContributorFooter({
 	repoName,
