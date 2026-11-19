@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, forwardRef, useContext, useId, useMemo, type ComponentProps } from "react";
 import { Legend, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@nimbus/_lib/utils";
