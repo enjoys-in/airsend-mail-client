@@ -5,7 +5,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@nimbus/_components/ui/dropdown-menu";
-import { BoxIcon, DropboxIcon, GoogleDriveIcon, LogoIcon, OneDriveIcon, S3Icon } from "@nimbus/_components/icons";
+import { LogoIcon, S3Icon, TelegramIcon } from "@nimbus/_components/icons";
 import { useUserInfoProvider } from "@nimbus/_components/providers/user-info-provider";
 import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
 import type { LimitedAccessAccount } from "@nimbus/_packages/shared";
@@ -15,20 +15,15 @@ import { Skeleton } from "@nimbus/_components/ui/skeleton";
 import { ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "@nimbus/_components/ui/button";
 import { useEffect, useState } from "react";
+import { providerLabel } from "@nimbus/_lib/providers";
 import { cn } from "@nimbus/_lib/utils";
 
 export function providerToIcon(providerId: string) {
 	switch (providerId) {
-		case "google":
-			return <GoogleDriveIcon className="h-5 w-5" />;
-		case "microsoft":
-			return <OneDriveIcon className="h-5 w-5" />;
-		case "box":
-			return <BoxIcon className="h-5 w-5" />;
-		case "dropbox":
-			return <DropboxIcon className="h-5 w-5" />;
 		case "s3":
 			return <S3Icon className="h-5 w-5" />;
+		case "telegram":
+			return <TelegramIcon className="h-5 w-5" />;
 		default:
 			return <LogoIcon className="h-5 w-5" />;
 	}
@@ -79,8 +74,8 @@ export function SourceSelector() {
 					>
 						<div className="flex items-center gap-2">
 							{selectedIcon}
-							<span className={cn("truncate", !selectedAccountNickname ? "capitalize" : "")}>
-								{selectedAccountNickname || providerId || "Select a source"}
+							<span className={cn("truncate")}>
+								{selectedAccountNickname || (providerId ? providerLabel(providerId) : "Select a source")}
 							</span>
 						</div>
 						<ChevronsUpDown className="h-4 w-4 opacity-50" />
@@ -102,7 +97,7 @@ export function SourceSelector() {
 										{account.nickname ? (
 											<span className="truncate overflow-x-clip">{account.nickname}</span>
 										) : (
-											<span className="truncate overflow-x-clip capitalize">{account.providerId}</span>
+											<span className="truncate overflow-x-clip">{providerLabel(account.providerId)}</span>
 										)}
 									</DropdownMenuItem>
 								))
