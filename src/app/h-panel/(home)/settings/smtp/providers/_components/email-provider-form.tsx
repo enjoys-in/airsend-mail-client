@@ -1,10 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SmtpConfigForm } from "./smtp-config-form"
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core"
@@ -16,9 +14,11 @@ import {
     arrayMove,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, CheckCircle2 } from "lucide-react"
+import { GripVertical, CheckCircle2, Server } from "lucide-react"
 import { SavedProviders } from "./saved-providers"
 import { useToast } from "@/components/ui/use-toast"
+import { EmptyState, Pill, Section } from "@/components/h-panel/kit"
+import { cn } from "@/lib/utils"
 
 export type SmtpConfig = {
     host: string
@@ -85,7 +85,10 @@ function SortableProvider({
         <div
             ref={setNodeRef}
             style={style}
-            className={`flex items-center justify-between py-2.5 px-2 group border-b last:border-b-0 cursor-pointer hover:bg-muted/50 transition-colors ${isEditing ? "bg-muted/50" : ""}`}
+            className={cn(
+                "group flex cursor-pointer items-center justify-between gap-2 border-b border-border/70 px-4 py-2.5 transition-colors last:border-b-0 hover:bg-muted/50",
+                isEditing && "bg-muted/60"
+            )}
             onClick={onClick}
         >
             <div className="flex items-center gap-2 min-w-0">
@@ -98,14 +101,14 @@ function SortableProvider({
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <span className="text-xs text-muted-foreground w-4 shrink-0">#{index + 1}</span>
-                <Label className="cursor-pointer text-sm truncate">{provider.name}</Label>
+                <Label className="cursor-pointer truncate text-sm font-normal">{provider.name}</Label>
                 {isConfigured && (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
                 )}
             </div>
             <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                 {isActive && !isConfigured && (
-                    <Badge variant="outline" className="text-xs rounded-none">Pending</Badge>
+                    <Pill tone="amber">Pending</Pill>
                 )}
                 <Switch checked={isActive} onCheckedChange={onToggle} />
             </div>
@@ -201,14 +204,11 @@ export function EmailProviderForm() {
             <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
                 {/* Provider list with drag & drop */}
                 <div className="space-y-4">
-                    <Card className="rounded-none">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Email Providers</CardTitle>
-                            <CardDescription className="text-xs">
-                                Toggle providers on/off and drag to set priority order. The top provider (#1) is used first.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0">
+                    <Section
+                        title="Email providers"
+                        description="Toggle providers on or off and drag to set the priority order. The top provider (#1) is used first."
+                        flush
+                    >
                             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                                 <SortableContext items={providerOrder} strategy={verticalListSortingStrategy}>
                                     <div>
@@ -231,30 +231,24 @@ export function EmailProviderForm() {
                                     </div>
                                 </SortableContext>
                             </DndContext>
-                        </CardContent>
-                    </Card>
+                    </Section>
 
                     {/* Priority summary */}
                     {activeProviders.length > 0 && (
-                        <Card className="rounded-none">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm">Send Priority</CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                        <Section title="Send priority">
                                 <div className="flex flex-wrap gap-1.5">
                                     {orderedProviders
                                         .filter((p) => activeProviders.includes(p.id))
                                         .map((p, i) => (
-                                            <Badge key={p.id} variant={savedProviders[p.id] ? "default" : "outline"} className="text-xs rounded-none">
+                                            <Pill key={p.id} tone={savedProviders[p.id] ? "green" : "neutral"}>
                                                 {i + 1}. {p.name}
-                                            </Badge>
+                                            </Pill>
                                         ))}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-2">
+                                <p className="mt-3 text-xs text-muted-foreground">
                                     Emails are sent using the highest-priority provider. If it fails, the next provider is tried.
                                 </p>
-                            </CardContent>
-                        </Card>
+                        </Section>
                     )}
                 </div>
 
@@ -269,11 +263,13 @@ export function EmailProviderForm() {
                             onSave={handleSaveConfig}
                         />
                     ) : (
-                        <Card className="rounded-none">
-                            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                                <p className="text-sm text-muted-foreground">Toggle a provider on and click it to configure SMTP settings.</p>
-                            </CardContent>
-                        </Card>
+                        <Section>
+                            <EmptyState
+                                icon={Server}
+                                title="No provider selected"
+                                description="Toggle a provider on and click it to configure its SMTP settings."
+                            />
+                        </Section>
                     )}
                 </div>
             </div>
