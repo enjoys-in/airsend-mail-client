@@ -8,9 +8,7 @@ import {
     Shield,
     Sliders,
     Search,
-    Globe,
-    ExternalLink,
-    Check,
+    Users,
     KeyRound,
     RefreshCw,
     Loader2,
@@ -34,7 +32,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+import { EmptyState, Initials, Pill, RowsSkeleton } from "./kit"
 import {
     Select,
     SelectContent,
@@ -85,6 +83,8 @@ import type { OrgService } from "../_lib/types"
 interface MembersTableProps {
     data: IMember[]
     onUpdated?: () => void
+    /** Initial load in progress (shows a skeleton instead of an empty state). */
+    loading?: boolean
     /** When set, "Sync users" only covers this organization. */
     orgId?: string
 }
@@ -96,7 +96,7 @@ const defaultRoles = [
     { value: "viewer", label: "Viewer" },
 ]
 
-export function MembersTable({ data, onUpdated, orgId }: MembersTableProps) {
+export function MembersTable({ data, onUpdated, orgId, loading }: MembersTableProps) {
     const { toast } = useToast()
     const [members, setMembers] = React.useState<IMember[]>(data)
     const [searchQuery, setSearchQuery] = React.useState("")
@@ -304,108 +304,108 @@ export function MembersTable({ data, onUpdated, orgId }: MembersTableProps) {
         }
     }
 
-    const getStatusBadge = (status: string) => {
+    const statusPill = (status: string) => {
         switch (status) {
             case "active":
-                return <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-white">Active</Badge>
+                return <Pill tone="green">Active</Pill>
             case "banned":
-                return <Badge variant="destructive">Banned</Badge>
+                return <Pill tone="red">Banned</Pill>
+            case "pending":
+                return <Pill tone="amber">Pending</Pill>
             case "inactive":
-                return <Badge variant="secondary">Inactive</Badge>
+                return <Pill>Inactive</Pill>
             default:
-                return <Badge variant="outline">{status}</Badge>
+                return <Pill>{status}</Pill>
         }
     }
 
-    const getOriginBadge = (member: IMember) => {
-        const isExternal =
-            member.account_origin === "external" ||
-            member.email.startsWith("ext.") ||
-            !!member.external_email
-
-        if (isExternal) {
-            return (
-                <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300">
-                    External
-                </Badge>
-            )
-        }
-        return (
-            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300">
-                Internal
-            </Badge>
-        )
-    }
+    const isExternal = (member: IMember) =>
+        member.account_origin === "external" || member.email.startsWith("ext.") || !!member.external_email
 
     return (
         <div className="space-y-4">
-            {/* Search Bar */}
-            <div className="flex items-center justify-between gap-2">
-                <div className="relative w-full max-w-sm">
+            {/* Toolbar */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative w-full sm:max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="text"
-                        placeholder="Search members by name, email, or role..."
+                        placeholder="Search by name, email, domain or role"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-8 text-sm"
+                        className="h-9 pl-8 text-sm"
                     />
                 </div>
-                <Button variant="outline" size="sm" onClick={syncAll} disabled={syncingAll} title="Add the Files, Tasks and Workspace roles that are missing for members">
-                    {syncingAll ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-2"
+                    onClick={syncAll}
+                    disabled={syncingAll}
+                    title="Add the Files, Tasks and Workspace roles that are missing for members"
+                >
+                    {syncingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     Sync users
                 </Button>
             </div>
 
             {/* Members Table */}
-            <div className="rounded-md border bg-card">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>User / Mailbox</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Organization & Domain</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Service Roles</TableHead>
-                            <TableHead>Feature Scopes</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredMembers.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-                                    No organization members found.
-                                </TableCell>
+            <div className="overflow-hidden rounded-lg border border-border/70">
+                {loading && members.length === 0 ? (
+                    <RowsSkeleton rows={5} />
+                ) : filteredMembers.length === 0 ? (
+                    <EmptyState
+                        icon={Users}
+                        title={searchQuery.trim() ? "No members match your search" : "No members yet"}
+                        description={
+                            searchQuery.trim()
+                                ? "Try a different name, email, domain or role."
+                                : "Mailboxes on the domains of your organization show up here."
+                        }
+                    />
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/40 hover:bg-muted/40">
+                                <TableHead className="h-10 text-xs text-muted-foreground">Member</TableHead>
+                                <TableHead className="h-10 text-xs text-muted-foreground">Organization</TableHead>
+                                <TableHead className="h-10 text-xs text-muted-foreground">Role</TableHead>
+                                <TableHead className="h-10 text-xs text-muted-foreground">Service roles</TableHead>
+                                <TableHead className="hidden h-10 text-xs text-muted-foreground xl:table-cell">Scopes</TableHead>
+                                <TableHead className="h-10 text-xs text-muted-foreground">Status</TableHead>
+                                <TableHead className="h-10 w-12" />
                             </TableRow>
-                        ) : (
-                            filteredMembers.map((member) => (
-                                <TableRow key={member.id}>
-                                    <TableCell>
-                                        <div className="font-medium text-sm text-foreground">
-                                            {member.name || member.email}
-                                        </div>
-                                        <div className="text-xs font-mono text-muted-foreground">
-                                            {member.email}
-                                        </div>
-                                        {member.external_email && (
-                                            <div className="text-[11px] text-purple-600 dark:text-purple-400 mt-0.5 flex items-center gap-1">
-                                                <span>Original:</span> {member.external_email}
+                        </TableHeader>
+                        <TableBody>
+                            {filteredMembers.map((member) => (
+                                <TableRow key={member.id} className="hover:bg-muted/30">
+                                    <TableCell className="py-3">
+                                        <div className="flex items-center gap-3">
+                                            <Initials text={member.name || member.email} />
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="truncate text-sm">{member.name || member.email}</span>
+                                                    {isExternal(member) && <Pill tone="violet">External</Pill>}
+                                                </div>
+                                                <div className="truncate text-xs text-muted-foreground">{member.email}</div>
+                                                {member.external_email && (
+                                                    <div className="truncate text-[11px] text-muted-foreground">
+                                                        Original: {member.external_email}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
                                     </TableCell>
-                                    <TableCell>{getOriginBadge(member)}</TableCell>
-                                    <TableCell>
-                                        <div className="text-sm font-medium">{member.organization || "—"}</div>
+                                    <TableCell className="py-3">
+                                        <div className="text-sm">{member.organization || "—"}</div>
                                         <div className="text-xs text-muted-foreground">{member.domain}</div>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="py-3">
                                         <Select
                                             defaultValue={member.role?.toLowerCase() || "member"}
                                             onValueChange={(val) => updateMemberRole(member.id, val)}
                                         >
-                                            <SelectTrigger className="w-[125px] h-8 text-xs">
+                                            <SelectTrigger className="h-8 w-[120px] border-transparent bg-transparent text-xs shadow-none hover:border-border focus:ring-0">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -417,49 +417,58 @@ export function MembersTable({ data, onUpdated, orgId }: MembersTableProps) {
                                             </SelectContent>
                                         </Select>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="py-3">
                                         <ServiceRoleBadges roles={member.service_roles} />
                                     </TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-wrap items-center gap-1 max-w-[220px]">
-                                            {(member.scopes && member.scopes.length > 0) ? (
-                                                member.scopes.map((s) => {
-                                                    const [feat, perm] = s.split(":")
-                                                    return (
+                                    <TableCell className="hidden py-3 xl:table-cell">
+                                        <div className="flex max-w-[220px] flex-wrap items-center gap-1">
+                                            {member.scopes && member.scopes.length > 0 ? (
+                                                <>
+                                                    {member.scopes.slice(0, 3).map((s) => (
+                                                        <Pill key={s}>{s}</Pill>
+                                                    ))}
+                                                    {member.scopes.length > 3 && (
                                                         <span
-                                                            key={s}
-                                                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                                                            className="text-[11px] text-muted-foreground"
+                                                            title={member.scopes.slice(3).join(", ")}
                                                         >
-                                                            {feat}:{perm}
+                                                            +{member.scopes.length - 3}
                                                         </span>
-                                                    )
-                                                })
+                                                    )}
+                                                </>
                                             ) : (
-                                                <span className="text-xs text-muted-foreground">Default scopes</span>
+                                                <span className="text-xs text-muted-foreground">Default</span>
                                             )}
                                         </div>
                                     </TableCell>
-                                    <TableCell>{getStatusBadge(member.status)}</TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="py-3">{statusPill(member.status)}</TableCell>
+                                    <TableCell className="py-3 text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                                                     <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">Member actions</span>
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
+                                                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                                                    Member actions
+                                                </DropdownMenuLabel>
                                                 <DropdownMenuItem onClick={() => openRoleEditor(member)}>
-                                                    <KeyRound className="h-4 w-4 mr-2" />
-                                                    Edit Service Roles
+                                                    <KeyRound className="mr-2 h-4 w-4" />
+                                                    Edit service roles
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => syncOne(member)} disabled={syncingId === member.id}>
-                                                    {syncingId === member.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                                                    {syncingId === member.id ? (
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <RefreshCw className="mr-2 h-4 w-4" />
+                                                    )}
                                                     Sync access
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => openScopeEditor(member)}>
-                                                    <Sliders className="h-4 w-4 mr-2" />
-                                                    Edit Access Scopes
+                                                    <Sliders className="mr-2 h-4 w-4" />
+                                                    Edit access scopes
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
@@ -469,8 +478,8 @@ export function MembersTable({ data, onUpdated, orgId }: MembersTableProps) {
                                                     }}
                                                     className="text-amber-600 focus:text-amber-600"
                                                 >
-                                                    <Ban className="h-4 w-4 mr-2" />
-                                                    Ban Account
+                                                    <Ban className="mr-2 h-4 w-4" />
+                                                    Ban account
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     onClick={() => {
@@ -479,17 +488,17 @@ export function MembersTable({ data, onUpdated, orgId }: MembersTableProps) {
                                                     }}
                                                     className="text-destructive focus:text-destructive"
                                                 >
-                                                    <UserMinus className="h-4 w-4 mr-2" />
-                                                    Deactivate Member
+                                                    <UserMinus className="mr-2 h-4 w-4" />
+                                                    Deactivate member
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
             </div>
 
             {/* Service Roles Dialog */}
@@ -499,13 +508,13 @@ export function MembersTable({ data, onUpdated, orgId }: MembersTableProps) {
             >
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <KeyRound className="w-5 h-5 text-primary" />
+                        <DialogTitle className="flex items-center gap-2 text-base">
+                            <KeyRound className="h-4 w-4 text-muted-foreground" />
                             Service Roles
                         </DialogTitle>
                         <DialogDescription>
                             Choose the role of{" "}
-                            <strong>{editingRolesMember?.name || editingRolesMember?.email}</strong> in each service of{" "}
+                            <span className="text-foreground">{editingRolesMember?.name || editingRolesMember?.email}</span> in each service of{" "}
                             {editingRolesMember?.organization || "the organization"}.
                         </DialogDescription>
                     </DialogHeader>
@@ -549,12 +558,12 @@ export function MembersTable({ data, onUpdated, orgId }: MembersTableProps) {
                 <DialogContent className="max-w-3xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Sliders className="w-5 h-5 text-primary" />
+                            <Sliders className="h-4 w-4 text-muted-foreground" />
                             Edit Permissions & Scopes
                         </DialogTitle>
                         <DialogDescription>
                             Configure feature access levels for{" "}
-                            <strong>{editingScopesMember?.name || editingScopesMember?.email}</strong>.
+                            <span className="text-foreground">{editingScopesMember?.name || editingScopesMember?.email}</span>.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -595,14 +604,14 @@ export function MembersTable({ data, onUpdated, orgId }: MembersTableProps) {
                             {actionType === "kick" ? (
                                 <>
                                     Are you sure you want to remove{" "}
-                                    <strong>{actionMember?.name || actionMember?.email}</strong> from this
+                                    <span className="text-foreground">{actionMember?.name || actionMember?.email}</span> from this
                                     organization? The mailbox will be marked inactive and unable to send
                                     or receive emails.
                                 </>
                             ) : (
                                 <>
                                     Are you sure you want to ban{" "}
-                                    <strong>{actionMember?.name || actionMember?.email}</strong>? They will be
+                                    <span className="text-foreground">{actionMember?.name || actionMember?.email}</span>? They will be
                                     immediately blocked from sending emails.
                                 </>
                             )}
