@@ -1,27 +1,26 @@
-import React from 'react'
-import InfoCard from './InfoCard'
-import { Mail, MailCheck, AlertCircle, XCircle } from 'lucide-react';
-import serverAxios from '@/lib/api/serverAxios';
-import { ApiResponse } from '@/lib/types';
-import { sentenceCase } from 'change-case';
-import { StatCardSkeleton } from './CardSkelton';
+import React from "react"
+import InfoCard, { type InfoCardIcon } from "./InfoCard"
+import serverAxios from "@/lib/api/serverAxios"
+import { ApiResponse } from "@/lib/types"
+import { sentenceCase } from "change-case"
+import { StatGrid, Panel, EmptyState } from "@/components/h-panel/kit"
 
 export type MailStatisticsResponse = Root2[]
 
 export interface Root2 {
-    status: "received" | "bounced" | "failed" | "sent" | "delivered" | "undelivered";
+    status: "received" | "bounced" | "failed" | "sent" | "delivered" | "undelivered"
     total: number
 }
-const getIcon = (status: string) => {
+const getIcon = (status: string): InfoCardIcon => {
     switch (status) {
         case "received":
-            return <MailCheck className="h-4 w-4 text-muted-foreground" />
+            return "mailCheck"
         case "bounced":
-            return <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            return "alert"
         case "failed":
-            return <XCircle className="h-4 w-4 text-muted-foreground" />
+            return "failed"
         default:
-            return <Mail className="h-4 w-4 text-muted-foreground" />
+            return "mail"
     }
 }
 const MailStatistics = async () => {
@@ -32,19 +31,26 @@ const MailStatistics = async () => {
         if (!data.success) {
             throw new Error(data.message)
         }
+        if (!data.result.length) {
+            return (
+                <Panel>
+                    <EmptyState title="No mail yet" description="Totals appear here once mail is sent or received." />
+                </Panel>
+            )
+        }
         return (
-            <div className="grid auto-rows-min gap-4 md:grid-cols-4 mb-2">
-
-
+            <StatGrid>
                 {data.result.map((item: Root2) => (
-                    <div key={item.status}>
-                        <InfoCard title={`Total Mail ${sentenceCase(item.status)}`} icon={getIcon(item.status)} value={item.total.toString()} />
-                    </div>
+                    <InfoCard key={item.status} title={`Mail ${sentenceCase(item.status).toLowerCase()}`} icon={getIcon(item.status)} value={item.total.toString()} />
                 ))}
-            </div>
+            </StatGrid>
         )
     } catch (error) {
-        return <StatCardSkeleton />
+        return (
+            <Panel>
+                <EmptyState title="Mail statistics are unavailable" description="They could not be loaded right now. Reload the page to try again." />
+            </Panel>
+        )
     }
 }
 

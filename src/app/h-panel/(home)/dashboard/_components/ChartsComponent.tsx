@@ -1,8 +1,7 @@
-import React from 'react'
-import { MailChart } from './MailCharts'
-import { SentReciveChart } from './SentReciveChart'
-import serverAxios from '@/lib/api/serverAxios'
-import { ApiResponse } from '@/lib/types'
+import React from "react"
+import { SentReciveChart } from "./SentReciveChart"
+import serverAxios from "@/lib/api/serverAxios"
+import { ApiResponse } from "@/lib/types"
 
 const ChartsComponent = async () => {
     try {
@@ -11,12 +10,7 @@ const ChartsComponent = async () => {
         if (!data.success) {
             throw new Error(data.message)
         }
-        return (
-            <div>
-                {/* <MailChart /> */}
-                <SentReciveChart chartData={data.result} />
-            </div>
-        )
+        return <SentReciveChart chartData={data.result} />
     } catch (error) {
         return null
     }

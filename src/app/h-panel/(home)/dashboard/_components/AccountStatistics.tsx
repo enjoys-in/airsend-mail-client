@@ -1,9 +1,8 @@
-import React from 'react'
-import InfoCard from './InfoCard'
-import { Users, Globe, CheckCircle, UserCheck } from 'lucide-react';
-import serverAxios from '@/lib/api/serverAxios';
-import { ApiResponse } from '@/lib/types';
-import { StatCardSkeleton } from './CardSkelton';
+import React from "react"
+import InfoCard from "./InfoCard"
+import serverAxios from "@/lib/api/serverAxios"
+import { ApiResponse } from "@/lib/types"
+import { StatGrid, Panel, EmptyState } from "@/components/h-panel/kit"
 
 interface AccountStatisticsResponse {
     totaldomains: string
@@ -20,17 +19,18 @@ const AccountStatistics = async () => {
             throw new Error(data.message)
         }
         return (
-            <div className="grid auto-rows-min gap-4 md:grid-cols-4 mb-2">
-                <InfoCard title="Total Accounts" icon={<Users className="h-4 w-4 text-muted-foreground" />} value={data.result.totalaccounts} />
-                <InfoCard title="Total Domains" icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />} value={data.result.totaldomains} />
-                <InfoCard title="Active Domains" icon={<Globe className="h-4 w-4 text-muted-foreground" />} value={data.result.activedomains} />
-                <InfoCard title="Active Accounts" icon={<UserCheck className="h-4 w-4 text-muted-foreground" />} value={data.result.activeaccounts} />
-            </div>
+            <StatGrid>
+                <InfoCard title="Total accounts" icon="users" value={data.result.totalaccounts} />
+                <InfoCard title="Active accounts" icon="userCheck" value={data.result.activeaccounts} />
+                <InfoCard title="Total domains" icon="domains" value={data.result.totaldomains} />
+                <InfoCard title="Active domains" icon="globe" value={data.result.activedomains} />
+            </StatGrid>
         )
     } catch (error) {
         return (
-            <StatCardSkeleton />
-
+            <Panel>
+                <EmptyState title="Account statistics are unavailable" description="They could not be loaded right now. Reload the page to try again." />
+            </Panel>
         )
     }
 }
