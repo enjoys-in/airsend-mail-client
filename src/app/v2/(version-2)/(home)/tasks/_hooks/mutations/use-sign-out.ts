@@ -1,0 +1,73 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { replayAuthEntrance } from "@tasks/_components/auth/auth-entrance";
+import { replayShellEntrance } from "@tasks/_components/common/shell-entered";
+import { getIdToken } from "@tasks/_fetchers/oauth/get-id-token";
+import { descriptionSaveQueue } from "@tasks/_lib/description-save-queue";
+import { i18n } from "@tasks/_lib/i18n";
+import { authClient } from "@tasks/_lib/auth-client";
+import { signOutState } from "@tasks/_lib/sign-out-state";
+
+function useSignOut(idpLogoutUrl?: string | null) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: session } = authClient.useSession();
+
+  return useMutation({
+    mutationFn: async () => {
+      const resume = descriptionSaveQueue.pause(session?.user.id ?? "");
+      let returnTo: string | null = null;
+      try {
+        if (!(await descriptionSaveQueue.drain(session?.user.id ?? "")))
+          throw new Error(i18n.t("tasks:detail.editor.saveFailed"));
+        const url = idpLogoutUrl ? new URL(idpLogoutUrl) : null;
+        if (url) {
+          url.searchParams.set(
+            "post_logout_redirect_uri",
+            `${window.location.origin}/auth/sign-in`,
+          );
+          signOutState.isRedirecting = true;
+          try {
+            const { idToken } = await getIdToken();
+            if (idToken) url.searchParams.set("id_token_hint", idToken);
+          } catch {
+            // If we can't get the id_token, proceed without it.
+          }
+        } else {
+          signOutState.isRedirecting = true;
+          replayAuthEntrance();
+          replayShellEntrance();
+          returnTo =
+            window.location.pathname +
+            window.location.search +
+            window.location.hash;
+          await navigate({ to: "/auth/sign-in", replace: true });
+        }
+
+        const result = await authClient.signOut();
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+        descriptionSaveQueue.clear();
+        // Drop the signed-out user's data before leaving the app, but keep the
+        // instance config and status that the auth pages reuse.
+        queryClient.removeQueries({
+          predicate: ({ queryKey }) =>
+            queryKey[0] !== "config" && queryKey[0] !== "instance-status",
+        });
+        queryClient.getMutationCache().clear();
+        if (url) window.location.href = url.toString();
+        else signOutState.isRedirecting = false;
+        return result.data;
+      } catch (error) {
+        signOutState.isRedirecting = false;
+        if (returnTo) void navigate({ href: returnTo, replace: true });
+        throw error;
+      } finally {
+        resume();
+      }
+    },
+  });
+}
+
+export default useSignOut;
