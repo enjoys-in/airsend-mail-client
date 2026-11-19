@@ -13,6 +13,7 @@ import {
   getAuthToken,
   isValidUUID,
   toMessage,
+  toAttachment,
   toTeam,
   toChannel,
   toMeeting,
@@ -21,7 +22,7 @@ import {
   toWorkspaceFile,
   toChatTask,
 } from "./api";
-import type { ServerMessage } from "./api";
+import type { ServerMessage, ServerAttachment } from "./api";
 import { refreshMyTasks } from "../../tasks/_lib/my-tasks-store";
 
 interface WSIncoming {
@@ -210,6 +211,25 @@ function handleWSEvent(msg: WSIncoming) {
       useChatStore.setState((s) => ({
         messages: [...s.messages, newMsg],
       }));
+      break;
+    }
+
+    // A file was attached to a message (channel or DM). The bytes live in the files service; this carries the reference.
+    case "message.attachment": {
+      const data = msg.data as { message_id: string; attachment: ServerAttachment };
+      if (!data?.message_id || !data.attachment) break;
+      store.addMessageAttachment(data.message_id, toAttachment(data.attachment));
+      break;
+    }
+
+    case "dm.message.attachment": {
+      const data = msg.data as { conversation_id: string; message_id: string; attachment: ServerAttachment };
+      if (!data?.message_id || !data.attachment) break;
+      store.addMessageAttachment(data.message_id, toAttachment(data.attachment));
+      // The message itself may not be loaded yet (another tab / the partner's file): pull the conversation.
+      if (data.conversation_id && !(useChatStore.getState().dmMessages[data.conversation_id] ?? []).some((m) => m.id === data.message_id)) {
+        void useChatStore.getState().fetchDMMessages(data.conversation_id);
+      }
       break;
     }
 
