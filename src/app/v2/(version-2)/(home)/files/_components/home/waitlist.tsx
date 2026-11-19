@@ -1,6 +1,4 @@
-"use client";
-
-import { emailObjectSchema, type ApiResponse, type WaitlistCount } from "@nimbus/_lib/files-types";
+import { emailObjectSchema, type ApiResponse, type WaitlistCount } from "@nimbus/_packages/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@nimbus/_components/ui/button";
@@ -19,7 +17,7 @@ import z from "zod";
 const formSchema = emailObjectSchema;
 type FormSchema = z.infer<typeof formSchema>;
 
-// API functions for Files backend
+// API functions for Hono backend
 async function getWaitlistCount(): Promise<WaitlistCount> {
 	const response = await publicClient.api.waitlist.count.$get();
 	if (!response.ok) {
