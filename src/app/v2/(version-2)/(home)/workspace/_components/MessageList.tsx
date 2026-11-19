@@ -419,7 +419,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={() => router.push("/v2/workspace/files")}
+            onClick={() => router.push("/v2/files")}
             title="Channel Files"
           >
             <FolderOpen className="size-3.5 text-indigo-500" />

@@ -26,6 +26,7 @@ import SidebarCalendar from "../(home)/calender/_components/sidebar-calendar"
 import ChannelList from "../(home)/workspace/_components/ChannelList"
 import WorkspaceSidebar from "../(home)/workspace/_components/WorkspaceSidebar"
 import { TasksSidebar } from "../(home)/tasks/_components/TasksSidebar"
+import { FilesSidebar } from "../(home)/files/_components/FilesSidebar"
 import { SettingsMenuSidebar } from "./mail/settingsSidebar"
 import { cn } from "@/lib/utils"
 import { useFeatureAccess } from "@/hooks/use-feature-access"
@@ -54,12 +55,13 @@ const navMain: NavItem[] = [
         matchPath: "/v2/calender",
         featureKey: "canAccessCalendar",
     },
-    // {
-    //     title: "Files",
-    //     url: "/v2/files",
-    //     icon: File,
-    //     matchPath: "/v2/files",
-    // },
+    {
+        title: "Files",
+        url: "/v2/files",
+        icon: File,
+        matchPath: "/v2/files",
+        featureKey: "canAccessWorkspace",
+    },
     // {
     //     title: "Chats",
     //     url: "/v2/chats",
@@ -139,7 +141,8 @@ const SidebarSecondaryPanel = React.memo(({ pathname }: { pathname: string }) =>
     // Workspace nested sidebar — team switcher + channels + DMs
     if (pathname.startsWith("/v2/workspace")) return <WorkspaceSidebar />
     if (pathname.startsWith("/v2/tasks")) return <TasksSidebar />
-    if (pathname === "/v2/chats" || pathname === "/v2/files") return <ChannelList />
+    if (pathname.startsWith("/v2/files")) return <FilesSidebar />
+    if (pathname === "/v2/chats") return <ChannelList />
     return null
 })
 SidebarSecondaryPanel.displayName = "SidebarSecondaryPanel"

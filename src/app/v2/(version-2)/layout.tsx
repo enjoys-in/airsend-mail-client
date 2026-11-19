@@ -17,6 +17,7 @@ import CustomWidget from "@/components/common/custom-widget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePathname } from "next/navigation";
 import { TasksProvider } from "./(home)/tasks/_lib/tasks-context";
+import { FilesProvider } from "./(home)/files/_lib/files-provider";
 
 // NOTE: this must be a layout (not a template). A template remounts on every
 // navigation, which disconnected the socket, re-fetched the user/settings and
@@ -64,11 +65,14 @@ function MainLayout({ children }: { children: ReactNode }) {
     </SocketContextProvider>
   );
 
-  // The tasks sidebar (rendered by the app sidebar) and the tasks page share
-  // one provider, so it has to sit above both. Scoped to /v2/tasks because it
-  // fetches on mount. (/v2/workspace/tasks loads its own assigned-only list.)
+  // Providers that must sit above both sidebar and page:
   const needsTasks = pathname.startsWith("/v2/tasks");
-  return needsTasks ? <TasksProvider>{content}</TasksProvider> : content;
+  const needsFiles = pathname.startsWith("/v2/files") || pathname.startsWith("/v2/workspace/files");
+
+  let wrapped = content;
+  if (needsTasks) wrapped = <TasksProvider>{wrapped}</TasksProvider>;
+  if (needsFiles) wrapped = <Suspense fallback={<Spinner />}><FilesProvider>{wrapped}</FilesProvider></Suspense>;
+  return wrapped;
 }
 
 export default MainLayout;

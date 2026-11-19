@@ -85,7 +85,7 @@ function ActivityFeedContent() {
     } else if (n.type === "task_assigned") {
       router.push("/v2/workspace/tasks");
     } else if (n.type === "file_shared") {
-      router.push("/v2/workspace/files");
+      router.push("/v2/files");
     }
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useCallback } from "react";
+import React, { createContext, useContext, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 export interface DashboardSearch {
@@ -28,7 +28,7 @@ interface RouterContextValue {
 
 const RouterContext = createContext<RouterContextValue | null>(null);
 
-export function FilesRouterProvider({
+function InnerFilesRouterProvider({
   children,
   initialParams = {},
 }: {
@@ -98,6 +98,22 @@ export function FilesRouterProvider({
   return <RouterContext.Provider value={value}>{children}</RouterContext.Provider>;
 }
 
+export function FilesRouterProvider({
+  children,
+  initialParams = {},
+}: {
+  children: React.ReactNode;
+  initialParams?: Record<string, string>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <InnerFilesRouterProvider initialParams={initialParams}>
+        {children}
+      </InnerFilesRouterProvider>
+    </Suspense>
+  );
+}
+
 export function useNavigate(_options?: any) {
   const ctx = useContext(RouterContext);
   const router = useRouter();
@@ -125,20 +141,10 @@ export function useNavigate(_options?: any) {
 
 export function useSearch(_options?: any): DashboardSearch {
   const ctx = useContext(RouterContext);
-  const searchParams = useSearchParams();
-
   if (ctx) {
     return ctx.search;
   }
-
-  const res: DashboardSearch = {};
-  if (!searchParams) return res;
-  searchParams.forEach((value, key) => {
-    if (value === "true") (res as any)[key] = true;
-    else if (value === "false") (res as any)[key] = false;
-    else (res as any)[key] = value;
-  });
-  return res;
+  return {};
 }
 
 export function useParams(_options?: any): Record<string, string> {
@@ -150,7 +156,7 @@ export function useLocation(): { pathname: string; search: Record<string, string
   const pathname = usePathname();
   const search = useSearch();
   return {
-    pathname: pathname || "/v2/workspace/files",
+    pathname: pathname || "/v2/files",
     search: search as any,
   };
 }
