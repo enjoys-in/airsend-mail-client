@@ -1,5 +1,3 @@
-"use client";
-
 // TODO: this should be more provider agnostic, especially around the folder logic
 
 "use-client";
@@ -23,7 +21,7 @@ import { RenameFileDialog } from "@nimbus/_components/dialogs/rename-file-dialog
 import { DeleteFileDialog } from "@nimbus/_components/dialogs/delete-file-dialog";
 import { usePinFile } from "@nimbus/_hooks/useDriveOps";
 import { Button } from "@nimbus/_components/ui/button";
-import type { File } from "@nimbus/_lib/files-types";
+import type { File } from "@nimbus/_packages/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 
