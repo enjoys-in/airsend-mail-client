@@ -16,7 +16,6 @@ import SentMailToast from "@/components/common/sent-mail";
 import CustomWidget from "@/components/common/custom-widget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePathname } from "next/navigation";
-import { FilesProvider } from "./(home)/files/_lib/files-provider";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { featureForPath } from "@/lib/feature-gate";
 import { AccessDenied } from "./_components/access-denied";
@@ -81,11 +80,8 @@ function MainLayout({ children }: { children: ReactNode }) {
   );
 
   // Providers that must sit above both sidebar and page:
-  const needsFiles = pathname.startsWith("/v2/files");
 
-  let wrapped = content;
-  if (needsFiles) wrapped = <Suspense fallback={<Spinner />}><FilesProvider>{wrapped}</FilesProvider></Suspense>;
-  return wrapped;
+  return content;
 }
 
 export default MainLayout;
