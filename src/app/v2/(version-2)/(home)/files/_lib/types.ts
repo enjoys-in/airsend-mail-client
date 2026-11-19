@@ -1,7 +1,7 @@
 // This file holds web-specific types and interfaces for the Next.js front end app.
 import type { ChangeEvent, ComponentProps, ReactNode } from "react";
 import type { Button } from "@nimbus/_components/ui/button";
-import type { DriveProvider } from "@nimbus/_lib/files-types";
+import type { DriveProvider } from "@nimbus/_packages/shared";
 import type { Input } from "@nimbus/_components/ui/input";
 
 export interface CreateFolderDialogProps {
