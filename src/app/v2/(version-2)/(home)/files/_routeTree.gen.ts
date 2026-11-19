@@ -9,32 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./_routes/__root"
-import { Route as DevelopersRouteImport } from "./_routes/developers"
-import { Route as PublicRouteImport } from "./_routes/_public"
 import { Route as ProtectedRouteImport } from "./_routes/_protected"
 import { Route as IndexRouteImport } from "./_routes/index"
-import { Route as PublicVerifyEmailRouteImport } from "./_routes/_public/verify-email"
-import { Route as PublicTermsRouteImport } from "./_routes/_public/terms"
-import { Route as PublicSignupRouteImport } from "./_routes/_public/signup"
-import { Route as PublicSigninRouteImport } from "./_routes/_public/signin"
-import { Route as PublicResetPasswordRouteImport } from "./_routes/_public/reset-password"
-import { Route as PublicPrivacyRouteImport } from "./_routes/_public/privacy"
-import { Route as PublicForgotPasswordRouteImport } from "./_routes/_public/forgot-password"
-import { Route as PublicContributorsRouteImport } from "./_routes/_public/contributors"
 import { Route as ProtectedDashboardRouteImport } from "./_routes/_protected/dashboard"
 import { Route as ProtectedDashboardIndexRouteImport } from "./_routes/_protected/dashboard/index"
 import { Route as ProtectedDashboardSettingsRouteImport } from "./_routes/_protected/dashboard/settings"
 import { Route as ProtectedDashboardProviderSlugAccountIdRouteImport } from "./_routes/_protected/dashboard/$providerSlug.$accountId"
 
-const DevelopersRoute = DevelopersRouteImport.update({
-  id: "/developers",
-  path: "/developers",
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PublicRoute = PublicRouteImport.update({
-  id: "/_public",
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProtectedRoute = ProtectedRouteImport.update({
   id: "/_protected",
   getParentRoute: () => rootRouteImport,
@@ -43,46 +24,6 @@ const IndexRoute = IndexRouteImport.update({
   id: "/",
   path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
-const PublicVerifyEmailRoute = PublicVerifyEmailRouteImport.update({
-  id: "/verify-email",
-  path: "/verify-email",
-  getParentRoute: () => PublicRoute,
-} as any)
-const PublicTermsRoute = PublicTermsRouteImport.update({
-  id: "/terms",
-  path: "/terms",
-  getParentRoute: () => PublicRoute,
-} as any)
-const PublicSignupRoute = PublicSignupRouteImport.update({
-  id: "/signup",
-  path: "/signup",
-  getParentRoute: () => PublicRoute,
-} as any)
-const PublicSigninRoute = PublicSigninRouteImport.update({
-  id: "/signin",
-  path: "/signin",
-  getParentRoute: () => PublicRoute,
-} as any)
-const PublicResetPasswordRoute = PublicResetPasswordRouteImport.update({
-  id: "/reset-password",
-  path: "/reset-password",
-  getParentRoute: () => PublicRoute,
-} as any)
-const PublicPrivacyRoute = PublicPrivacyRouteImport.update({
-  id: "/privacy",
-  path: "/privacy",
-  getParentRoute: () => PublicRoute,
-} as any)
-const PublicForgotPasswordRoute = PublicForgotPasswordRouteImport.update({
-  id: "/forgot-password",
-  path: "/forgot-password",
-  getParentRoute: () => PublicRoute,
-} as any)
-const PublicContributorsRoute = PublicContributorsRouteImport.update({
-  id: "/contributors",
-  path: "/contributors",
-  getParentRoute: () => PublicRoute,
 } as any)
 const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   id: "/dashboard",
@@ -109,31 +50,13 @@ const ProtectedDashboardProviderSlugAccountIdRoute =
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
-  "/developers": typeof DevelopersRoute
   "/dashboard": typeof ProtectedDashboardRouteWithChildren
-  "/contributors": typeof PublicContributorsRoute
-  "/forgot-password": typeof PublicForgotPasswordRoute
-  "/privacy": typeof PublicPrivacyRoute
-  "/reset-password": typeof PublicResetPasswordRoute
-  "/signin": typeof PublicSigninRoute
-  "/signup": typeof PublicSignupRoute
-  "/terms": typeof PublicTermsRoute
-  "/verify-email": typeof PublicVerifyEmailRoute
   "/dashboard/settings": typeof ProtectedDashboardSettingsRoute
   "/dashboard/": typeof ProtectedDashboardIndexRoute
   "/dashboard/$providerSlug/$accountId": typeof ProtectedDashboardProviderSlugAccountIdRoute
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
-  "/developers": typeof DevelopersRoute
-  "/contributors": typeof PublicContributorsRoute
-  "/forgot-password": typeof PublicForgotPasswordRoute
-  "/privacy": typeof PublicPrivacyRoute
-  "/reset-password": typeof PublicResetPasswordRoute
-  "/signin": typeof PublicSigninRoute
-  "/signup": typeof PublicSignupRoute
-  "/terms": typeof PublicTermsRoute
-  "/verify-email": typeof PublicVerifyEmailRoute
   "/dashboard/settings": typeof ProtectedDashboardSettingsRoute
   "/dashboard": typeof ProtectedDashboardIndexRoute
   "/dashboard/$providerSlug/$accountId": typeof ProtectedDashboardProviderSlugAccountIdRoute
@@ -142,17 +65,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   "/": typeof IndexRoute
   "/_protected": typeof ProtectedRouteWithChildren
-  "/_public": typeof PublicRouteWithChildren
-  "/developers": typeof DevelopersRoute
   "/_protected/dashboard": typeof ProtectedDashboardRouteWithChildren
-  "/_public/contributors": typeof PublicContributorsRoute
-  "/_public/forgot-password": typeof PublicForgotPasswordRoute
-  "/_public/privacy": typeof PublicPrivacyRoute
-  "/_public/reset-password": typeof PublicResetPasswordRoute
-  "/_public/signin": typeof PublicSigninRoute
-  "/_public/signup": typeof PublicSignupRoute
-  "/_public/terms": typeof PublicTermsRoute
-  "/_public/verify-email": typeof PublicVerifyEmailRoute
   "/_protected/dashboard/settings": typeof ProtectedDashboardSettingsRoute
   "/_protected/dashboard/": typeof ProtectedDashboardIndexRoute
   "/_protected/dashboard/$providerSlug/$accountId": typeof ProtectedDashboardProviderSlugAccountIdRoute
@@ -161,31 +74,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | "/"
-    | "/developers"
     | "/dashboard"
-    | "/contributors"
-    | "/forgot-password"
-    | "/privacy"
-    | "/reset-password"
-    | "/signin"
-    | "/signup"
-    | "/terms"
-    | "/verify-email"
     | "/dashboard/settings"
     | "/dashboard/"
     | "/dashboard/$providerSlug/$accountId"
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/"
-    | "/developers"
-    | "/contributors"
-    | "/forgot-password"
-    | "/privacy"
-    | "/reset-password"
-    | "/signin"
-    | "/signup"
-    | "/terms"
-    | "/verify-email"
     | "/dashboard/settings"
     | "/dashboard"
     | "/dashboard/$providerSlug/$accountId"
@@ -193,17 +88,7 @@ export interface FileRouteTypes {
     | "__root__"
     | "/"
     | "/_protected"
-    | "/_public"
-    | "/developers"
     | "/_protected/dashboard"
-    | "/_public/contributors"
-    | "/_public/forgot-password"
-    | "/_public/privacy"
-    | "/_public/reset-password"
-    | "/_public/signin"
-    | "/_public/signup"
-    | "/_public/terms"
-    | "/_public/verify-email"
     | "/_protected/dashboard/settings"
     | "/_protected/dashboard/"
     | "/_protected/dashboard/$providerSlug/$accountId"
@@ -212,26 +97,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProtectedRoute: typeof ProtectedRouteWithChildren
-  PublicRoute: typeof PublicRouteWithChildren
-  DevelopersRoute: typeof DevelopersRoute
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    "/developers": {
-      id: "/developers"
-      path: "/developers"
-      fullPath: "/developers"
-      preLoaderRoute: typeof DevelopersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    "/_public": {
-      id: "/_public"
-      path: ""
-      fullPath: ""
-      preLoaderRoute: typeof PublicRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     "/_protected": {
       id: "/_protected"
       path: ""
@@ -245,62 +114,6 @@ declare module "@tanstack/react-router" {
       fullPath: "/"
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    "/_public/verify-email": {
-      id: "/_public/verify-email"
-      path: "/verify-email"
-      fullPath: "/verify-email"
-      preLoaderRoute: typeof PublicVerifyEmailRouteImport
-      parentRoute: typeof PublicRoute
-    }
-    "/_public/terms": {
-      id: "/_public/terms"
-      path: "/terms"
-      fullPath: "/terms"
-      preLoaderRoute: typeof PublicTermsRouteImport
-      parentRoute: typeof PublicRoute
-    }
-    "/_public/signup": {
-      id: "/_public/signup"
-      path: "/signup"
-      fullPath: "/signup"
-      preLoaderRoute: typeof PublicSignupRouteImport
-      parentRoute: typeof PublicRoute
-    }
-    "/_public/signin": {
-      id: "/_public/signin"
-      path: "/signin"
-      fullPath: "/signin"
-      preLoaderRoute: typeof PublicSigninRouteImport
-      parentRoute: typeof PublicRoute
-    }
-    "/_public/reset-password": {
-      id: "/_public/reset-password"
-      path: "/reset-password"
-      fullPath: "/reset-password"
-      preLoaderRoute: typeof PublicResetPasswordRouteImport
-      parentRoute: typeof PublicRoute
-    }
-    "/_public/privacy": {
-      id: "/_public/privacy"
-      path: "/privacy"
-      fullPath: "/privacy"
-      preLoaderRoute: typeof PublicPrivacyRouteImport
-      parentRoute: typeof PublicRoute
-    }
-    "/_public/forgot-password": {
-      id: "/_public/forgot-password"
-      path: "/forgot-password"
-      fullPath: "/forgot-password"
-      preLoaderRoute: typeof PublicForgotPasswordRouteImport
-      parentRoute: typeof PublicRoute
-    }
-    "/_public/contributors": {
-      id: "/_public/contributors"
-      path: "/contributors"
-      fullPath: "/contributors"
-      preLoaderRoute: typeof PublicContributorsRouteImport
-      parentRoute: typeof PublicRoute
     }
     "/_protected/dashboard": {
       id: "/_protected/dashboard"
@@ -361,36 +174,9 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
   ProtectedRouteChildren,
 )
 
-interface PublicRouteChildren {
-  PublicContributorsRoute: typeof PublicContributorsRoute
-  PublicForgotPasswordRoute: typeof PublicForgotPasswordRoute
-  PublicPrivacyRoute: typeof PublicPrivacyRoute
-  PublicResetPasswordRoute: typeof PublicResetPasswordRoute
-  PublicSigninRoute: typeof PublicSigninRoute
-  PublicSignupRoute: typeof PublicSignupRoute
-  PublicTermsRoute: typeof PublicTermsRoute
-  PublicVerifyEmailRoute: typeof PublicVerifyEmailRoute
-}
-
-const PublicRouteChildren: PublicRouteChildren = {
-  PublicContributorsRoute: PublicContributorsRoute,
-  PublicForgotPasswordRoute: PublicForgotPasswordRoute,
-  PublicPrivacyRoute: PublicPrivacyRoute,
-  PublicResetPasswordRoute: PublicResetPasswordRoute,
-  PublicSigninRoute: PublicSigninRoute,
-  PublicSignupRoute: PublicSignupRoute,
-  PublicTermsRoute: PublicTermsRoute,
-  PublicVerifyEmailRoute: PublicVerifyEmailRoute,
-}
-
-const PublicRouteWithChildren =
-  PublicRoute._addFileChildren(PublicRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProtectedRoute: ProtectedRouteWithChildren,
-  PublicRoute: PublicRouteWithChildren,
-  DevelopersRoute: DevelopersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
