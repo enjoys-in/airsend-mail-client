@@ -6,6 +6,7 @@ import { eventBus } from "@/lib/event-bus";
 import { CustomEventKey } from "@/hooks/use-custom-event";
 import { tasksApi } from "./tasks-api";
 import type { TaskItem, TaskStatus } from "./tasks-types";
+export type { TaskItem, TaskStatus };
 
 // ==========================================================================
 // My Tasks — single source of truth for "tasks assigned to me".

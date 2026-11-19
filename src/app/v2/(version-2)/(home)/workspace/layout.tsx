@@ -38,8 +38,8 @@ const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // If user account is specifically disabled for workspace
-  if (currAccount && currAccount.workspace === false) {
+  // If user account is specifically confirmed to not have a workspace
+  if (currAccount && !currAccount.workspace) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100svh-3.5rem)] gap-3 text-muted-foreground">
         <Boxes className="h-10 w-10" />
