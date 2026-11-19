@@ -1,4 +1,4 @@
-import { useNavigate } from "@nimbus/_lib/router-shim";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@nimbus/_components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
