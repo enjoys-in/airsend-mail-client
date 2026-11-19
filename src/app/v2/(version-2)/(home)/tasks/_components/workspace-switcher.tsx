@@ -23,6 +23,8 @@ import { UserAvatar } from "@tasks/_components/user-avatar";
 import useGetConfig from "@tasks/_hooks/queries/config/use-get-config";
 import useActiveWorkspace from "@tasks/_hooks/queries/workspace/use-active-workspace";
 import useGetWorkspaces from "@tasks/_hooks/queries/workspace/use-get-workspaces";
+import { useIsMobile } from "@tasks/_hooks/use-mobile";
+import { useTasksSidebarSlot } from "@tasks/_lib/sidebar-slot";
 import { Kbd } from "@tasks/_components/ui/kbd";
 import { getModifierKeyText } from "@tasks/_lib/shortcuts/platform";
 import { useShortcut } from "@tasks/_lib/shortcuts/use-shortcut";
@@ -42,6 +44,10 @@ export function WorkspaceSwitcher() {
   const canCreateWorkspace =
     isAdmin || (config !== undefined && !config.disableWorkspaceCreation);
   const navigate = useNavigate();
+  // In the AirSend sidebar (desktop) the search and the account menu already exist there.
+  const hostSlot = useTasksSidebarSlot();
+  const isMobile = useIsMobile();
+  const inHostSidebar = hostSlot !== null && !isMobile;
   const [isOpen, setIsOpen] = React.useState(false);
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] =
     React.useState(false);
@@ -133,7 +139,9 @@ export function WorkspaceSwitcher() {
                 )}
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="min-w-(--anchor-width) text-sidebar-foreground"
+                // Match the trigger (the full sidebar row). The floor keeps it usable if the anchor width is
+                // ever unavailable, and the max() form stays valid CSS without the variable.
+                className="w-[max(var(--anchor-width,0px),14rem)] min-w-(--anchor-width) text-sidebar-foreground"
                 align="start"
                 side="bottom"
                 sideOffset={4}
@@ -190,12 +198,14 @@ export function WorkspaceSwitcher() {
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <div className="flex items-center gap-0.5">
-          <Search />
-          <div className="h-8 w-8 shrink-0">
-            <UserAvatar />
+        {inHostSidebar ? null : (
+          <div className="flex items-center gap-0.5">
+            <Search />
+            <div className="h-8 w-8 shrink-0">
+              <UserAvatar />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <CreateWorkspaceModal

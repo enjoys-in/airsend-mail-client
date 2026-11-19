@@ -19,6 +19,7 @@ import { Bell, Settings } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area"
 import BreadcrumbInfo from "./breadcrumb"
 import Link from "next/link";
+import { setHeaderSlot } from "@/components/common/header-slot";
 
 /** Icon button used in the header toolbar  */
 const HeaderIconBtn = React.memo(({ children, tooltip, href }: {
@@ -55,8 +56,15 @@ export const HeaderV2 = React.memo(() => {
                     <BreadcrumbInfo />
                 </div>
 
+                {/* Module breadcrumb/actions (Files, Tasks) portal in here; when it has content it
+                    replaces the mail search below. */}
+                <div
+                    ref={setHeaderSlot}
+                    className="flex min-w-0 flex-1 items-center pl-2 empty:hidden [&:not(:empty)~[data-host-search]]:hidden"
+                />
+
                 {/* Center: search */}
-                <div className="hidden md:flex items-center mx-auto w-full max-w-md">
+                <div data-host-search className="hidden md:flex items-center mx-auto w-full max-w-md">
                     <SidebarInput
                         placeholder="Search mail..."
                         className="h-8 rounded-lg bg-muted/40 border-0 focus-visible:ring-1 focus-visible:ring-ring/30 placeholder:text-muted-foreground/50 text-sm"

@@ -2,7 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { TasksSkeleton } from "@/components/common/tasks-skeleton";
+import { KANEO_CSS_VERSION } from "@tasks/_lib/kaneo-css-version";
 import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 import { useTasksSidebarSlot } from "@tasks/_lib/sidebar-slot";
 
@@ -36,7 +38,7 @@ function useKaneoStylesheet() {
       link = document.createElement("link");
       link.id = KANEO_CSS_ID;
       link.rel = "stylesheet";
-      link.href = "/tasks/kaneo.css";
+      link.href = `/tasks/kaneo.css?v=${KANEO_CSS_VERSION}`;
       document.head.appendChild(link);
     }
     if (link.sheet) {
@@ -58,6 +60,8 @@ function useKaneoStylesheet() {
 export default function TasksPage() {
   const ready = useKaneoStylesheet();
   const inHostSidebar = useTasksSidebarSlot() !== null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const setPortalHost = useCallback((el: HTMLDivElement | null) => {
     kaneoPortalContainer.current = el;
   }, []);
@@ -74,8 +78,15 @@ export default function TasksPage() {
         {ready ? <KaneoApp /> : <Loading />}
       </div>
       {/* Popups (dialogs, menus, tooltips, toasts) portal here so they keep Kaneo's scoped
-          styles. `display: contents` keeps the host out of the layout. */}
-      <div ref={setPortalHost} className="kaneo-root contents" />
+          styles. It lives on <body>, not in this page: the page scrolls and clips, so a menu
+          opened from the AirSend sidebar (outside it) would be cut off or sit underneath.
+          `display: contents` keeps the host out of the layout. */}
+      {mounted
+        ? createPortal(
+            <div ref={setPortalHost} className="kaneo-root contents" />,
+            document.body,
+          )
+        : null}
     </>
   );
 }

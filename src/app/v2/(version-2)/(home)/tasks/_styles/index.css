@@ -380,9 +380,19 @@ h6 {
 /* Kaneo's sidebar lives in the AirSend sidebar on desktop, which has its own toggle, so Kaneo's
    toggle buttons would do nothing there. Kept on mobile, where Kaneo's drawer is still used. */
 @media (min-width: 768px) {
-  :root[data-host-sidebar] [data-slot="sidebar-trigger"] {
+  :root[data-host-sidebar] [data-slot="sidebar-trigger"],
+  :root[data-host-sidebar] [data-sidebar="trigger"] {
     display: none;
   }
+}
+
+/* The same two redundancies inside the AirSend top bar, where the page header is hosted: the
+   AirSend bar has its own sidebar toggle, so drop Kaneo's toggle and the divider after it. */
+:root[data-kaneo-header] [data-slot="sidebar-trigger"],
+:root[data-kaneo-header] [data-sidebar="trigger"],
+:root[data-kaneo-header] [data-slot="sidebar-trigger"] + div[class*="w-px"],
+:root[data-kaneo-header] [data-sidebar="trigger"] + div[class*="w-px"] {
+  display: none;
 }
 
 .h-svh {

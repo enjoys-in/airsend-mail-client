@@ -1,5 +1,9 @@
 import { useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
+import {
+  HostedSidebar,
+  useHostedSidebarSlot,
+} from "@tasks/_components/common/hosted-sidebar";
 import { normalizeSettingsPath } from "@tasks/_components/settings/nav/get-settings-breadcrumb";
 import { SettingsNavGroup } from "@tasks/_components/settings/nav/settings-nav-group";
 import { SettingsNavProjects } from "@tasks/_components/settings/nav/settings-nav-projects";
@@ -17,13 +21,14 @@ export function SettingsSidebar({ nav, onLeave }: SettingsSidebarProps) {
     select: (location) => normalizeSettingsPath(location.pathname),
   });
   const { setOpenMobile } = useSidebar();
+  const hostSlot = useHostedSidebarSlot();
 
   useEffect(() => {
     if (pathname) setOpenMobile(false);
   }, [pathname, setOpenMobile]);
 
-  return (
-    <Sidebar collapsible="offcanvas" variant="inset" className="border-none">
+  const sections = (
+    <>
       <SettingsSidebarHeader onLeave={onLeave} />
       <SidebarContent className="gap-0 pb-2">
         <SettingsNavGroup group={nav.account} pathname={pathname} />
@@ -33,6 +38,15 @@ export function SettingsSidebar({ nav, onLeave }: SettingsSidebarProps) {
           <SettingsNavGroup group={nav.admin} pathname={pathname} />
         ) : null}
       </SidebarContent>
+    </>
+  );
+
+  // Desktop, inside the AirSend shell: the settings navigation lives in the AirSend sidebar.
+  if (hostSlot) return <HostedSidebar slot={hostSlot}>{sections}</HostedSidebar>;
+
+  return (
+    <Sidebar collapsible="offcanvas" variant="inset" className="border-none">
+      {sections}
     </Sidebar>
   );
 }

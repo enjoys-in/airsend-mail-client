@@ -1,1 +1,2 @@
-export const isDemoMode = window.location.hostname === "demo.kaneo.app";
+// There is no hosted demo of the tasks app inside AirSend.
+export const isDemoMode = false;

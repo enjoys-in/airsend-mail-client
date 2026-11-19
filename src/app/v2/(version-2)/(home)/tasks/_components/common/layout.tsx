@@ -9,6 +9,7 @@ import { useUserPreferencesEffects } from "@tasks/_hooks/use-user-preferences-ef
 import { cn } from "@tasks/_lib/cn";
 import { useBackgroundStore } from "@tasks/_store/background";
 import { useUserPreferencesStore } from "@tasks/_store/user-preferences";
+import { HostedHeader } from "./hosted-header";
 import { hasShellEntered, markShellEntered } from "./shell-entered";
 import { useShellReveal } from "./use-shell-reveal";
 
@@ -28,15 +29,23 @@ type ContentProps = {
 };
 
 function LayoutHeader({ children, className }: HeaderProps) {
+  // Desktop, inside the AirSend shell: the breadcrumb and page actions go in the AirSend top bar
+  // instead of a second bar.
   return (
-    <header
-      className={cn(
-        "flex h-10 shrink-0 gap-2 transition-[width,height] ease-in-out group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-8 border-b border-border bg-card p-2",
-        className,
-      )}
+    <HostedHeader
+      fallback={
+        <header
+          className={cn(
+            "flex h-10 shrink-0 gap-2 transition-[width,height] ease-in-out group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-8 border-b border-border bg-card p-2",
+            className,
+          )}
+        >
+          {children}
+        </header>
+      }
     >
       {children}
-    </header>
+    </HostedHeader>
   );
 }
 

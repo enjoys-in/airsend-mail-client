@@ -1,3 +1,4 @@
+import { HostedHeader } from "@tasks/_components/common/hosted-header";
 import { ShortcutKeys } from "@tasks/_components/shortcuts/shortcut-keys";
 import { useTranslation } from "react-i18next";
 import type { SettingsBreadcrumb } from "@tasks/_components/settings/nav/get-settings-breadcrumb";
@@ -23,8 +24,8 @@ type SettingsHeaderProps = {
 export function SettingsHeader({ breadcrumb }: SettingsHeaderProps) {
   const { t } = useTranslation();
 
-  return (
-    <header className="flex h-10 shrink-0 items-center gap-1 border-b border-border bg-card p-2">
+  const content = (
+    <>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -58,6 +59,19 @@ export function SettingsHeader({ breadcrumb }: SettingsHeaderProps) {
           ) : null}
         </BreadcrumbList>
       </Breadcrumb>
-    </header>
+    </>
+  );
+
+  // Desktop, inside the AirSend shell: the breadcrumb goes in the AirSend top bar.
+  return (
+    <HostedHeader
+      fallback={
+        <header className="flex h-10 shrink-0 items-center gap-1 border-b border-border bg-card p-2">
+          {content}
+        </header>
+      }
+    >
+      {content}
+    </HostedHeader>
   );
 }

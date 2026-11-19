@@ -30,7 +30,7 @@ export function KaneoConnectForm({
           inputMode="url"
           value={values.url}
           onChange={(event) => onChange({ url: event.target.value })}
-          placeholder="https://cloud.kaneo.app"
+          placeholder="https://tasks.example.com"
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}

@@ -1,8 +1,11 @@
 import { useLocation } from "@tanstack/react-router";
 import type * as React from "react";
 import { useEffect } from "react";
-import { createPortal } from "react-dom";
 
+import {
+  HostedSidebar,
+  useHostedSidebarSlot,
+} from "@tasks/_components/common/hosted-sidebar";
 import { NavMain } from "@tasks/_components/nav-main";
 import { NavProjects } from "@tasks/_components/nav-projects";
 import { NavSecondary } from "@tasks/_components/nav-secondary";
@@ -17,7 +20,6 @@ import {
 } from "@tasks/_components/ui/sidebar";
 import { VersionDisplay } from "@tasks/_components/version-display";
 import { WorkspaceSwitcher } from "@tasks/_components/workspace-switcher";
-import { useTasksSidebarSlot } from "@tasks/_lib/sidebar-slot";
 
 function SidebarSections() {
   return (
@@ -42,9 +44,9 @@ function SidebarSections() {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { setOpenMobile } = useSidebar();
   const pathname = useLocation({ select: (location) => location.pathname });
-  const hostSlot = useTasksSidebarSlot();
+  const hostSlot = useHostedSidebarSlot();
 
   // Navigation that doesn't start from a sidebar link (creating a project,
   // the command palette) must still dismiss the mobile drawer.
@@ -52,22 +54,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (pathname) setOpenMobile(false);
   }, [pathname, setOpenMobile]);
 
-  // Desktop, inside the AirSend shell: the sections live in the AirSend sidebar's panel. The
-  // wrapper carries the attributes Kaneo's `Sidebar` would have put on its own root, because the
-  // menu components style themselves from them.
-  if (!isMobile && hostSlot) {
-    return createPortal(
-      <div
-        className="group flex h-full min-h-0 w-full flex-col text-sidebar-foreground"
-        data-collapsible=""
-        data-side="left"
-        data-slot="sidebar"
-        data-state="expanded"
-        data-variant="inset"
-      >
+  // Desktop, inside the AirSend shell: the sections live in the AirSend sidebar's panel.
+  if (hostSlot) {
+    return (
+      <HostedSidebar slot={hostSlot}>
         <SidebarSections />
-      </div>,
-      hostSlot,
+      </HostedSidebar>
     );
   }
 

@@ -6,7 +6,6 @@ import PageTitle from "@tasks/_components/page-title";
 import { CopyUrlButton } from "@tasks/_components/public-project/copy-url-button";
 import { ErrorView } from "@tasks/_components/public-project/error-view";
 import { PublicKanbanView } from "@tasks/_components/public-project/kanban-view";
-import { KaneoBranding } from "@tasks/_components/public-project/kaneo-branding";
 import { PublicListView } from "@tasks/_components/public-project/list-view";
 import { LoadingSkeleton } from "@tasks/_components/public-project/loading-skeleton";
 import { PublicProjectDescription } from "@tasks/_components/public-project/project-description";
@@ -143,8 +142,7 @@ function RouteComponent() {
 
         <footer className="border-t border-border">
           <div className="px-6 py-3">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <KaneoBranding />
+            <div className="flex items-center justify-end text-xs text-muted-foreground">
               <span>{t("publicProject:readOnly")}</span>
             </div>
           </div>

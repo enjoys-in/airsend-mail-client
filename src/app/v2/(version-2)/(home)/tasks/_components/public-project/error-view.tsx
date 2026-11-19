@@ -1,6 +1,5 @@
 import { ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { KaneoBranding } from "./kaneo-branding";
 
 export function ErrorView() {
   const { t } = useTranslation();
@@ -19,7 +18,6 @@ export function ErrorView() {
               {t("publicProject:error.description")}
             </p>
           </div>
-          <KaneoBranding />
         </div>
       </div>
     </div>

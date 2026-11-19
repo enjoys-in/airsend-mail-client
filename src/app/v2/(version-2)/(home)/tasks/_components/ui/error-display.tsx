@@ -88,18 +88,6 @@ export function ErrorDisplay({
               </Button>
             )}
 
-            {parsedError.type === "cors" && (
-              <Button
-                onClick={() => window.open("https://kaneo.app/docs", "_blank")}
-                variant="outline"
-                size="icon"
-                className="w-full"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                {t("common:error.viewDeploymentGuide")}
-              </Button>
-            )}
-
             <Button
               onClick={() => window.location.reload()}
               variant="outline"
