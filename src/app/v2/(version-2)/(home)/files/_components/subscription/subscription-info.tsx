@@ -1,15 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nimbus/_components/ui/card";
 import { CreditCard, Zap, CheckCircle2 } from "lucide-react";
-import { authClient } from "@nimbus/_lib/auth-shim";
+import { authClient } from "@nimbus/_packages/auth/auth-client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@nimbus/_components/ui/button";
 import { Badge } from "@nimbus/_components/ui/badge";
 import { toast } from "sonner";
 
 async function upgradePlan() {
-	const response: any = await authClient.checkout({ slug: "pro" });
-	if (response?.error) {
-		toast.error(response.error.message || "Failed to upgrade plan");
+	const response = await authClient.checkout({ slug: "pro" });
+	if (response.error) {
+		toast.error(response.error.message);
 	}
 }
 
@@ -17,14 +17,14 @@ export function SubscriptionInfo() {
 	const { data: subscriptions } = useQuery({
 		queryKey: ["subscriptions"],
 		queryFn: async () => {
-			const response: any = await authClient.customer.subscriptions.list({
+			const response = await authClient.customer.subscriptions.list({
 				query: { page: 1, limit: 10, active: true },
 			});
-			return response?.data;
+			return response.data;
 		},
 	});
 
-	const planId = (subscriptions as any)?.result?.items?.[0]?.id;
+	const planId = subscriptions?.result.items[0]?.id;
 	const isPro = Boolean(planId);
 
 	return (
