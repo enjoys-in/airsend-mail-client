@@ -1,6 +1,6 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@nimbus/_components/ui/avatar";
 import { Card, CardTitle } from "@nimbus/_components/ui/card";
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 import { Badge } from "@nimbus/_components/ui/badge";
 import { GitCommit } from "lucide-react";
 
