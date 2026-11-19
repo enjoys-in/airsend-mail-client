@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreatePinnedFile, DriveInfo, PinnedFile } from "@nimbus/_lib/files-types";
+import type { CreatePinnedFile, DriveInfo, PinnedFile } from "@nimbus/_packages/shared";
 import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
 import { handleUnauthorizedError } from "@nimbus/_utils/client";
 
@@ -38,7 +38,7 @@ export const usePinnedFiles = () => {
 
 			const data = await response.json();
 			// Convert the raw data to match the PinnedFile type
-			return data.map((file: any) => ({
+			return data.map(file => ({
 				...file,
 				createdAt: new Date(file.createdAt),
 				updatedAt: new Date(file.updatedAt),
@@ -102,19 +102,4 @@ export const useUnpinFile = () => {
 			void queryClient.invalidateQueries({ queryKey: [PINNED_FILES_QUERY_KEY] });
 		},
 	});
-};
-
-export const useDriveOps = () => {
-	const { data: driveInfo, isLoading: isLoadingDriveInfo } = useDriveInfo();
-	const { data: pinnedFiles = [], isLoading: isLoadingPinnedFiles } = usePinnedFiles();
-	const pin = usePinFile();
-	const unpin = useUnpinFile();
-	return {
-		driveInfo,
-		isLoadingDriveInfo,
-		pinnedFiles,
-		isLoadingPinnedFiles,
-		pinFile: (params: CreatePinnedFile) => pin.mutate(params),
-		unpinFile: (id: string) => unpin.mutate(id),
-	};
 };
