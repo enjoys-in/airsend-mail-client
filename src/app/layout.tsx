@@ -14,8 +14,8 @@ import { ServiceWorker } from "@/components/shared/ServiceWorker";
 import { createMetadata, jsonLd } from "@/lib/meta/MetaTags";
 
 
+// Variable font: every weight 200-800 is available. (It used to load 600 only, which made all text render semibold.)
 const jakarta = Plus_Jakarta_Sans({
-  weight: ['600',],
   style: ['normal'],
   subsets: ['latin'],
   display: 'swap',

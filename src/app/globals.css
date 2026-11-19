@@ -176,7 +176,8 @@ body {
   background: #eee;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, ".SFNSText-Regular",
     sans-serif;
-  font-weight: 500;
+  /* The rest of the app keeps the look it had (the font used to be loaded at 600 only); the h-panel overrides this below. */
+  font-weight: 600;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -574,3 +575,19 @@ pre::-webkit-scrollbar-thumb {
   line-height: 16px;
   background-size: contain;
 }
+
+/* ── h-panel typography ────────────────────────────────────────────────────────────────────────────────────────────
+ * The h-panel (`.hpanel-root`, see app/h-panel/layout.tsx) uses a calm type scale: regular body text and lighter emphasis.
+ * `html:has(.hpanel-root)` (not just the wrapper) so dialogs, menus, selects and toasts, which render in a portal under
+ * <body>, match the page. The font is variable, so in-between weights are real. Only the h-panel is affected. */
+html:has(.hpanel-root) body {
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+html:has(.hpanel-root) :is(.font-extrabold, .font-black) { font-weight: 600; }
+html:has(.hpanel-root) .font-bold { font-weight: 600; }
+html:has(.hpanel-root) .font-semibold { font-weight: 550; }
+html:has(.hpanel-root) .font-medium { font-weight: 480; }
+html:has(.hpanel-root) :is(h1, h2, h3, h4) { font-weight: 550; letter-spacing: -0.012em; }
+html:has(.hpanel-root) :is(th, label) { font-weight: 480; }
+html:has(.hpanel-root) :is(input, textarea, select, button) { font-weight: inherit; }
