@@ -54,6 +54,14 @@ export interface IDomainOrgHistory {
 // ─── Member ─────────────────────────────────────────────────────
 export type MemberStatus = "active" | "inactive" | "banned" | "invited"
 
+/** The AirSend services whose role can differ per mailbox inside one organization. */
+export type OrgService = "files" | "tasks" | "workspace"
+export type OrgServiceRole = "owner" | "admin" | "member"
+/** Effective role per service, as returned by the members API. */
+export type IServiceRoles = Record<OrgService, OrgServiceRole>
+/** What can be sent: a role sets an override, `null` removes it (back to the org-wide role). */
+export type ServiceRoleChanges = Partial<Record<OrgService, "admin" | "member" | null>>
+
 export interface IMember {
     id: string
     name: string
@@ -65,6 +73,8 @@ export interface IMember {
     org_id: string
     domain: string
     scopes?: string[]
+    /** Effective role in Files / Tasks / Workspace (the org-wide role unless overridden). */
+    service_roles?: IServiceRoles
     status: MemberStatus
     avatar_url: string | null
     joined_at: string
