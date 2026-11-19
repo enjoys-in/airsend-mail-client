@@ -12,6 +12,7 @@ import {
     AtSign,
     Loader2,
     ShieldCheck,
+    ChevronDown,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -26,7 +27,19 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { API } from "@/lib/api/handler"
-import type { IRole } from "../_lib/types"
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import type { IRole, OrgService } from "../_lib/types"
+import {
+    INHERIT_ALL,
+    ServiceRolePicker,
+    choicesToChanges,
+    type ServiceRoleChoice,
+    type ServiceRoleChoices,
+} from "./service-role-picker"
 
 export interface CreateInternalMemberFormProps {
     domains: any[]
@@ -62,6 +75,7 @@ export function CreateInternalMemberForm({
     )
     const [password, setPassword] = React.useState("")
     const [role, setRole] = React.useState("member")
+    const [serviceChoices, setServiceChoices] = React.useState<ServiceRoleChoices>(INHERIT_ALL)
     const [showPassword, setShowPassword] = React.useState(false)
     const [submitting, setSubmitting] = React.useState(false)
 
@@ -133,6 +147,10 @@ export function CreateInternalMemberForm({
                 email: fullEmail,
                 name: name.trim(),
                 role,
+                // Only overrides are sent; "same as org role" services follow the role above.
+                ...(Object.values(serviceChoices).some((c) => c !== "inherit")
+                    ? { service_roles: choicesToChanges(serviceChoices) }
+                    : {}),
             }).catch(() => {})
 
             toast({
@@ -292,6 +310,29 @@ export function CreateInternalMemberForm({
                             Governs access rights in the H-Panel dashboard.
                         </p>
                     </div>
+
+                    {/* Advanced: per-service roles */}
+                    <Collapsible className="space-y-3 md:col-span-2">
+                        <CollapsibleTrigger asChild>
+                            <button
+                                type="button"
+                                className="group flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                            >
+                                <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-180" />
+                                Advanced: per-service roles
+                            </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <ServiceRolePicker
+                                value={serviceChoices}
+                                orgRole={role}
+                                disabled={submitting}
+                                onChange={(service: OrgService, choice: ServiceRoleChoice) =>
+                                    setServiceChoices((prev) => ({ ...prev, [service]: choice }))
+                                }
+                            />
+                        </CollapsibleContent>
+                    </Collapsible>
                 </div>
             </div>
 
