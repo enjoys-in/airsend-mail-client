@@ -16,9 +16,34 @@ export * from "./tasks-crud-api";
 
 const BASE_URL = "/api/tasks";
 
-export async function fetchProjects(): Promise<TaskProject[]> {
+let workspaceIdPromise: Promise<string | null> | null = null;
+
+/**
+ * The user's Kaneo workspace id. Kaneo needs it on the project and assigned-task lists and the proxy no longer asks
+ * airsend-api for it, so it is read from Kaneo's own workspace list (first workspace unless one was passed in).
+ */
+function resolveWorkspaceId(): Promise<string | null> {
+  workspaceIdPromise ??= (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/organization/list`, { cache: "no-store" });
+      if (!res.ok) return null;
+      const list = await res.json();
+      return Array.isArray(list) && list[0]?.id ? String(list[0].id) : null;
+    } catch {
+      return null;
+    }
+  })().then((id) => {
+    if (!id) workspaceIdPromise = null; // don't cache a failure
+    return id;
+  });
+  return workspaceIdPromise;
+}
+
+export async function fetchProjects(workspaceId?: string): Promise<TaskProject[]> {
   try {
-    const res = await fetch(`${BASE_URL}/project`, { cache: "no-store" });
+    const ws = workspaceId ?? (await resolveWorkspaceId());
+    if (!ws) return [];
+    const res = await fetch(`${BASE_URL}/project?workspaceId=${encodeURIComponent(ws)}`, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
     if (!Array.isArray(data)) return [];
@@ -106,10 +131,9 @@ export async function fetchProjectTasks(projectId: string): Promise<{
 
 export async function fetchAssignedTasks(workspaceId?: string): Promise<TaskItem[]> {
   try {
-    const url = workspaceId
-      ? `${BASE_URL}/task/assigned?workspaceId=${workspaceId}`
-      : `${BASE_URL}/task/assigned`;
-    const res = await fetch(url, { cache: "no-store" });
+    const ws = workspaceId ?? (await resolveWorkspaceId());
+    if (!ws) return [];
+    const res = await fetch(`${BASE_URL}/task/assigned?workspaceId=${encodeURIComponent(ws)}`, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
     const rawList = Array.isArray(data?.tasks) ? data.tasks : [];
