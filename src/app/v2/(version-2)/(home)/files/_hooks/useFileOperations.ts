@@ -7,7 +7,7 @@ import type {
 	MoveFileSchema,
 	UpdateFileSchema,
 	UploadFileSchema,
-} from "@nimbus/_lib/files-types";
+} from "@nimbus/_packages/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccountProvider } from "@nimbus/_components/providers/account-provider";
 import type { DriveProviderClient } from "@nimbus/_utils/client";
@@ -23,7 +23,7 @@ export function useGetFiles({ parentId, pageSize, pageToken, returnedValues }: G
 			const response = await handleUnauthorizedError(
 				() =>
 					BASE_FILE_CLIENT.$get({
-						query: { parentId, pageSize: (pageSize ?? 30).toString(), pageToken, returnedValues },
+						query: { parentId, pageSize: pageSize.toString(), pageToken, returnedValues },
 					}),
 				"Failed to fetch files"
 			);
