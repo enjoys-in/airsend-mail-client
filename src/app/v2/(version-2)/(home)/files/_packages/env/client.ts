@@ -10,8 +10,6 @@ const env = {
 	VITE_FRONTEND_URL: (
 		process.env.NEXT_PUBLIC_FILES_APP_URL || (typeof window === "undefined" ? "http://localhost:9500" : window.location.origin)
 	).replace(/\/+$/, ""),
-	VITE_POSTHOG_KEY: process.env.NEXT_PUBLIC_FILES_POSTHOG_KEY,
-	VITE_POSTHOG_HOST: process.env.NEXT_PUBLIC_FILES_POSTHOG_HOST,
 };
 
 export default env;
