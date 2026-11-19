@@ -1,5 +1,5 @@
-// Types only: the session user the backend returns (better-auth `user`, or the AirSend identity when the backend runs
-// with AIRSEND_AUTH_ENABLED). The server-side auth setup stays in the backend repo.
+// Types only: the session user the files backend returns from `GET /api/auth/get-session`. The backend builds it from the
+// AirSend JWT (shared secret); there is no Nimbus sign-in or better-auth session.
 export type SessionUser = {
 	id: string;
 	name: string;
