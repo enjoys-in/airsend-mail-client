@@ -1,6 +1,6 @@
 import { AuthProviderButtons } from "@nimbus/_components/auth/shared/auth-provider-buttons";
 import { PasswordInput } from "@nimbus/_components/auth/shared/password-input";
-import { signInSchema, type SignInFormData } from "@nimbus/_lib/files-types";
+import { signInSchema, type SignInFormData } from "@nimbus/_packages/shared";
 import { AuthCard } from "@nimbus/_components/auth/shared/auth-card";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { FieldError } from "@nimbus/_components/ui/field-error";
@@ -8,7 +8,7 @@ import type { ChangeEvent, ComponentProps } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Checkbox } from "@nimbus/_components/ui/checkbox";
 import { Button } from "@nimbus/_components/ui/button";
-import { Link } from "@nimbus/_lib/router-shim";
+import { Link } from "@tanstack/react-router";
 import { Label } from "@nimbus/_components/ui/label";
 import { Input } from "@nimbus/_components/ui/input";
 import { useSignIn } from "@nimbus/_hooks/useAuth";
