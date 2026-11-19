@@ -1,5 +1,3 @@
-"use client";
-
 import { SearchDialog } from "@nimbus/_components/search/search-dialog";
 import { Button } from "@nimbus/_components/ui/button";
 import { Search } from "lucide-react";
