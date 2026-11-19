@@ -3,9 +3,9 @@ import { SomethingWentWrong } from "@/components/common/SomethingWentWrong"
 import type { ApiResponse } from "@/lib/types"
 import type { WorkspaceResponse } from "@/lib/types/workspace.interface"
 import { WorkspaceManager } from "./_components/workspace-manager"
-import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { EmptyState, PageHeader, PageShell, Panel } from "@/components/h-panel/kit"
 
 export default async function WorkspacePage({ params }: { params: any }) {
     const { domainId } = await params
@@ -20,30 +20,30 @@ export default async function WorkspacePage({ params }: { params: any }) {
 
         if (!workspace) {
             return (
-                <div className="p-6 space-y-4">
-                    <p className="text-muted-foreground">Workspace is not enabled for this domain.</p>
-                    <Link href={`/h-panel/domains/${domainId}`}>
-                        <Button variant="outline" size="sm" className="rounded-none">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Go to Domain Settings
-                        </Button>
-                    </Link>
-                </div>
+                <PageShell>
+                    <PageHeader back={{ href: "/h-panel/workspace", label: "Workspace" }} title="Workspace" />
+                    <Panel>
+                        <EmptyState
+                            title="Workspace is not enabled for this domain"
+                            description="Turn it on in the domain settings, then come back to add members."
+                            action={
+                                <Button asChild variant="outline" size="sm">
+                                    <Link href={`/h-panel/domains/${domainId}`}>Go to domain settings</Link>
+                                </Button>
+                            }
+                        />
+                    </Panel>
+                </PageShell>
             )
         }
 
         return (
-            <div className="p-4 md:p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold">{workspace.name}</h1>
-                        <p className="text-sm text-muted-foreground">Manage members and their access scopes</p>
-                    </div>
-                    <Link href={`/h-panel/domains/${domainId}`}>
-                        <Button variant="outline" size="sm" className="rounded-none">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Domain
-                        </Button>
-                    </Link>
-                </div>
+            <PageShell>
+                <PageHeader
+                    back={{ href: `/h-panel/domains/${domainId}`, label: "Domain" }}
+                    title={workspace.name}
+                    description="Manage members and their access scopes."
+                />
 
                 <WorkspaceManager
                     domainId={domainId}
@@ -51,7 +51,7 @@ export default async function WorkspacePage({ params }: { params: any }) {
                     initialMembers={workspace.members}
                     availableAccounts={available_accounts}
                 />
-            </div>
+            </PageShell>
         )
     } catch (error) {
         return <SomethingWentWrong />
