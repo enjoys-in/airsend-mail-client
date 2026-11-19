@@ -1,19 +1,7 @@
-export { TasksProvider, useTasks } from "./_lib/tasks-context";
+// Public surface of the tasks (Kaneo) module for the rest of AirSend.
+// The Kaneo SPA itself is mounted by ./[[...slug]]/page.tsx and must not be
+// imported from here: it needs `window` and is loaded client-side only.
+export * from "./_lib/base-path";
 export * from "./_lib/tasks-types";
-export * from "./_lib/router-shim";
-export * as constants from "./constants";
-export * as fetchers from "./fetchers";
-export { BoardView } from "./board/BoardView";
-export { ListView } from "./list/ListView";
-export { CalendarView } from "./calendar/CalendarView";
-export { GanttView } from "./gantt/GanttView";
-export { MyTasksView } from "./my-tasks/MyTasksView";
-export { HomeView } from "./home/HomeView";
-export { InboxView } from "./inbox/InboxView";
-export { MembersView } from "./members/MembersView";
-export { TasksHeader } from "./navigation/TasksHeader";
-export { TasksSidebar } from "./navigation/TasksSidebar";
-export { SettingsShell } from "./settings/SettingsShell";
-export { TaskDetailDialog } from "./task/TaskDetailDialog";
-export { TaskCreateDialog } from "./task/TaskCreateDialog";
-export { ProjectCreateDialog } from "./project/ProjectCreateDialog";
+export * from "./_lib/tasks-api";
+export * from "./_lib/my-tasks-store";
