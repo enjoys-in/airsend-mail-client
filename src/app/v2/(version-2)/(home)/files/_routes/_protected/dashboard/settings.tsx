@@ -1,3 +1,4 @@
+import { FILES_BASE_PATH } from "@nimbus/_lib/base-path";
 import { type ApiResponse, type DriveProvider } from "@nimbus/_packages/shared";
 import { useEffect, useState, type ChangeEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -11,8 +12,6 @@ import { useUnlinkAccount } from "@nimbus/_hooks/useUnlinkAccount";
 import { protectedClient } from "@nimbus/_utils/client";
 
 import { ConnectedAccountsSection } from "@nimbus/_components/settings/connected-accounts-section";
-import { SubscriptionInfo } from "@nimbus/_components/subscription/subscription-info";
-import { UpgradeDialog } from "@nimbus/_components/subscription/upgrade-dialog";
 // import { SecuritySection } from "@nimbus/_components/settings/security-section";
 import { ProfileSection } from "@nimbus/_components/settings/profile-section";
 import { SettingsHeader } from "@nimbus/_components/settings/header";
@@ -62,7 +61,7 @@ function SettingsPage() {
 			if (user?.email !== email) {
 				await authClient.changeEmail({
 					newEmail: email,
-					callbackURL: `${env.VITE_FRONTEND_URL}/verify-email`,
+					callbackURL: `${env.VITE_FRONTEND_URL}${FILES_BASE_PATH}/dashboard/settings`,
 				});
 				isUpdated = true;
 			}
@@ -172,8 +171,6 @@ function SettingsPage() {
 					isSaving={isSaving}
 				/>
 
-				<SubscriptionInfo />
-
 				<ConnectedAccountsSection
 					accounts={accounts}
 					defaultAccountId={defaultAccountId}
@@ -186,7 +183,6 @@ function SettingsPage() {
 				{/*<SecuritySection />*/}
 			</div>
 
-			<UpgradeDialog />
 		</div>
 	);
 }
