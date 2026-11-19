@@ -99,8 +99,14 @@ function createFetchProxy(
             if (qs) queryString = `?${qs}`;
           }
 
+          // Separate files backend: when NEXT_PUBLIC_FILES_API_URL is set the browser calls it
+          // directly (CORS + credentials); otherwise it goes through the same-origin /api/files
+          // proxy, which forwards to FILES_API_URL on the server.
+          const directBackend = process.env.NEXT_PUBLIC_FILES_API_URL?.trim().replace(/\/+$/, "");
           const baseUrl = typeof window !== "undefined" ? "" : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
-          const url = `${baseUrl}/api/files/${pathStr}${queryString}`;
+          const url = directBackend
+            ? `${directBackend}/api/${pathStr}${queryString}`
+            : `${baseUrl}/api/files/${pathStr}${queryString}`;
 
           // Assemble headers
           const headers: Record<string, string> = {};
