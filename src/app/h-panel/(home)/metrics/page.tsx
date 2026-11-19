@@ -1,8 +1,9 @@
-import { SomethingWentWrong } from '@/components/common/SomethingWentWrong'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import serverAxios from '@/lib/api/serverAxios'
-import moment from 'moment'
-import React from 'react'
+import { SomethingWentWrong } from "@/components/common/SomethingWentWrong"
+import serverAxios from "@/lib/api/serverAxios"
+import moment from "moment"
+import React from "react"
+import { EmptyState, PageHeader, PageShell, Pill, Section } from "@/components/h-panel/kit"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 const page = async () => {
   try {
@@ -15,7 +16,13 @@ const page = async () => {
     }
 
     return (
-      <ResponsiveTable data={data.result} />
+      <PageShell>
+        <PageHeader
+          title="Metrics"
+          description="Who opened the mail you sent, how often, and where each message got to."
+        />
+        <ResponsiveTable data={data.result} />
+      </PageShell>
     )
   } catch (error) {
     return (
@@ -24,72 +31,59 @@ const page = async () => {
   }
 
 }
+
+const formatTime = (time: unknown) => moment(time as string).format("YYYY-MM-DD hh:mm A")
+
 const ResponsiveTable = ({ data }: { data: any[] }) => {
-
-
+  const records = data.flatMap((domain: any, d: number) =>
+    (domain?.track_records ?? [])
+      .filter((record: any) => record !== null)
+      .map((record: any, i: number) => ({ ...record, _key: `${domain?.id ?? d}-${record?.id ?? i}` }))
+  )
 
   return (
-    <div className="w-full">
-      <ScrollArea className="h-[600px] rounded-md border">
-        <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-full border border-gray-200 bg-transparent shadow-md rounded-lg overflow-hidden">
-            <thead className="bg-stone-400">
-              <tr>
-                <th className="px-4 py-2 text-left text-gray-700">From</th>
-                <th className="px-4 py-2 text-left text-gray-700">To</th>
-                <th className="px-4 py-2 text-left text-gray-700">Opened</th>
-                <th className="px-4 py-2 text-left text-gray-700">Opened Times</th>
-                <th className="px-4 py-2 text-left text-gray-700">Last Opened</th>
-                <th className="px-4 py-2 text-left text-gray-700">Status</th>
-              </tr>
-            </thead>
-            <tbody className='text-gray-400'>
-              {data.length === 0 ? <tr><td colSpan={5} className="text-center">No records found</td></tr>
-                : data.map((domain, i: number) =>
-                  domain.track_records.filter((d: any,) => d !== null).length === 0 ?
-                    <tr key={domain.id + i}>
-                      <td colSpan={5} className="text-center">No records found</td></tr> :
-                    domain.track_records.map((record: any) => (
-                      <tr key={record.id + i} className="border-t border-gray-400 hover:bg-stone-900">
-
-                        <td className="px-4 py-2">{record?.from}</td>
-                        <td className="px-4 py-2">{record?.to}</td>
-                        <td className="px-4 py-2">{record?.opened ? "Yes" : "No"}</td>
-                        <td className="px-4 py-2">{record?.opened_times}</td>
-                        <td className="px-4 py-2">{record?.last_opened ? moment(record?.last_opened).format("YYYY-MM-DD hh:mm:ss A") : "Not Opened Yet"}</td>
-                        <td className="px-4 py-2">
-                          {Object.entries(record?.all_status).map(([status, time]) => (
-                            <p key={status}><strong>{status}:</strong> {moment(time as string).format("YYYY-MM-DD hh:mm:ss A")}</p>
-                          ))}
-                        </td>
-                      </tr>
-                    ))
-                )}
-            </tbody>
-          </table>
-        </div>
-        <div className="md:hidden space-y-4 text-gray-400 " >
-          {data.length === 0 ? <div className="text-center">No records found</div> : data.map((domain) =>
-            domain.track_records.filter((d: any) => d !== null).length === 0 ? <div className="text-center">No records found</div> : domain.track_records.map((record: any, i: number) => (
-              <div key={record.id + i} className="border border-gray-200 p-4 rounded-lg shadow-md bg-black">
-
-                <p><strong>From:</strong> {record?.from}</p>
-
-                <p><strong>Status:</strong></p>
-                <ul>
-                  {Object.entries(record?.all_status).map(([status, time]) => (
-                    <li key={status}><strong>{status}:</strong> {moment(time as string).format("YYYY-MM-DD hh:mm:ss A")}</li>
-                  ))}
-                </ul>
-                <p><strong>Opened:</strong> {record?.opened ? "Yes" : "No"}</p>
-                <p><strong>Opened Times:</strong> {record?.opened_times}</p>
-                <p><strong>Last Opened:</strong> {record?.last_opened ? moment(record?.last_opened).format("YYYY-MM-DD hh:mm:ss A") : "Not Opened Yet"}</p>
-              </div>
-            ))
-          )}
-        </div>
-      </ScrollArea>
-    </div>
-  );
-};
+    <Section title="Tracked messages" description={`${records.length} record${records.length === 1 ? "" : "s"}`} flush>
+      {records.length === 0 ? (
+        <EmptyState title="No records found" description="Opens are tracked for mail you send with tracking turned on." />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>From</TableHead>
+              <TableHead>To</TableHead>
+              <TableHead>Opened</TableHead>
+              <TableHead className="text-right">Times</TableHead>
+              <TableHead>Last opened</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {records.map((record: any) => (
+              <TableRow key={record._key}>
+                <TableCell className="max-w-[220px] truncate">{record?.from}</TableCell>
+                <TableCell className="max-w-[220px] truncate">{record?.to}</TableCell>
+                <TableCell>
+                  <Pill tone={record?.opened ? "green" : "neutral"}>{record?.opened ? "Opened" : "Not opened"}</Pill>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{record?.opened_times}</TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {record?.last_opened ? formatTime(record?.last_opened) : "Not opened yet"}
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-0.5 text-xs text-muted-foreground">
+                    {Object.entries(record?.all_status ?? {}).map(([status, time]) => (
+                      <p key={status} className="whitespace-nowrap">
+                        <span className="text-foreground">{status}</span> {formatTime(time)}
+                      </p>
+                    ))}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </Section>
+  )
+}
 export default page
