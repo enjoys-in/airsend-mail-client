@@ -1,7 +1,5 @@
-"use client";
-
-import { useNavigate, useLocation } from "@nimbus/_lib/router-shim";
-import { authClient } from "@nimbus/_lib/auth-shim";
+import { useNavigate, useLocation } from "@tanstack/react-router";
+import { authClient } from "@nimbus/_packages/auth/auth-client";
 import { useEffect } from "react";
 
 interface RouteGuardProps {
