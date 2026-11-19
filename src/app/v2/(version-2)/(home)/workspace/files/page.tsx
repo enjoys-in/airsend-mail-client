@@ -56,11 +56,13 @@ import { workspaceApi, isValidUUID } from "../_lib/api";
 import {
   downloadWorkspaceFile,
   filesErrorMessage,
-  getTeamStorage,
-  type TeamStorage,
+  getOrgStorage,
+  getFilesOrganization,
+  FILES_SETUP_PATH,
+  type FilesOrganization,
+  type StorageAccount,
 } from "../_lib/files-api";
 import { formatBytes } from "../_lib/file-utils";
-import { settingsPath } from "../_lib/use-access";
 
 export default function FilesPage() {
   return (
@@ -96,30 +98,32 @@ function FilesHubContent() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // The storage account the team's workspace uploads go to (undefined = still loading, null = not configured)
-  const [storage, setStorage] = useState<TeamStorage | null | undefined>(undefined);
+  // The organization's default storage account (undefined = still loading, null = not configured) and the user's role
+  // in it: owners and admins set storage up in Files, everyone else asks them.
+  const [storage, setStorage] = useState<StorageAccount | null | undefined>(undefined);
   const [storageError, setStorageError] = useState<string | null>(null);
+  const [organization, setOrganization] = useState<FilesOrganization | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!activeTeamId || !isValidUUID(activeTeamId)) {
-      setStorage(undefined);
-      return;
-    }
     let cancelled = false;
     setStorage(undefined);
     setStorageError(null);
-    getTeamStorage(activeTeamId)
-      .then((s) => !cancelled && setStorage(s))
+    Promise.all([getOrgStorage(), getFilesOrganization()])
+      .then(([s, org]) => {
+        if (cancelled) return;
+        setStorage(s);
+        setOrganization(org);
+      })
       .catch((err) => {
         if (cancelled) return;
         setStorage(null);
-        setStorageError(filesErrorMessage(err, "Could not check this team's storage"));
+        setStorageError(filesErrorMessage(err, "Could not check your organization's storage"));
       });
     return () => {
       cancelled = true;
     };
-  }, [activeTeamId]);
+  }, []);
 
   const teamUploads = pendingUploads.filter((u) => u.contextType === "team" && u.contextId === activeTeamId);
   const channelsInTeam = channels.filter((c) => isValidUUID(c.id) && (!activeTeamId || c.teamId === activeTeamId));
@@ -293,17 +297,20 @@ function FilesHubContent() {
         <div className="mx-4 mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400 md:mx-6">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
           <div className="flex-1">
-            <p className="font-medium">{storageError ?? "This team has no storage connected yet."}</p>
+            <p className="font-medium">{storageError ?? "Your organization has not set up file storage yet."}</p>
             <p className="mt-0.5 opacity-90">
-              Uploads (here and in chats) need a storage account. A team owner or admin can connect one in{" "}
-              {activeTeamId ? (
-                <Link href={settingsPath.team(activeTeamId, "storage")} className="font-semibold underline underline-offset-2">
-                  team settings → Storage
-                </Link>
+              Uploads (here and in chats) go to your organization&apos;s storage.{" "}
+              {organization?.canManageStorage ? (
+                <>
+                  Connect it in{" "}
+                  <Link href={FILES_SETUP_PATH} className="font-semibold underline underline-offset-2">
+                    Files
+                  </Link>
+                  .
+                </>
               ) : (
-                "team settings → Storage"
+                "Ask an organization owner or admin to set it up."
               )}
-              .
             </p>
           </div>
         </div>
@@ -531,7 +538,7 @@ function FilesHubContent() {
               Upload to Workspace Files
             </DialogTitle>
             <DialogDescription>
-              Upload documents, presentations, or spreadsheets to your team storage.
+              Upload documents, presentations, or spreadsheets to your organization&apos;s storage.
             </DialogDescription>
           </DialogHeader>
 
@@ -617,7 +624,7 @@ function FilesHubContent() {
               Channel: #{previewFile?.channelName || "general"}
             </p>
             <p className="text-xs text-muted-foreground mt-3 bg-background border border-border/40 px-3 py-1.5 rounded-lg max-w-sm">
-              Stored in your team&apos;s connected storage.
+              Stored in your organization&apos;s storage.
             </p>
           </div>
 
