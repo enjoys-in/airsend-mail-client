@@ -1,11 +1,11 @@
 /*
  * AirSend design-system bridge, shared by the embedded apps. Appended UNSCOPED to
- * public/tasks/kaneo.css (scripts/build-tasks-css.mjs) and public/files/nimbus.css
+ * public/tasks/tasks.css (scripts/build-tasks-css.mjs) and public/files/nimbus.css
  * (scripts/build-files-css.mjs).
  *
- * An embedded app's tokens live on its own root (`.kaneo-root`, `.nimbus-root`) and shadow the host's same-named variables there, so they
+ * An embedded app's tokens live on its own root (`.tasks-root`, `.nimbus-root`) and shadow the host's same-named variables there, so they
  * cannot read `--background` etc. directly (that would be a cycle). These aliases are resolved on
- * <html>, where the host's light/dark values apply, and then inherited into `.kaneo-root`, which
+ * <html>, where the host's light/dark values apply, and then inherited into `.tasks-root`, which
  * maps its own tokens onto them (see that app's _styles/index.css). Switching the host theme therefore
  * re-themes Kaneo with no extra work. The `--ds-*` names are unique, so nothing is clobbered.
  */

@@ -1,5 +1,5 @@
 /*
- * Compiled with Tailwind v4 (alias `tailwindcss-v4`) into public/tasks/kaneo.css via
+ * Compiled with Tailwind v4 (alias `tailwindcss-v4`) into public/tasks/tasks.css via
  * `bun run tasks:css`; the host app itself stays on Tailwind v3. The Geist fonts are
  * imported from ../_lib/kaneo-app.tsx so the bundler can resolve their font files.
  */
@@ -117,6 +117,35 @@ input:-webkit-autofill:active {
 }
 
 
+@theme {
+  --font-weight-semibold: 400;
+  --font-weight-bold: 400;
+  --font-weight-extrabold: 400;
+  --font-weight-medium: 400;
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f4f4f5;
+  --color-neutral-200: #e4e4e7;
+  --color-neutral-300: #d4d4d8;
+  --color-neutral-400: #a1a1aa;
+  --color-neutral-500: #71717a;
+  --color-neutral-600: #52525b;
+  --color-neutral-700: #3f3f46;
+  --color-neutral-800: #27272a;
+  --color-neutral-900: #18181b;
+  --color-neutral-950: #09090b;
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f4f4f5;
+  --color-slate-200: #e4e4e7;
+  --color-slate-300: #d4d4d8;
+  --color-slate-400: #a1a1aa;
+  --color-slate-500: #71717a;
+  --color-slate-600: #52525b;
+  --color-slate-700: #3f3f46;
+  --color-slate-800: #27272a;
+  --color-slate-900: #18181b;
+  --color-slate-950: #09090b;
+}
+
 @theme inline {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -227,10 +256,7 @@ input:-webkit-autofill:active {
 }
 
 :root {
-  --font-sans:
-    ui-sans-serif,
-    system-ui,
-    sans-serif;
+  --font-sans: inherit;
   --font-heading: var(--font-sans);
   --font-mono:
     "Geist Mono Variable",
@@ -360,6 +386,25 @@ input:-webkit-autofill:active {
   --priority-high: #fb923c;
   --priority-urgent: #e5484d;
   --due-overdue: #ff6467;
+  --dark-line: color-mix(in srgb, var(--border) 60%, var(--muted-foreground));
+  --board-card-border-hover: color-mix(in srgb, var(--border) 70%, var(--muted-foreground));
+  --board-card-selected-border: var(--dark-line);
+  --board-card-done-border: var(--border);
+  --chip-border: var(--border);
+  --chip-border-hover: color-mix(in srgb, var(--border) 70%, var(--muted-foreground));
+  --chip-border-open: var(--dark-line);
+  --avatar-border: var(--border);
+}
+
+/* Dark mode: no white hairlines. Drop the translucent white top highlight on cards, dialogs,
+   popovers and inputs, and keep selected/emphasised borders to a soft grey instead of white. */
+.dark [class*="dark:before:shadow-"]::before {
+  box-shadow: none !important;
+}
+
+.dark [class*="border-primary/"],
+.dark [class*="border-foreground/"] {
+  border-color: var(--dark-line);
 }
 
 /* Typography: inherit the AirSend font (set on the host body) instead of Kaneo's own. */
@@ -374,9 +419,9 @@ h6 {
   font-family: inherit;
 }
 
-/* Kaneo is embedded below the AirSend header, so its "viewport" is the `.kaneo-root` box (see
+/* Kaneo is embedded below the AirSend header, so its "viewport" is the `.tasks-root` box (see
    [[...slug]]/page.tsx), not the window. Unlayered on purpose: it is emitted after the utilities
-   and must win over `h-svh`/`min-h-svh`. `scripts/build-tasks-css.mjs` scopes it to `.kaneo-root`. */
+   and must win over `h-svh`/`min-h-svh`. `scripts/build-tasks-css.mjs` scopes it to `.tasks-root`. */
 /* Kaneo's sidebar lives in the AirSend sidebar on desktop, which has its own toggle, so Kaneo's
    toggle buttons would do nothing there. Kept on mobile, where Kaneo's drawer is still used. */
 @media (min-width: 768px) {
@@ -599,7 +644,7 @@ h6 {
   .kaneo-tiptap-slash-group-title {
     padding: 0.22rem 0.42rem 0.3rem;
     font-size: 0.68rem;
-    font-weight: 600;
+    font-weight: 400;
     letter-spacing: 0.01em;
     text-transform: uppercase;
     color: color-mix(in srgb, var(--foreground) 48%, transparent);
@@ -642,7 +687,7 @@ h6 {
     align-items: baseline;
     border-radius: 0.3rem;
     padding: 0 0.2rem;
-    font-weight: 500;
+    font-weight: 400;
     color: var(--primary);
     background: color-mix(in srgb, var(--primary) 12%, transparent);
     white-space: nowrap;
@@ -702,7 +747,7 @@ h6 {
   .kaneo-tiptap-content .ProseMirror h3 {
     margin: 1.05rem 0 0.45rem;
     font-family: var(--font-heading);
-    font-weight: 600;
+    font-weight: 400;
     letter-spacing: -0.02em;
     line-height: 1.26;
     color: var(--foreground);
@@ -1009,7 +1054,7 @@ h6 {
 
   .kaneo-tiptap-content .ProseMirror table th {
     background: color-mix(in srgb, var(--accent) 70%, transparent);
-    font-weight: 600;
+    font-weight: 400;
     text-align: left;
   }
 
@@ -1096,7 +1141,7 @@ h6 {
   .kaneo-issue-link-key {
     flex-shrink: 0;
     font-size: 0.76rem;
-    font-weight: 500;
+    font-weight: 400;
     color: color-mix(in srgb, var(--foreground) 64%, transparent);
   }
 
@@ -1106,7 +1151,7 @@ h6 {
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 0.86rem;
-    font-weight: 500;
+    font-weight: 400;
     color: var(--foreground);
   }
 
@@ -1130,7 +1175,7 @@ h6 {
   }
 
   .kaneo-issue-link-preview-key {
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0.01em;
   }
 
@@ -1138,7 +1183,7 @@ h6 {
     margin-top: 0.45rem;
     font-size: 0.9rem;
     line-height: 1.35;
-    font-weight: 500;
+    font-weight: 400;
     color: var(--foreground);
   }
 
@@ -1210,7 +1255,7 @@ h6 {
   .kaneo-attachment-card-title {
     color: var(--foreground);
     font-size: 0.96rem;
-    font-weight: 600;
+    font-weight: 400;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
@@ -1576,7 +1621,7 @@ h6 {
 
   .kaneo-comment-editor-prose table th {
     background: color-mix(in srgb, var(--accent) 65%, transparent);
-    font-weight: 600;
+    font-weight: 400;
     text-align: left;
   }
 

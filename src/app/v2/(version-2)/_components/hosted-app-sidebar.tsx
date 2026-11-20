@@ -9,7 +9,7 @@ import { TasksSidebarSkeleton } from "@/components/common/tasks-skeleton";
  * content into the slot element below (see src/components/common/slot-store.ts), so it sits in the
  * AirSend sidebar like the other modules' panels instead of showing a second sidebar.
  *
- * `rootClass` (`kaneo-root` / `nimbus-root`) gives the slot the app's scoped design tokens and
+ * `rootClass` (`tasks-root` / `nimbus-root`) gives the slot the app's scoped design tokens and
  * utilities. Until the app has resolved its first route, a skeleton stands in; once it has, an
  * empty slot just hides (a page that has no sidebar, like the Files setup screen).
  */

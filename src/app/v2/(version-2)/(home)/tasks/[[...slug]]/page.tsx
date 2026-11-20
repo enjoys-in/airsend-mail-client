@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { TasksSkeleton } from "@/components/common/tasks-skeleton";
-import { KANEO_CSS_VERSION } from "@tasks/_lib/kaneo-css-version";
+import { TASKS_CSS_VERSION } from "@tasks/_lib/tasks-css-version";
 import { kaneoPortalContainer } from "@tasks/_lib/portal-container";
 import { useTasksSidebarSlot } from "@tasks/_lib/sidebar-slot";
 
@@ -25,20 +25,20 @@ const KaneoApp = dynamic(() => import("@tasks/_lib/kaneo-app"), {
 });
 
 // Kaneo's Tailwind v4 stylesheet is compiled separately (`bun run tasks:css`) because the
-// host app is on Tailwind v3. It is scoped to `.kaneo-root`, and attached only while this route
+// host app is on Tailwind v3. It is scoped to `.tasks-root`, and attached only while this route
 // is mounted. Returns true once it has loaded, so the app never paints unstyled.
-const KANEO_CSS_ID = "kaneo-tasks-css";
+const TASKS_CSS_ID = "tasks-css";
 
 function useKaneoStylesheet() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let link = document.getElementById(KANEO_CSS_ID) as HTMLLinkElement | null;
+    let link = document.getElementById(TASKS_CSS_ID) as HTMLLinkElement | null;
     if (!link) {
       link = document.createElement("link");
-      link.id = KANEO_CSS_ID;
+      link.id = TASKS_CSS_ID;
       link.rel = "stylesheet";
-      link.href = `/tasks/kaneo.css?v=${KANEO_CSS_VERSION}`;
+      link.href = `/tasks/tasks.css?v=${TASKS_CSS_VERSION}`;
       document.head.appendChild(link);
     }
     if (link.sheet) {
@@ -50,7 +50,7 @@ function useKaneoStylesheet() {
       link.addEventListener("error", done, { once: true });
     }
     return () => {
-      document.getElementById(KANEO_CSS_ID)?.remove();
+      document.getElementById(TASKS_CSS_ID)?.remove();
     };
   }, []);
 
@@ -71,7 +71,7 @@ export default function TasksPage() {
       {/* `contain: layout` makes Kaneo's `position: fixed` sidebar relative to this box rather
           than the window, so it doesn't paint over the AirSend header and sidebar. */}
       <div
-        className={`kaneo-root flex ${FRAME_HEIGHT} w-full flex-row overflow-hidden`}
+        className={`tasks-root flex ${FRAME_HEIGHT} w-full flex-row overflow-hidden`}
         data-host-sidebar={inHostSidebar ? "" : undefined}
         style={{ contain: "layout" }}
       >
@@ -83,7 +83,7 @@ export default function TasksPage() {
           `display: contents` keeps the host out of the layout. */}
       {mounted
         ? createPortal(
-            <div ref={setPortalHost} className="kaneo-root contents" />,
+            <div ref={setPortalHost} className="tasks-root contents" />,
             document.body,
           )
         : null}

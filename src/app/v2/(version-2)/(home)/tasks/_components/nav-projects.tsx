@@ -232,7 +232,7 @@ export function NavProjects() {
           <CollapsibleTrigger
             className="data-panel-open:[&_svg]:rotate-90"
             render={
-              <SidebarGroupLabel className="h-7 cursor-pointer justify-start gap-1 px-0 text-sidebar-accent-foreground" />
+              <SidebarGroupLabel className="h-7 cursor-pointer justify-start gap-1 px-0 text-sidebar-foreground/70" />
             }
           >
             <span>{t("navigation:sidebar.projects")}</span>

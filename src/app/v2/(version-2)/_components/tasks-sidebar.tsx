@@ -10,7 +10,7 @@ import {
 export function TasksSidebar() {
   return (
     <HostedAppSidebar
-      rootClass="kaneo-root"
+      rootClass="tasks-root"
       setSlot={setTasksSidebarSlot}
       useReady={useTasksSidebarReady}
     />

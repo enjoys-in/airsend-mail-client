@@ -7,7 +7,7 @@ import { useIsMobile } from "@tasks/_hooks/use-mobile";
  * Renders a page header's content in the AirSend top bar (desktop) instead of a second bar under
  * it; `fallback` is the original in-page header, used on mobile or outside the AirSend shell.
  *
- * `.kaneo-root` scopes Kaneo's tokens and utilities to the hosted content, and
+ * `.tasks-root` scopes Kaneo's tokens and utilities to the hosted content, and
  * `data-kaneo-header` drives the CSS that hides Kaneo's sidebar toggle and the divider after it
  * (the AirSend bar has its own toggle).
  */
@@ -24,7 +24,7 @@ export function HostedHeader({
   if (hostSlot && !isMobile) {
     return createPortal(
       <div
-        className="kaneo-root flex min-w-0 flex-1 items-center"
+        className="tasks-root flex min-w-0 flex-1 items-center"
         data-kaneo-header=""
         style={{ background: "transparent" }}
       >

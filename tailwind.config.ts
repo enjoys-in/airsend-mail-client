@@ -6,7 +6,7 @@ module.exports = {
 		"./components/**/*.{ts,tsx}",
 		"./app/**/*.{ts,tsx}",
 		"./src/**/*.{ts,tsx}",
-		// The Kaneo tasks app is styled by its own Tailwind v4 build (public/tasks/kaneo.css,
+		// The tasks app is styled by its own Tailwind v4 build (public/tasks/tasks.css,
 		// `bun run tasks:css`); v4-only class syntax in there would break this v3 build.
 		"!./src/app/v2/(version-2)/(home)/tasks/**",
 	],
