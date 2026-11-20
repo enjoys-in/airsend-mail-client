@@ -6,6 +6,7 @@ import { Radio, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useChatStore } from "./_lib/chat-store";
+import { revalidate } from "./_lib/workspace-cache";
 import { isOpenTask, useEnsureMyTasks, useMyTasksStore } from "../tasks/_lib/my-tasks-store";
 import { WorkspaceHomeSkeleton } from "./_components/WorkspaceSkeletons";
 import WorkspaceErrorBoundary from "./_components/WorkspaceErrorBoundary";
@@ -51,10 +52,10 @@ function WorkspaceDashboardContent() {
   useEffect(() => {
     const email = "mullayam06@airsend.in";
     if (teams.length === 0) {
-      fetchTeams(email);
+      void revalidate("teams", () => fetchTeams(email));
     }
-    fetchNotifications();
-    fetchMeetings(activeTeamId || undefined);
+    void revalidate("notifications", () => fetchNotifications());
+    void revalidate(activeTeamId ? `meetings:${activeTeamId}` : "meetings:all", () => fetchMeetings(activeTeamId || undefined));
   }, [teams.length, activeTeamId, fetchTeams, fetchNotifications, fetchMeetings]);
 
   const activeTeam = teams.find((t) => t.id === activeTeamId) || teams[0];

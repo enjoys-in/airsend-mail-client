@@ -13,6 +13,7 @@ import {
   getAuthToken,
   isValidUUID,
   toMessage,
+  toDMMessage,
   toAttachment,
   toTeam,
   toChannel,
@@ -22,7 +23,8 @@ import {
   toWorkspaceFile,
   toChatTask,
 } from "./api";
-import type { ServerMessage, ServerAttachment } from "./api";
+import type { ServerMessage, ServerDMMessage, ServerAttachment } from "./api";
+import { removeOutbox } from "./workspace-cache";
 import { refreshMyTasks } from "../../tasks/_lib/my-tasks-store";
 
 interface WSIncoming {
@@ -36,6 +38,7 @@ export function useWorkspaceWS(email: string | undefined) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(true);
+  const everOpenedRef = useRef(false);
 
   const connect = useCallback(() => {
     if (!email || !mountedRef.current) return;
@@ -61,6 +64,17 @@ export function useWorkspaceWS(email: string | undefined) {
         const { teams, channels } = useChatStore.getState();
         subscribeAll(ws, "team", teams.map((t) => t.id));
         subscribeAll(ws, "channel", channels.map((c) => c.id));
+
+        // After a reconnect, anything sent while the socket was down is missing: pull the open conversation's delta
+        // and send whatever was queued offline.
+        const chat = useChatStore.getState();
+        if (everOpenedRef.current) {
+          if (chat.activeChannelId) void chat.fetchMessages(chat.activeChannelId, chat.currentUserId);
+          if (chat.activeDmId) void chat.fetchDMMessages(chat.activeDmId);
+          refreshAfterReconnect();
+        }
+        everOpenedRef.current = true;
+        void chat.flushOutbox();
       };
 
       ws.onmessage = (ev) => {
@@ -107,7 +121,18 @@ export function useWorkspaceWS(email: string | undefined) {
     return () => {
       mountedRef.current = false;
       clearTimeout(reconnectRef.current);
-      wsRef.current?.close();
+      const ws = wsRef.current;
+      wsRef.current = null;
+      if (!ws) return;
+      ws.onclose = null;
+      ws.onerror = null;
+      ws.onmessage = null;
+      if (useChatStore.getState()._ws === ws) useChatStore.getState().setWS(null);
+      if (ws.readyState === WebSocket.CONNECTING) {
+        ws.onopen = () => ws.close();
+      } else {
+        ws.close();
+      }
     };
   }, [connect]);
 
@@ -185,6 +210,7 @@ function handleWSEvent(msg: WSIncoming) {
       const data = msg.data as { temp_id: string; message: ServerMessage };
       if (!data.message || !data.temp_id) break;
       const real = toMessage(data.message);
+      void removeOutbox(data.temp_id);
       useChatStore.setState((s) => ({
         messages: s.messages.map((m) => (m.id === data.temp_id ? real : m)),
       }));
@@ -194,6 +220,7 @@ function handleWSEvent(msg: WSIncoming) {
     case "message.error": {
       const data = msg.data as { temp_id: string; error: string };
       if (data.temp_id) {
+        void removeOutbox(data.temp_id);
         useChatStore.setState((s) => ({
           messages: s.messages.filter((m) => m.id !== data.temp_id),
           apiError: data.error || "Failed to send message",
@@ -211,6 +238,19 @@ function handleWSEvent(msg: WSIncoming) {
       useChatStore.setState((s) => ({
         messages: [...s.messages, newMsg],
       }));
+      store.noteIncoming(newMsg.channelId, newMsg);
+      break;
+    }
+
+    case "dm.message.created": {
+      const data = msg.data as { message?: ServerDMMessage; conversation_id?: string };
+      if (!data?.message) break;
+      const conversationId = data.conversation_id ?? data.message.conversation_id;
+      if (!conversationId) break;
+      store.receiveDMMessage(conversationId, toDMMessage(data.message));
+      if (!store.directMessages.some((d) => d.id === conversationId)) {
+        void store.fetchDMs(store.currentUserId);
+      }
       break;
     }
 
@@ -219,6 +259,21 @@ function handleWSEvent(msg: WSIncoming) {
       const data = msg.data as { message_id: string; attachment: ServerAttachment };
       if (!data?.message_id || !data.attachment) break;
       store.addMessageAttachment(data.message_id, toAttachment(data.attachment));
+      break;
+    }
+
+    case "dm.created":
+    case "dm.updated":
+    case "dm.member.added":
+    case "dm.member.removed":
+    case "dm.member.role_changed": {
+      void useChatStore.getState().fetchDMs(useChatStore.getState().currentUserId);
+      break;
+    }
+
+    case "call.started":
+    case "call.ended": {
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("airsend:call-event"));
       break;
     }
 
@@ -393,6 +448,18 @@ function handleWSEvent(msg: WSIncoming) {
                   customStatus: data.custom_status ?? m.customStatus,
                 }
               : m
+          ),
+          directMessages: s.directMessages.map((dm) =>
+            dm.participants.some((p) => p.userId?.toLowerCase() === data.email.toLowerCase())
+              ? {
+                  ...dm,
+                  participants: dm.participants.map((p) =>
+                    p.userId?.toLowerCase() === data.email.toLowerCase() && !p.unavailable
+                      ? { ...p, status: (data.status as any) || p.status }
+                      : p
+                  ),
+                }
+              : dm
           ),
         }));
       }

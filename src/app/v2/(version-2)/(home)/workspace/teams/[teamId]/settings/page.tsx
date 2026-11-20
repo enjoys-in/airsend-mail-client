@@ -12,6 +12,7 @@ import { PERMISSION_METADATA } from "../../../_lib/permissions";
 import type { PermissionKey } from "../../../_lib/chat-types";
 import { useTeamSettings } from "./_components/use-team-settings";
 import { SettingsCard, SettingsHeader, Notice, SaveBar } from "./_components/settings-ui";
+import { LocalDataCard } from "./_components/local-data-card";
 
 const CATEGORY_LABEL: Record<string, string> = {
   text: "Text",
@@ -156,6 +157,8 @@ export default function TeamOverviewPage() {
             ))}
           </div>
         </SettingsCard>
+
+        <LocalDataCard />
 
         {!s.customRoles && (
           <Notice>

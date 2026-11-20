@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
-import { canUserPerformInChannel, getUserRoleInTeam } from "../_lib/permissions";
+import { canUserPerformInChannel, getDMPartner, getUserRoleInTeam } from "../_lib/permissions";
 import { useAccessStore } from "../_lib/access-store";
 import { isTimedOut } from "../_lib/use-access";
 import { formatUntil } from "../_lib/member-actions";
@@ -274,8 +274,10 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
   const isAnnouncement =
     channel?.type === "announcement" || channel?.postingPermission === "admins_only";
 
+  const dmGone = !!dm && !channel && dm.kind !== "group" && !!getDMPartner(dm, currentUserId).unavailable;
+
   const canSend = dm
-    ? true
+    ? !dmGone
     : !timedOut && canUserPerformInChannel(channel, currentUserId, userRole, "send_messages");
 
   const canAttach = dm
@@ -299,7 +301,9 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     : canUserPerformInChannel(channel, currentUserId, userRole, "mention_everyone");
 
   const activePlaceholder = !canSend
-    ? timedOut
+    ? dmGone
+      ? "This user no longer exists."
+      : timedOut
       ? `You're timed out for ${formatUntil(timedOutUntil)} — you can read but not post.`
       : isLocked
       ? "This channel is locked — only admins and moderators can post."
@@ -318,6 +322,15 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {dmGone && (
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive" role="status" data-testid="dm-unknown-user">
+          <AlertTriangle className="size-3.5 shrink-0" />
+          <span className="font-medium">
+            This user no longer exists. You can read the history, but you can&apos;t send messages or call them.
+          </span>
+        </div>
+      )}
+
       {/* ── Timed out ── */}
       {timedOut && (
         <div className="mb-2 flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
@@ -339,7 +352,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
       )}
 
       {/* ── Announcement / Admins-Only Warning ── */}
-      {!timedOut && !isLocked && isAnnouncement && !canSend && (
+      {!dmGone && !timedOut && !isLocked && isAnnouncement && !canSend && (
         <div className="mb-2 flex items-center gap-2 rounded-md bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-xs text-blue-600 dark:text-blue-400">
           <Shield className="size-3.5 shrink-0" />
           <span className="font-medium">
@@ -349,7 +362,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
       )}
 
       {/* ── Granular OpenFGA Denied Warning ── */}
-      {!timedOut && !isLocked && !isAnnouncement && !canSend && (
+      {!dmGone && !timedOut && !isLocked && !isAnnouncement && !canSend && (
         <div className="mb-2 flex items-center gap-2 rounded-md bg-muted/60 border border-border/50 px-3 py-2 text-xs text-muted-foreground">
           <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
           <span className="font-medium">

@@ -1,5 +1,8 @@
 "use client";
 
+import { usePhone } from "../phone/_lib/phone-context";
+import ConversationCallBanner from "../phone/_components/ConversationCallBanner";
+import GroupMembersDialog from "./GroupMembersDialog";
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -41,6 +44,8 @@ import DMThread from "./DMThread";
 import AnnouncementBanner from "./AnnouncementBanner";
 import { MessageContextMenu, WorkspaceContextMenu } from "./MessageContextMenu";
 import { getDMPartner } from "../_lib/permissions";
+import UserPresenceBadge from "./UserPresenceBadge";
+import { isBusyStatus, presenceLabel } from "../_lib/presence";
 import { useChannelPermissions, settingsPath } from "../_lib/use-access";
 import type { ChatMessage, TeamMember } from "../_lib/chat-types";
 
@@ -73,8 +78,28 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
   const isLoadingMessages = useChatStore((s) => s.isLoadingMessages);
   const startCall = useChatStore((s) => s.startCall);
   const addCallRecord = useChatStore((s) => s.addCallRecord);
+  const phone = usePhone();
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+
+  const handleStartConversationCall = (conversationId: string, title: string, type: "video" | "audio") => {
+    void phone.start("", { conversationId, media: type, title });
+  };
 
   const handleStartDMCall = (receiverId: string, receiverName: string, type: "video" | "audio") => {
+    if (type === "audio" && phone.me && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(receiverId)) {
+      addCallRecord({
+        callerId: currentUserId || "u-self",
+        callerName: "You",
+        receiverId,
+        receiverName,
+        type,
+        direction: "outgoing",
+        duration: 0,
+        teamId: activeTeamId || "t-1",
+      });
+      void phone.start(receiverId);
+      return;
+    }
     const callId = `call-${Date.now().toString(36)}`;
     startCall(callId, `${type === "video" ? "Video Call with" : "Call with"} ${receiverName}`);
     addCallRecord({
@@ -260,25 +285,43 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
   // DM view
   if (dm && !channel) {
     const other = getDMPartner(dm, currentUserId);
+    const isGroup = dm.kind === "group";
     return (
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/40 px-4">
           <div className="flex items-center gap-2">
             <MobileWorkspaceSidebar />
-            <UserIcon className="size-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold">
+            {isGroup ? <Users className="size-4 text-muted-foreground" /> : <UserIcon className="size-4 text-muted-foreground" />}
+            <h3 className="text-sm font-semibold" data-testid="dm-title">
               {other?.displayName ?? "Direct Message"}
             </h3>
+            {!isGroup && other && !other.unavailable && (
+              <UserPresenceBadge status={other.status} showText className="ml-1" />
+            )}
+            {isGroup && (
+              <button
+                type="button"
+                className="rounded px-1.5 text-xs text-muted-foreground hover:bg-muted"
+                onClick={() => setGroupDialogOpen(true)}
+                data-testid="group-open-members"
+              >
+                {dm.participants.length} people
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-1">
-            {other && (
+            {other && !other.unavailable && (!isGroup || phone.me) && (
               <>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="size-7 text-purple-600 hover:bg-purple-500/10"
-                  onClick={() => handleStartDMCall(other.userId, other.displayName, "audio")}
-                  title="Audio call"
+                  onClick={() =>
+                    phone.me
+                      ? handleStartConversationCall(dm.id, other.displayName, "audio")
+                      : handleStartDMCall(other.userId, other.displayName, "audio")
+                  }
+                  title={!isGroup && isBusyStatus(other.status) ? `Audio call (${other.displayName} is ${presenceLabel(other.status).toLowerCase()})` : "Audio call"}
                 >
                   <Phone className="size-3.5" />
                 </Button>
@@ -286,8 +329,12 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
                   variant="ghost"
                   size="icon"
                   className="size-7 text-blue-600 hover:bg-blue-500/10"
-                  onClick={() => handleStartDMCall(other.userId, other.displayName, "video")}
-                  title="Video call"
+                  onClick={() =>
+                    phone.me
+                      ? handleStartConversationCall(dm.id, other.displayName, "video")
+                      : handleStartDMCall(other.userId, other.displayName, "video")
+                  }
+                  title={!isGroup && isBusyStatus(other.status) ? `Video call (${other.displayName} is ${presenceLabel(other.status).toLowerCase()})` : "Video call"}
                 >
                   <Video className="size-3.5" />
                 </Button>
@@ -303,6 +350,16 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
             </Button>
           </div>
         </div>
+        {isGroup && (
+          <GroupMembersDialog
+            group={dm}
+            currentUserId={currentUserId}
+            open={groupDialogOpen}
+            onOpenChange={setGroupDialogOpen}
+            onLeft={() => router.push("/v2/workspace")}
+          />
+        )}
+        <ConversationCallBanner conversationId={dm.id} title={other?.displayName ?? "Call"} />
         <WorkspaceContextMenu dm={dm} onScrollToBottom={scrollToBottom} onFocusInput={focusInput}>
           <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
             <div className="space-y-0.5 py-4 min-h-full">
@@ -397,7 +454,32 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
           )}
         </div>
         <div className="flex items-center gap-1">
-          {canStartCalls && (
+          {canStartCalls && phone.me && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 text-purple-600 hover:bg-purple-500/10"
+                onClick={() => handleStartConversationCall(channel.id, `#${channel.name}`, "audio")}
+                title="Start an audio call in this channel"
+                data-testid="channel-call-audio"
+              >
+                <Phone className="size-3.5" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs px-2 gap-1 text-blue-600 border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                onClick={() => handleStartConversationCall(channel.id, `#${channel.name}`, "video")}
+                title="Start a video call in this channel"
+                data-testid="channel-call-video"
+              >
+                <Video className="size-3" />
+                <span className="hidden sm:inline">Meet</span>
+              </Button>
+            </>
+          )}
+          {canStartCalls && !phone.me && (
             <Button
               size="sm"
               variant="outline"
@@ -468,6 +550,8 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
           )}
         </div>
       </div>
+
+      {phone.me && <ConversationCallBanner conversationId={channel.id} title={`#${channel.name}`} />}
 
       {/* Active channel meeting indicator */}
       {liveChannelMeeting && (

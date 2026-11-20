@@ -2,7 +2,13 @@
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  createEmbeddedHistory,
+  syncEmbeddedHistory,
+} from "@/components/common/embedded-history";
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import queryClient from "@tasks/_query-client";
@@ -20,6 +26,7 @@ import { ErrorBoundary } from "../_components/ui/error-boundary";
 import { ShortcutListener } from "./shortcuts/shortcut-listener";
 import { captureCheckoutIntent } from "./checkout-intent";
 import { preloadRouteComponents } from "./preload-route-components";
+import { restoreQueryCache, startQueryPersistence } from "./query-persist";
 import { AppI18nProvider } from "./i18n/provider";
 import { stripTasksBasePath, TASKS_BASE_PATH } from "./base-path";
 import { routeTree } from "../_routeTree.gen";
@@ -28,29 +35,72 @@ import { routeTree } from "../_routeTree.gen";
 // router runs and strips it across the sign-up → onboarding redirect chain.
 captureCheckoutIntent();
 
-const router = createRouter({
-  routeTree,
-  basepath: TASKS_BASE_PATH,
-  defaultPreload: "intent",
-  defaultPreloadStaleTime: 0,
-  defaultPendingComponent: RoutePending,
-  defaultErrorComponent: RouteError,
-  defaultNotFoundComponent: RouteNotFound,
-  // Don't flash a spinner for fast loads; once shown, keep it long enough to read as a state.
-  defaultPendingMs: 250,
-  defaultPendingMinMs: 400,
-  context: {
-    user: null,
-    queryClient,
-  },
-});
-
-preloadRouteComponents(router, stripTasksBasePath(window.location.pathname));
+// Created in an effect with a private history, never at module load: Next updates the URL from a
+// `useInsertionEffect`, and a router that patches `window.history` runs its subscribers in that phase
+// ("useInsertionEffect must not schedule updates"). See components/common/embedded-history.ts.
+function buildRouter() {
+  return createRouter({
+    routeTree,
+    basepath: TASKS_BASE_PATH,
+    history: createEmbeddedHistory(),
+    defaultPreload: "intent",
+    defaultPreloadStaleTime: 0,
+    defaultPendingComponent: RoutePending,
+    defaultErrorComponent: RouteError,
+    defaultNotFoundComponent: RouteNotFound,
+    // Don't flash a spinner for fast loads; once shown, keep it long enough to read as a state.
+    defaultPendingMs: 250,
+    defaultPendingMinMs: 400,
+    context: {
+      user: null,
+      queryClient,
+    },
+  });
+}
 
 function App() {
   const { user } = useAuth();
+  const [router, setRouter] = useState<ReturnType<typeof buildRouter> | null>(
+    null,
+  );
 
-  return <RouterProvider router={router} context={{ user }} />;
+  // Seed the query cache from IndexedDB before the router mounts, so lists and boards paint from the last visit and
+  // refresh in the background (restored queries refetch once on mount, see the query client). The user id keys the
+  // snapshot, and it is cleared with the other workspace data on sign-out.
+  const userId = user?.id ?? null;
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    if (!userId) {
+      setRestored(true);
+      return;
+    }
+    let cancelled = false;
+    void restoreQueryCache(queryClient, userId).finally(() => {
+      if (!cancelled) setRestored(true);
+    });
+    const stop = startQueryPersistence(queryClient, userId);
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    const created = buildRouter();
+    preloadRouteComponents(
+      created,
+      stripTasksBasePath(window.location.pathname),
+    );
+    setRouter(created);
+    return () => created.history.destroy();
+  }, []);
+
+  const pathname = usePathname();
+  useEffect(() => {
+    if (router) syncEmbeddedHistory(router.history);
+  }, [router, pathname]);
+
+  return router && restored ? <RouterProvider router={router} context={{ user }} /> : null;
 }
 
 // Root boundary fallback: shows a generic message and a refresh button,

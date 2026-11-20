@@ -22,6 +22,7 @@ import {
   Pin,
   Calendar,
   Phone,
+  PhoneCall,
   FolderOpen,
   Home,
   Workflow,
@@ -66,7 +67,10 @@ import type { Channel } from "../_lib/chat-types";
 import ChannelCreateEditDialog from "./ChannelCreateEditDialog";
 import InviteMemberDialog from "./InviteMemberDialog";
 import TeamCreateDialog from "./TeamCreateDialog";
+import NewGroupDialog from "./NewGroupDialog";
 import StatusCard from "./StatusCard";
+import UpcomingMeetings from "./UpcomingMeetings";
+import { isAutoStatus } from "../_lib/presence";
 import UserPresenceBadge from "./UserPresenceBadge";
 
 // ==========================================================================
@@ -84,6 +88,7 @@ export default function WorkspaceSidebar() {
     members,
     myStatus,
     myCustomStatus,
+    effectiveStatus,
     currentUserId,
     setMyStatus,
     setMyCustomStatus,
@@ -107,6 +112,7 @@ export default function WorkspaceSidebar() {
   const [textOpen, setTextOpen] = useState(true);
   const [voiceOpen, setVoiceOpen] = useState(true);
   const [dmOpen, setDmOpen] = useState(true);
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -157,6 +163,8 @@ export default function WorkspaceSidebar() {
     busy: "bg-red-500",
     away: "bg-yellow-500",
     offline: "bg-gray-400",
+    in_call: "bg-red-500",
+    in_meeting: "bg-rose-500",
   };
 
   return (
@@ -286,6 +294,19 @@ export default function WorkspaceSidebar() {
                       <span>Calls</span>
                     </Link>
                     <Link
+                      href="/v2/workspace/phone"
+                      data-testid="nav-phone"
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
+                        pathname.startsWith("/v2/workspace/phone")
+                          ? "bg-accent text-accent-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                      )}
+                    >
+                      <PhoneCall className="size-3.5 shrink-0 text-emerald-500" />
+                      <span>Phone</span>
+                    </Link>
+                    <Link
                       href="/v2/workspace/tasks"
                       className={cn(
                         "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors font-medium",
@@ -404,11 +425,14 @@ export default function WorkspaceSidebar() {
                     <Separator className="bg-border/30" />
                   </div>
 
+                  <UpcomingMeetings />
+
                   {/* Direct Messages */}
                   <ChannelSection
                     title="Direct Messages"
                     isOpen={dmOpen}
                     onToggle={() => setDmOpen(!dmOpen)}
+                    onAdd={() => setNewGroupOpen(true)}
                   >
                     {directMessages.map((dm) => {
                       const other = getDMPartner(dm, currentUserId);
@@ -471,6 +495,7 @@ export default function WorkspaceSidebar() {
           <div className="px-2 py-1">
             <StatusCard
               currentStatus={myStatus}
+              autoStatus={isAutoStatus(effectiveStatus) ? effectiveStatus : undefined}
               customStatus={myCustomStatus || undefined}
               displayName="You"
               onStatusChange={setMyStatus}
@@ -566,6 +591,8 @@ export default function WorkspaceSidebar() {
         open={inviteDialogOpen}
         onOpenChange={setInviteDialogOpen}
       />
+
+      <NewGroupDialog open={newGroupOpen} onOpenChange={setNewGroupOpen} currentUserId={currentUserId} />
 
       {/* Create team dialog */}
       <TeamCreateDialog

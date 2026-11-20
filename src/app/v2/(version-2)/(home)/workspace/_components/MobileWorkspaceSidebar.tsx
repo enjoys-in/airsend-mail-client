@@ -242,6 +242,7 @@ export default function MobileWorkspaceSidebar({
                             other.status === "online" && "bg-emerald-500",
                             other.status === "idle" && "bg-yellow-500",
                             other.status === "dnd" && "bg-red-500",
+                            (other.status === "in_call" || other.status === "in_meeting") && "bg-red-500",
                             other.status === "offline" && "bg-gray-400",
                           )}
                         />

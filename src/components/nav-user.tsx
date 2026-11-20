@@ -26,6 +26,7 @@ import { AdminLogout } from "./server-actions/logout-admin"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { API } from "@/lib/api/handler"
+import { broadcastLogout } from "@/lib/auth-sync"
 /** "Mullayam Singh" -> "MS", "ops@x.in" -> "O". */
 const initialsOf = (value?: string) => {
   const parts = String(value || "").trim().split(/[\s@._-]+/).filter(Boolean)
@@ -56,6 +57,7 @@ export function NavUser() {
     const { data } = await API.handleAdminLogout()
     if (data) {
       await AdminLogout()
+      broadcastLogout("admin")
       router.replace("/h-panel")
     }
 

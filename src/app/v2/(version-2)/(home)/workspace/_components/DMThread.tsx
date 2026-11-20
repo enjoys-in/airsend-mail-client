@@ -16,6 +16,7 @@ import type { ChatMessage } from "../_lib/chat-types";
 
 const EMPTY: ChatMessage[] = [];
 const POLL_MS = 8000;
+const SAFETY_POLL_MS = 60_000;
 
 export default function DMThread({ dmId, currentUserId }: { dmId: string; currentUserId: string }) {
   const messages = useChatStore((s) => s.dmMessages[dmId]) ?? EMPTY;
@@ -23,11 +24,28 @@ export default function DMThread({ dmId, currentUserId }: { dmId: string; curren
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    void fetchDMMessages(dmId);
+    let last = Date.now();
+    const refresh = () => {
+      last = Date.now();
+      void fetchDMMessages(dmId);
+    };
+    refresh();
+    // New messages arrive over the WebSocket (dm.message.created); the poll only catches edits and deletes made
+    // elsewhere, and is a delta request that returns nothing when nothing changed. Without a live socket it runs faster.
     const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void fetchDMMessages(dmId);
+      if (document.visibilityState !== "visible") return;
+      const live = useChatStore.getState()._ws?.readyState === WebSocket.OPEN;
+      if (live && Date.now() - last < SAFETY_POLL_MS) return;
+      refresh();
     }, POLL_MS);
-    return () => clearInterval(timer);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [dmId, fetchDMMessages]);
 
   useEffect(() => {

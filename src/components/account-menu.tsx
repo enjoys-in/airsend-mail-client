@@ -22,6 +22,8 @@ import { IUser } from "@/lib/types/user.interface";
 import { useRouter } from "next/navigation";
 import { handleServerlogout } from "./layout/actions/logout";
 import { useToast } from "./ui/use-toast";
+import { broadcastLogout } from "@/lib/auth-sync";
+import { clearWorkspaceCache } from "@/app/v2/(version-2)/(home)/workspace/_lib/workspace-cache";
 
 function AccountMenu({ currAccount }: { currAccount: IUser }) {
   const { socket } = useSockets()
@@ -32,6 +34,8 @@ function AccountMenu({ currAccount }: { currAccount: IUser }) {
     try {
       const data = await handleServerlogout()
       if (data.success) {
+        void clearWorkspaceCache()
+        broadcastLogout("user")
         router.push("/")
         socket.disconnect()
         socket.close()      

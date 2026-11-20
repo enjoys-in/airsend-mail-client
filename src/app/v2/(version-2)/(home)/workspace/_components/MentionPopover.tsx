@@ -49,6 +49,7 @@ export default function MentionPopover({
                   member.status === "online" && "bg-emerald-500",
                   member.status === "idle" && "bg-yellow-500",
                   member.status === "dnd" && "bg-red-500",
+                  (member.status === "in_call" || member.status === "in_meeting") && "bg-red-500",
                   member.status === "offline" && "bg-gray-400",
                 )}
               />

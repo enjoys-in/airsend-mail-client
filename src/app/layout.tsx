@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { IndexDbProvider } from "@/context/IndexDbContext";
 
 import StoreProvider from "@/components/layout/StoreProvider";
+import AuthSyncListener from "@/components/layout/AuthSyncListener";
 import { RuntimeConfigProvider } from "@/components/RuntimeConfigProvider";
 import { Plus_Jakarta_Sans } from "next/font/google";
 
@@ -65,6 +66,7 @@ export default async function RootLayout({
             encryptionKey={process.env.ENCRYPTION_KEY || ""}
           >
             <StoreProvider>
+              <AuthSyncListener />
               <IndexDbProvider>
                 <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
               </IndexDbProvider>

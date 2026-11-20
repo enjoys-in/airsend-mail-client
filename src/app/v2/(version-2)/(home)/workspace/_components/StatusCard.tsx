@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import type { PresenceStatus } from "../_lib/chat-types";
+import { presenceDot, presenceLabel } from "../_lib/presence";
 
 // ---------------------------------------------------------------------------
 // StatusCard — compact h-10 card above message input showing user status
@@ -81,6 +82,7 @@ const STATUS_OPTIONS: {
 
 interface StatusCardProps {
   currentStatus: PresenceStatus;
+  autoStatus?: PresenceStatus;
   customStatus?: string;
   displayName: string;
   onStatusChange: (status: PresenceStatus) => void;
@@ -90,6 +92,7 @@ interface StatusCardProps {
 
 export default function StatusCard({
   currentStatus,
+  autoStatus,
   customStatus,
   displayName,
   onStatusChange,
@@ -116,11 +119,12 @@ export default function StatusCard({
             className,
           )}
         >
-          <span className={cn("size-2.5 shrink-0 rounded-full", current.dotColor)} />
+          <span className={cn("size-2.5 shrink-0 rounded-full", autoStatus ? presenceDot(autoStatus) : current.dotColor)} />
           <span className="flex-1 truncate text-left">
-            <span className={cn("font-medium", current.color)}>
-              {current.label}
+            <span className={cn("font-medium", autoStatus ? "text-red-500" : current.color)} data-testid="my-status-label">
+              {autoStatus ? presenceLabel(autoStatus) : current.label}
             </span>
+            {autoStatus && <span className="ml-1.5 text-muted-foreground">· automatic</span>}
             {customStatus && (
               <span className="ml-1.5 text-muted-foreground">
                 — {customStatus}

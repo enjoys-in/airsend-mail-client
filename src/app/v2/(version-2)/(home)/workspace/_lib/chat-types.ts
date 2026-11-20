@@ -206,7 +206,7 @@ export interface TeamMember {
 
 export type MemberRole = "owner" | "admin" | "moderator" | "member" | "guest";
 
-export type PresenceStatus = "online" | "idle" | "dnd" | "offline" | "away" | "busy";
+export type PresenceStatus = "online" | "idle" | "dnd" | "offline" | "away" | "busy" | "in_call" | "in_meeting";
 
 // ---------------------------------------------------------------------------
 // Message Priority
@@ -292,9 +292,13 @@ export interface MessageAttachment {
 // ---------------------------------------------------------------------------
 
 export interface DirectMessage {
+  kind?: "dm" | "group";
+  name?: string;
+  createdBy?: string;
+  roles?: Record<string, "owner" | "admin" | "member">;
   id: string;
   participantIds: string[];
-  participants: Pick<TeamMember, "userId" | "username" | "displayName" | "avatar" | "status">[];
+  participants: (Pick<TeamMember, "userId" | "username" | "displayName" | "avatar" | "status"> & { unavailable?: boolean })[];
   lastMessage?: ChatMessage;
   unreadCount: number;
   updatedAt: string;

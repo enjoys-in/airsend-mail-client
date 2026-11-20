@@ -105,6 +105,11 @@ export class API {
     static unblockDomainIP(domain: string, ip: string) { return instance.delete(adminRoutes('/blocked-ips/domains'), { data: { domain, ip } }) }
     static purgeDomainBlockedIPs(domain: string) { return instance.delete(adminRoutes('/blocked-ips/domains/purge'), { data: { domain } }) }
 
+    // CORS ORIGINS (workspace server, super admin only)
+    static addCorsOrigin(origin: string) { return instance.post(adminRoutes('/cors-origins'), { origin }) }
+    static setCorsOriginActive(id: string, is_active: boolean) { return instance.patch(adminRoutes(`/cors-origins/${encodeURIComponent(id)}`), { is_active }) }
+    static removeCorsOrigin(id: string) { return instance.delete(adminRoutes(`/cors-origins/${encodeURIComponent(id)}`)) }
+
     // ACCOUNTS
     static handleGetAllAccounts(domain: string) {
         return instance.get(adminRoutes(`/accounts?domain=${domain}`))

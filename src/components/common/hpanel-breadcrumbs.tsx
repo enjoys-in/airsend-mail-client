@@ -20,6 +20,7 @@ const LABELS: Record<string, string> = {
     "danger-zone": "Danger zone",
     "emails-events": "Email events",
     "manage-ip": "IP management",
+    "cors-origins": "Allowed origins",
     api: "API",
     webhook: "Webhooks",
     add: "Invite member",

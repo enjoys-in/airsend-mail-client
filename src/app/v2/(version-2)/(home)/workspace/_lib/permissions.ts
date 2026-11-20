@@ -316,7 +316,11 @@ export function channelPermissionsToFGATuples(
 export function getDMPartner(
   dm: DirectMessage | undefined | null,
   currentUserId?: string | null,
-): { userId: string; username: string; displayName: string; status: TeamMember["status"] } {
+): { userId: string; username: string; displayName: string; status: TeamMember["status"]; unavailable?: boolean } {
+  if (dm && dm.kind === "group") {
+    const names = dm.participants.map((p) => p.displayName).filter(Boolean);
+    return { userId: dm.id, username: "group", displayName: dm.name || names.join(", ") || "Group chat", status: "online" };
+  }
   if (!dm || !dm.participants || dm.participants.length === 0) {
     return {
       userId: "unknown",

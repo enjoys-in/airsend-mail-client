@@ -45,6 +45,7 @@ import { useChatStore } from "../_lib/chat-store";
 import { meetingApi, generateMeetCode, formatMeetUrl } from "../_lib/api";
 import WorkspaceErrorBoundary from "../_components/WorkspaceErrorBoundary";
 import LiveMeetingCard from "../_components/LiveMeetingCard";
+import CalendarMeetingsList from "../_components/CalendarMeetingsList";
 import type { Meeting } from "../_lib/chat-types";
 
 export default function MeetingsPage() {
@@ -267,6 +268,7 @@ function MeetingsHubContent() {
       {/* ── Meetings Grid ── */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="max-w-5xl mx-auto space-y-4">
+          {activeTab !== "past" && <CalendarMeetingsList todayOnly={activeTab === "today"} />}
           {filteredMeetings.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground mb-3">

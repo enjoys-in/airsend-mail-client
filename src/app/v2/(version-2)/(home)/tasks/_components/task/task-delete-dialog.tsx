@@ -40,7 +40,9 @@ export default function TaskDeleteDialog({
   });
 
   useEffect(() => {
-    return () => handle.close();
+    return () => {
+      if (handle.isOpen) handle.close();
+    };
   }, [handle, taskId]);
 
   if (!canDelete) {

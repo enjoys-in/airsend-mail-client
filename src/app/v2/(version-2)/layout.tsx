@@ -19,6 +19,9 @@ import { usePathname } from "next/navigation";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { featureForPath } from "@/lib/feature-gate";
 import { AccessDenied } from "./_components/access-denied";
+import { PhoneProvider } from "./(home)/workspace/phone/_lib/phone-context";
+import MeetingWaitingRoom from "./(home)/workspace/_components/MeetingWaitingRoom";
+import PresenceSync from "./(home)/workspace/_components/PresenceSync";
 
 // NOTE: this must be a layout (not a template). A template remounts on every
 // navigation, which disconnected the socket, re-fetched the user/settings and
@@ -62,6 +65,7 @@ function MainLayout({ children }: { children: ReactNode }) {
         : <AccessDenied feature={gatedFeature} />
 
   const content = (
+    <PhoneProvider enabled={canAccessWorkspace}>
     <SocketContextProvider>
       <CustomWidget />
       <CalendarProvider>
@@ -73,10 +77,13 @@ function MainLayout({ children }: { children: ReactNode }) {
             <DesktopLayoutV2>{isMobile ? null : pageContent}</DesktopLayoutV2>
           </div>
           <NewMailRecived />
+          <MeetingWaitingRoom enabled={canAccessWorkspace} />
+          <PresenceSync enabled={canAccessWorkspace} />
           <SentMailToast />
         </Suspense>
       </CalendarProvider>
     </SocketContextProvider>
+    </PhoneProvider>
   );
 
   // Providers that must sit above both sidebar and page:

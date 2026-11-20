@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { clearWorkspaceCache } from "@/app/v2/(version-2)/(home)/workspace/_lib/workspace-cache"
 import {
   BadgeCheck,
   Bell,
@@ -35,6 +36,7 @@ import { useRouter } from "next/navigation"
 import { UserLogout } from "@/components/server-actions/logout-user"
 import { API } from "@/lib/api/handler"
 import { airsendDB } from "@/db"
+import { broadcastLogout } from "@/lib/auth-sync"
 
 export function NavUserV2() {
   const { isMobile } = useSidebar()
@@ -73,6 +75,8 @@ export function NavUserV2() {
     const { data } = await API.handleLogout()
     if (data.success) {
       await UserLogout()
+      await clearWorkspaceCache()
+      broadcastLogout("user")
       router.replace("/v2")
     }
   }

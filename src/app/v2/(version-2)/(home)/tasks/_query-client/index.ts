@@ -5,6 +5,7 @@ import {
   setSessionRecoveredHandler,
 } from "@tasks/_lib/http-error";
 import { isForbiddenOrNotFound } from "@tasks/_lib/is-forbidden-or-not-found";
+import { isRestoredPending } from "@tasks/_lib/query-restore-state";
 
 // TanStack raises these before any fetcher-level message exists; CORS rejections
 // from the browser also surface here. Avoid retrying those automatically.
@@ -38,7 +39,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      refetchOnMount: false,
+      refetchOnMount: (query) => (isRestoredPending(query.queryHash) ? "always" : false),
       retry: (failureCount, error) =>
         isNetworkError(error) ||
         isUnauthorizedError(error) ||

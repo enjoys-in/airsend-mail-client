@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceApi } from "../_lib/api";
+import { usePhone } from "../phone/_lib/phone-context";
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -70,6 +72,7 @@ function CallsHubContent() {
     activeTeamId,
   } = useChatStore();
 
+  const phone = usePhone();
   const [filterTab, setFilterTab] = useState<"all" | "missed" | "incoming" | "outgoing">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dialerOpen, setDialerOpen] = useState(false);
@@ -95,6 +98,17 @@ function CallsHubContent() {
   });
 
   const handleStartCall = async (memberId: string, memberName: string, type: "video" | "audio") => {
+    const memberEmail = (members.find((m) => m.userId === memberId)?.email || memberId).toLowerCase();
+    if (phone.me && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(memberEmail)) {
+      try {
+        const dm = await workspaceApi.createDM(memberEmail, currentUserId);
+        setDialerOpen(false);
+        void phone.start("", { conversationId: dm.id, media: type, title: memberName });
+        return;
+      } catch {
+        // fall back to the room-based call below
+      }
+    }
     let meetCode = generateMeetCode();
     try {
       const room = await meetingApi.createRoom(
@@ -374,7 +388,7 @@ function CallsHubContent() {
                         <span
                           className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full border border-background ${
                             member.status === "online" ? "bg-emerald-500" :
-                            member.status === "busy" || member.status === "dnd" ? "bg-red-500" :
+                            member.status === "busy" || member.status === "dnd" || member.status === "in_call" || member.status === "in_meeting" ? "bg-red-500" :
                             "bg-yellow-500"
                           }`}
                         />

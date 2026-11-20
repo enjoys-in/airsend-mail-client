@@ -3,6 +3,16 @@
 // ============================================================================
 
 import { create, type StoreApi, type UseBoundStore } from "zustand";
+import {
+  enqueueOutbox,
+  loadCachedChannelMessages,
+  loadCachedDMMessages,
+  loadOutbox,
+  newestChange,
+  removeOutbox,
+  revalidate,
+  upsertById,
+} from "./workspace-cache";
 import type {
   Team,
   Channel,
@@ -109,6 +119,22 @@ async function withRefRetry<T>(call: () => Promise<T>): Promise<T> {
 }
 
 /** Merge the server's DM page with what we already show (in-flight temp messages, attachments not yet confirmed). */
+function dedupeById(list: ChatMessage[]): ChatMessage[] {
+  const seen = new Set<string>();
+  return list.filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)));
+}
+
+function mergeIncomingDM(local: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  if (!incoming.length) return local;
+  const merged = incoming.map((m) => {
+    const prev = local.find((x) => x.id === m.id);
+    if (!prev) return m;
+    const missing = prev.attachments.filter((a) => a.fileId && !m.attachments.some((x) => x.fileId === a.fileId));
+    return missing.length ? { ...m, attachments: [...m.attachments, ...missing] } : m;
+  });
+  return upsertById(local, merged);
+}
+
 function mergeDMMessages(local: ChatMessage[], server: ChatMessage[]): ChatMessage[] {
   const localById = new Map(local.map((m) => [m.id, m]));
   const merged = server.map((m) => {
@@ -184,6 +210,13 @@ interface ChatStore {
 
   // Actions — Files
   deleteFile: (fileId: string) => void;
+
+  // Read tracking (client-side: the server does not compute unread counts) and the offline outbox
+  readPositions: Record<string, string>;
+  markRead: (conversationId: string) => void;
+  noteIncoming: (conversationId: string, message: ChatMessage) => void;
+  receiveDMMessage: (conversationId: string, message: ChatMessage) => void;
+  flushOutbox: () => Promise<void>;
 
   // WebSocket reference for sending messages
   _ws: WebSocket | null;
@@ -279,6 +312,9 @@ interface ChatStore {
   // Actions — User status
   myStatus: PresenceStatus;
   myCustomStatus: string;
+  effectiveStatus: PresenceStatus;
+  hydrateManualPresence: () => void;
+  setEffectiveStatus: (status: PresenceStatus) => void;
   setMyStatus: (status: PresenceStatus) => void;
   setMyCustomStatus: (text: string) => void;
 
@@ -333,6 +369,28 @@ interface ChatStore {
 
 export type { ChatStore };
 
+const MANUAL_PRESENCE_KEY = "airsend:workspace:presence";
+const MANUAL_STATUSES: PresenceStatus[] = ["online", "idle", "dnd", "offline", "away", "busy"];
+
+function loadManualPresence(): { status: PresenceStatus; custom: string } {
+  try {
+    if (typeof window === "undefined") return { status: "online", custom: "" };
+    const raw = JSON.parse(window.localStorage.getItem(MANUAL_PRESENCE_KEY) ?? "{}") as { status?: string; custom?: string };
+    const status = MANUAL_STATUSES.includes(raw.status as PresenceStatus) ? (raw.status as PresenceStatus) : "online";
+    return { status, custom: typeof raw.custom === "string" ? raw.custom : "" };
+  } catch {
+    return { status: "online", custom: "" };
+  }
+}
+
+function saveManualPresence(status: PresenceStatus, custom: string): void {
+  try {
+    window.localStorage.setItem(MANUAL_PRESENCE_KEY, JSON.stringify({ status, custom }));
+  } catch {
+    return;
+  }
+}
+
 export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore>()((set, get) => ({
   // Data — initialized empty, loaded from live backend API
   teams: [],
@@ -341,6 +399,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   messages: [],
   messageCursors: {},
   messageHasMore: {},
+  readPositions: {},
   isLoadingOlder: false,
   threadReplies: [],
   directMessages: [],
@@ -410,6 +469,119 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       activeThreadMessageId: null,
       sidePanelView: null,
     });
+    if (defaultChannel) get().markRead(defaultChannel.id);
+  },
+
+  markRead: (conversationId) =>
+    set((s) => {
+      const known = s.messages.some((m) => m.channelId === conversationId)
+        ? s.messages.filter((m) => m.channelId === conversationId)
+        : (s.dmMessages[conversationId] ?? []);
+      let latest = Date.parse(s.readPositions[conversationId] ?? "") || 0;
+      for (const m of known) {
+        const t = Date.parse(m.createdAt);
+        if (Number.isFinite(t) && t > latest) latest = t;
+      }
+      const position = new Date(latest || Date.now()).toISOString();
+      const hasChannelUnread = s.channels.some((c) => c.id === conversationId && c.unreadCount > 0);
+      const hasDmUnread = s.directMessages.some((d) => d.id === conversationId && d.unreadCount > 0);
+      if (s.readPositions[conversationId] === position && !hasChannelUnread && !hasDmUnread) return s;
+      return {
+        readPositions: { ...s.readPositions, [conversationId]: position },
+        channels: hasChannelUnread ? s.channels.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)) : s.channels,
+        directMessages: hasDmUnread
+          ? s.directMessages.map((d) => (d.id === conversationId ? { ...d, unreadCount: 0 } : d))
+          : s.directMessages,
+      };
+    }),
+
+  noteIncoming: (conversationId, message) => {
+    const s = get();
+    if (message.isDeleted || message.authorId === s.currentUserId) return;
+    const sentAt = Date.parse(message.createdAt);
+    const viewing =
+      (s.activeChannelId === conversationId || s.activeDmId === conversationId) &&
+      (typeof document === "undefined" || document.visibilityState === "visible");
+    if (viewing) {
+      get().markRead(conversationId);
+      return;
+    }
+    const readAt = Date.parse(s.readPositions[conversationId] ?? "");
+    if (Number.isFinite(readAt) && Number.isFinite(sentAt) && sentAt <= readAt) return;
+    set((st) => ({
+      channels: st.channels.some((c) => c.id === conversationId)
+        ? st.channels.map((c) => (c.id === conversationId ? { ...c, unreadCount: c.unreadCount + 1 } : c))
+        : st.channels,
+      directMessages: st.directMessages.some((d) => d.id === conversationId)
+        ? st.directMessages.map((d) => (d.id === conversationId ? { ...d, unreadCount: d.unreadCount + 1 } : d))
+        : st.directMessages,
+    }));
+  },
+
+  receiveDMMessage: (conversationId, message) => {
+    const existing = get().dmMessages[conversationId] ?? [];
+    if (existing.some((m) => m.id === message.id)) return;
+    set((s) => ({
+      dmMessages: { ...s.dmMessages, [conversationId]: [...(s.dmMessages[conversationId] ?? []), message] },
+      directMessages: s.directMessages.map((d) =>
+        d.id === conversationId ? { ...d, lastMessage: message, updatedAt: message.createdAt } : d,
+      ),
+    }));
+    get().noteIncoming(conversationId, message);
+  },
+
+  flushOutbox: async () => {
+    const email = get().currentUserId;
+    if (!email) return;
+    const rows = await loadOutbox();
+    for (const row of rows) {
+      const live =
+        row.kind === "channel"
+          ? get().messages.some((m) => m.id === row.id)
+          : (get().dmMessages[row.target] ?? []).some((m) => m.id === row.id);
+      if (live && Date.now() - row.createdAt < 15_000) continue;
+      try {
+        if (row.kind === "channel") {
+          const serverMsg = await workspaceApi.sendMessage(
+            row.target,
+            { content: row.content, type: "text", priority: row.priority, mentions: row.mentions },
+            email,
+          );
+          const real = toMessage(serverMsg);
+          set((s) => ({
+            messages: s.messages.some((m) => m.id === row.id)
+              ? s.messages.map((m) => (m.id === row.id ? real : m))
+              : s.messages.some((m) => m.id === real.id)
+                ? s.messages
+                : [...s.messages, real],
+          }));
+        } else {
+          const serverMsg = await workspaceApi.sendDMMessage(row.target, row.content, email);
+          const real = toDMMessage(serverMsg);
+          set((s) => {
+            const list = s.dmMessages[row.target] ?? [];
+            const next = list.some((m) => m.id === row.id)
+              ? list.map((m) => (m.id === row.id ? real : m))
+              : list.some((m) => m.id === real.id)
+                ? list
+                : [...list, real];
+            return { dmMessages: { ...s.dmMessages, [row.target]: next } };
+          });
+        }
+        await removeOutbox(row.id);
+      } catch (err) {
+        if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+        await removeOutbox(row.id);
+        set((s) =>
+          row.kind === "channel"
+            ? { messages: s.messages.filter((m) => m.id !== row.id), apiError: apiErrorMessage(err, "Failed to send message") }
+            : {
+                dmMessages: { ...s.dmMessages, [row.target]: (s.dmMessages[row.target] ?? []).filter((m) => m.id !== row.id) },
+                apiError: apiErrorMessage(err, "Failed to send message"),
+              },
+        );
+      }
+    }
   },
 
   addTeam: (team) => {
@@ -420,7 +592,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   // Channel actions
   // -----------------------------------------------------------------------
 
-  setActiveChannel: (channelId) =>
+  setActiveChannel: (channelId) => {
     set({
       activeChannelId: channelId,
       activeDmId: null,
@@ -428,7 +600,9 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       sidePanelView: null,
       replyingTo: null,
       editingMessageId: null,
-    }),
+    });
+    if (channelId) get().markRead(channelId);
+  },
 
   addChannel: (channel) =>
     set((s) => ({ channels: [...s.channels, channel] })),
@@ -490,6 +664,15 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
 
     // Send via WebSocket (preferred) or fallback to HTTP
     if (activeChannelId && isValidUUID(activeChannelId)) {
+      void enqueueOutbox({
+        id: tempId,
+        kind: "channel",
+        target: activeChannelId,
+        content: content.trim(),
+        mentions,
+        priority,
+        createdAt: now,
+      });
       if (_ws && _ws.readyState === WebSocket.OPEN) {
         _ws.send(
           JSON.stringify({
@@ -522,11 +705,14 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
           )
           .then((serverMsg) => {
             const real = toMessage(serverMsg);
+            void removeOutbox(tempId);
             set((s) => ({
               messages: s.messages.map((m) => (m.id === tempId ? real : m)),
             }));
           })
           .catch(() => {
+            if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+            void removeOutbox(tempId);
             set((s) => ({
               messages: s.messages.filter((m) => m.id !== tempId),
               apiError: "Failed to send message",
@@ -743,25 +929,50 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   // DM actions
   // -----------------------------------------------------------------------
 
-  setActiveDm: (dmId) =>
+  setActiveDm: (dmId) => {
     set({
       activeDmId: dmId,
       activeChannelId: null,
       activeThreadMessageId: null,
       sidePanelView: null,
-    }),
+    });
+    if (dmId) get().markRead(dmId);
+  },
 
   fetchDMMessages: async (dmId) => {
     const email = get().currentUserId;
     if (!isValidUUID(dmId) || !email) return;
+    if (!get().dmMessages[dmId]?.length) {
+      const cached = await loadCachedDMMessages(dmId);
+      if (cached.length && !get().dmMessages[dmId]?.length) {
+        set((s) => ({ dmMessages: { ...s.dmMessages, [dmId]: cached } }));
+      }
+    }
     try {
-      const page = await workspaceApi.listDMMessages(dmId, email);
-      const server = (page?.items ?? []).map(toDMMessage);
-      set((s) => ({
-        dmMessages: { ...s.dmMessages, [dmId]: mergeDMMessages(s.dmMessages[dmId] ?? [], server) },
-      }));
+      const since = newestChange(get().dmMessages[dmId] ?? []);
+      if (since) {
+        let cursor = since;
+        for (let round = 0; round < 5; round++) {
+          const res = await workspaceApi.listDMMessagesSince(dmId, email, cursor);
+          const incoming = (res?.items ?? []).map(toDMMessage);
+          const seen = new Set((get().dmMessages[dmId] ?? []).map((m) => m.id));
+          set((s) => ({
+            dmMessages: { ...s.dmMessages, [dmId]: mergeIncomingDM(s.dmMessages[dmId] ?? [], incoming) },
+          }));
+          for (const m of incoming) if (!seen.has(m.id)) get().noteIncoming(dmId, m);
+          if (!res?.has_more || !incoming.length) break;
+          cursor = newestChange(incoming) ?? cursor;
+        }
+      } else {
+        const res = await workspaceApi.listLatestDMMessages(dmId, email);
+        const server = (res?.items ?? []).map(toDMMessage);
+        set((s) => ({
+          dmMessages: { ...s.dmMessages, [dmId]: mergeDMMessages(s.dmMessages[dmId] ?? [], server) },
+        }));
+      }
+      if (get().activeDmId === dmId) get().markRead(dmId);
     } catch {
-      // Silent: the DM view keeps what it has and retries on the next poll.
+      // Silent: the DM view keeps what it has and refreshes on the next event or delta poll.
     }
   },
 
@@ -790,22 +1001,27 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       isDeleted: false,
     };
     set((s) => ({ dmMessages: { ...s.dmMessages, [dmId]: [...(s.dmMessages[dmId] ?? []), optimistic] } }));
+    void enqueueOutbox({ id: tempId, kind: "dm", target: dmId, content: text, mentions: [], priority: "normal", createdAt: Date.now() });
     workspaceApi
       .sendDMMessage(dmId, text, currentUserId)
       .then((serverMsg) => {
         const real = toDMMessage(serverMsg);
+        void removeOutbox(tempId);
         set((s) => ({
           dmMessages: {
             ...s.dmMessages,
-            [dmId]: (s.dmMessages[dmId] ?? []).map((m) => (m.id === tempId ? real : m)),
+            [dmId]: dedupeById((s.dmMessages[dmId] ?? []).map((m) => (m.id === tempId ? real : m))),
           },
         }));
       })
       .catch((err) => {
+        if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+        void removeOutbox(tempId);
         set((s) => ({
           dmMessages: { ...s.dmMessages, [dmId]: (s.dmMessages[dmId] ?? []).filter((m) => m.id !== tempId) },
           apiError: apiErrorMessage(err, "Failed to send message"),
         }));
+        void get().fetchDMs(currentUserId).catch(() => {});
       });
   },
 
@@ -1189,6 +1405,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     set((s) => ({ callRecords: [newRecord, ...s.callRecords] }));
 
     const email = get().currentUserId || "alex@airsend.io";
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(callInput.receiverId)) return;
     workspaceApi
       .logCall(
         {
@@ -1298,20 +1515,20 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
 
   myStatus: "online" as PresenceStatus,
   myCustomStatus: "",
+  effectiveStatus: "online" as PresenceStatus,
 
+  hydrateManualPresence: () => {
+    const saved = loadManualPresence();
+    set({ myStatus: saved.status, myCustomStatus: saved.custom });
+  },
+  setEffectiveStatus: (status) => set({ effectiveStatus: status }),
   setMyStatus: (status) => {
     set({ myStatus: status });
-    const { activeTeamId, currentUserId, myCustomStatus } = get();
-    if (activeTeamId && currentUserId) {
-      workspaceApi.updateMyStatus(activeTeamId, status, myCustomStatus, currentUserId).catch(() => {});
-    }
+    saveManualPresence(status, get().myCustomStatus);
   },
   setMyCustomStatus: (text) => {
     set({ myCustomStatus: text });
-    const { activeTeamId, currentUserId, myStatus } = get();
-    if (activeTeamId && currentUserId) {
-      workspaceApi.updateMyStatus(activeTeamId, myStatus, text, currentUserId).catch(() => {});
-    }
+    saveManualPresence(get().myStatus, text);
   },
 
   // -----------------------------------------------------------------------
@@ -1320,7 +1537,8 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
 
   fetchTeams: async (email) => {
     const userEmail = email || get().currentUserId || "mullayam06@airsend.in";
-    set({ isLoading: true, isLoadingTeams: true, apiError: null, currentUserId: userEmail });
+    const hasTeams = get().teams.length > 0;
+    set({ isLoading: !hasTeams, isLoadingTeams: !hasTeams, apiError: null, currentUserId: userEmail });
     try {
       const serverTeams = await workspaceApi.listTeams(userEmail);
       const teams = (serverTeams || []).map(toTeam);
@@ -1337,11 +1555,11 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       });
 
       if (teams.length > 0) {
-        const activeId = teams[0].id;
-        get().fetchChannels(activeId, userEmail);
-        get().fetchMembers(activeId, userEmail);
-        get().fetchMeetings(activeId);
-        get().fetchFiles(activeId);
+        const activeId = get().activeTeamId ?? teams[0].id;
+        void revalidate(`channels:${activeId}`, () => get().fetchChannels(activeId, userEmail));
+        void revalidate(`members:${activeId}`, () => get().fetchMembers(activeId, userEmail));
+        void revalidate(`meetings:${activeId}`, () => get().fetchMeetings(activeId));
+        void revalidate(`files:${activeId}`, () => get().fetchFiles(activeId));
       }
     } catch (err) {
       set({ isLoading: false, isLoadingTeams: false, apiError: (err as Error).message });
@@ -1354,7 +1572,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       return;
     }
     const userEmail = email || get().currentUserId || "mullayam06@airsend.in";
-    set({ isLoadingChannels: true });
+    set({ isLoadingChannels: !get().channels.some((c) => c.teamId === teamId) });
     try {
       const serverChannels = await workspaceApi.listChannels(teamId, userEmail);
       const channels = (serverChannels || []).map(toChannel);
@@ -1367,10 +1585,15 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
           nextActiveChannelId = defaultChannel?.id || null;
         }
 
+        const merged = channels.map((c) => {
+          const prev = s.channels.find((x) => x.id === c.id);
+          return prev ? { ...c, unreadCount: prev.unreadCount, isPinned: prev.isPinned } : c;
+        });
+
         return {
           channels: [
             ...s.channels.filter((c) => c.teamId !== teamId),
-            ...channels,
+            ...merged,
           ],
           activeChannelId: nextActiveChannelId,
           isLoadingChannels: false,
@@ -1448,8 +1671,43 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       set({ isLoadingMessages: false });
       return;
     }
-    set({ isLoadingMessages: true });
+    let hasLocal = get().messages.some((m) => m.channelId === channelId);
+    if (!hasLocal) {
+      const cached = await loadCachedChannelMessages(channelId);
+      if (cached.length && !get().messages.some((m) => m.channelId === channelId)) {
+        set((s) => ({ messages: [...s.messages, ...cached] }));
+        hasLocal = true;
+      }
+    }
+    set({ isLoadingMessages: !hasLocal });
     try {
+      const since = hasLocal ? newestChange(get().messages.filter((m) => m.channelId === channelId)) : null;
+      if (since) {
+        let cursor = since;
+        let caughtUp = false;
+        for (let round = 0; round < 5; round++) {
+          const res = await workspaceApi.listMessagesSince(channelId, email, cursor);
+          const incoming = (res.items ?? []).map(toMessage);
+          const seen = new Set(get().messages.filter((m) => m.channelId === channelId).map((m) => m.id));
+          set((s) => ({
+            messages: [
+              ...s.messages.filter((m) => m.channelId !== channelId),
+              ...upsertById(s.messages.filter((m) => m.channelId === channelId), incoming),
+            ],
+          }));
+          for (const m of incoming) if (!seen.has(m.id)) get().noteIncoming(channelId, m);
+          if (!res.has_more || !incoming.length) {
+            caughtUp = true;
+            break;
+          }
+          cursor = newestChange(incoming) ?? cursor;
+        }
+        if (caughtUp) {
+          set({ isLoadingMessages: false });
+          if (get().activeChannelId === channelId) get().markRead(channelId);
+          return;
+        }
+      }
       const res = await workspaceApi.listMessages(channelId, email, 100);
       const msgs = (res.items ?? []).map(toMessage);
       set((s) => ({
@@ -1461,6 +1719,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
         messageHasMore: { ...s.messageHasMore, [channelId]: res.has_more ?? false },
         isLoadingMessages: false,
       }));
+      if (get().activeChannelId === channelId) get().markRead(channelId);
     } catch {
       set({ isLoadingMessages: false });
     }
@@ -1500,9 +1759,14 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     try {
       const serverDMs = await workspaceApi.listDMs(userEmail);
       const dms = (serverDMs || []).map(toDM);
-      set({ directMessages: dms });
+      set((s) => ({
+        directMessages: dms.map((d) => {
+          const prev = s.directMessages.find((x) => x.id === d.id);
+          return prev ? { ...d, unreadCount: prev.unreadCount } : d;
+        }),
+      }));
     } catch {
-      set({ directMessages: [] });
+      return;
     }
   },
 
@@ -1516,7 +1780,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       const meetings = (res || []).map(toMeeting);
       set({ meetings });
     } catch {
-      set({ meetings: [] });
+      return;
     }
   },
 
@@ -1533,7 +1797,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       const files = (res || []).map(toWorkspaceFile);
       set({ files });
     } catch {
-      set({ files: [] });
+      return;
     }
   },
 
@@ -1544,7 +1808,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       const callRecords = (res || []).map(toCallRecord);
       set({ callRecords });
     } catch {
-      set({ callRecords: [] });
+      return;
     }
   },
 
@@ -1565,7 +1829,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
         })),
       });
     } catch {
-      set({ notifications: [] });
+      return;
     }
   },
 

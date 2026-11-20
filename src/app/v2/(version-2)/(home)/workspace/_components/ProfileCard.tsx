@@ -38,6 +38,8 @@ const statusLabels: Record<PresenceStatus, string> = {
   offline: "Offline",
   away: "Away",
   busy: "Busy",
+  in_call: "In a call",
+  in_meeting: "In a meeting",
 };
 
 const statusColors: Record<PresenceStatus, string> = {
@@ -47,6 +49,8 @@ const statusColors: Record<PresenceStatus, string> = {
   offline: "bg-gray-400",
   away: "bg-orange-500",
   busy: "bg-rose-500",
+  in_call: "bg-red-500",
+  in_meeting: "bg-rose-500",
 };
 
 // Role hierarchy ordering

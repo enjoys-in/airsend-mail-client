@@ -241,7 +241,11 @@ export interface TeamFileRef {
 
 export interface ServerDMConversation {
   id: string
-  participants: { email: string; display_name?: string; status: string; account_name?: string }[]
+  kind?: "dm" | "group"
+  name?: string
+  name_custom?: boolean
+  created_by?: string
+  participants: { email: string; display_name?: string; status: string; account_name?: string; role?: "owner" | "admin" | "member"; unavailable?: boolean }[]
   last_message?: ServerDMMessage
   unread_count: number
   created_at: string
@@ -720,14 +724,21 @@ export function toMessage(s: ServerMessage): ChatMessage {
 }
 
 export function toDM(s: ServerDMConversation): DirectMessage {
+  const roles: Record<string, "owner" | "admin" | "member"> = {}
+  for (const p of s.participants) roles[p.email.toLowerCase()] = p.role ?? "member"
   return {
+    kind: s.kind ?? "dm",
+    name: s.name ?? undefined,
+    createdBy: s.created_by ?? undefined,
+    roles,
     id: s.id,
     participantIds: s.participants.map(p => p.email),
     participants: s.participants.map(p => ({
       userId: p.email,
-      username: p.email.split("@")[0],
-      displayName: p.display_name ?? p.account_name ?? p.email,
-      status: (p.status ?? "offline") as TeamMember["status"],
+      username: p.unavailable ? "unknown" : p.email.split("@")[0],
+      displayName: p.unavailable ? "Unknown user" : (p.display_name ?? p.account_name ?? p.email),
+      status: (p.unavailable ? "offline" : (p.status ?? "offline")) as TeamMember["status"],
+      unavailable: !!p.unavailable,
     })),
     lastMessage: undefined, // simplified — populated separately if needed
     unreadCount: s.unread_count ?? 0,
@@ -953,6 +964,14 @@ export const workspaceApi = {
     return apiFetch<CursorPaginatedResponse<ServerMessage>>(`/api/v1/channels/${channelId}/messages?${params}`, { email })
   },
 
+  listMessagesSince: (channelId: string, email: string, since: string) => {
+    if (!isValidUUID(channelId)) {
+      return Promise.resolve({ items: [] as ServerMessage[], next_cursor: "", has_more: false, limit: 0 })
+    }
+    const params = new URLSearchParams({ since })
+    return apiFetch<CursorPaginatedResponse<ServerMessage>>(`/api/v1/channels/${channelId}/messages?${params}`, { email })
+  },
+
   sendMessage: (channelId: string, data: { content: string; type?: string; priority?: string; parent_id?: string; mentions?: string[] }, email: string) => {
     if (!isValidUUID(channelId)) return Promise.reject(new Error("Invalid channel UUID"))
     return apiFetch<ServerMessage>(`/api/v1/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify(data), email })
@@ -1060,9 +1079,9 @@ export const workspaceApi = {
     return apiFetch<{ removed: boolean }>(`/api/v1/teams/${teamId}/members/${encodeURIComponent(memberEmail)}`, { method: "DELETE", email: actorEmail })
   },
 
-  updateMyStatus: (teamId: string, status: string, customStatus: string, email: string) => {
+  updateMyStatus: (teamId: string, status: string, customStatus: string, email: string, keepalive = false) => {
     if (!isValidUUID(teamId)) return Promise.resolve({ updated: false })
-    return apiFetch<{ updated: boolean }>(`/api/v1/teams/${teamId}/members/me/status`, { method: "PUT", body: JSON.stringify({ status, custom_status: customStatus }), email })
+    return apiFetch<{ updated: boolean }>(`/api/v1/teams/${teamId}/members/me/status`, { method: "PUT", body: JSON.stringify({ status, custom_status: customStatus }), email, keepalive })
   },
 
   // ── Direct Messages ──
@@ -1074,9 +1093,37 @@ export const workspaceApi = {
   createDM: (participantEmail: string, email: string) =>
     apiFetch<ServerDMConversation>("/api/v1/dms", { method: "POST", body: JSON.stringify({ participant_email: participantEmail }), email }),
 
+  createGroupDM: (emails: string[], name: string | undefined, email: string) =>
+    apiFetch<ServerDMConversation>("/api/v1/dms/groups", { method: "POST", body: JSON.stringify({ emails, name }), email }),
+
+  addGroupMember: (dmId: string, memberEmail: string, email: string) =>
+    apiFetch<ServerDMConversation>(`/api/v1/dms/${dmId}/members`, { method: "POST", body: JSON.stringify({ email: memberEmail }), email }),
+
+  removeGroupMember: (dmId: string, memberEmail: string, email: string) =>
+    apiFetch<unknown>(`/api/v1/dms/${dmId}/members/${encodeURIComponent(memberEmail)}`, { method: "DELETE", email }),
+
+  setGroupMemberRole: (dmId: string, memberEmail: string, role: "owner" | "admin" | "member", email: string) =>
+    apiFetch<unknown>(`/api/v1/dms/${dmId}/members/${encodeURIComponent(memberEmail)}/role`, { method: "PUT", body: JSON.stringify({ role }), email }),
+
+  renameGroup: (dmId: string, name: string, email: string) =>
+    apiFetch<ServerDMConversation>(`/api/v1/dms/${dmId}`, { method: "PUT", body: JSON.stringify({ name }), email }),
+
+  leaveGroup: (dmId: string, email: string) =>
+    apiFetch<unknown>(`/api/v1/dms/${dmId}/leave`, { method: "POST", email }),
+
   getDM: (dmId: string, email: string) => {
     if (!isValidUUID(dmId)) return Promise.reject(new Error("Invalid DM conversation UUID"))
     return apiFetch<ServerDMConversation>(`/api/v1/dms/${dmId}`, { email })
+  },
+
+  listLatestDMMessages: (dmId: string, email: string, limit = 50) => {
+    if (!isValidUUID(dmId)) return Promise.resolve({ items: [] as ServerDMMessage[], next_cursor: "", has_more: false, limit })
+    return apiFetch<CursorPaginatedResponse<ServerDMMessage>>(`/api/v1/dms/${dmId}/messages?latest=1&limit=${limit}`, { email })
+  },
+
+  listDMMessagesSince: (dmId: string, email: string, since: string) => {
+    if (!isValidUUID(dmId)) return Promise.resolve({ items: [] as ServerDMMessage[], next_cursor: "", has_more: false, limit: 0 })
+    return apiFetch<CursorPaginatedResponse<ServerDMMessage>>(`/api/v1/dms/${dmId}/messages?since=${encodeURIComponent(since)}`, { email })
   },
 
   listDMMessages: (dmId: string, email: string, page = 1, limit = 50) => {
@@ -1617,7 +1664,45 @@ export function getMeetBaseUrl(): string {
   return url;
 }
 
+export interface MeetingWaitingGuest {
+  id: string;
+  roomId: string;
+  participantId: string;
+  name: string;
+  email?: string;
+  requestedAt: string;
+}
+
+async function meetingFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const apiUrl = getMeetApiUrl().replace(/\/+$/, "");
+  const token = getAuthToken();
+  const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined) };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return fetch(`${apiUrl}${path}`, { ...init, headers, credentials: "include" });
+}
+
 export const meetingApi = {
+  /** Guests waiting to join meetings the signed-in user hosts */
+  waitingRoom: async (): Promise<MeetingWaitingGuest[]> => {
+    const res = await meetingFetch("/api/me/waiting-room");
+    if (res.status === 401) throw Object.assign(new Error("Sign in required"), { status: 401 });
+    if (!res.ok) throw new Error("Failed to load the waiting room");
+    const body = (await res.json().catch(() => ({}))) as { waiting?: MeetingWaitingGuest[] };
+    return Array.isArray(body.waiting) ? body.waiting : [];
+  },
+
+  /** Lets a waiting guest into the meeting (host only) */
+  answerGuest: async (roomId: string, admissionId: string, admit: boolean): Promise<void> => {
+    const res = await meetingFetch(
+      `/api/rooms/${encodeURIComponent(roomId)}/waiting/${encodeURIComponent(admissionId)}/${admit ? "admit" : "deny"}`,
+      { method: "POST" },
+    );
+    if (!res.ok && res.status !== 404) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Could not answer that request");
+    }
+  },
+
   /** Creates room in meeting backend (../meeting server POST /api/rooms) */
   createRoom: async (title?: string, customRoomId?: string, email?: string): Promise<{ roomId: string; hostGrant: string }> => {
     const apiUrl = getMeetApiUrl().replace(/\/+$/, "");
@@ -1625,9 +1710,6 @@ export const meetingApi = {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
-    }
-    if (email) {
-      headers["X-User-Email"] = email;
     }
     const res = await fetch(`${apiUrl}/api/rooms`, {
       method: "POST",

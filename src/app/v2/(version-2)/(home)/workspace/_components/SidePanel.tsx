@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useChatStore } from "../_lib/chat-store";
+import { searchCachedMessages, type CachedSearchHit } from "../_lib/workspace-cache";
 import { useEnsureMyTasks, useMyTasksStore } from "../../tasks/_lib/my-tasks-store";
 import type { TaskItem as MyTask } from "../../tasks/_lib/tasks-types";
 import type {
@@ -316,6 +317,7 @@ function MemberGroup({
                   member.status === "online" && "bg-emerald-500",
                   member.status === "idle" && "bg-yellow-500",
                   member.status === "dnd" && "bg-red-500",
+                  (member.status === "in_call" || member.status === "in_meeting") && "bg-red-500",
                   member.status === "offline" && "bg-gray-400",
                 )}
               />
@@ -392,13 +394,38 @@ function PinnedContent() {
 // ---------------------------------------------------------------------------
 
 function SearchContent() {
-  const { messages, searchQuery, setSearchQuery } = useChatStore();
+  const { searchQuery, setSearchQuery, channels, directMessages, currentUserId, setActiveChannel, setActiveDm } = useChatStore();
+  const [results, setResults] = React.useState<CachedSearchHit[]>([]);
 
-  const results = searchQuery.trim()
-    ? messages.filter((m) =>
-        m.content.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : [];
+  React.useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void searchCachedMessages(q).then((hits) => {
+        if (!cancelled) setResults(hits);
+      });
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  const labelFor = (hit: CachedSearchHit) => {
+    if (hit.kind === "channel") {
+      const ch = channels.find((c) => c.id === hit.conversationId);
+      return ch ? `#${ch.name}` : "Channel";
+    }
+    const dm = directMessages.find((d) => d.id === hit.conversationId);
+    if (!dm) return "Direct message";
+    if (dm.name) return dm.name;
+    const others = dm.participants.filter((p) => p.userId !== currentUserId).map((p) => p.displayName);
+    return others.join(", ") || "Direct message";
+  };
 
   return (
     <div className="p-3 space-y-3">
@@ -414,19 +441,21 @@ function SearchContent() {
           {results.length} result{results.length !== 1 ? "s" : ""}
         </span>
       )}
-      {results.map((msg) => (
+      {results.map((hit) => (
         <div
-          key={msg.id}
+          key={hit.message.id}
+          onClick={() => (hit.kind === "channel" ? setActiveChannel(hit.conversationId) : setActiveDm(hit.conversationId))}
           className="rounded-md border border-border/40 p-3 space-y-1 hover:bg-accent/30 transition-colors cursor-pointer"
         >
           <div className="flex items-baseline gap-2">
-            <span className="text-sm font-semibold">{msg.authorName}</span>
+            <span className="text-sm font-semibold">{hit.message.authorName}</span>
+            <span className="text-[11px] text-muted-foreground">{labelFor(hit)}</span>
             <span className="text-[11px] text-muted-foreground">
-              {new Date(msg.createdAt).toLocaleString()}
+              {new Date(hit.message.createdAt).toLocaleString()}
             </span>
           </div>
           <p className="text-sm text-muted-foreground leading-snug">
-            {msg.content}
+            {hit.message.content}
           </p>
         </div>
       ))}

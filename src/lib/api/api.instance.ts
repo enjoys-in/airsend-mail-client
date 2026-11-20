@@ -4,6 +4,7 @@ import Cookies from 'js-cookie'
 import { Security } from '../security';
 import { ApiResponse } from '../types';
 import { getMid } from './auth-state';
+import { broadcastLogout } from '../auth-sync';
 
 const security = new Security();
 
@@ -60,6 +61,7 @@ instance.interceptors.response.use(
             document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             document.cookie = 'shield_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             const isHPanel = typeof window !== 'undefined' && window.location.pathname.startsWith('/h-panel');
+            broadcastLogout(isHPanel ? 'admin' : 'user');
             window.location.href = isHPanel ? '/h-panel' : '/v2';
         }
         return Promise.reject(error);
