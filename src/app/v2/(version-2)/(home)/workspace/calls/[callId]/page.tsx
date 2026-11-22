@@ -42,6 +42,7 @@ import TranscriptPanel from "../../_components/meet/transcript/TranscriptPanel";
 import { useVideoEffects } from "../../_lib/meet/effects";
 import { useMeetingPresence } from "../../_lib/meet/presence/use-meeting-presence";
 import { useMeetTranscript } from "../../_lib/meet/transcription/use-meet-transcript";
+import { useCallChat } from "../../_lib/meet/chat/use-call-chat";
 import MeetDetailsDrawer from "../../_components/MeetDetailsDrawer";
 import MeetHostControlsDrawer from "../../_components/MeetHostControlsDrawer";
 import MeetCaptionsOverlay from "../../_components/MeetCaptionsOverlay";
@@ -218,27 +219,8 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [spotlightId, setSpotlightId] = useState<string | null>(null);
 
-  // In-call chat messages
-  const [chatMessages, setChatMessages] = useState<
-    { id: string; sender: string; text: string; time: string }[]
-  >([
-    { id: "cm-1", sender: "Sarah Chen", text: "Welcome everyone! Feel free to share your screen or raise your hand.", time: "Just now" },
-  ]);
+  // In-call chat: real messages to everyone in the call (see _lib/meet/chat/use-call-chat.ts)
   const [inputMessage, setInputMessage] = useState("");
-
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: `cm-${Date.now()}`,
-        sender: "You",
-        text: inputMessage.trim(),
-        time: "Just now",
-      },
-    ]);
-    setInputMessage("");
-  };
 
   const handleCopyLink = () => {
     navigator.clipboard?.writeText(formatMeetUrl(callId));
@@ -282,6 +264,24 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
     micMuted: isMyMicMuted,
     peers: allParticipants.filter((p) => p.id !== selfParticipant.id),
   });
+
+  const chat = useCallChat({
+    callId,
+    selfEmail: currentUserId || "",
+    selfName: displayName.trim() || "You",
+    peers: allParticipants.filter((p) => p.id !== selfParticipant.id),
+    enabled: isLobbyJoined,
+  });
+  const { markRead } = chat;
+  useEffect(() => {
+    if (activeDrawer === "chat") markRead();
+  }, [activeDrawer, chat.messages.length, markRead]);
+
+  const handleSendMessage = () => {
+    if (!inputMessage.trim()) return;
+    chat.send(inputMessage);
+    setInputMessage("");
+  };
 
   // Pre-join (green room): real roster and organizer, camera effects, devices and the user's own name.
   if (!isLobbyJoined) {
@@ -337,10 +337,6 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
       {/* ── Top Bar ── */}
       <div className="flex h-13 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-900/60 px-4 backdrop-blur">
         <div className="flex items-center gap-3">
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/40 text-[10px] gap-1 animate-pulse">
-            <span className="size-1.5 rounded-full bg-red-500" />
-            REC
-          </Badge>
           <div className="space-y-0.5">
             <h2 className="text-xs sm:text-sm font-semibold truncate max-w-[200px] sm:max-w-md text-white">
               {title}
@@ -556,15 +552,27 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
                 ✕
               </Button>
             </div>
+            {chat.status !== "sharing" && (
+              <p className="border-b border-slate-800 bg-amber-500/10 px-4 py-2 text-[11px] text-amber-300">
+                {chat.status === "local"
+                  ? "Messages are only visible to you in this meeting type."
+                  : "This server cannot deliver chat yet, so only you can see your messages."}
+              </p>
+            )}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">
-                {chatMessages.map((msg) => (
+                {chat.messages.length === 0 && (
+                  <p className="pt-6 text-center text-xs text-slate-500">No messages yet. Say hello to everyone.</p>
+                )}
+                {chat.messages.map((msg) => (
                   <div key={msg.id} className="rounded-xl bg-slate-950/70 p-3 border border-slate-800/80">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-xs text-blue-400">{msg.sender}</span>
-                      <span className="text-[10px] text-slate-500">{msg.time}</span>
+                      <span className="font-semibold text-xs text-blue-400">{msg.isSelf ? "You" : msg.sender}</span>
+                      <span className="text-[10px] text-slate-500">
+                        {new Date(msg.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-200 leading-relaxed">{msg.text}</p>
+                    <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
                   </div>
                 ))}
               </div>
@@ -803,7 +811,7 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
             size="icon"
             variant="outline"
             onClick={() => toggleDrawer("chat")}
-            className={`size-10 rounded-full border transition-all ${
+            className={`relative size-10 rounded-full border transition-all ${
               activeDrawer === "chat"
                 ? "bg-blue-600/30 border-blue-500 text-blue-400"
                 : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
@@ -811,6 +819,11 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
             title="In-Call Chat"
           >
             <MessageSquare className="size-4" />
+            {chat.unread > 0 && activeDrawer !== "chat" && (
+              <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-medium text-white">
+                {chat.unread > 9 ? "9+" : chat.unread}
+              </span>
+            )}
           </Button>
 
           {/* Participants Toggle Button */}
