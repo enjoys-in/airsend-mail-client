@@ -37,6 +37,8 @@ import {
   TimerOff,
   UserCog,
   UserX,
+  Forward,
+  CheckSquare,
 } from "lucide-react";
 import { useChatStore } from "../_lib/chat-store";
 import { useChannelPermissions, settingsPath } from "../_lib/use-access";
@@ -125,6 +127,14 @@ export function MessageContextMenu({ message, children }: MessageContextMenuProp
         )}
 
         <ContextMenuSeparator className={sepCls} />
+        <ContextMenuItem onClick={a.forward} className={itemCls}>
+          <Forward className="size-3.5 text-muted-foreground" />
+          <span>Forward</span>
+        </ContextMenuItem>
+        <ContextMenuItem onClick={a.select} className={itemCls}>
+          <CheckSquare className="size-3.5 text-muted-foreground" />
+          <span>Select Messages</span>
+        </ContextMenuItem>
         <ContextMenuItem onClick={a.copyText} className={itemCls}>
           <Copy className="size-3.5 text-muted-foreground" />
           <span>Copy Text</span>

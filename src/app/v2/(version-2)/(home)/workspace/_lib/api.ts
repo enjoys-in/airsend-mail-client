@@ -119,8 +119,25 @@ export interface ServerMessage {
   reactions: { emoji: string; count: number; users: string[] }[]
   attachments: ServerAttachment[]
   reply_count: number
+  reply_to_id?: string | null
+  reply_to?: ServerReplyPreview
   created_at: string
   updated_at: string
+}
+
+/** The quoted message of an inline reply (joined by the workspace server). */
+export interface ServerReplyPreview {
+  id: string
+  sender_email: string
+  sender_name?: string
+  content: string
+  is_deleted: boolean
+}
+
+/** One entry of GET /channels/:id/reads and /dms/:id/reads, and of the `conversation.read` event. */
+export interface ServerReadPosition {
+  email: string
+  read_at: string
 }
 
 export interface ServerTeam {
@@ -261,6 +278,8 @@ export interface ServerDMMessage {
   is_edited: boolean
   is_deleted: boolean
   attachments?: ServerAttachment[]
+  reply_to_id?: string | null
+  reply_to?: ServerReplyPreview
   created_at: string
   updated_at: string
 }
@@ -677,6 +696,18 @@ export function toAttachment(a: ServerAttachment): MessageAttachment {
   }
 }
 
+/** The inline-reply quote of a message; a placeholder when only the id is known (the quote is not loaded). */
+function toReplyRef(id?: string | null, p?: ServerReplyPreview): ChatMessage["replyTo"] {
+  if (!id && !p) return undefined
+  if (!p) return { messageId: id as string, authorId: "", authorName: "", content: "" }
+  return {
+    messageId: p.id,
+    authorId: p.sender_email,
+    authorName: p.sender_name || p.sender_email,
+    content: p.is_deleted ? "This message has been deleted." : p.content,
+  }
+}
+
 /** A DM message in the same shape as a channel message (channelId holds the conversation id). */
 export function toDMMessage(s: ServerDMMessage): ChatMessage {
   return {
@@ -697,6 +728,7 @@ export function toDMMessage(s: ServerDMMessage): ChatMessage {
     attachments: (s.attachments ?? []).map(toAttachment),
     threadReplyCount: 0,
     isDeleted: s.is_deleted,
+    replyTo: toReplyRef(s.reply_to_id, s.reply_to),
   }
 }
 
@@ -719,7 +751,8 @@ export function toMessage(s: ServerMessage): ChatMessage {
     attachments: (s.attachments ?? []).map(toAttachment),
     threadReplyCount: s.reply_count ?? 0,
     isDeleted: s.is_deleted,
-    replyTo: s.parent_id ? { messageId: s.parent_id, authorId: "", authorName: "", content: "" } : undefined,
+    // parent_id is a THREAD reply (shown in the thread panel); reply_to is the inline quote.
+    replyTo: toReplyRef(s.reply_to_id, s.reply_to),
   }
 }
 
@@ -974,7 +1007,18 @@ export const workspaceApi = {
     return apiFetch<CursorPaginatedResponse<ServerMessage>>(`/api/v1/channels/${channelId}/messages?${params}`, { email })
   },
 
-  sendMessage: (channelId: string, data: { content: string; type?: string; priority?: string; parent_id?: string; mentions?: string[] }, email: string) => {
+  sendMessage: (
+    channelId: string,
+    data: {
+      content: string
+      type?: string
+      priority?: string
+      parent_id?: string
+      reply_to_id?: string
+      mentions?: string[]
+    },
+    email: string,
+  ) => {
     if (!isValidUUID(channelId)) return Promise.reject(new Error("Invalid channel UUID"))
     return apiFetch<ServerMessage>(`/api/v1/channels/${channelId}/messages`, { method: "POST", body: JSON.stringify(data), email })
   },
@@ -1133,9 +1177,17 @@ export const workspaceApi = {
     return apiFetch<PaginatedResponse<ServerDMMessage>>(`/api/v1/dms/${dmId}/messages?page=${page}&limit=${limit}`, { email })
   },
 
-  sendDMMessage: (dmId: string, content: string, email: string) => {
+  sendDMMessage: (dmId: string, content: string, email: string, replyToId?: string) => {
     if (!isValidUUID(dmId)) return Promise.reject(new Error("Invalid DM conversation UUID"))
-    return apiFetch<ServerDMMessage>(`/api/v1/dms/${dmId}/messages`, { method: "POST", body: JSON.stringify({ content }), email })
+    const body = JSON.stringify({ content, reply_to_id: replyToId && isValidUUID(replyToId) ? replyToId : undefined })
+    return apiFetch<ServerDMMessage>(`/api/v1/dms/${dmId}/messages`, { method: "POST", body, email })
+  },
+
+  /** Read receipts: how far each member has read the channel / DM. */
+  listReads: (kind: "channel" | "dm", id: string, email: string) => {
+    if (!isValidUUID(id)) return Promise.resolve([] as ServerReadPosition[])
+    const path = kind === "channel" ? `/api/v1/channels/${id}/reads` : `/api/v1/dms/${id}/reads`
+    return apiFetch<ServerReadPosition[]>(path, { email })
   },
 
   // ── Events / Audit ──

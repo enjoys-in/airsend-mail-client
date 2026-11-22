@@ -5,6 +5,7 @@ import { useAppSelector } from "@/store/hooks";
 import { useChatStore } from "../_lib/chat-store";
 import { initWorkspaceCache, resetRevalidation, revalidate } from "../_lib/workspace-cache";
 import { useAccessStore } from "../_lib/access-store";
+import { useDrafts } from "../_lib/drafts";
 import { useWorkspaceWS } from "../_lib/use-workspace-ws";
 import { getWorkspaceApiUrl, isValidUUID } from "../_lib/api";
 
@@ -75,6 +76,7 @@ export default function WorkspaceInit() {
     if (!email || !cacheReady) return;
     const flush = () => void useChatStore.getState().flushOutbox();
     flush();
+    void useDrafts.getState().hydrate();
     window.addEventListener("online", flush);
     return () => window.removeEventListener("online", flush);
   }, [email, cacheReady]);

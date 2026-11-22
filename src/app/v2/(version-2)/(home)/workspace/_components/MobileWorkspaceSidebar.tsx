@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
+import { unreadRowClass } from "../_lib/sidebar-style";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -239,6 +240,7 @@ export default function MobileWorkspaceSidebar({
                         activeDmId === dm.id
                           ? "bg-accent text-accent-foreground"
                           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                        unreadRowClass(dm.unreadCount, activeDmId === dm.id),
                       )}
                     >
                       <PresenceAvatar
@@ -358,6 +360,7 @@ function MobileChannelItem({
         isActive
           ? "bg-accent text-accent-foreground font-medium"
           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+        unreadRowClass(channel.unreadCount, isActive),
       )}
     >
       <Icon className="size-4 shrink-0" />

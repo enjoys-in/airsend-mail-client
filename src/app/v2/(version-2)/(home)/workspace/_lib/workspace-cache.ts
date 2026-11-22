@@ -42,6 +42,44 @@ export interface OutboxEntry {
   mentions: string[];
   priority: string;
   createdAt: number;
+  /** Inline quote-reply target. */
+  replyToId?: string;
+  // Retry state (see send-retry.ts)
+  attempts?: number;
+  nextAt?: number;
+  failed?: boolean;
+  error?: string;
+  // File messages: the bytes stay here until the files service has them, so a reload or going offline resumes
+  file?: Blob;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+  fileExtension?: string;
+  /** Reuse a file already in the files service (forward / "use the existing upload") instead of uploading. */
+  reuseFileId?: string;
+  /** Set once the message exists on the workspace server (step 1 done). */
+  messageId?: string;
+  /** Set once the files service stored the file under messageId (step 2 done). */
+  uploaded?: boolean;
+}
+
+/** A composer draft: unsent text and files of one conversation. */
+export interface DraftEntry {
+  id: string;
+  text: string;
+  files: DraftFile[];
+  updatedAt: number;
+}
+
+/** A staged file: new bytes, or a file already uploaded in this conversation that will be reused. */
+export interface DraftFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  blob?: Blob;
+  existingFileId?: string;
+  extension?: string;
 }
 
 interface CacheState {
@@ -100,6 +138,7 @@ class WorkspaceCacheDB extends Dexie {
   notifications!: Table<Row<ChatNotification>, string>;
   calls!: Table<Row<CallRecord>, string>;
   outbox!: Table<OutboxEntry, string>;
+  drafts!: Table<DraftEntry, string>;
   meta!: Table<MetaRow, string>;
 
   constructor(name: string) {
@@ -120,6 +159,7 @@ class WorkspaceCacheDB extends Dexie {
       calls: "id",
       outbox: "id, createdAt",
     });
+    this.version(3).stores({ drafts: "id" });
   }
 }
 
@@ -222,7 +262,8 @@ async function wipeIfStale(db: WorkspaceCacheDB) {
   if (stored && stored.value === DATA_VERSION) return;
   if (stored) {
     await Promise.all(
-      db.tables.filter((t) => t.name !== "outbox").map((t) => t.clear()),
+      // Unsent work (outbox, drafts) survives a cache format change.
+      db.tables.filter((t) => t.name !== "outbox" && t.name !== "drafts").map((t) => t.clear()),
     );
   }
   await db.meta.put({ key: "dataVersion", value: DATA_VERSION });
@@ -535,6 +576,41 @@ export async function loadOutbox(): Promise<OutboxEntry[]> {
     return await c.db.outbox.orderBy("createdAt").toArray();
   } catch {
     return [];
+  }
+}
+
+/** One outbox row, or null when it is gone (sent or discarded meanwhile). */
+export async function getOutboxRow(id: string): Promise<OutboxEntry | null> {
+  const c = ctx;
+  if (!c) return null;
+  try {
+    await c.ready;
+    return (await c.db.outbox.get(id)) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function loadDrafts(): Promise<DraftEntry[]> {
+  const c = ctx;
+  if (!c) return [];
+  try {
+    await c.ready;
+    return await c.db.drafts.toArray();
+  } catch {
+    return [];
+  }
+}
+
+/** Saves a draft, or removes it when it has no text and no files. */
+export async function saveDraft(entry: DraftEntry): Promise<void> {
+  const c = ctx;
+  if (!c) return;
+  try {
+    if (!entry.text.trim() && !entry.files.length) await c.db.drafts.delete(entry.id);
+    else await c.db.drafts.put(entry);
+  } catch {
+    return;
   }
 }
 

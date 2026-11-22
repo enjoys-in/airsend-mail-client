@@ -10,12 +10,17 @@ import { useChatStore } from "./chat-store";
 import { useMessagePermissions, settingsPath, type MessagePermissions } from "./use-access";
 import { kickMember, timeoutMember, formatUntil } from "./member-actions";
 import { confirmAction, confirmWithReason } from "../_components/ConfirmHost";
+import { useSelection } from "./selection-store";
 import type { ChatMessage } from "./chat-types";
 
 export interface MessageActionHandlers {
   react: (emoji: string) => void;
   reply: () => void;
   replyInThread: () => void;
+  /** Forward this message to other conversations. */
+  forward: () => void;
+  /** Enter select mode with this message selected. */
+  select: () => void;
   edit: () => void;
   copyText: () => void;
   copyLink: () => void;
@@ -56,6 +61,8 @@ export function useMessageActions(message: ChatMessage): MessagePermissions & Me
     },
     reply: () => perms.canReply && store.getState().setReplyingTo(message),
     replyInThread: () => perms.canReplyThread && store.getState().openThread(message.id),
+    forward: () => useSelection.getState().openForward(message.channelId, [message.id]),
+    select: () => useSelection.getState().start(message.channelId, message.id),
     edit: () => perms.canEdit && store.getState().setEditingMessage(message.id),
     copyText: () => copy(message.content, "Message"),
     copyLink: () => {

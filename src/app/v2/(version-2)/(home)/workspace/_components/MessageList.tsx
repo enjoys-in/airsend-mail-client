@@ -42,6 +42,10 @@ import ChannelMeetingBanner from "./meet/ChannelMeetingBanner";
 import { useChannelMeetings } from "../_lib/meet/meeting-state";
 import { PollCard } from "./PollCard";
 import { AttachmentList } from "./FileCard";
+import MessageStatus from "./MessageStatus";
+import ReplyQuote from "./ReplyQuote";
+import SelectableMessage from "./SelectableMessage";
+import ConversationSelectionTools from "./SelectionBar";
 import DMThread from "./DMThread";
 import AnnouncementBanner from "./AnnouncementBanner";
 import { MessageContextMenu, WorkspaceContextMenu } from "./MessageContextMenu";
@@ -284,6 +288,8 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
 
   // Group messages by date
   const grouped = useMemo(() => groupByDate(messages), [messages]);
+  // The open DM's messages (for select / forward in the DM view).
+  const dmList = useChatStore((s) => (effectiveDmId ? s.dmMessages[effectiveDmId] : undefined));
 
   // DM view
   if (dm && !channel) {
@@ -384,6 +390,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
             </div>
           </ScrollArea>
         </WorkspaceContextMenu>
+        <ConversationSelectionTools conversationId={dm.id} messages={dmList ?? []} />
       </div>
     );
   }
@@ -626,17 +633,18 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
                   const isCompact = shouldCompact(msg, prevMsg);
 
                   return (
-                    <MessageBubble
-                      key={msg.id}
-                      message={msg}
-                      isCompact={isCompact}
-                      members={members}
-                      currentUserId={currentUserId}
-                      canAddReactions={canAddReactions}
-                      onOpenThread={openThread}
-                      onReact={addReaction}
-                      onUnreact={removeReaction}
-                    />
+                    <SelectableMessage key={msg.id} conversationId={channel.id} messageId={msg.id}>
+                      <MessageBubble
+                        message={msg}
+                        isCompact={isCompact}
+                        members={members}
+                        currentUserId={currentUserId}
+                        canAddReactions={canAddReactions}
+                        onOpenThread={openThread}
+                        onReact={addReaction}
+                        onUnreact={removeReaction}
+                      />
+                    </SelectableMessage>
                   );
                 })}
               </React.Fragment>
@@ -645,6 +653,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
           </div>
         </ScrollArea>
       </WorkspaceContextMenu>
+      <ConversationSelectionTools conversationId={channel.id} messages={messages} />
     </div>
   );
 }
@@ -713,21 +722,16 @@ function MessageBubble({
       >
         {/* Hover actions */}
         <MessageActions message={message} />
+        {/* My messages: sending / sent / seen / failed */}
+        <MessageStatus
+          message={message}
+          conversationId={message.channelId}
+          me={currentUserId}
+          className="absolute bottom-1 right-2"
+        />
 
-      {/* Reply reference */}
-      {message.replyTo && (
-        <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <div className="ml-6 flex items-center gap-1 rounded bg-accent/50 px-2 py-0.5">
-            <span className="size-3 rounded-full bg-muted" />
-            <span className="font-medium text-foreground">
-              {message.replyTo.authorName}
-            </span>
-            <span className="truncate max-w-xs">
-              {message.replyTo.content}
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Inline reply: the quoted message */}
+      {message.replyTo && <ReplyQuote reply={message.replyTo} className="mb-1 ml-11 max-w-md" />}
 
       <div className="flex gap-3">
         {/* Avatar or timestamp gutter */}

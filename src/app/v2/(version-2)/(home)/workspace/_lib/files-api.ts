@@ -1,10 +1,11 @@
 // ============================================================================
 // Files service client (browser -> files backend, direct).
 //
-// Workspace uploads do NOT go through the workspace server. The browser uploads the
-// bytes here first, gets a file id back, and only then tells the workspace server
-// "this message has file <id>" (see workspaceApi.add*Ref). Downloads fetch the bytes
-// from this service by file id. Every call sends the AirSend `access_token` cookie
+// Workspace uploads do NOT go through the workspace server. For a chat attachment the
+// browser first creates the message on the workspace server, uploads the bytes here with
+// that message id (the file is stored under the same id), and then tells the workspace
+// server "this message has file <id>" (see workspaceApi.add*Ref). Downloads fetch the
+// bytes from this service by file id (= message id for chat attachments). Every call sends the AirSend `access_token` cookie
 // (credentials: "include"); a Bearer header is added when the cookie is readable.
 // ============================================================================
 
@@ -151,16 +152,23 @@ function normalizeMeta(raw: any): WorkspaceFileMeta {
 /**
  * Uploads one file to the organization's storage through the files service.
  * Uses XMLHttpRequest so the UI can show real upload progress (fetch has none).
+ *
+ * `messageId` (chat attachments): the workspace message created for this file; the files service stores the file under
+ * that same id, so the attachment's file_id equals the message id. Omit it for team Files uploads.
  */
 export function uploadWorkspaceFile(
   file: File,
   contextType: WorkspaceFileContext,
   contextId: string,
-  opts?: { onProgress?: (percent: number) => void; signal?: AbortSignal },
+  opts?: { onProgress?: (percent: number) => void; signal?: AbortSignal; messageId?: string },
 ): Promise<WorkspaceFileMeta> {
   return new Promise((resolve, reject) => {
+    // The service streams the body and must know the context BEFORE the file part arrives, so the fields go in the
+    // query string too (and first in the form below).
+    const params = new URLSearchParams({ contextType, contextId })
+    if (opts?.messageId) params.set("messageId", opts.messageId)
     const xhr = new XMLHttpRequest()
-    xhr.open("POST", `${getFilesApiUrl()}/api/workspace/files`)
+    xhr.open("POST", `${getFilesApiUrl()}/api/workspace/files?${params}`)
     xhr.withCredentials = true
     for (const [k, v] of Object.entries(authHeaders())) xhr.setRequestHeader(k, v)
     xhr.responseType = "text"
@@ -190,12 +198,33 @@ export function uploadWorkspaceFile(
       opts.signal.addEventListener("abort", () => xhr.abort(), { once: true })
     }
 
+    // Order matters: every field before `file`.
     const form = new FormData()
-    form.append("file", file)
     form.append("contextType", contextType)
     form.append("contextId", contextId)
+    if (opts?.messageId) form.append("messageId", opts.messageId)
+    form.append("file", file)
     xhr.send(form)
   })
+}
+
+/**
+ * Attaches an existing file to another message (forward, or "use the file already uploaded"): the files service adds a
+ * row under `messageId` pointing at the same stored bytes, so the target conversation can download it.
+ */
+export async function shareWorkspaceFile(
+  fileId: string,
+  contextType: Exclude<WorkspaceFileContext, "team">,
+  contextId: string,
+  messageId: string,
+): Promise<WorkspaceFileMeta> {
+  if (!FILE_ID.test(fileId)) throw new FilesApiError("Invalid file id", 400)
+  const raw = await filesJson<any>(`/api/workspace/files/${encodeURIComponent(fileId)}/share`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contextType, contextId, messageId }),
+  })
+  return normalizeMeta(raw)
 }
 
 // ── Metadata & download ──

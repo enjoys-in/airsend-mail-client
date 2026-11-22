@@ -24,7 +24,7 @@ import {
   toChatTask,
 } from "./api";
 import type { ServerMessage, ServerDMMessage, ServerAttachment } from "./api";
-import { removeOutbox } from "./workspace-cache";
+import { useReadReceipts } from "./read-receipts";
 import { refreshMyTasks } from "../../tasks/_lib/my-tasks-store";
 
 interface WSIncoming {
@@ -209,23 +209,23 @@ function handleWSEvent(msg: WSIncoming) {
     case "message.ack": {
       const data = msg.data as { temp_id: string; message: ServerMessage };
       if (!data.message || !data.temp_id) break;
-      const real = toMessage(data.message);
-      void removeOutbox(data.temp_id);
-      useChatStore.setState((s) => ({
-        messages: s.messages.map((m) => (m.id === data.temp_id ? real : m)),
-      }));
+      store.noteSendAck(data.temp_id, toMessage(data.message));
       break;
     }
 
+    // DM sent over the socket (dm.send): same flow as message.ack / message.error.
+    case "dm.message.ack": {
+      const data = msg.data as { temp_id?: string; message?: ServerDMMessage };
+      if (!data?.message || !data.temp_id) break;
+      store.noteSendAck(data.temp_id, toDMMessage(data.message), "dm");
+      break;
+    }
+
+    case "dm.message.error":
     case "message.error": {
       const data = msg.data as { temp_id: string; error: string };
-      if (data.temp_id) {
-        void removeOutbox(data.temp_id);
-        useChatStore.setState((s) => ({
-          messages: s.messages.filter((m) => m.id !== data.temp_id),
-          apiError: data.error || "Failed to send message",
-        }));
-      }
+      // Not dropped: the outbox retries it over HTTP and marks it failed if that is refused too.
+      if (data.temp_id) store.noteSendError(data.temp_id, data.error);
       break;
     }
 
@@ -238,7 +238,15 @@ function handleWSEvent(msg: WSIncoming) {
       useChatStore.setState((s) => ({
         messages: [...s.messages, newMsg],
       }));
-      store.noteIncoming(newMsg.channelId, newMsg);
+      store.noteIncoming(newMsg.channelId, newMsg, true);
+      break;
+    }
+
+    // Someone (me in another tab, too) read a channel / DM up to read_at: drives the "seen" eye on my messages.
+    case "conversation.read": {
+      const data = msg.data as { conversation_id?: string; email?: string; read_at?: string };
+      if (!data?.conversation_id || !data.email || !data.read_at) break;
+      useReadReceipts.getState().apply(data.conversation_id, data.email, data.read_at);
       break;
     }
 

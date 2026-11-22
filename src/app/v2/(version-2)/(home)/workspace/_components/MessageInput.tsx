@@ -8,7 +8,6 @@ import {
   Smile,
   AtSign,
   X,
-  Reply,
   Bold,
   Italic,
   Code,
@@ -19,7 +18,6 @@ import {
   Lock,
   BarChart3,
   Shield,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,8 +36,13 @@ import EmojiPicker from "./EmojiPicker";
 import GifPicker from "./GifPicker";
 import { PollCreatorDialog } from "./PollCreatorDialog";
 import type { MessagePriority } from "../_lib/chat-types";
-import { formatBytes } from "../_lib/file-utils";
 import { ConversationDropContext } from "./ConversationDropZone";
+import { useDrafts } from "../_lib/drafts";
+import { useComposerFiles } from "../_lib/use-composer-files";
+import StagedFiles from "./StagedFiles";
+import DuplicateFileDialog from "./DuplicateFileDialog";
+import UploadProgressList from "./UploadProgressList";
+import ReplyQuote from "./ReplyQuote";
 
 // ---------------------------------------------------------------------------
 // MessageInput — rich text input with mentions, replies, emoji, GIF, files
@@ -69,7 +72,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     sendFiles,
     pendingUploads,
     cancelUpload,
-    dismissUpload,
+    retrySend,
   } = useChatStore();
 
   // Props from URL take priority
@@ -85,7 +88,19 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     [dropZone],
   );
 
-  const [content, setContent] = useState("");
+  // The text is the conversation's draft: it stays when switching conversations (and across reloads). Editing a
+  // message uses its own text so the draft is not overwritten.
+  const conversationId = effectiveChannelId ?? effectiveDmId ?? "";
+  const draftText = useDrafts((s) => s.drafts[conversationId]?.text ?? "");
+  const setDraftText = useDrafts((s) => s.setText);
+  const clearDraft = useDrafts((s) => s.clear);
+  const composer = useComposerFiles(conversationId);
+  const [editText, setEditText] = useState("");
+  const content = editingMessageId ? editText : draftText;
+  const setContent = useCallback(
+    (v: string) => (editingMessageId ? setEditText(v) : setDraftText(conversationId, v)),
+    [editingMessageId, conversationId, setDraftText],
+  );
   const [priority, setPriority] = useState<MessagePriority>("normal");
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
@@ -117,7 +132,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     if (editingMessageId) {
       const msg = messages.find((m:any) => m.id === editingMessageId);
       if (msg) {
-        setContent(msg.content);
+        setEditText(msg.content);
         textareaRef.current?.focus();
       }
     }
@@ -138,7 +153,8 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
   }, [content]);
 
   const handleSubmit = useCallback(() => {
-    if (!content.trim()) return;
+    const staged = composer.files;
+    if (!content.trim() && !(staged.length && !editingMessageId)) return;
 
     if (editingMessageId) {
       editMessage(editingMessageId, content.trim());
@@ -157,7 +173,12 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
           return member?.userId;
         })
         .filter((id): id is string => !!id);
-      if (dm && !channel) {
+      if (staged.length) {
+        // Staged files go out with the text as caption (one message per file); the draft is cleared.
+        const outgoing = composer.outgoing();
+        clearDraft(conversationId);
+        void sendFiles(outgoing, content.trim());
+      } else if (dm && !channel) {
         // Direct message: plain text through the DM endpoint.
         sendDMText(content);
       } else {
@@ -168,7 +189,22 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     }
 
     textareaRef.current?.focus();
-  }, [content, editingMessageId, editMessage, sendMessage, sendDMText, dm, channel]);
+  }, [
+    content,
+    editingMessageId,
+    editMessage,
+    sendMessage,
+    sendDMText,
+    dm,
+    channel,
+    composer,
+    clearDraft,
+    conversationId,
+    sendFiles,
+    members,
+    priority,
+    setContent,
+  ]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Send on Enter (but Shift+Enter for newline)
@@ -224,13 +260,12 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
 
   // Drag and drop is handled by <ConversationDropZone> around the whole pane (message list + this input); it hands the
   // dropped files to the uploader registered below, so permissions and the caption work exactly like the paperclip.
-  // File upload (channel or DM): the bytes go to the files service first, then the message carrying the returned
-  // file id is sent to the workspace server (see chat-store sendFiles). Text typed in the box becomes the caption.
+  // Picked / dropped files are STAGED in the draft (not sent yet); Enter or Send sends them with the text as caption.
+  // A file already shared here asks whether to reuse it (see useComposerFiles).
   const handleFileUpload = async (files: File[]) => {
-    if ((!effectiveChannelId && !effectiveDmId) || !currentUserId || !canAttach || !canSend) return;
-    const caption = editingMessageId ? "" : content.trim();
-    if (caption) setContent("");
-    await sendFiles(files, caption);
+    if (!conversationId || !currentUserId || !canAttach || !canSend) return;
+    composer.stage(files);
+    textareaRef.current?.focus();
   };
 
   // Uploads in flight (or failed) for the open conversation
@@ -366,20 +401,16 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
 
       {/* Reply preview */}
       {replyingTo && (
-        <div className="mb-2 flex items-center gap-2 rounded-md bg-accent/50 px-3 py-1.5 text-xs">
-          <Reply className="size-3 text-muted-foreground" />
-          <span className="text-muted-foreground">Replying to</span>
-          <span className="font-semibold">{replyingTo.authorName}</span>
-          <span className="flex-1 truncate text-muted-foreground">
-            {replyingTo.content}
-          </span>
-          <button
-            onClick={() => setReplyingTo(null)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="size-3.5" />
-          </button>
-        </div>
+        <ReplyQuote
+          className="mb-2"
+          reply={{
+            messageId: replyingTo.id,
+            authorId: replyingTo.authorId,
+            authorName: replyingTo.authorName,
+            content: replyingTo.content,
+          }}
+          onCancel={() => setReplyingTo(null)}
+        />
       )}
 
       {/* Edit indicator */}
@@ -401,52 +432,17 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
         </div>
       )}
 
-      {/* Files uploading to the files service */}
-      {myUploads.length > 0 && (
-        <div className="mb-2 flex flex-col gap-1.5">
-          {myUploads.map((u) => (
-            <div
-              key={u.id}
-              className={cn(
-                "flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs",
-                u.status === "error"
-                  ? "border-destructive/30 bg-destructive/10 text-destructive"
-                  : "border-border/50 bg-accent/40",
-              )}
-            >
-              {u.status === "error" ? (
-                <AlertTriangle className="size-3.5 shrink-0" />
-              ) : (
-                <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">
-                  {u.name} <span className="font-normal opacity-70">· {formatBytes(u.size)}</span>
-                </p>
-                {u.status === "error" ? (
-                  <p className="truncate text-[11px]">{u.error ?? "Upload failed"}</p>
-                ) : (
-                  <div className="mt-1 flex items-center gap-2">
-                    <div className="h-1 flex-1 overflow-hidden rounded-full bg-border/60">
-                      <div className="h-full bg-primary transition-all" style={{ width: `${u.progress}%` }} />
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">
-                      {u.status === "sending" ? "Sending…" : `${u.progress}%`}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => (u.status === "error" ? dismissUpload(u.id) : cancelUpload(u.id))}
-                className="shrink-0 opacity-70 hover:opacity-100"
-                aria-label={u.status === "error" ? "Dismiss" : "Cancel upload"}
-              >
-                <X className="size-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Files queued / uploading / failed for this conversation (they keep going in the background) */}
+      <UploadProgressList uploads={myUploads} onCancel={cancelUpload} onRetry={retrySend} />
+
+      {/* Files attached to the draft, sent with Enter */}
+      <StagedFiles files={composer.files} onRemove={composer.remove} />
+      <DuplicateFileDialog
+        file={composer.duplicate}
+        onUseExisting={() => composer.resolveDuplicate("existing")}
+        onUploadAgain={() => composer.resolveDuplicate("again")}
+        onCancel={() => composer.resolveDuplicate("cancel")}
+      />
 
       {/* Input area */}
       <div className="relative">
@@ -542,7 +538,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
               />
               <EmojiPicker
                 onSelect={(emoji) => {
-                  setContent((prev) => prev + emoji);
+                  setContent(content + emoji);
                   textareaRef.current?.focus();
                 }}
                 trigger={
@@ -604,7 +600,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
             <Button
               size="sm"
               className="h-7 px-3 text-xs"
-              disabled={!canSend || !content.trim()}
+              disabled={!canSend || (!content.trim() && !composer.files.length)}
               onClick={handleSubmit}
             >
               <Send className="mr-1 size-3" />

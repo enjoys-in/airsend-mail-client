@@ -16,6 +16,8 @@ import {
   TimerOff,
   UserCog,
   UserX,
+  Forward,
+  CheckSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -111,6 +113,9 @@ export default function MessageActions({ message }: { message: ChatMessage }) {
             <MessageSquare className="size-3.5" />
           </ToolbarButton>
         )}
+        <ToolbarButton label="Forward" onClick={a.forward}>
+          <Forward className="size-3.5" />
+        </ToolbarButton>
         {a.canEdit && (
           <ToolbarButton label="Edit" onClick={a.edit}>
             <Pencil className="size-3.5" />
@@ -134,6 +139,10 @@ export default function MessageActions({ message }: { message: ChatMessage }) {
                 {message.isPinned ? "Unpin Message" : "Pin Message"}
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem onClick={a.select}>
+              <CheckSquare className="mr-2 size-4" />
+              Select Messages
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={a.copyText}>
               <Copy className="mr-2 size-4" />
               Copy Text

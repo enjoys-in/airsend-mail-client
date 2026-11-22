@@ -241,7 +241,14 @@ export interface ChatMessage {
   threadReplyCount: number;
   threadLastReplyAt?: string;
   isDeleted: boolean;
+  /** Local only: still in the outbox ("sending") or gave up after retries ("failed"). Absent once the server has it. */
+  sendStatus?: "sending" | "failed";
+  /** Local only: the message was forwarded from another conversation. */
+  forwarded?: boolean;
 }
+
+/** Who has read a conversation up to when (email -> ISO time), from read receipts. */
+export type ReadReceipts = Record<string, string>;
 
 export type MessageType = "text" | "system" | "join" | "leave" | "pin" | "file" | "announcement";
 
@@ -268,7 +275,8 @@ export interface PendingUpload {
   size: number;
   /** 0-100 while uploading. */
   progress: number;
-  status: "uploading" | "sending" | "error";
+  /** queued: waiting for a free upload slot or for the next retry; error: gave up (Retry / Discard). */
+  status: "queued" | "uploading" | "sending" | "error";
   error?: string;
 }
 

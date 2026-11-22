@@ -4,12 +4,9 @@
 
 import { create, type StoreApi, type UseBoundStore } from "zustand";
 import {
-  enqueueOutbox,
   loadCachedChannelMessages,
   loadCachedDMMessages,
-  loadOutbox,
   newestChange,
-  removeOutbox,
   revalidate,
   upsertById,
 } from "./workspace-cache";
@@ -66,14 +63,14 @@ import {
   toWorkspaceFile,
   toChatTask,
   toDMMessage,
-  toAttachment,
   apiErrorMessage,
-  WorkspaceApiError,
-  type AttachmentRef,
 } from "./api";
-import { uploadWorkspaceFile, deleteWorkspaceFile, filesErrorMessage, type WorkspaceFileMeta } from "./files-api";
-import { categoryFor, extensionOf, fileKind } from "./file-utils";
+import { uploadWorkspaceFile, deleteWorkspaceFile, filesErrorMessage } from "./files-api";
+import { categoryFor, fileKind } from "./file-utils";
 import { toast } from "sonner";
+import { createOutbox, keepQuote, type ForwardTarget, type OutgoingFile } from "./outbox";
+import { announceRead, useReadReceipts } from "./read-receipts";
+import { notifyIncoming } from "./notify";
 
 // ---------------------------------------------------------------------------
 // File sending helpers
@@ -92,30 +89,20 @@ function withAttachment(m: ChatMessage, messageId: string, att: MessageAttachmen
   return m.id === messageId ? { ...m, type: "file", attachments: upsertAttachment(m.attachments ?? [], att) } : m;
 }
 
-/** The attachment shown right after sending, before the workspace server has confirmed the reference. */
-function localAttachment(meta: WorkspaceFileMeta, fileName: string): MessageAttachment {
-  return {
-    id: `local-${meta.id}`,
-    name: meta.name || fileName,
-    url: "",
-    mimeType: meta.mimeType,
-    size: meta.size,
-    fileId: meta.id,
-    extension: meta.extension || extensionOf(fileName) || undefined,
-  };
+/** Conversation kind of an id the store knows (channel or DM). */
+function kindOf(s: ChatStore, id: string): "channel" | "dm" {
+  return s.channels.some((c) => c.id === id) ? "channel" : "dm";
 }
 
-/** The /ref call can 404 for a moment while the server flushes the just-sent message; retry once after ~1s. */
-async function withRefRetry<T>(call: () => Promise<T>): Promise<T> {
-  try {
-    return await call();
-  } catch (err) {
-    if (err instanceof WorkspaceApiError && err.status === 404) {
-      await new Promise((r) => setTimeout(r, 1000));
-      return call();
-    }
-    throw err;
-  }
+/** Title for a notification about `conversationId`. */
+/** Messages the server has (not optimistic / outbox copies): only these decide between a delta and a full load. */
+const serverOnly = (list: ChatMessage[]) => list.filter((m) => isValidUUID(m.id) && !m.sendStatus);
+
+function conversationTitle(s: ChatStore, conversationId: string, fallback: string): string {
+  const ch = s.channels.find((c) => c.id === conversationId);
+  if (ch) return `#${ch.name}`;
+  const dm = s.directMessages.find((d) => d.id === conversationId);
+  return dm?.name || fallback;
 }
 
 /** Merge the server's DM page with what we already show (in-flight temp messages, attachments not yet confirmed). */
@@ -167,10 +154,6 @@ interface ChatStore {
   dmMessages: Record<string, ChatMessage[]>;
   /** Files currently uploading to the files service (chat attachments and team Files). */
   pendingUploads: PendingUpload[];
-  /** Messages of each DM conversation (channelId holds the conversation id), oldest first. */
-  dmMessages: Record<string, ChatMessage[]>;
-  /** Files currently uploading to the files service (chat attachments and team Files). */
-  pendingUploads: PendingUpload[];
   notifications: ChatNotification[];
   tasks: ChatTask[];
   typingIndicators: TypingIndicator[];
@@ -213,10 +196,20 @@ interface ChatStore {
 
   // Read tracking (client-side: the server does not compute unread counts) and the offline outbox
   readPositions: Record<string, string>;
+  /** Mark read locally and announce it (read receipts). */
   markRead: (conversationId: string) => void;
-  noteIncoming: (conversationId: string, message: ChatMessage) => void;
+  _markReadLocal: (conversationId: string) => void;
+  /** `live`: arrived over the socket just now (notify); false for catch-up fetches. */
+  noteIncoming: (conversationId: string, message: ChatMessage, live?: boolean) => void;
   receiveDMMessage: (conversationId: string, message: ChatMessage) => void;
   flushOutbox: () => Promise<void>;
+  /** Failed sends: try again now / give up (removes the message, or undoes a half-sent file). */
+  retrySend: (outboxId: string) => void;
+  discardSend: (outboxId: string) => void;
+  /** WebSocket results for a channel or DM send (temp id = outbox id). */
+  noteSendAck: (tempId: string, real: ChatMessage, kind?: "channel" | "dm") => void;
+  noteSendError: (tempId: string, error: string) => void;
+  forwardMessages: (messages: ChatMessage[], targets: ForwardTarget[]) => Promise<void>;
 
   // WebSocket reference for sending messages
   _ws: WebSocket | null;
@@ -270,18 +263,9 @@ interface ChatStore {
   fetchDMMessages: (dmId: string) => Promise<void>;
   sendDMText: (content: string) => void;
 
-  // Actions — Files (bytes go to the files service first, then the message / Files tab references the file id)
-  sendFiles: (files: File[], caption?: string) => Promise<void>;
-  uploadTeamFile: (file: File, opts?: { channelId?: string }) => Promise<boolean>;
-  cancelUpload: (uploadId: string) => void;
-  dismissUpload: (uploadId: string) => void;
-  /** Add (or replace by id / file id) an attachment on a channel or DM message. */
-  addMessageAttachment: (messageId: string, attachment: MessageAttachment) => void;
-  fetchDMMessages: (dmId: string) => Promise<void>;
-  sendDMText: (content: string) => void;
-
-  // Actions — Files (bytes go to the files service first, then the message / Files tab references the file id)
-  sendFiles: (files: File[], caption?: string) => Promise<void>;
+  // Actions — Files (message first, then the bytes under the message id, then the reference; see outbox.ts)
+  /** Send files (new or reused) to the open conversation; the first carries the caption and the reply. */
+  sendFiles: (files: OutgoingFile[], caption?: string) => Promise<void>;
   uploadTeamFile: (file: File, opts?: { channelId?: string }) => Promise<boolean>;
   cancelUpload: (uploadId: string) => void;
   dismissUpload: (uploadId: string) => void;
@@ -391,7 +375,9 @@ function saveManualPresence(status: PresenceStatus, custom: string): void {
   }
 }
 
-export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore>()((set, get) => ({
+export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore>()((set, get) => {
+  const outbox = createOutbox(set, get);
+  return {
   // Data — initialized empty, loaded from live backend API
   teams: [],
   channels: [],
@@ -472,7 +458,14 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     if (defaultChannel) get().markRead(defaultChannel.id);
   },
 
-  markRead: (conversationId) =>
+  markRead: (conversationId) => {
+    get()._markReadLocal(conversationId);
+    const s = get();
+    const position = s.readPositions[conversationId];
+    if (position) announceRead(s._ws, kindOf(s, conversationId), conversationId, position);
+  },
+
+  _markReadLocal: (conversationId) =>
     set((s) => {
       const known = s.messages.some((m) => m.channelId === conversationId)
         ? s.messages.filter((m) => m.channelId === conversationId)
@@ -495,8 +488,16 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       };
     }),
 
-  noteIncoming: (conversationId, message) => {
+  noteIncoming: (conversationId, message, live = false) => {
     const s = get();
+    const viewingNow =
+      (s.activeChannelId === conversationId || s.activeDmId === conversationId) &&
+      (typeof document === "undefined" || document.visibilityState === "visible");
+    if (live && !viewingNow && !message.isDeleted && message.authorId !== s.currentUserId) {
+      const open = () =>
+        kindOf(get(), conversationId) === "channel" ? get().setActiveChannel(conversationId) : get().setActiveDm(conversationId);
+      notifyIncoming(message, conversationTitle(s, conversationId, message.authorName || message.authorId), open);
+    }
     if (message.isDeleted || message.authorId === s.currentUserId) return;
     const sentAt = Date.parse(message.createdAt);
     const viewing =
@@ -527,62 +528,30 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
         d.id === conversationId ? { ...d, lastMessage: message, updatedAt: message.createdAt } : d,
       ),
     }));
-    get().noteIncoming(conversationId, message);
+    get().noteIncoming(conversationId, message, true);
   },
 
-  flushOutbox: async () => {
-    const email = get().currentUserId;
-    if (!email) return;
-    const rows = await loadOutbox();
-    for (const row of rows) {
-      const live =
-        row.kind === "channel"
-          ? get().messages.some((m) => m.id === row.id)
-          : (get().dmMessages[row.target] ?? []).some((m) => m.id === row.id);
-      if (live && Date.now() - row.createdAt < 15_000) continue;
-      try {
-        if (row.kind === "channel") {
-          const serverMsg = await workspaceApi.sendMessage(
-            row.target,
-            { content: row.content, type: "text", priority: row.priority, mentions: row.mentions },
-            email,
-          );
-          const real = toMessage(serverMsg);
-          set((s) => ({
-            messages: s.messages.some((m) => m.id === row.id)
-              ? s.messages.map((m) => (m.id === row.id ? real : m))
-              : s.messages.some((m) => m.id === real.id)
-                ? s.messages
-                : [...s.messages, real],
-          }));
-        } else {
-          const serverMsg = await workspaceApi.sendDMMessage(row.target, row.content, email);
-          const real = toDMMessage(serverMsg);
-          set((s) => {
-            const list = s.dmMessages[row.target] ?? [];
-            const next = list.some((m) => m.id === row.id)
-              ? list.map((m) => (m.id === row.id ? real : m))
-              : list.some((m) => m.id === real.id)
-                ? list
-                : [...list, real];
-            return { dmMessages: { ...s.dmMessages, [row.target]: next } };
-          });
-        }
-        await removeOutbox(row.id);
-      } catch (err) {
-        if (typeof navigator !== "undefined" && navigator.onLine === false) return;
-        await removeOutbox(row.id);
-        set((s) =>
-          row.kind === "channel"
-            ? { messages: s.messages.filter((m) => m.id !== row.id), apiError: apiErrorMessage(err, "Failed to send message") }
-            : {
-                dmMessages: { ...s.dmMessages, [row.target]: (s.dmMessages[row.target] ?? []).filter((m) => m.id !== row.id) },
-                apiError: apiErrorMessage(err, "Failed to send message"),
-              },
-        );
-      }
-    }
+  // Sending, retries, uploads and forwards live in outbox.ts.
+  flushOutbox: () => outbox.flush(),
+  retrySend: (id) => void outbox.retry(id),
+  discardSend: (id) => void outbox.discard(id),
+  forwardMessages: (messages, targets) => outbox.forward(messages, targets),
+
+  // Channel acks swap in `messages`; DM acks in that conversation's list (real.channelId is the conversation id).
+  noteSendAck: (tempId, real, kind = "channel") => {
+    outbox.acked(tempId);
+    const swap = (list: ChatMessage[]) =>
+      list.some((m) => m.id === real.id)
+        ? list.filter((m) => m.id !== tempId)
+        : list.map((m) => (m.id === tempId ? keepQuote(real, m) : m));
+    set((s) =>
+      kind === "channel"
+        ? { messages: swap(s.messages) }
+        : { dmMessages: { ...s.dmMessages, [real.channelId]: swap(s.dmMessages[real.channelId] ?? []) } },
+    );
   },
+
+  noteSendError: (tempId, error) => void outbox.wsFailed(tempId, error),
 
   addTeam: (team) => {
     set((s) => ({ teams: [...s.teams, team] }));
@@ -601,7 +570,9 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       replyingTo: null,
       editingMessageId: null,
     });
-    if (channelId) get().markRead(channelId);
+    if (!channelId) return;
+    get().markRead(channelId);
+    void useReadReceipts.getState().load("channel", channelId, get().currentUserId);
   },
 
   addChannel: (channel) =>
@@ -618,108 +589,13 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   // Message actions
   // -----------------------------------------------------------------------
 
-  sendMessage: (content, mentions = [], attachments = [], priority = "normal") => {
-    const { activeChannelId, currentUserId, _ws } = get();
-    if (!activeChannelId || !content.trim() || !currentUserId) return;
-
-    // Optimistic local message
-    const now = Date.now();
-    const tempId = `temp-${now}`;
-    const optimistic: ChatMessage = {
-      id: tempId,
-      channelId: activeChannelId,
-      authorId: currentUserId,
-      authorName: "You",
-      content: content.trim(),
-      type: "text",
-      priority,
-      createdAt: new Date(now).toISOString(),
-      isEdited: false,
-      isPinned: false,
-      isPinnedPublic: false,
-      replyTo: get().replyingTo
-        ? {
-            messageId: get().replyingTo!.id,
-            authorId: get().replyingTo!.authorId,
-            authorName: get().replyingTo!.authorName,
-            content:
-              get().replyingTo!.content.length > 80
-                ? get().replyingTo!.content.slice(0, 80) + "..."
-                : get().replyingTo!.content,
-          }
-        : undefined,
-      mentions,
-      reactions: [],
-      attachments,
-      threadReplyCount: 0,
-      isDeleted: false,
-    };
-
-    set((s) => ({
-      messages: [...s.messages, optimistic],
-      replyingTo: null,
-    }));
-
-    const parentId = get().replyingTo?.id;
-
-    // Send via WebSocket (preferred) or fallback to HTTP
-    if (activeChannelId && isValidUUID(activeChannelId)) {
-      void enqueueOutbox({
-        id: tempId,
-        kind: "channel",
-        target: activeChannelId,
-        content: content.trim(),
-        mentions,
-        priority,
-        createdAt: now,
-      });
-      if (_ws && _ws.readyState === WebSocket.OPEN) {
-        _ws.send(
-          JSON.stringify({
-            type: "message.send",
-            payload: {
-              channel_id: activeChannelId,
-              content: content.trim(),
-              type: "text",
-              priority,
-              parent_id: parentId ?? null,
-              mentions,
-              temp_id: tempId,
-            },
-          }),
-        );
-        // message.ack from server will replace the temp message
-      } else {
-        // Fallback: HTTP POST
-        workspaceApi
-          .sendMessage(
-            activeChannelId,
-            {
-              content: content.trim(),
-              type: "text",
-              priority,
-              parent_id: parentId,
-              mentions,
-            },
-            currentUserId,
-          )
-          .then((serverMsg) => {
-            const real = toMessage(serverMsg);
-            void removeOutbox(tempId);
-            set((s) => ({
-              messages: s.messages.map((m) => (m.id === tempId ? real : m)),
-            }));
-          })
-          .catch(() => {
-            if (typeof navigator !== "undefined" && navigator.onLine === false) return;
-            void removeOutbox(tempId);
-            set((s) => ({
-              messages: s.messages.filter((m) => m.id !== tempId),
-              apiError: "Failed to send message",
-            }));
-          });
-      }
-    }
+  // The reply target is read BEFORE it is cleared (it used to be read after, so replies lost their target).
+  sendMessage: (content, mentions = [], _attachments = [], priority = "normal") => {
+    const { activeChannelId, currentUserId, replyingTo } = get();
+    const text = content.trim();
+    if (!activeChannelId || !isValidUUID(activeChannelId) || !text || !currentUserId) return;
+    set({ replyingTo: null });
+    void outbox.queueText("channel", activeChannelId, text, { mentions, priority, replyTo: replyingTo });
   },
 
   editMessage: (messageId, newContent) => {
@@ -935,21 +811,25 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       activeChannelId: null,
       activeThreadMessageId: null,
       sidePanelView: null,
+      replyingTo: null,
+      editingMessageId: null,
     });
-    if (dmId) get().markRead(dmId);
+    if (!dmId) return;
+    get().markRead(dmId);
+    void useReadReceipts.getState().load("dm", dmId, get().currentUserId);
   },
 
   fetchDMMessages: async (dmId) => {
     const email = get().currentUserId;
     if (!isValidUUID(dmId) || !email) return;
-    if (!get().dmMessages[dmId]?.length) {
+    if (!serverOnly(get().dmMessages[dmId] ?? []).length) {
       const cached = await loadCachedDMMessages(dmId);
-      if (cached.length && !get().dmMessages[dmId]?.length) {
-        set((s) => ({ dmMessages: { ...s.dmMessages, [dmId]: cached } }));
+      if (cached.length && !serverOnly(get().dmMessages[dmId] ?? []).length) {
+        set((s) => ({ dmMessages: { ...s.dmMessages, [dmId]: mergeDMMessages(s.dmMessages[dmId] ?? [], cached) } }));
       }
     }
     try {
-      const since = newestChange(get().dmMessages[dmId] ?? []);
+      const since = newestChange(serverOnly(get().dmMessages[dmId] ?? []));
       if (since) {
         let cursor = since;
         for (let round = 0; round < 5; round++) {
@@ -977,52 +857,11 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   },
 
   sendDMText: (content) => {
-    const { activeDmId, currentUserId } = get();
+    const { activeDmId, currentUserId, replyingTo } = get();
     const text = content.trim();
     if (!activeDmId || !isValidUUID(activeDmId) || !text || !currentUserId) return;
-    const dmId = activeDmId;
-    const tempId = `temp-${Date.now()}`;
-    const optimistic: ChatMessage = {
-      id: tempId,
-      channelId: dmId,
-      authorId: currentUserId,
-      authorName: "You",
-      content: text,
-      type: "text",
-      priority: "normal",
-      createdAt: new Date().toISOString(),
-      isEdited: false,
-      isPinned: false,
-      isPinnedPublic: false,
-      mentions: [],
-      reactions: [],
-      attachments: [],
-      threadReplyCount: 0,
-      isDeleted: false,
-    };
-    set((s) => ({ dmMessages: { ...s.dmMessages, [dmId]: [...(s.dmMessages[dmId] ?? []), optimistic] } }));
-    void enqueueOutbox({ id: tempId, kind: "dm", target: dmId, content: text, mentions: [], priority: "normal", createdAt: Date.now() });
-    workspaceApi
-      .sendDMMessage(dmId, text, currentUserId)
-      .then((serverMsg) => {
-        const real = toDMMessage(serverMsg);
-        void removeOutbox(tempId);
-        set((s) => ({
-          dmMessages: {
-            ...s.dmMessages,
-            [dmId]: dedupeById((s.dmMessages[dmId] ?? []).map((m) => (m.id === tempId ? real : m))),
-          },
-        }));
-      })
-      .catch((err) => {
-        if (typeof navigator !== "undefined" && navigator.onLine === false) return;
-        void removeOutbox(tempId);
-        set((s) => ({
-          dmMessages: { ...s.dmMessages, [dmId]: (s.dmMessages[dmId] ?? []).filter((m) => m.id !== tempId) },
-          apiError: apiErrorMessage(err, "Failed to send message"),
-        }));
-        void get().fetchDMs(currentUserId).catch(() => {});
-      });
+    set({ replyingTo: null });
+    void outbox.queueText("dm", activeDmId, text, { replyTo: replyingTo });
   },
 
   // -----------------------------------------------------------------------
@@ -1038,116 +877,33 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       ),
     })),
 
+  // Team Files uploads keep their own controllers; chat uploads belong to the outbox.
   cancelUpload: (uploadId) => {
+    if (!uploadControllers.has(uploadId)) return void outbox.discard(uploadId);
     uploadControllers.get(uploadId)?.abort();
     uploadControllers.delete(uploadId);
     set((s) => ({ pendingUploads: s.pendingUploads.filter((u) => u.id !== uploadId) }));
   },
 
   dismissUpload: (uploadId) => {
+    if (!uploadControllers.has(uploadId)) return void outbox.discard(uploadId);
     uploadControllers.delete(uploadId);
     set((s) => ({ pendingUploads: s.pendingUploads.filter((u) => u.id !== uploadId) }));
   },
 
+  // Queued in IndexedDB first, then sent in the background (at most 5 uploads at once); switching conversations
+  // does not stop it. See outbox.ts.
   sendFiles: async (files, caption) => {
-    const { activeChannelId, activeDmId, currentUserId } = get();
+    const { activeChannelId, activeDmId, currentUserId, replyingTo } = get();
     const target =
       activeChannelId && isValidUUID(activeChannelId)
-        ? ({ type: "channel", id: activeChannelId } as const)
+        ? ({ kind: "channel", id: activeChannelId } as const)
         : activeDmId && isValidUUID(activeDmId)
-          ? ({ type: "dm", id: activeDmId } as const)
+          ? ({ kind: "dm", id: activeDmId } as const)
           : null;
-    if (!target || !currentUserId) return;
-
-    let first = true;
-    for (const file of files) {
-      const uploadId = `up-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const controller = new AbortController();
-      uploadControllers.set(uploadId, controller);
-      const patch = (p: Partial<PendingUpload>) =>
-        set((s) => ({ pendingUploads: s.pendingUploads.map((u) => (u.id === uploadId ? { ...u, ...p } : u)) }));
-      set((s) => ({
-        pendingUploads: [
-          ...s.pendingUploads,
-          { id: uploadId, contextType: target.type, contextId: target.id, name: file.name, size: file.size, progress: 0, status: "uploading" },
-        ],
-      }));
-
-      // 1) bytes -> files service (direct, no workspace proxy)
-      let meta: WorkspaceFileMeta;
-      try {
-        meta = await uploadWorkspaceFile(file, target.type, target.id, {
-          onProgress: (progress) => patch({ progress }),
-          signal: controller.signal,
-        });
-      } catch (err) {
-        if (!uploadControllers.has(uploadId)) continue; // cancelled by the user
-        const message = filesErrorMessage(err, "Upload failed", target.type);
-        patch({ status: "error", error: message });
-        toast.error(`${file.name}: ${message}`);
-        continue;
-      }
-
-      // 2) message -> workspace server ("this message is a file"), 3) reference the file id on it
-      patch({ progress: 100, status: "sending" });
-      const text = (first ? caption?.trim() : "") || file.name;
-      first = false;
-      const ref: AttachmentRef = {
-        file_id: meta.id,
-        file_name: meta.name || file.name,
-        file_type: meta.mimeType,
-        file_size: meta.size,
-        file_extension: meta.extension,
-      };
-      const local = localAttachment(meta, file.name);
-      let messageId: string | null = null;
-      try {
-        if (target.type === "channel") {
-          const serverMsg = await workspaceApi.sendMessage(target.id, { content: text, type: "file" }, currentUserId);
-          messageId = serverMsg.id;
-          const real: ChatMessage = { ...toMessage(serverMsg), type: "file", attachments: [local] };
-          set((s) =>
-            s.activeChannelId !== target.id || s.messages.some((m) => m.id === real.id)
-              ? s
-              : { messages: [...s.messages, real] },
-          );
-          const att = await withRefRetry(() => workspaceApi.addAttachmentRef(real.id, ref, currentUserId));
-          get().addMessageAttachment(real.id, toAttachment(att));
-        } else {
-          const serverMsg = await workspaceApi.sendDMMessage(target.id, text, currentUserId);
-          messageId = serverMsg.id;
-          const real: ChatMessage = { ...toDMMessage(serverMsg), type: "file", attachments: [local] };
-          set((s) => ({
-            dmMessages: {
-              ...s.dmMessages,
-              [target.id]: (s.dmMessages[target.id] ?? []).some((m) => m.id === real.id)
-                ? s.dmMessages[target.id]
-                : [...(s.dmMessages[target.id] ?? []), real],
-            },
-          }));
-          const att = await withRefRetry(() => workspaceApi.addDMAttachmentRef(target.id, real.id, ref, currentUserId));
-          get().addMessageAttachment(real.id, toAttachment(att));
-        }
-        set((s) => ({ pendingUploads: s.pendingUploads.filter((u) => u.id !== uploadId) }));
-        uploadControllers.delete(uploadId);
-      } catch (err) {
-        const message = apiErrorMessage(err, "Could not send the file");
-        // The file is stored but the message / reference failed: drop the placeholder so nothing looks attached.
-        if (messageId) {
-          set((s) => ({
-            messages: s.messages.map((m) => (m.id === messageId ? { ...m, attachments: m.attachments.filter((a) => a.id !== local.id) } : m)),
-            dmMessages: Object.fromEntries(
-              Object.entries(s.dmMessages).map(([id, list]) => [
-                id,
-                list.map((m) => (m.id === messageId ? { ...m, attachments: m.attachments.filter((a) => a.id !== local.id) } : m)),
-              ]),
-            ),
-          }));
-        }
-        patch({ status: "error", error: message });
-        toast.error(`${file.name}: ${message}`);
-      }
-    }
+    if (!target || !currentUserId || !files.length) return;
+    set({ replyingTo: null });
+    await outbox.queueFiles(target.kind, target.id, files, caption, replyingTo);
   },
 
   uploadTeamFile: async (file, opts) => {
@@ -1672,17 +1428,17 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       set({ isLoadingMessages: false });
       return;
     }
-    let hasLocal = get().messages.some((m) => m.channelId === channelId);
+    let hasLocal = serverOnly(get().messages).some((m) => m.channelId === channelId);
     if (!hasLocal) {
       const cached = await loadCachedChannelMessages(channelId);
-      if (cached.length && !get().messages.some((m) => m.channelId === channelId)) {
+      if (cached.length && !serverOnly(get().messages).some((m) => m.channelId === channelId)) {
         set((s) => ({ messages: [...s.messages, ...cached] }));
         hasLocal = true;
       }
     }
     set({ isLoadingMessages: !hasLocal });
     try {
-      const since = hasLocal ? newestChange(get().messages.filter((m) => m.channelId === channelId)) : null;
+      const since = hasLocal ? newestChange(serverOnly(get().messages.filter((m) => m.channelId === channelId))) : null;
       if (since) {
         let cursor = since;
         let caughtUp = false;
@@ -1693,7 +1449,8 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
           set((s) => ({
             messages: [
               ...s.messages.filter((m) => m.channelId !== channelId),
-              ...upsertById(s.messages.filter((m) => m.channelId === channelId), incoming),
+              // Keeps attachments still uploading (placeholders) on messages the server has without them yet.
+              ...mergeIncomingDM(s.messages.filter((m) => m.channelId === channelId), incoming),
             ],
           }));
           for (const m of incoming) if (!seen.has(m.id)) get().noteIncoming(channelId, m);
@@ -1714,7 +1471,8 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       set((s) => ({
         messages: [
           ...s.messages.filter((m) => m.channelId !== channelId),
-          ...msgs,
+          // Unsent (outbox) messages and in-flight uploads survive the refresh.
+          ...mergeDMMessages(s.messages.filter((m) => m.channelId === channelId), msgs),
         ],
         messageCursors: { ...s.messageCursors, [channelId]: res.next_cursor ?? "" },
         messageHasMore: { ...s.messageHasMore, [channelId]: res.has_more ?? false },
@@ -2076,4 +1834,5 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
   getUnreadNotificationCount: () =>
     get().notifications.filter((n) => !n.isRead).length,
 
-}));
+  };
+});

@@ -6,6 +6,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useChatStore } from "../_lib/chat-store";
 import { AttachmentList } from "./FileCard";
 import TimeSeparator, { getDateLabel } from "./TimeSeparator";
+import MessageStatus from "./MessageStatus";
+import QuickMessageActions from "./QuickMessageActions";
+import ReplyQuote from "./ReplyQuote";
+import SelectableMessage from "./SelectableMessage";
 import type { ChatMessage } from "../_lib/chat-types";
 
 // ---------------------------------------------------------------------------
@@ -69,7 +73,12 @@ export default function DMThread({ dmId, currentUserId }: { dmId: string; curren
         return (
           <React.Fragment key={m.id}>
             {showDay && <TimeSeparator label={getDateLabel(new Date(m.createdAt))} />}
-            <div className={cn("flex gap-2.5", grouped ? "pt-0" : "pt-2")}>
+            <SelectableMessage conversationId={dmId} messageId={m.id}>
+            <div
+              id={`msg-${m.id}`}
+              className={cn("group relative flex gap-2.5 rounded-md px-1 hover:bg-accent/30", grouped ? "pt-0" : "pt-2")}
+            >
+              <QuickMessageActions message={m} />
               <div className="w-8 shrink-0">
                 {!grouped && (
                   <Avatar className="size-8">
@@ -88,6 +97,7 @@ export default function DMThread({ dmId, currentUserId }: { dmId: string; curren
                     </span>
                   </div>
                 )}
+                {m.replyTo && <ReplyQuote reply={m.replyTo} className="mb-1 max-w-md" />}
                 {m.isDeleted ? (
                   <p className="text-sm italic text-muted-foreground">This message has been deleted.</p>
                 ) : (
@@ -95,7 +105,9 @@ export default function DMThread({ dmId, currentUserId }: { dmId: string; curren
                 )}
                 <AttachmentList attachments={m.attachments} />
               </div>
+              <MessageStatus message={m} conversationId={dmId} me={currentUserId} className="self-end pb-0.5" />
             </div>
+            </SelectableMessage>
           </React.Fragment>
         );
       })}
