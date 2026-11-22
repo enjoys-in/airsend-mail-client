@@ -171,6 +171,8 @@ export default function PreJoinScreen({
                 stream={previewStream}
                 videoRef={previewVideoRef}
                 cameraOn={cameraOn}
+                // A mirrored preview would also flip a picture background (everyone else sees it the right way round).
+                mirrored={effects?.mode.type !== "image"}
                 name={name || "You"}
                 micMuted={micMuted}
                 levelStream={micStream ?? null}
