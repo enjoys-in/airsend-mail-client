@@ -17,6 +17,7 @@ import { WorkspaceTasksCard } from "./_components/WorkspaceTasksCard";
 import { WorkspaceActivityCard } from "./_components/WorkspaceActivityCard";
 import { WorkspaceFilesCard } from "./_components/WorkspaceFilesCard";
 import { WorkspaceChannelsCard } from "./_components/WorkspaceChannelsCard";
+import { useLiveMeetings } from "./_lib/meet/meeting-state";
 
 export default function WorkspacePage() {
   return (
@@ -62,7 +63,7 @@ function WorkspaceDashboardContent() {
   const teamChannels = activeTeamId
     ? channels.filter((c) => c.teamId === activeTeamId)
     : channels;
-  const liveMeetings = meetings.filter((m) => m.status === "live");
+  const liveMeetings = useLiveMeetings(); // really started, not merely scheduled
   const defaultChannel =
     teamChannels.find((c) => c.isDefault) || teamChannels[0];
 
@@ -102,7 +103,7 @@ function WorkspaceDashboardContent() {
                   <Badge className="bg-emerald-600 text-[10px] text-white">Live Now</Badge>
                 </div>
                 <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                  Organized by {liveMeetings[0].organizerName} • {liveMeetings[0].attendees.length} participants joined
+                  Organized by {liveMeetings[0].organizerName} • {liveMeetings[0].attendees.length} invited
                 </p>
               </div>
             </div>

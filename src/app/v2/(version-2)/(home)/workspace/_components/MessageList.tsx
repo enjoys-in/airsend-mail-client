@@ -38,6 +38,8 @@ import ProfileCard from "./ProfileCard";
 import TimeSeparator, { getDateLabel } from "./TimeSeparator";
 import { renderContentWithMentions } from "./MentionHighlight";
 import MobileWorkspaceSidebar from "./MobileWorkspaceSidebar";
+import ChannelMeetingBanner from "./meet/ChannelMeetingBanner";
+import { useChannelMeetings } from "../_lib/meet/meeting-state";
 import { PollCard } from "./PollCard";
 import { AttachmentList } from "./FileCard";
 import DMThread from "./DMThread";
@@ -118,9 +120,14 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
   const handleStartChannelMeeting = (channelName: string, channelId?: string) => {
     const callId = `meet-${Date.now().toString(36)}`;
     const title = `#${channelName} Channel Meeting`;
-    startCall(callId, title);
+    const { addMeeting, activeTeamId, members } = useChatStore.getState();
+    // The organizer is the signed-in person, by their real name (not a hardcoded "You").
+    const selfEmail = currentUserId || "";
+    const selfName =
+      members.find((m) => m.email?.toLowerCase() === selfEmail.toLowerCase())?.displayName ||
+      (selfEmail ? selfEmail.split("@")[0] : "Organizer");
+    startCall(callId, title, selfName);
 
-    const { addMeeting, activeTeamId } = useChatStore.getState();
     addMeeting({
       title,
       description: `Live video conference started in #${channelName}`,
@@ -128,7 +135,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
       channelId: channelId,
       channelName: channelName,
       organizerId: currentUserId || "u-self",
-      organizerName: "You",
+      organizerName: selfName,
       startTime: new Date().toISOString(),
       endTime: new Date(Date.now() + 3600000).toISOString(),
       isOnline: true,
@@ -137,7 +144,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
       attendees: [
         {
           id: currentUserId || "u-self",
-          name: "You",
+          name: selfName,
           email: currentUserId || "you@airsend.io",
           status: "accepted",
           isOrganizer: true,
@@ -153,13 +160,9 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
   const effectiveDmId = dmId ?? activeDmId;
 
 
-  const liveChannelMeeting = useChatStore((s) =>
-    effectiveChannelId
-      ? s.meetings.find(
-          (m) => m.channelId === effectiveChannelId && (m.status === "live" || m.status === "scheduled")
-        )
-      : null
-  );
+  // Only a meeting that has really started is "live"; a scheduled one shows as "scheduled" once its time is near.
+  const channelMeetings = useChannelMeetings();
+  const channelMeeting = effectiveChannelId ? channelMeetings.get(effectiveChannelId) : undefined;
 
   const channel = useChatStore((s) =>
     effectiveChannelId ? s.channels.find((c: any) => c.id === effectiveChannelId) : null,
@@ -554,25 +557,7 @@ export default function MessageList({ channelId, dmId }: MessageListProps) {
       {phone.me && <ConversationCallBanner conversationId={channel.id} title={`#${channel.name}`} />}
 
       {/* Active channel meeting indicator */}
-      {liveChannelMeeting && (
-        <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent border-b border-red-500/20">
-          <div className="flex items-center gap-2">
-            <Radio className="size-3.5 text-red-500 animate-pulse" />
-            <span className="text-xs font-semibold text-red-600 dark:text-red-400">
-              Live Meeting in Progress: {liveChannelMeeting.title}
-            </span>
-            <span className="text-[11px] text-muted-foreground hidden sm:inline">
-              • Started by {liveChannelMeeting.organizerName}
-            </span>
-          </div>
-          <Button size="sm" asChild className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white gap-1 shadow-sm">
-            <Link href={liveChannelMeeting.meetingUrl}>
-              <Video className="size-3" />
-              Join Call
-            </Link>
-          </Button>
-        </div>
-      )}
+      {channelMeeting && <ChannelMeetingBanner meeting={channelMeeting.meeting} phase={channelMeeting.phase} />}
 
       {/* Announcement Channel Intro Banner */}
       {channel.type === "announcement" && (
