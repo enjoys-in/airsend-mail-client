@@ -93,7 +93,8 @@ export default function TranscriptPanel({
   }, [tailKey]);
 
   const handleDownload = () => {
-    const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
+    // digits only (2026-11-22T10:15 -> 202611221015). A regex class with a colon in brackets would be read by Tailwind's scanner as a utility.
+    const stamp = new Date().toISOString().slice(0, 16).replace(/\D/g, "");
     downloadText(`transcript-${stamp}.txt`, transcriptToText(finalLines, title));
   };
 
