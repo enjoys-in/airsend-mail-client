@@ -1,5 +1,5 @@
 /*
- * Compiled with Tailwind v4 (alias `tailwindcss-v4`) into public/files/nimbus.css via `npm run files:css`, scoped to
+ * Compiled with Tailwind v4 (alias `tailwindcss-v4`) into public/files/files.css via `npm run files:css`, scoped to
  * `.nimbus-root`; the host app itself stays on Tailwind v3.
  */
 @import "tailwindcss-v4" source("../");

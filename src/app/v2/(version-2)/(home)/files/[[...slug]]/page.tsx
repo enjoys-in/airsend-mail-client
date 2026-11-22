@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
-import { NIMBUS_CSS_VERSION } from "@/app/v2/(version-2)/(home)/files/_lib/nimbus-css-version";
+import { FILES_CSS_VERSION } from "@/app/v2/(version-2)/(home)/files/_lib/files-css-version";
 import { nimbusPortalContainer } from "@/app/v2/(version-2)/(home)/files/_lib/portal-container";
 
 // Fills the space below the AirSend header (3.5rem on mobile, 3rem from md up, same as the calendar page) so the page
@@ -24,20 +24,20 @@ const NimbusApp = dynamic(() => import("@/app/v2/(version-2)/(home)/files/_lib/n
 
 // Nimbus's Tailwind v4 stylesheet is compiled separately (`npm run files:css`) because the host app is on Tailwind v3.
 // It is scoped to `.nimbus-root` and attached only while this route is mounted.
-const NIMBUS_CSS_ID = "nimbus-files-css";
+const FILES_CSS_ID = "files-css";
 
 function useNimbusStylesheet() {
 	useEffect(() => {
-		let link = document.getElementById(NIMBUS_CSS_ID) as HTMLLinkElement | null;
+		let link = document.getElementById(FILES_CSS_ID) as HTMLLinkElement | null;
 		if (!link) {
 			link = document.createElement("link");
-			link.id = NIMBUS_CSS_ID;
+			link.id = FILES_CSS_ID;
 			link.rel = "stylesheet";
-			link.href = `/files/nimbus.css?v=${NIMBUS_CSS_VERSION}`;
+			link.href = `/files/files.css?v=${FILES_CSS_VERSION}`;
 			document.head.appendChild(link);
 		}
 		return () => {
-			document.getElementById(NIMBUS_CSS_ID)?.remove();
+			document.getElementById(FILES_CSS_ID)?.remove();
 		};
 	}, []);
 }

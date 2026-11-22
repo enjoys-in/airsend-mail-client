@@ -1,6 +1,6 @@
 /*
  * AirSend design-system bridge, shared by the embedded apps. Appended UNSCOPED to
- * public/tasks/tasks.css (scripts/build-tasks-css.mjs) and public/files/nimbus.css
+ * public/tasks/tasks.css (scripts/build-tasks-css.mjs) and public/files/files.css
  * (scripts/build-files-css.mjs).
  *
  * An embedded app's tokens live on its own root (`.tasks-root`, `.nimbus-root`) and shadow the host's same-named variables there, so they
