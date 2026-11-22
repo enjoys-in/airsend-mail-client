@@ -71,6 +71,9 @@ import NewGroupDialog from "./NewGroupDialog";
 import StatusCard from "./StatusCard";
 import UpcomingMeetings from "./UpcomingMeetings";
 import { isAutoStatus } from "../_lib/presence";
+import { useChannelMeetings, type ChannelMeeting } from "../_lib/meet/meeting-state";
+import PresenceAvatar from "./PresenceAvatar";
+import { CalendarClock, Radio } from "lucide-react";
 import UserPresenceBadge from "./UserPresenceBadge";
 
 // ==========================================================================
@@ -101,6 +104,9 @@ export default function WorkspaceSidebar() {
     isLoadingTeams,
     isLoadingChannels,
   } = useChatStore();
+
+  // Channels with a meeting on right now (live, or scheduled and about to start): they get an icon in the list.
+  const channelMeetings = useChannelMeetings();
 
   // Derive active channel/dm from URL
   const channelMatch = pathname.match(/\/workspace\/c\/([^/]+)/);
@@ -385,6 +391,7 @@ export default function WorkspaceSidebar() {
                         channel={channel}
                         isActive={activeChannelId === channel.id}
                         href={`/v2/workspace/c/${channel.id}`}
+                        meeting={channelMeetings.get(channel.id)}
                         onEdit={
                           canManageChannel(channel)
                             ? (ch) => router.push(settingsPath.channel(ch.teamId, ch.id))
@@ -410,6 +417,7 @@ export default function WorkspaceSidebar() {
                           isActive={activeChannelId === channel.id}
                           href={`/v2/workspace/c/${channel.id}`}
                           isVoice
+                          meeting={channelMeetings.get(channel.id)}
                           onEdit={
                             canManageChannel(channel)
                               ? (ch) => router.push(settingsPath.channel(ch.teamId, ch.id))
@@ -447,13 +455,12 @@ export default function WorkspaceSidebar() {
                               : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                           )}
                         >
-                          <span className="relative flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium">
-                            {(other.displayName || other.username || "?").charAt(0).toUpperCase()}
-                            <UserPresenceBadge
-                              status={other.status}
-                              className="absolute -bottom-0.5 -right-0.5"
-                            />
-                          </span>
+                          <PresenceAvatar
+                            name={other.displayName || other.username}
+                            src={other.avatar}
+                            status={other.status}
+                            showBadge={dm.kind !== "group"}
+                          />
                           <span className="truncate text-xs">
                             {other.displayName || other.username}
                           </span>
@@ -655,6 +662,7 @@ function ChannelItem({
   isActive,
   href,
   isVoice,
+  meeting,
   onEdit,
   onTogglePin,
 }: {
@@ -662,6 +670,8 @@ function ChannelItem({
   isActive: boolean;
   href: string;
   isVoice?: boolean;
+  /** A meeting on right now in this channel (live or about to start): shown as an icon next to the name. */
+  meeting?: ChannelMeeting;
   onEdit?: (channel: Channel) => void;
   onTogglePin?: (channelId: string) => void;
 }) {
@@ -687,6 +697,18 @@ function ChannelItem({
         >
           <Icon className="size-3.5 shrink-0" />
           <span className="truncate text-xs">{channel.name}</span>
+          {meeting && (
+            <span
+              className="shrink-0"
+              title={meeting.phase === "live" ? `Live meeting: ${meeting.meeting.title}` : `Meeting starting: ${meeting.meeting.title}`}
+            >
+              {meeting.phase === "live" ? (
+                <Radio className="size-3 animate-pulse text-red-500" aria-label="Live meeting" />
+              ) : (
+                <CalendarClock className="size-3 text-amber-500" aria-label="Meeting starting" />
+              )}
+            </span>
+          )}
           {channel.isPinned && (
             <Pin className="size-2.5 shrink-0 text-primary ml-auto" />
           )}

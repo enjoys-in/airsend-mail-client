@@ -43,6 +43,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useChatStore } from "../_lib/chat-store";
 import { getDMPartner } from "../_lib/permissions";
+import { useChannelMeetings, type ChannelMeeting } from "../_lib/meet/meeting-state";
+import PresenceAvatar from "./PresenceAvatar";
+import { CalendarClock, Radio } from "lucide-react";
 import type { Channel } from "../_lib/chat-types";
 import { settingsPath } from "../_lib/use-access";
 
@@ -66,6 +69,8 @@ export default function MobileWorkspaceSidebar({
     setActiveTeam,
     getTeamChannels,
   } = useChatStore();
+  // Channels with a meeting on right now (live, or scheduled and about to start) get an icon.
+  const channelMeetings = useChannelMeetings();
 
   const channelMatch = pathname.match(/\/workspace\/c\/([^/]+)/);
   const dmMatch = pathname.match(/\/workspace\/dm\/([^/]+)/);
@@ -185,6 +190,7 @@ export default function MobileWorkspaceSidebar({
                     channel={channel}
                     isActive={activeChannelId === channel.id}
                     href={`/v2/workspace/c/${channel.id}`}
+                    meeting={channelMeetings.get(channel.id)}
                     onNavigate={() => setSheetOpen(false)}
                   />
                 ))}
@@ -204,6 +210,7 @@ export default function MobileWorkspaceSidebar({
                       isActive={activeChannelId === channel.id}
                       href={`/v2/workspace/c/${channel.id}`}
                       isVoice
+                      meeting={channelMeetings.get(channel.id)}
                       onNavigate={() => setSheetOpen(false)}
                     />
                   ))}
@@ -234,19 +241,12 @@ export default function MobileWorkspaceSidebar({
                           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                       )}
                     >
-                      <span className="relative flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-medium">
-                        {(other.displayName || other.username || "?").charAt(0).toUpperCase()}
-                        <span
-                          className={cn(
-                            "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-background",
-                            other.status === "online" && "bg-emerald-500",
-                            other.status === "idle" && "bg-yellow-500",
-                            other.status === "dnd" && "bg-red-500",
-                            (other.status === "in_call" || other.status === "in_meeting") && "bg-red-500",
-                            other.status === "offline" && "bg-gray-400",
-                          )}
-                        />
-                      </span>
+                      <PresenceAvatar
+                        name={other.displayName || other.username}
+                        src={other.avatar}
+                        status={other.status}
+                        showBadge={dm.kind !== "group"}
+                      />
                       <span className="truncate text-xs">
                         {other.displayName}
                       </span>
@@ -331,12 +331,14 @@ function MobileChannelItem({
   isActive,
   href,
   isVoice,
+  meeting,
   onNavigate,
 }: {
   channel: Channel;
   isActive: boolean;
   href: string;
   isVoice?: boolean;
+  meeting?: ChannelMeeting;
   onNavigate?: () => void;
 }) {
   const Icon = isVoice
@@ -360,6 +362,18 @@ function MobileChannelItem({
     >
       <Icon className="size-4 shrink-0" />
       <span className="truncate text-xs">{channel.name}</span>
+      {meeting && (
+        <span
+          className="shrink-0"
+          title={meeting.phase === "live" ? `Live meeting: ${meeting.meeting.title}` : `Meeting starting: ${meeting.meeting.title}`}
+        >
+          {meeting.phase === "live" ? (
+            <Radio className="size-3.5 animate-pulse text-red-500" aria-label="Live meeting" />
+          ) : (
+            <CalendarClock className="size-3.5 text-amber-500" aria-label="Meeting starting" />
+          )}
+        </span>
+      )}
       {channel.unreadCount > 0 && (
         <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
           {channel.unreadCount}

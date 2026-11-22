@@ -245,7 +245,7 @@ export interface ServerDMConversation {
   name?: string
   name_custom?: boolean
   created_by?: string
-  participants: { email: string; display_name?: string; status: string; account_name?: string; role?: "owner" | "admin" | "member"; unavailable?: boolean }[]
+  participants: { email: string; display_name?: string; status: string; account_name?: string; avatar_url?: string; role?: "owner" | "admin" | "member"; unavailable?: boolean }[]
   last_message?: ServerDMMessage
   unread_count: number
   created_at: string
@@ -737,6 +737,8 @@ export function toDM(s: ServerDMConversation): DirectMessage {
       userId: p.email,
       username: p.unavailable ? "unknown" : p.email.split("@")[0],
       displayName: p.unavailable ? "Unknown user" : (p.display_name ?? p.account_name ?? p.email),
+      // The picture, when the server provides one (it does not yet: PresenceAvatar falls back to coloured initials)
+      avatar: p.unavailable ? undefined : p.avatar_url || undefined,
       status: (p.unavailable ? "offline" : (p.status ?? "offline")) as TeamMember["status"],
       unavailable: !!p.unavailable,
     })),
