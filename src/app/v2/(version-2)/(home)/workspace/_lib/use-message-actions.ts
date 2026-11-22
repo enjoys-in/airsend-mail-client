@@ -94,8 +94,12 @@ export function useMessageActions(message: ChatMessage): MessagePermissions & Me
       });
       if (!confirmed) return;
       const ok = await store.getState().deleteMessage(message.id);
-      if (ok) toast.success("Message deleted");
-      else toast.error("You don't have permission to delete this message.");
+      if (!ok) return void toast.error("You don't have permission to delete this message.");
+      // Only your own message can be undone (see message-delete.ts).
+      const undo = async () => {
+        if (!(await store.getState().undoDelete(message.id))) toast.error("Could not restore the message.");
+      };
+      toast.success("Message deleted", perms.isMine ? { action: { label: "Undo", onClick: () => void undo() } } : {});
     },
 
     timeoutAuthor: async (minutes, label) => {

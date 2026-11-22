@@ -9,6 +9,7 @@ import TimeSeparator, { getDateLabel } from "./TimeSeparator";
 import MessageStatus from "./MessageStatus";
 import QuickMessageActions from "./QuickMessageActions";
 import ReplyQuote from "./ReplyQuote";
+import DeletedMessage from "./DeletedMessage";
 import SelectableMessage from "./SelectableMessage";
 import type { ChatMessage } from "../_lib/chat-types";
 
@@ -56,7 +57,8 @@ export default function DMThread({ dmId, currentUserId }: { dmId: string; curren
     endRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
 
-  const visible = useMemo(() => messages.filter((m) => !m.isDeleted || m.attachments.length > 0), [messages]);
+  // Deleted messages stay as "deleted by <name>" placeholders; only an empty leftover of a failed send is hidden.
+  const visible = useMemo(() => messages.filter((m) => !m.isDeleted || m.attachments.length > 0 || m.deletedBy), [messages]);
 
   let lastDay = "";
   return (
@@ -97,9 +99,9 @@ export default function DMThread({ dmId, currentUserId }: { dmId: string; curren
                     </span>
                   </div>
                 )}
-                {m.replyTo && <ReplyQuote reply={m.replyTo} className="mb-1 max-w-md" />}
+                {m.replyTo && !m.isDeleted && <ReplyQuote reply={m.replyTo} className="mb-1 max-w-md" />}
                 {m.isDeleted ? (
-                  <p className="text-sm italic text-muted-foreground">This message has been deleted.</p>
+                  <DeletedMessage message={m} />
                 ) : (
                   !hideText && <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{m.content}</p>
                 )}

@@ -44,6 +44,7 @@ import { PollCard } from "./PollCard";
 import { AttachmentList } from "./FileCard";
 import MessageStatus from "./MessageStatus";
 import ReplyQuote from "./ReplyQuote";
+import DeletedMessage from "./DeletedMessage";
 import SelectableMessage from "./SelectableMessage";
 import ConversationSelectionTools from "./SelectionBar";
 import DMThread from "./DMThread";
@@ -690,8 +691,8 @@ function MessageBubble({
 
   if (message.isDeleted) {
     return (
-      <div className="py-1 px-2 text-xs text-muted-foreground italic">
-        This message has been deleted.
+      <div id={`msg-${message.id}`} className="px-2 py-1">
+        <DeletedMessage message={message} className="text-xs" />
       </div>
     );
   }

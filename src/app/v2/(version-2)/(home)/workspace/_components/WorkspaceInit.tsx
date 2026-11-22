@@ -6,6 +6,7 @@ import { useChatStore } from "../_lib/chat-store";
 import { initWorkspaceCache, resetRevalidation, revalidate } from "../_lib/workspace-cache";
 import { useAccessStore } from "../_lib/access-store";
 import { useDrafts } from "../_lib/drafts";
+import { hydrateTrash } from "../_lib/trash";
 import { useWorkspaceWS } from "../_lib/use-workspace-ws";
 import { getWorkspaceApiUrl, isValidUUID } from "../_lib/api";
 
@@ -77,6 +78,7 @@ export default function WorkspaceInit() {
     const flush = () => void useChatStore.getState().flushOutbox();
     flush();
     void useDrafts.getState().hydrate();
+    void hydrateTrash();
     window.addEventListener("online", flush);
     return () => window.removeEventListener("online", flush);
   }, [email, cacheReady]);
