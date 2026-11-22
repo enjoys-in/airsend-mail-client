@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Mic,
@@ -25,7 +25,7 @@ import {
   Edit3,
   LayoutGrid,
   Smile,
-  Bot,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,11 @@ import { useWebRTCCall } from "../../_lib/use-webrtc-call";
 import { formatMeetUrl, meetingApi } from "../../_lib/api";
 import LiveCallTile from "../../_components/LiveCallTile";
 import WorkspaceErrorBoundary from "../../_components/WorkspaceErrorBoundary";
-import GoogleMeetLobby from "../../_components/GoogleMeetLobby";
+import PreJoinLobby from "../../_components/meet/prejoin/PreJoinLobby";
+import TranscriptPanel from "../../_components/meet/transcript/TranscriptPanel";
+import { useVideoEffects } from "../../_lib/meet/effects";
+import { useMeetingPresence } from "../../_lib/meet/presence/use-meeting-presence";
+import { useMeetTranscript } from "../../_lib/meet/transcription/use-meet-transcript";
 import MeetDetailsDrawer from "../../_components/MeetDetailsDrawer";
 import MeetHostControlsDrawer from "../../_components/MeetHostControlsDrawer";
 import MeetCaptionsOverlay from "../../_components/MeetCaptionsOverlay";
@@ -78,16 +82,46 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
 
   // Pre-join lobby state
   const [isLobbyJoined, setIsLobbyJoined] = useState(false);
-  const [isMeetingBotActive, setIsMeetingBotActive] = useState(true);
+  const joinedRef = useRef(false);
 
-  // Ensure call is active in store
+  // Who the user is: the name they used last time, else their workspace display name, else the start of their email.
+  // Editable in the lobby; the call room is only joined when they press "Join now" (not when this page loads).
+  const members = useChatStore((s) => s.members);
+  const defaultName =
+    members.find((m) => m.email?.toLowerCase() === (currentUserId || "").toLowerCase())?.displayName ||
+    (currentUserId ? currentUserId.split("@")[0] : "");
+  const [displayName, setDisplayName] = useState("");
+  const nameTouched = useRef(false);
   useEffect(() => {
-    startCall(callId, title);
-  }, [callId, title, startCall]);
+    if (nameTouched.current || displayName) return;
+    let remembered = "";
+    try {
+      remembered = window.localStorage.getItem("airsend.meet.display-name") || "";
+    } catch {
+      /* private mode */
+    }
+    const initial = remembered || defaultName;
+    if (initial) setDisplayName(initial);
+  }, [defaultName, displayName]);
+  const changeDisplayName = (name: string) => {
+    nameTouched.current = true;
+    setDisplayName(name);
+  };
+
+  // Leaving the page while in the call (back button, closed tab route change) also leaves the room.
+  useEffect(
+    () => () => {
+      if (joinedRef.current) leaveCall();
+    },
+    [leaveCall]
+  );
 
   // WebRTC Media & Signaling Hook
   const {
     localVideoRef,
+    localStream,
+    setOutgoingVideoTrack,
+    switchDevices,
     screenVideoRef,
     remoteStreams,
     hasMediaPermission,
@@ -111,17 +145,44 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
     return () => clearInterval(timer);
   }, [isLobbyJoined]);
 
-  // Mint or verify token from dedicated meeting backend (../meeting, meet.airsend.in)
+  // Background effects (blur / picture): the processed video is previewed in the lobby, shown in the self tile and SENT to the
+  // other participants in place of the raw camera track.
+  const effects = useVideoEffects({ stream: localStream, cameraOn: isMyCameraOn });
   useEffect(() => {
-    meetingApi
-      .mintToken(callId, currentUserId || "u-self", undefined, "Alex Chen")
-      .then((res) => {
-        console.log("[MeetBackend] Token minted from meet.airsend.in:", res.role);
-      })
-      .catch((err) => {
-        console.warn("[MeetBackend] Dedicated meet server offline, peer fallback active:", err.message);
-      });
-  }, [callId, currentUserId]);
+    const out = effects.outputStream;
+    const processed = out && out !== localStream ? (out.getVideoTracks()[0] ?? null) : null;
+    setOutgoingVideoTrack(processed);
+    const el = localVideoRef.current;
+    if (el && (out ?? localStream) && el.srcObject !== (out ?? localStream)) el.srcObject = out ?? localStream;
+  }, [effects.outputStream, localStream, setOutgoingVideoTrack, localVideoRef, isLobbyJoined]);
+
+  // Who is really in the call (the ../meeting server + the workspace call room), shown in the lobby.
+  const presence = useMeetingPresence({
+    roomId: callId,
+    selfEmail: currentUserId || "",
+    selfName: displayName,
+    enabled: !isLobbyJoined,
+  });
+
+  // Camera / microphone pickers
+  const [videoDeviceId, setVideoDeviceId] = useState<string | undefined>();
+  const [audioDeviceId, setAudioDeviceId] = useState<string | undefined>();
+  const [deviceError, setDeviceError] = useState<string | null>(null);
+  const changeDevices = useCallback(
+    async (next: { video?: string; audio?: string }) => {
+      const video = next.video ?? videoDeviceId;
+      const audio = next.audio ?? audioDeviceId;
+      try {
+        await switchDevices({ videoDeviceId: video, audioDeviceId: audio });
+        setVideoDeviceId(video);
+        setAudioDeviceId(audio);
+        setDeviceError(null);
+      } catch (err) {
+        setDeviceError(err instanceof Error ? err.message : "Could not switch to that device");
+      }
+    },
+    [switchDevices, videoDeviceId, audioDeviceId]
+  );
 
   // Reactions state & animation
   const REACTION_EMOJIS = ["👍", "🎉", "❤️", "😂", "😮", "😢", "🙏", "👏"] as const;
@@ -149,7 +210,7 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
   };
 
   // UI state
-  type DrawerType = "chat" | "participants" | "details" | "host" | "notes" | null;
+  type DrawerType = "chat" | "participants" | "details" | "host" | "notes" | "transcript" | null;
   const [activeDrawer, setActiveDrawer] = useState<DrawerType>(null);
   const [showCaptions, setShowCaptions] = useState(false);
   const [layoutMode, setLayoutMode] = useState<"grid" | "spotlight" | "sidebar">("grid");
@@ -203,44 +264,65 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
     role: "host",
   };
 
-  const meetingBotParticipant: LiveCallParticipant = {
-    id: "airsend-meeting-bot",
-    name: "Meeting Bot (AI Assistant)",
-    email: "bot@airsend.io",
-    isAudioMuted: false,
-    isVideoOff: true,
-    isScreenSharing: false,
-    isHandRaised: false,
-    isSpeaking: false,
-    role: "attendee",
-  };
-
   const allParticipants = [
     selfParticipant,
-    ...(isMeetingBotActive ? [meetingBotParticipant] : []),
     ...callParticipants.filter((p) => p.email !== selfParticipant.email && p.id !== selfParticipant.id),
   ];
 
   // Screen share presenter if someone is sharing
   const screenSharer = allParticipants.find((p) => p.isScreenSharing);
 
-  // If in Green Room Pre-Join Lobby, render Google Meet Lobby
+  // Live speech-to-text (browser Web Speech API) + the other participants' captions: one recogniser for the captions bar and
+  // the transcript pane. Only listens while one of them is open.
+  const transcript = useMeetTranscript({
+    enabled: isLobbyJoined && (showCaptions || activeDrawer === "transcript"),
+    callId,
+    selfEmail: currentUserId || "",
+    selfName: displayName.trim() || "You",
+    micMuted: isMyMicMuted,
+    peers: allParticipants.filter((p) => p.id !== selfParticipant.id),
+  });
+
+  // Pre-join (green room): real roster and organizer, camera effects, devices and the user's own name.
   if (!isLobbyJoined) {
     return (
-      <GoogleMeetLobby
-        callId={callId}
+      <PreJoinLobby
+        roomId={callId}
         title={title}
-        participants={allParticipants}
-        localVideoRef={localVideoRef}
-        isMyCameraOn={isMyCameraOn}
-        isMyMicMuted={isMyMicMuted}
-        toggleCamera={toggleCamera}
-        toggleMic={toggleMic}
-        onJoin={(startWithScreenShare) => {
-          setIsLobbyJoined(true);
-          if (startWithScreenShare) {
-            toggleScreenShare();
+        displayName={displayName}
+        onDisplayNameChange={changeDisplayName}
+        previewStream={effects.outputStream ?? localStream}
+        micStream={localStream}
+        cameraOn={isMyCameraOn}
+        micMuted={isMyMicMuted}
+        onToggleCamera={toggleCamera}
+        onToggleMic={toggleMic}
+        effects={effects}
+        presence={presence}
+        devices={{
+          videoDeviceId,
+          audioDeviceId,
+          onVideoDeviceChange: (id) => void changeDevices({ video: id }),
+          onAudioDeviceChange: (id) => void changeDevices({ audio: id }),
+        }}
+        mediaError={deviceError ?? mediaError}
+        onJoin={({ audio, present }) => {
+          const name = displayName.trim();
+          try {
+            window.localStorage.setItem("airsend.meet.display-name", name);
+          } catch {
+            /* private mode */
           }
+          joinedRef.current = true;
+          setIsLobbyJoined(true);
+          // Only now does the user appear in the call room (and to everyone else).
+          startCall(callId, title, name);
+          meetingApi
+            .mintToken(callId, currentUserId || undefined, undefined, name)
+            .then((res) => console.log("[MeetBackend] Token minted:", res.role))
+            .catch((err) => console.warn("[MeetBackend] Dedicated meet server unavailable, peer fallback active:", err.message));
+          if (audio === "none" && !isMyMicMuted) toggleMic();
+          if (present) toggleScreenShare();
         }}
       />
     );
@@ -259,12 +341,6 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
             <span className="size-1.5 rounded-full bg-red-500" />
             REC
           </Badge>
-          {isMeetingBotActive && (
-            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/40 text-[10px] gap-1 hidden sm:flex">
-              <Bot className="size-3 text-purple-400 animate-pulse" />
-              Bot Attending
-            </Badge>
-          )}
           <div className="space-y-0.5">
             <h2 className="text-xs sm:text-sm font-semibold truncate max-w-[200px] sm:max-w-md text-white">
               {title}
@@ -436,7 +512,7 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
 
         {/* ── Live Captions Overlay ── */}
         {showCaptions && (
-          <MeetCaptionsOverlay onClose={() => setShowCaptions(false)} />
+          <MeetCaptionsOverlay onClose={() => setShowCaptions(false)} transcript={transcript} />
         )}
 
         {/* ── Side Drawers ── */}
@@ -459,6 +535,12 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
 
         {activeDrawer === "notes" && (
           <MeetWhiteboardDrawer onClose={() => setActiveDrawer(null)} />
+        )}
+
+        {activeDrawer === "transcript" && (
+          <div className="flex h-full w-80 sm:w-96 flex-col border-l border-slate-800 bg-slate-900/95 backdrop-blur text-slate-100 z-30 shadow-2xl">
+            <TranscriptPanel transcript={transcript} title={title} onClose={() => setActiveDrawer(null)} />
+          </div>
         )}
 
         {activeDrawer === "chat" && (
@@ -701,19 +783,19 @@ function LiveCallRoomContent({ callId }: { callId: string }) {
             <Edit3 className="size-4" />
           </Button>
 
-          {/* Meeting Bot Attend & Transcribe Button */}
+          {/* Live transcript (speech-to-text) */}
           <Button
             size="icon"
             variant="outline"
-            onClick={() => setIsMeetingBotActive(!isMeetingBotActive)}
+            onClick={() => toggleDrawer("transcript")}
             className={`size-10 rounded-full border transition-all ${
-              isMeetingBotActive
-                ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30"
-                : "bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white"
+              activeDrawer === "transcript"
+                ? "bg-blue-600/30 border-blue-500 text-blue-300"
+                : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
             }`}
-            title={isMeetingBotActive ? "Meeting Bot Active (Recording & Transcribing)" : "Invite Meeting Bot to Attend"}
+            title="Live transcript"
           >
-            <Bot className="size-4" />
+            <FileText className="size-4" />
           </Button>
 
           {/* Chat Toggle Button */}
