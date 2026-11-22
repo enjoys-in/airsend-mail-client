@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useContext } from "react";
 import { cn } from "@/lib/utils";
 import {
   Send,
@@ -39,6 +39,7 @@ import GifPicker from "./GifPicker";
 import { PollCreatorDialog } from "./PollCreatorDialog";
 import type { MessagePriority } from "../_lib/chat-types";
 import { formatBytes } from "../_lib/file-utils";
+import { ConversationDropContext } from "./ConversationDropZone";
 
 // ---------------------------------------------------------------------------
 // MessageInput — rich text input with mentions, replies, emoji, GIF, files
@@ -75,12 +76,20 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
   const effectiveChannelId = channelId ?? activeChannelId;
   const effectiveDmId = dmId ?? activeDmId;
 
+  const dropZone = useContext(ConversationDropContext);
+  // Don't leave a stale uploader behind when this input goes away.
+  useEffect(
+    () => () => {
+      if (dropZone) dropZone.current = null;
+    },
+    [dropZone],
+  );
+
   const [content, setContent] = useState("");
   const [priority, setPriority] = useState<MessagePriority>("normal");
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionStart, setMentionStart] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [pollDialogOpen, setPollDialogOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -213,23 +222,8 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     textareaRef.current?.focus();
   };
 
-  // Drag and drop
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => setIsDragging(false);
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFileUpload(files);
-    }
-  };
-
+  // Drag and drop is handled by <ConversationDropZone> around the whole pane (message list + this input); it hands the
+  // dropped files to the uploader registered below, so permissions and the caption work exactly like the paperclip.
   // File upload (channel or DM): the bytes go to the files service first, then the message carrying the returned
   // file id is sent to the workspace server (see chat-store sendFiles). Text typed in the box becomes the caption.
   const handleFileUpload = async (files: File[]) => {
@@ -264,6 +258,9 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
     textareaRef.current?.focus();
   };
 
+  // The drop zone calls this uploader (the latest one: it closes over the typed text and the permissions).
+  if (dropZone) dropZone.current = null;
+
   if (!channel && !dm) return null;
 
   const userRole = channel
@@ -283,6 +280,8 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
   const canAttach = dm
     ? true
     : canUserPerformInChannel(channel, currentUserId, userRole, "send_media");
+
+  if (dropZone) dropZone.current = { canUpload: canSend && canAttach, upload: handleFileUpload };
 
   const canGif = dm
     ? true
@@ -314,13 +313,7 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
 
   return (
     <div
-      className={cn(
-        "shrink-0 border-t border-border/40 px-4 pb-3 pt-2",
-        isDragging && "bg-primary/5 border-primary/30",
-      )}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      className="shrink-0 border-t border-border/40 px-4 pb-3 pt-2"
     >
       {dmGone && (
         <div className="mb-2 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive" role="status" data-testid="dm-unknown-user">
@@ -452,13 +445,6 @@ export default function MessageInput({ channelId, dmId }: MessageInputProps) {
               </button>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Drag overlay */}
-      {isDragging && (
-        <div className="mb-2 flex items-center justify-center rounded-md border-2 border-dashed border-primary/40 py-4 text-sm text-primary">
-          Drop files to upload
         </div>
       )}
 
