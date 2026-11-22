@@ -27,6 +27,11 @@ export function useWebRTCCall({ callId, userEmail, enabled = true }: WebRTCCallP
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const localStreamRef = useRef<MediaStream | null>(null);
+  // The camera feed as seen by the page (for previews, device pickers and the effects pipeline).
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  // What the other participants receive as video: the effects pipeline's processed track (blur / background) when one is set,
+  // otherwise the raw camera track. Screen sharing temporarily overrides it.
+  const outgoingVideoTrackRef = useRef<MediaStreamTrack | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
 
@@ -56,11 +61,12 @@ export function useWebRTCCall({ callId, userEmail, enabled = true }: WebRTCCallP
       pc = new RTCPeerConnection(ICE_SERVERS);
       peerConnectionsRef.current.set(peerEmail, pc);
 
-      // Add local media tracks
+      // Add local media tracks (the processed video track when background effects are on)
       if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => {
-          pc?.addTrack(track, localStreamRef.current!);
-        });
+        const local = localStreamRef.current;
+        local.getAudioTracks().forEach((track) => pc?.addTrack(track, local));
+        const video = outgoingVideoTrackRef.current ?? local.getVideoTracks()[0];
+        if (video) pc?.addTrack(video, local);
       }
 
       // Handle ICE candidates
@@ -114,6 +120,7 @@ export function useWebRTCCall({ callId, userEmail, enabled = true }: WebRTCCallP
         }
 
         localStreamRef.current = stream;
+        setLocalStream(stream);
         setHasMediaPermission(true);
         setMediaError(null);
 
@@ -142,6 +149,8 @@ export function useWebRTCCall({ callId, userEmail, enabled = true }: WebRTCCallP
       isMounted = false;
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
+      outgoingVideoTrackRef.current = null;
+      setLocalStream(null);
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
       peerConnectionsRef.current.forEach((pc) => pc.close());
@@ -199,6 +208,7 @@ export function useWebRTCCall({ callId, userEmail, enabled = true }: WebRTCCallP
         t.enabled = nextState;
       });
     }
+    if (outgoingVideoTrackRef.current) outgoingVideoTrackRef.current.enabled = nextState;
   }, [isMyCameraOn, storeToggleCamera]);
 
   // Toggle Mic
@@ -258,7 +268,7 @@ export function useWebRTCCall({ callId, userEmail, enabled = true }: WebRTCCallP
     }
 
     // Revert peer connection tracks back to local camera
-    const localVideoTrack = localStreamRef.current?.getVideoTracks()[0] || null;
+    const localVideoTrack = outgoingVideoTrackRef.current ?? localStreamRef.current?.getVideoTracks()[0] ?? null;
     peerConnectionsRef.current.forEach((pc) => {
       const senders = pc.getSenders();
       const videoSender = senders.find((s) => s.track?.kind === "video");
@@ -288,8 +298,58 @@ export function useWebRTCCall({ callId, userEmail, enabled = true }: WebRTCCallP
     workspaceApi.updateCallState(callId, { is_hand_raised: next }, userEmail).catch(() => {});
   }, [callId, userEmail, isMyHandRaised, storeToggleHandRaise]);
 
+  // Background effects: send this (processed) video track to every peer instead of the raw camera track. Pass null to go back to
+  // the camera. Ignored while screen sharing (the share keeps priority; stopScreenShare restores whatever is set here).
+  const setOutgoingVideoTrack = useCallback((track: MediaStreamTrack | null) => {
+    outgoingVideoTrackRef.current = track;
+    if (screenStreamRef.current) return;
+    const next = track ?? localStreamRef.current?.getVideoTracks()[0] ?? null;
+    if (!next) return;
+    peerConnectionsRef.current.forEach((pc) => {
+      const sender = pc.getSenders().find((s) => s.track?.kind === "video");
+      if (sender && sender.track !== next) void sender.replaceTrack(next).catch(() => {});
+    });
+  }, []);
+
+  // Pick another camera / microphone: re-acquire the media, keep the current mute / camera state and swap the tracks on every
+  // peer. The caller re-applies its effects to the new camera stream (it receives `localStream` again).
+  const switchDevices = useCallback(
+    async ({ videoDeviceId, audioDeviceId }: { videoDeviceId?: string; audioDeviceId?: string }) => {
+      if (!navigator.mediaDevices?.getUserMedia) return;
+      const previous = localStreamRef.current;
+      const next = await navigator.mediaDevices.getUserMedia({
+        video: videoDeviceId
+          ? { deviceId: { exact: videoDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
+      });
+      next.getAudioTracks().forEach((t) => {
+        t.enabled = !useChatStore.getState().isMyMicMuted;
+      });
+      next.getVideoTracks().forEach((t) => {
+        t.enabled = useChatStore.getState().isMyCameraOn;
+      });
+      localStreamRef.current = next;
+      outgoingVideoTrackRef.current = null; // belonged to the old camera; the effects pipeline sets a new one
+      previous?.getTracks().forEach((t) => t.stop());
+      setLocalStream(next);
+      if (localVideoRef.current) localVideoRef.current.srcObject = next;
+      peerConnectionsRef.current.forEach((pc) => {
+        for (const sender of pc.getSenders()) {
+          const kind = sender.track?.kind;
+          const track = kind === "audio" ? next.getAudioTracks()[0] : kind === "video" && !screenStreamRef.current ? next.getVideoTracks()[0] : null;
+          if (track) void sender.replaceTrack(track).catch(() => {});
+        }
+      });
+    },
+    []
+  );
+
   return {
     localVideoRef,
+    localStream,
+    setOutgoingVideoTrack,
+    switchDevices,
     screenVideoRef,
     remoteStreams,
     hasMediaPermission,
