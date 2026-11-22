@@ -1,52 +1,63 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { ClosedCaption, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React from "react";
+import { useChatStore } from "../_lib/chat-store";
+import type { LiveCallParticipant } from "../_lib/chat-types";
+import { useMeetTranscript, type MeetTranscript } from "../_lib/meet/transcription/use-meet-transcript";
+import CaptionsOverlay from "./meet/transcript/CaptionsOverlay";
 
 interface MeetCaptionsOverlayProps {
   onClose: () => void;
+  /** Everything below falls back to the chat store (active call, signed-in user, mic state, call roster). */
+  callId?: string;
+  selfEmail?: string;
+  selfName?: string;
+  micMuted?: boolean;
+  peers?: LiveCallParticipant[];
+  /**
+   * A transcript the page already owns (shared with <TranscriptPanel> so there is one speech recogniser).
+   * When given, this overlay only displays it; otherwise it runs its own.
+   */
+  transcript?: MeetTranscript;
 }
 
-const SAMPLE_CAPTIONS = [
-  { speaker: "Sarah Chen", text: "Let's review the sprint deliverables and make sure our WebRTC signaling server is balanced." },
-  { speaker: "Raj Patel", text: "The ICE candidate exchange latency dropped under 40 milliseconds on regional clusters." },
-  { speaker: "Alex Chen", text: "Awesome. The Google Meet link integration with meet.airsend.in is now active for all participants." },
-  { speaker: "Emily Watson", text: "I've uploaded the new Figma specs into the channel files tab for review." },
-];
+/**
+ * Live captions for the call: real speech-to-text from the microphone (Web Speech API), plus the other participants'
+ * captions when the call supports sharing them. Mounting it turns captions on, closing it turns them off.
+ */
+export default function MeetCaptionsOverlay({
+  onClose,
+  callId,
+  selfEmail,
+  selfName,
+  micMuted,
+  peers,
+  transcript,
+}: MeetCaptionsOverlayProps) {
+  const storeCallId = useChatStore((s) => s.activeCallId);
+  const currentUserId = useChatStore((s) => s.currentUserId);
+  const members = useChatStore((s) => s.members);
+  const storeMuted = useChatStore((s) => s.isMyMicMuted);
+  const storePeers = useChatStore((s) => s.callParticipants);
 
-export default function MeetCaptionsOverlay({ onClose }: MeetCaptionsOverlayProps) {
-  const [captionIndex, setCaptionIndex] = useState(0);
+  const email = selfEmail ?? currentUserId ?? "";
+  const name =
+    selfName ??
+    members.find((m) => m.email?.toLowerCase() === email.toLowerCase())?.displayName ??
+    (email ? email.split("@")[0] : "You");
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCaptionIndex((prev) => (prev + 1) % SAMPLE_CAPTIONS.length);
-    }, 4500);
-    return () => clearInterval(interval);
-  }, []);
-
-  const current = SAMPLE_CAPTIONS[captionIndex];
+  const own = useMeetTranscript({
+    enabled: !transcript,
+    callId: callId ?? storeCallId ?? undefined,
+    selfEmail: email,
+    selfName: name,
+    micMuted: micMuted ?? storeMuted,
+    peers: peers ?? storePeers,
+  });
 
   return (
-    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 max-w-2xl w-[90%] pointer-events-auto">
-      <div className="rounded-2xl bg-slate-950/85 backdrop-blur-md border border-slate-800/80 px-4 py-3 shadow-2xl flex items-start gap-3">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-600/20 text-blue-400 mt-0.5">
-          <ClosedCaption className="size-4" />
-        </div>
-        <div className="flex-1 text-xs">
-          <span className="font-semibold text-blue-400 block mb-0.5">{current.speaker}</span>
-          <p className="text-slate-200 leading-relaxed font-sans">{current.text}</p>
-        </div>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={onClose}
-          className="size-6 text-slate-400 hover:text-white shrink-0 -mr-1"
-          title="Turn off captions"
-        >
-          <X className="size-3.5" />
-        </Button>
-      </div>
+    <div className="absolute bottom-20 left-1/2 z-20 w-[90%] max-w-2xl -translate-x-1/2 pointer-events-auto">
+      <CaptionsOverlay transcript={transcript ?? own} onClose={onClose} />
     </div>
   );
 }
