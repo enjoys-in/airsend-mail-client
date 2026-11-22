@@ -201,7 +201,7 @@ interface ChatStore {
 
   // Actions — Calls
   addCallRecord: (call: Omit<CallRecord, "id" | "timestamp">) => void;
-  startCall: (callId: string, title?: string) => void;
+  startCall: (callId: string, title?: string, displayName?: string) => void;
   leaveCall: () => void;
   toggleCamera: () => void;
   toggleMic: () => void;
@@ -1427,7 +1427,7 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
       });
   },
 
-  startCall: (callId, title) => {
+  startCall: (callId, title, displayName) => {
     set({
       activeCallId: callId,
       activeCallTitle: title || "Live Meeting Call",
@@ -1438,7 +1438,8 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     });
 
     const email = get().currentUserId || "alex@airsend.io";
-    workspaceApi.joinCallRoom(callId, "Alex Rivera", "attendee", email).catch(() => {});
+    const name = displayName?.trim() || (email ? email.split("@")[0] : "Guest");
+    workspaceApi.joinCallRoom(callId, name, "attendee", email).catch(() => {});
   },
 
   leaveCall: () => {
