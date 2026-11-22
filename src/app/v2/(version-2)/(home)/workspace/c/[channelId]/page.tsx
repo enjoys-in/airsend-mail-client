@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import MessageList from "../../_components/MessageList";
 import MessageInput from "../../_components/MessageInput";
+import ConversationDropZone from "../../_components/ConversationDropZone";
 import VoiceChannelView from "../../_components/VoiceChannelView";
 import { useChatStore } from "../../_lib/chat-store";
 
@@ -44,9 +45,9 @@ export default function ChannelPage({ params }: ChannelPageProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <ConversationDropZone>
       <MessageList channelId={channelId} />
       <MessageInput channelId={channelId} />
-    </div>
+    </ConversationDropZone>
   );
 }

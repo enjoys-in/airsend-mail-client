@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import MessageList from "../../_components/MessageList";
 import MessageInput from "../../_components/MessageInput";
+import ConversationDropZone from "../../_components/ConversationDropZone";
 import { useChatStore } from "../../_lib/chat-store";
 
 interface DMPageProps {
@@ -35,9 +36,9 @@ export default function DMPage({ params }: DMPageProps) {
   if (!exists) return null;
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <ConversationDropZone>
       <MessageList dmId={dmId} />
       <MessageInput dmId={dmId} />
-    </div>
+    </ConversationDropZone>
   );
 }
