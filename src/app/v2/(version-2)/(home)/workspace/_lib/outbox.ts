@@ -39,7 +39,15 @@ import {
 } from "./files-api";
 import { enqueueOutbox, removeOutbox, loadOutbox, getOutboxRow, type OutboxEntry } from "./workspace-cache";
 import { uploadLimit } from "./limit";
-import { retryDelay, isTransient, isOffline, isAlreadyAttached, MAX_SEND_ATTEMPTS } from "./send-retry";
+import {
+  retryDelay,
+  isTransient,
+  isOffline,
+  isAlreadyAttached,
+  isStillUploading,
+  UploadFailedError,
+  MAX_SEND_ATTEMPTS,
+} from "./send-retry";
 import { extensionOf } from "./file-utils";
 
 type SetState = StoreApi<ChatStore>["setState"];
@@ -104,13 +112,14 @@ async function withRefRetry<T>(call: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Does the files service already hold the file of this message? (Unknown counts as no: the upload then decides.) */
+/** Does the files service already hold the file of this message? Only a 404 is a no; other errors are thrown. */
 async function isStored(messageId: string): Promise<boolean> {
   try {
     await getWorkspaceFileMeta(messageId);
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    if (err instanceof FilesApiError && err.status === 404) return false;
+    throw err;
   }
 }
 
@@ -264,8 +273,8 @@ export function createOutbox(set: SetState, get: GetState) {
     // Build on the latest saved copy: steps done since `stale` was taken (messageId, uploaded) must survive,
     // or the retry would redo them (e.g. upload the same file again).
     const row = memory.get(stale.id) ?? stale;
-    // Offline: no attempt is counted; the "online" event flushes again.
-    if (isOffline()) return show(row);
+    // Offline: no attempt is counted; the "online" event flushes again (a failed upload still shows as failed).
+    if (isOffline() && !(err instanceof UploadFailedError)) return show(row);
     const attempts = (row.attempts ?? 0) + 1;
     const retry = isTransient(err) && attempts < MAX_SEND_ATTEMPTS;
     const next: OutboxEntry = {
@@ -358,11 +367,13 @@ export function createOutbox(set: SetState, get: GetState) {
     const messageId = row.messageId as string;
     let current = row;
     // A retry whose earlier upload may have landed (response lost, tab closed): never upload the same file twice.
-    if (!row.uploaded && row.attempts && (await isStored(messageId))) {
+    if (!row.uploaded && row.uploadTried && (await isStored(messageId))) {
       current = { ...row, uploaded: true };
       await save(current);
     }
     if (!current.uploaded) {
+      current = { ...row, uploadTried: true };
+      await save(current);
       const controller = new AbortController();
       controllers.set(row.id, controller);
       try {
@@ -377,9 +388,11 @@ export function createOutbox(set: SetState, get: GetState) {
           });
         });
       } catch (err) {
-        if (!isAlreadyAttached(err)) throw err; // 409: an earlier try already stored it
+        // 409 "already has a file": an earlier try stored it. "Still uploading": wait for it, then ask again.
+        if (isStillUploading(err) || discarded.has(row.id)) throw err;
+        if (!isAlreadyAttached(err)) throw new UploadFailedError(describe(err, "Upload failed"));
       }
-      current = { ...row, uploaded: true };
+      current = { ...current, uploaded: true };
       await save(current);
     }
     patchUpload(row.id, { progress: 100, status: "sending" });

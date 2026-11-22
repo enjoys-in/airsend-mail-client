@@ -26,13 +26,29 @@ function statusOf(err: unknown): number | undefined {
   return typeof status === "number" ? status : undefined;
 }
 
+/**
+ * A failed byte upload. Shown as failed at once, never re-sent automatically: the bytes may have reached storage
+ * even though the answer was lost, and a blind re-upload would store the file twice. The user's Retry asks first.
+ */
+export class UploadFailedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UploadFailedError";
+  }
+}
+
 /** Worth retrying automatically? */
 export function isTransient(err: unknown): boolean {
+  if (err instanceof UploadFailedError) return false;
   if (isOffline()) return true;
   const status = statusOf(err);
   if (status === undefined || status === 0) return true; // network error / unreachable
+  if (isStillUploading(err)) return true; // an earlier try is still storing it: check again later
   return status === 408 || status === 425 || status === 429 || status >= 500;
 }
 
 /** The files service answers 409 when the message already has its file (an earlier try succeeded). */
-export const isAlreadyAttached = (err: unknown) => statusOf(err) === 409 && /already has a file/i.test(String(err));
+/** 409 while an earlier upload of the same message (whose response was lost) is still running on the server. */
+export const isStillUploading = (err: unknown) => statusOf(err) === 409 && /still uploading/i.test(String(err));
+
+export const isAlreadyAttached =(err: unknown) => statusOf(err) === 409 && /already has a file/i.test(String(err));

@@ -61,6 +61,8 @@ export interface OutboxEntry {
   messageId?: string;
   /** Set once the files service stored the file under messageId (step 2 done). */
   uploaded?: boolean;
+  /** Set when step 2 was first tried: a later try asks the files service before sending the bytes again. */
+  uploadTried?: boolean;
 }
 
 /** A composer draft: unsent text and files of one conversation. */
