@@ -64,6 +64,16 @@ export interface OutboxEntry {
 }
 
 /** A composer draft: unsent text and files of one conversation. */
+/** A message you deleted: its text and files, kept for undo until the window ends (then its files are purged). */
+export interface TrashEntry {
+  id: string;
+  kind: "channel" | "dm";
+  conversationId: string;
+  content: string;
+  fileIds: string[];
+  deletedAt: number;
+}
+
 export interface DraftEntry {
   id: string;
   text: string;
@@ -121,6 +131,7 @@ export interface CacheStats {
 }
 
 const DATA_VERSION = 2;
+const KEEP_ON_WIPE = new Set(["outbox", "drafts", "trash"]);
 const DB_PREFIX = "airsend-workspace:";
 const MESSAGES_PER_SCOPE = 200;
 const FLUSH_DELAY_MS = 400;
@@ -139,6 +150,7 @@ class WorkspaceCacheDB extends Dexie {
   calls!: Table<Row<CallRecord>, string>;
   outbox!: Table<OutboxEntry, string>;
   drafts!: Table<DraftEntry, string>;
+  trash!: Table<TrashEntry, string>;
   meta!: Table<MetaRow, string>;
 
   constructor(name: string) {
@@ -160,6 +172,7 @@ class WorkspaceCacheDB extends Dexie {
       outbox: "id, createdAt",
     });
     this.version(3).stores({ drafts: "id" });
+    this.version(4).stores({ trash: "id" });
   }
 }
 
@@ -262,8 +275,8 @@ async function wipeIfStale(db: WorkspaceCacheDB) {
   if (stored && stored.value === DATA_VERSION) return;
   if (stored) {
     await Promise.all(
-      // Unsent work (outbox, drafts) survives a cache format change.
-      db.tables.filter((t) => t.name !== "outbox" && t.name !== "drafts").map((t) => t.clear()),
+      // Unsent work (outbox, drafts) and undo copies (trash) survive a cache format change.
+      db.tables.filter((t) => !KEEP_ON_WIPE.has(t.name)).map((t) => t.clear()),
     );
   }
   await db.meta.put({ key: "dataVersion", value: DATA_VERSION });
@@ -609,6 +622,29 @@ export async function saveDraft(entry: DraftEntry): Promise<void> {
   try {
     if (!entry.text.trim() && !entry.files.length) await c.db.drafts.delete(entry.id);
     else await c.db.drafts.put(entry);
+  } catch {
+    return;
+  }
+}
+
+export async function loadTrash(): Promise<TrashEntry[]> {
+  const c = ctx;
+  if (!c) return [];
+  try {
+    await c.ready;
+    return await c.db.trash.toArray();
+  } catch {
+    return [];
+  }
+}
+
+/** Keeps an undo copy, or drops it when `entry` is just an id. */
+export async function saveTrash(entry: TrashEntry | string): Promise<void> {
+  const c = ctx;
+  if (!c) return;
+  try {
+    if (typeof entry === "string") await c.db.trash.delete(entry);
+    else await c.db.trash.put(entry);
   } catch {
     return;
   }

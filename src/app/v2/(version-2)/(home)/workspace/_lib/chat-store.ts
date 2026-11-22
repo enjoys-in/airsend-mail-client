@@ -69,6 +69,7 @@ import { uploadWorkspaceFile, deleteWorkspaceFile, filesErrorMessage } from "./f
 import { categoryFor, fileKind } from "./file-utils";
 import { toast } from "sonner";
 import { createOutbox, keepQuote, type ForwardTarget, type OutgoingFile } from "./outbox";
+import { createDeletes } from "./message-delete";
 import { announceRead, useReadReceipts } from "./read-receipts";
 import { notifyIncoming } from "./notify";
 
@@ -245,7 +246,12 @@ interface ChatStore {
   // Actions — Messages
   sendMessage: (content: string, mentions?: string[], attachments?: ChatMessage["attachments"], priority?: MessagePriority) => void;
   editMessage: (messageId: string, newContent: string) => void;
+  /** Channel or DM message; your own can be undone for a while (see message-delete.ts). */
   deleteMessage: (messageId: string) => Promise<boolean>;
+  undoDelete: (messageId: string) => Promise<boolean>;
+  /** From the socket: someone deleted / restored a message. */
+  noteDeleted: (messageId: string, by?: ChatMessage["deletedBy"]) => void;
+  noteRestored: (message: ChatMessage) => void;
   pinMessage: (messageId: string, isPublic: boolean) => Promise<boolean>;
   unpinMessage: (messageId: string) => Promise<boolean>;
   addReaction: (messageId: string, emoji: string) => void;
@@ -377,6 +383,7 @@ function saveManualPresence(status: PresenceStatus, custom: string): void {
 
 export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore>()((set, get) => {
   const outbox = createOutbox(set, get);
+  const deletes = createDeletes(set, get);
   return {
   // Data — initialized empty, loaded from live backend API
   teams: [],
@@ -616,26 +623,10 @@ export const useChatStore: UseBoundStore<StoreApi<ChatStore>> = create<ChatStore
     });
   },
 
-  deleteMessage: async (messageId) => {
-    const { currentUserId } = get();
-    const msg = get().messages.find((m) => m.id === messageId);
-    // Optimistic
-    set((s) => ({
-      messages: s.messages.map((m) =>
-        m.id === messageId
-          ? { ...m, isDeleted: true, content: "This message has been deleted." }
-          : m,
-      ),
-    }));
-    try {
-      await workspaceApi.deleteMessage(messageId, currentUserId);
-      return true;
-    } catch {
-      // Restore the original message (e.g. 403).
-      if (msg) set((s) => ({ messages: s.messages.map((m) => (m.id === messageId ? msg : m)) }));
-      return false;
-    }
-  },
+  deleteMessage: (messageId) => deletes.remove(messageId),
+  undoDelete: (messageId) => deletes.undo(messageId),
+  noteDeleted: (messageId, by) => deletes.applyDeleted(messageId, by),
+  noteRestored: (message) => deletes.applyRestored(message),
 
   pinMessage: async (messageId, isPublic) => {
     const { currentUserId } = get();

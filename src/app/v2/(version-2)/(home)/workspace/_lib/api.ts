@@ -103,7 +103,14 @@ export interface APIResponse<T> {
 
 // ── Server-shape types (matching Go JSON) ──
 
-export interface ServerMessage {
+/** Who deleted a message, on deleted messages (the workspace server blanks their text and files). */
+export interface ServerDeletion {
+  deleted_by?: string | null
+  deleted_by_name?: string | null
+  deleted_at?: string | null
+}
+
+export interface ServerMessage extends ServerDeletion {
   id: string
   channel_id: string
   sender_email: string
@@ -269,7 +276,7 @@ export interface ServerDMConversation {
   updated_at: string
 }
 
-export interface ServerDMMessage {
+export interface ServerDMMessage extends ServerDeletion {
   id: string
   conversation_id: string
   sender_email: string
@@ -708,6 +715,10 @@ function toReplyRef(id?: string | null, p?: ServerReplyPreview): ChatMessage["re
   }
 }
 
+export function toDeletedBy(s: ServerDeletion): ChatMessage["deletedBy"] {
+  return s.deleted_by ? { email: s.deleted_by, name: s.deleted_by_name || s.deleted_by } : undefined
+}
+
 /** A DM message in the same shape as a channel message (channelId holds the conversation id). */
 export function toDMMessage(s: ServerDMMessage): ChatMessage {
   return {
@@ -728,6 +739,7 @@ export function toDMMessage(s: ServerDMMessage): ChatMessage {
     attachments: (s.attachments ?? []).map(toAttachment),
     threadReplyCount: 0,
     isDeleted: s.is_deleted,
+    deletedBy: toDeletedBy(s),
     replyTo: toReplyRef(s.reply_to_id, s.reply_to),
   }
 }
@@ -751,6 +763,7 @@ export function toMessage(s: ServerMessage): ChatMessage {
     attachments: (s.attachments ?? []).map(toAttachment),
     threadReplyCount: s.reply_count ?? 0,
     isDeleted: s.is_deleted,
+    deletedBy: toDeletedBy(s),
     // parent_id is a THREAD reply (shown in the thread panel); reply_to is the inline quote.
     replyTo: toReplyRef(s.reply_to_id, s.reply_to),
   }
@@ -1033,6 +1046,13 @@ export const workspaceApi = {
     return apiFetch<{ deleted: boolean }>(`/api/v1/messages/${messageId}`, { method: "DELETE", email })
   },
 
+  /** Undo a delete (own message, within the undo window): the text comes back from the local undo copy. */
+  restoreMessage: (messageId: string, content: string, email: string) => {
+    if (!isValidUUID(messageId)) return Promise.reject(new Error("Invalid message UUID"))
+    const body = JSON.stringify({ content })
+    return apiFetch<ServerMessage>(`/api/v1/messages/${messageId}/restore`, { method: "POST", body, email })
+  },
+
   pinMessage: (messageId: string, pin: boolean, email: string) => {
     if (!isValidUUID(messageId)) return Promise.reject(new Error("Invalid message UUID"))
     return apiFetch<{ pinned: boolean }>(`/api/v1/messages/${messageId}/pin`, { method: "PUT", body: JSON.stringify({ pin }), email })
@@ -1181,6 +1201,17 @@ export const workspaceApi = {
     if (!isValidUUID(dmId)) return Promise.reject(new Error("Invalid DM conversation UUID"))
     const body = JSON.stringify({ content, reply_to_id: replyToId && isValidUUID(replyToId) ? replyToId : undefined })
     return apiFetch<ServerDMMessage>(`/api/v1/dms/${dmId}/messages`, { method: "POST", body, email })
+  },
+
+  deleteDMMessage: (dmId: string, messageId: string, email: string) => {
+    if (!isValidUUID(dmId) || !isValidUUID(messageId)) return Promise.reject(new Error("Invalid DM message UUID"))
+    return apiFetch<unknown>(`/api/v1/dms/${dmId}/messages/${messageId}`, { method: "DELETE", email })
+  },
+
+  restoreDMMessage: (dmId: string, messageId: string, content: string, email: string) => {
+    if (!isValidUUID(dmId) || !isValidUUID(messageId)) return Promise.reject(new Error("Invalid DM message UUID"))
+    const path = `/api/v1/dms/${dmId}/messages/${messageId}/restore`
+    return apiFetch<ServerDMMessage>(path, { method: "POST", body: JSON.stringify({ content }), email })
   },
 
   /** Read receipts: how far each member has read the channel / DM. */

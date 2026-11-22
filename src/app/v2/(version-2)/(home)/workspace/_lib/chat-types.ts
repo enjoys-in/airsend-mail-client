@@ -241,6 +241,8 @@ export interface ChatMessage {
   threadReplyCount: number;
   threadLastReplyAt?: string;
   isDeleted: boolean;
+  /** Who deleted the message (author or a moderator), when known. */
+  deletedBy?: { email: string; name: string };
   /** Local only: still in the outbox ("sending") or gave up after retries ("failed"). Absent once the server has it. */
   sendStatus?: "sending" | "failed";
   /** Local only: the message was forwarded from another conversation. */

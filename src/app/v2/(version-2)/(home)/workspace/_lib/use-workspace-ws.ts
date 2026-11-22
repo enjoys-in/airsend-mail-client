@@ -22,8 +22,9 @@ import {
   toLiveCallParticipant,
   toWorkspaceFile,
   toChatTask,
+  toDeletedBy,
 } from "./api";
-import type { ServerMessage, ServerDMMessage, ServerAttachment } from "./api";
+import type { ServerMessage, ServerDMMessage, ServerAttachment, ServerDeletion } from "./api";
 import { useReadReceipts } from "./read-receipts";
 import { refreshMyTasks } from "../../tasks/_lib/my-tasks-store";
 
@@ -306,15 +307,20 @@ function handleWSEvent(msg: WSIncoming) {
       break;
     }
 
-    case "message.deleted": {
-      const data = msg.data as { message_id: string };
-      useChatStore.setState((s) => ({
-        messages: s.messages.map((m) =>
-          m.id === data.message_id
-            ? { ...m, isDeleted: true, content: "This message has been deleted." }
-            : m,
-        ),
-      }));
+    // Deleted for everyone ("deleted by <name>"); restored = the author's undo.
+    case "message.deleted":
+    case "dm.message.deleted": {
+      const data = msg.data as { message_id: string } & ServerDeletion;
+      if (data.message_id) store.noteDeleted(data.message_id, toDeletedBy(data));
+      break;
+    }
+
+    case "message.restored":
+    case "dm.message.restored": {
+      const data = msg.data as { message?: ServerMessage & ServerDMMessage };
+      if (!data.message) break;
+      const restored = msg.event === "dm.message.restored" ? toDMMessage(data.message) : toMessage(data.message);
+      store.noteRestored(restored);
       break;
     }
 
