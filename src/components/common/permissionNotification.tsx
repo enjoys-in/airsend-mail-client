@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
  
 import { useAppSelector } from '@/store/hooks'
+import { registerAppServiceWorker } from "@/lib/sw-url"
 function urlBase64ToUint8Array(base64String: string) {
     const padding = "=".repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
@@ -46,8 +47,7 @@ export default function NotificationRequest() {
             }
 
             if ("serviceWorker" in navigator) {
-                navigator.serviceWorker
-                    .register("/service-worker.js")
+                registerAppServiceWorker()
                     .then(subscribeToPush)
                     .catch((err) => console.error("Omffo Ji, Aj me sed hu or cry bhi aa rha", err));
 
