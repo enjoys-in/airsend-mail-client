@@ -33,6 +33,7 @@ import {
   uploadWorkspaceFile,
   shareWorkspaceFile,
   deleteWorkspaceFile,
+  getWorkspaceFileMeta,
   filesErrorMessage,
   FilesApiError,
 } from "./files-api";
@@ -100,6 +101,16 @@ async function withRefRetry<T>(call: () => Promise<T>): Promise<T> {
     if (!(err instanceof WorkspaceApiError) || err.status !== 404) throw err;
     await new Promise((r) => setTimeout(r, 1000));
     return call();
+  }
+}
+
+/** Does the files service already hold the file of this message? (Unknown counts as no: the upload then decides.) */
+async function isStored(messageId: string): Promise<boolean> {
+  try {
+    await getWorkspaceFileMeta(messageId);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -248,8 +259,11 @@ export function createOutbox(set: SetState, get: GetState) {
     if (isFileRow(row)) dropUpload(row.id);
   };
 
-  const fail = async (row: OutboxEntry, err: unknown) => {
-    if (discarded.has(row.id)) return;
+  const fail = async (stale: OutboxEntry, err: unknown) => {
+    if (discarded.has(stale.id)) return;
+    // Build on the latest saved copy: steps done since `stale` was taken (messageId, uploaded) must survive,
+    // or the retry would redo them (e.g. upload the same file again).
+    const row = memory.get(stale.id) ?? stale;
     // Offline: no attempt is counted; the "online" event flushes again.
     if (isOffline()) return show(row);
     const attempts = (row.attempts ?? 0) + 1;
@@ -343,7 +357,12 @@ export function createOutbox(set: SetState, get: GetState) {
   const finishFile = async (row: OutboxEntry): Promise<OutboxEntry> => {
     const messageId = row.messageId as string;
     let current = row;
-    if (!row.uploaded) {
+    // A retry whose earlier upload may have landed (response lost, tab closed): never upload the same file twice.
+    if (!row.uploaded && row.attempts && (await isStored(messageId))) {
+      current = { ...row, uploaded: true };
+      await save(current);
+    }
+    if (!current.uploaded) {
       const controller = new AbortController();
       controllers.set(row.id, controller);
       try {
