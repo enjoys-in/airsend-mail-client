@@ -28,7 +28,9 @@ const nextConfig = {
   },
   // Browser caching for the static files in /public. Next serves them with `max-age=0` by default, so every visit re-asks the
   // server for each logo, icon and font (a 304 at best). /_next/static already gets its own immutable header from Next.
-  // Deliberately not covered: /tasks/tasks.css and /files/nimbus.css (rebuilt on each deploy, so a long cache could pin old styles).
+  // The two app stylesheets (tasks.css, files.css) are loaded as `?v=<content hash>` (see tasks/files `[[...slug]]/page.tsx`),
+  // so a new build is a new URL and a year-long immutable cache is safe. A hard reload (Ctrl+Shift+R) bypasses the cache and
+  // refetches them.
   async headers() {
     const day = 60 * 60 * 24;
     return [
@@ -36,6 +38,14 @@ const nextConfig = {
         // MediaPipe model + wasm for background effects (~29 MB). Same file names across package upgrades, so a week, not "immutable".
         source: "/meet-effects/:path*",
         headers: [{ key: "Cache-Control", value: `public, max-age=${7 * day}` }],
+      },
+      {
+        source: "/tasks/tasks.css",
+        headers: [{ key: "Cache-Control", value: `public, max-age=${365 * day}, immutable` }],
+      },
+      {
+        source: "/files/files.css",
+        headers: [{ key: "Cache-Control", value: `public, max-age=${365 * day}, immutable` }],
       },
       {
         source: "/fonts/:path*",
