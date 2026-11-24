@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccountProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/account-provider";
 import { toast } from "sonner";
-import { FILES_REFRESH_MS } from "@/app/v2/(version-2)/(home)/files/_lib/files-list-cache";
 
 // Sharing a file of the open storage account: public links and sharing with people (files server /api/shares).
 
@@ -107,7 +106,6 @@ export function useSharedWithMe(enabled: boolean) {
 		queryKey: ["sharedWithMe"],
 		queryFn: () => call<SharedWithMe[]>(clientPromise, c => c.api.shares["with-me"].$get()),
 		enabled,
-		refetchInterval: FILES_REFRESH_MS,
 	});
 	const download = useMutation({
 		mutationFn: async (item: SharedWithMe) => {

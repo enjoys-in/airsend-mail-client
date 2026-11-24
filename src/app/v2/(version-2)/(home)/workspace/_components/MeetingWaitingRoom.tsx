@@ -4,23 +4,51 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DoorOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { meetingApi, type MeetingWaitingGuest } from "../_lib/api";
+import { useChatStore } from "../_lib/chat-store";
 
-const POLL_MS = 4000;
+// Guests can only knock on a meeting you host, so the waiting room is asked often only while one of your meetings is
+// live or about to start (or someone is already waiting); otherwise once every IDLE_MS. Inside the call the call
+// screen handles guests itself.
+const POLL_MS = 5000;
+const IDLE_MS = 2 * 60_000;
 const SIGNED_OUT_POLL_MS = 60000;
+/** A scheduled meeting counts as "about to start" this long before its start time. */
+const EARLY_MS = 15 * 60_000;
+
+function hostsMeetingNow(): boolean {
+  const { meetings, currentUserId } = useChatStore.getState();
+  const me = (currentUserId || "").toLowerCase();
+  if (!me) return false;
+  const now = Date.now();
+  return meetings.some(
+    (m) =>
+      m.organizerId?.toLowerCase() === me &&
+      (m.status === "live" ||
+        (m.status === "scheduled" && now >= Date.parse(m.startTime) - EARLY_MS && now <= Date.parse(m.endTime))),
+  );
+}
 
 export default function MeetingWaitingRoom({ enabled }: { enabled: boolean }) {
   const [waiting, setWaiting] = useState<MeetingWaitingGuest[]>([]);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAsked = useRef(0);
+  const someoneWaiting = useRef(false);
 
-  const refresh = useCallback(async (): Promise<number> => {
+  const refresh = useCallback(async (force = false): Promise<number> => {
     if (typeof document !== "undefined" && document.visibilityState === "hidden") return POLL_MS;
+    const busyNow = hostsMeetingNow() || someoneWaiting.current;
+    if (!force && !busyNow && Date.now() - lastAsked.current < IDLE_MS) return POLL_MS; // no request
+    lastAsked.current = Date.now();
     try {
-      setWaiting(await meetingApi.waitingRoom());
+      const list = await meetingApi.waitingRoom();
+      someoneWaiting.current = list.length > 0;
+      setWaiting(list);
       return POLL_MS;
     } catch (failure) {
       if ((failure as { status?: number }).status === 401) {
+        someoneWaiting.current = false;
         setWaiting([]);
         return SIGNED_OUT_POLL_MS;
       }

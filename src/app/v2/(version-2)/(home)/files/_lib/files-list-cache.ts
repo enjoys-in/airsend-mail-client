@@ -4,9 +4,6 @@ import type { File } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 // Last known contents of each folder, in IndexedDB, so a folder opens instantly (stale) while the fresh list loads.
 // Best effort: any IndexedDB failure (private mode, blocked storage) just means no cache.
 
-/** How often an open folder is fetched again on its own (re-opening one within 30 s reuses it: staleTime). */
-export const FILES_REFRESH_MS = 60_000;
-
 const MAX_LISTS = 100;
 
 interface CachedList {

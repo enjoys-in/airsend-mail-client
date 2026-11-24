@@ -14,15 +14,11 @@ import type { DriveProviderClient } from "@/app/v2/(version-2)/(home)/files/_uti
 import { handleUnauthorizedError } from "@/app/v2/(version-2)/(home)/files/_utils/client";
 import { toast } from "sonner";
 import { useEffect } from "react";
-import {
-	FILES_REFRESH_MS,
-	readCachedList,
-	writeCachedList,
-} from "@/app/v2/(version-2)/(home)/files/_lib/files-list-cache";
+import { readCachedList, writeCachedList } from "@/app/v2/(version-2)/(home)/files/_lib/files-list-cache";
 
 /**
- * A folder's files: the last known list from IndexedDB shows at once, the fresh one replaces it, and an open folder
- * is fetched again every FILES_REFRESH_MS (and on Refresh).
+ * A folder's files: the last known list from IndexedDB shows at once and the fresh one replaces it. Fetched only when
+ * the folder opens and on Refresh (uploads, renames, deletes and moves refetch it too).
  */
 export function useGetFiles({ parentId, pageSize, pageToken, returnedValues }: GetFilesSchema) {
 	const { clientPromise, providerId, accountId } = useAccountProvider();
@@ -62,9 +58,9 @@ export function useGetFiles({ parentId, pageSize, pageToken, returnedValues }: G
 		},
 		enabled: !!providerId && !!accountId,
 		retry: 2,
+		// Fetched when a folder opens (going back to one within 30 s reuses it) and on Refresh; no polling.
 		staleTime: 30_000,
-		refetchInterval: FILES_REFRESH_MS,
-		refetchIntervalInBackground: false,
+		refetchOnReconnect: false,
 	});
 }
 
