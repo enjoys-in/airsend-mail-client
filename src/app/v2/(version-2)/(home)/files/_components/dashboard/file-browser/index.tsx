@@ -20,25 +20,24 @@ import {
 	getCoreRowModel,
 	getSortedRowModel,
 	useReactTable,
-	type Row,
 	type SortingState,
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/v2/(version-2)/(home)/files/_components/ui/table";
 import { DownloadProvider } from "@/app/v2/(version-2)/(home)/files/_components/providers/download-provider";
-import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useDraggable, useDroppable } from "@dnd-kit/react";
-import { pointerIntersection } from "@dnd-kit/collision";
+import { useSearch } from "@tanstack/react-router";
 import DragNDropUploader from "./drag-n-drop-uploader";
 import { useMemo, useState, type JSX } from "react";
 import { Button } from "@/app/v2/(version-2)/(home)/files/_components/ui/button";
 import { formatFileSize } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { PdfIcon } from "@/app/v2/(version-2)/(home)/files/_components/icons";
-import { FileActions } from "./file-actions";
+import { FileDetailsRow, FileGridItem, FileListItem } from "./file-items";
+import { EmptyAreaContextMenu } from "./file-context-menu";
+import { FileToolbar, useFileViewMode } from "./file-toolbar";
+import { SharedWithMeDialog } from "@/app/v2/(version-2)/(home)/files/_components/dialogs/shared-with-me-dialog";
 import type { File } from "@/app/v2/(version-2)/(home)/files/_packages/shared";
 import { useTags } from "@/app/v2/(version-2)/(home)/files/_hooks/useTags";
 import { FileTags } from "./file-tags";
 import { format } from "date-fns";
-import { cn } from "@/app/v2/(version-2)/(home)/files/_lib/utils";
 
 // Utility function for date formatting
 const formatDate = (dateString: string | null): string => {
@@ -78,9 +77,21 @@ const columnHelper = createColumnHelper<File>();
 
 export function FileTable({ files, isLoading, refetch, error }: FileTableProps) {
 	const { tags } = useTags(files[0]?.parentId);
-	const navigate = useNavigate({ from: "/dashboard/$providerSlug/$accountId" });
 	const searchParams = useSearch({ from: "/_protected/dashboard/$providerSlug/$accountId" });
 	const [sorting, setSorting] = useState<SortingState>([]);
+	const [mode, setMode] = useFileViewMode();
+	const [refreshing, setRefreshing] = useState(false);
+	const [sharedOpen, setSharedOpen] = useState(false);
+
+	/** Reloads only this folder's list (not the page). */
+	const refresh = async () => {
+		setRefreshing(true);
+		try {
+			await refetch();
+		} finally {
+			setRefreshing(false);
+		}
+	};
 
 	const safeFiles = useMemo(() => {
 		if (isLoading || !files || !Array.isArray(files)) {
@@ -130,16 +141,6 @@ export function FileTable({ files, isLoading, refetch, error }: FileTableProps) 
 			}
 		});
 	}, [safeFiles, searchParams.type]);
-
-	const handleRowDoubleClick = (file: File): void => {
-		const fileType = file.mimeType.includes("folder") || file.mimeType === "folder" ? "folder" : "file";
-
-		if (fileType === "folder") {
-			navigate({
-				search: { ...searchParams, folderId: file.id },
-			});
-		}
-	};
 
 	const columns = useMemo(
 		() => [
@@ -251,23 +252,6 @@ export function FileTable({ files, isLoading, refetch, error }: FileTableProps) 
 				minSize: 150,
 			}),
 
-			columnHelper.display({
-				id: "actions",
-				header: "",
-				cell: ({ row }) => {
-					const file = row.original;
-					const fileType = file.mimeType.includes("folder") || file.mimeType === "folder" ? "folder" : "file";
-
-					return (
-						<DownloadProvider>
-							<FileActions file={row.original} fileType={fileType} />
-						</DownloadProvider>
-					);
-				},
-				size: 50,
-				maxSize: 50,
-				minSize: 50,
-			}),
 		],
 		[refetch, tags]
 	);
@@ -283,106 +267,82 @@ export function FileTable({ files, isLoading, refetch, error }: FileTableProps) 
 		getSortedRowModel: getSortedRowModel(),
 	});
 
+	const rows = table.getRowModel().rows;
+	const when = (f: File) => formatDate(f.modifiedTime);
+
 	return (
-		<div className="relative flex h-full w-full flex-col justify-start">
-			{error ? (
-				<ServiceUnavailable
-					onRetry={refetch}
-					{...(isServiceUnavailable(error) ? {} : { message: "We couldn't load this folder. Please try again." })}
+		<DownloadProvider>
+			<div className="relative flex h-full w-full flex-col justify-start">
+				<FileToolbar
+					mode={mode}
+					onMode={setMode}
+					onRefresh={() => void refresh()}
+					refreshing={refreshing}
+					onSharedWithMe={() => setSharedOpen(true)}
 				/>
-			) : (
-			<DragNDropUploader>
-				{/* h-0 is required to make the table scrollable */}
-				<div className="scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-accent/70 scrollbar-track-transparent scrollbar-hover:scrollbar-thumb-accent scrollbar-w-2 scrollbar-h-2 h-0 min-h-full w-full overflow-auto overflow-y-scroll pb-5">
-					<Table>
-						<TableHeader className="select-none hover:bg-transparent">
-							{table.getHeaderGroups().map(headerGroup => (
-								<TableRow key={headerGroup.id} className="h-6 select-none hover:bg-transparent">
-									{headerGroup.headers.map(header => (
-										<TableHead
-											key={header.id}
-											className="whitespace-nowrap select-none"
-											style={{
-												width:
-													header.id === "tags" || header.id === "size" || header.id === "modifiedTime"
-														? `${header.getSize()}px`
-														: undefined,
-											}}
-										>
-											{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-										</TableHead>
-									))}
-								</TableRow>
-							))}
-						</TableHeader>
-						<TableBody className="select-none">
-							{table.getRowModel().rows.map(row => (
-								<DroppableTableRow key={row.id} row={row} handleRowDoubleClick={handleRowDoubleClick} />
-							))}
-						</TableBody>
-					</Table>
-				</div>
-			</DragNDropUploader>
-			)}
-		</div>
-	);
-}
-
-function DroppableTableRow({
-	row,
-	handleRowDoubleClick,
-}: {
-	row: Row<File>;
-	handleRowDoubleClick: (file: File) => void;
-}) {
-	const { ref: droppableRef, isDropTarget } = useDroppable({
-		id: `droppable-${row.id}`,
-		accept: "files",
-		data: { id: row.original.id },
-		collisionDetector: pointerIntersection,
-	});
-
-	const { ref: draggableRef, isDragging } = useDraggable({
-		id: `draggable-${row.id}`,
-		type: "files",
-		data: { id: row.original.id, parentId: row.original.parentId },
-	});
-
-	const isFolder = row.original.type === "folder" || row.original.mimeType.includes("folder");
-
-	return (
-		<>
-			<TableRow
-				className={cn(
-					"h-8 rounded-md transition-all hover:bg-transparent",
-					isDragging && "z-[100] scale-x-90 rounded-md bg-blue-500/20 text-blue-500 ring-2 ring-blue-500",
-					isDropTarget && "scale-x-95 rounded-md bg-blue-500/20 text-blue-500 ring-2 ring-blue-500"
+				{error ? (
+					<ServiceUnavailable
+						onRetry={refetch}
+						{...(isServiceUnavailable(error) ? {} : { message: "We couldn't load this folder. Please try again." })}
+					/>
+				) : (
+					<DragNDropUploader>
+						<EmptyAreaContextMenu refresh={() => void refresh()}>
+							{/* h-0 is required to make the view scrollable */}
+							<div className="scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-accent/70 scrollbar-track-transparent scrollbar-hover:scrollbar-thumb-accent scrollbar-w-2 scrollbar-h-2 h-0 min-h-full w-full overflow-auto overflow-y-scroll pb-5">
+								{mode === "grid" && (
+									<div className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2 p-2">
+										{rows.map(r => (
+											<FileGridItem key={r.id} file={r.original} refresh={() => void refresh()} modified={when(r.original)} />
+										))}
+									</div>
+								)}
+								{mode === "list" && (
+									<div className="flex flex-col p-1">
+										{rows.map(r => (
+											<FileListItem key={r.id} file={r.original} refresh={() => void refresh()} modified={when(r.original)} />
+										))}
+									</div>
+								)}
+								{mode === "details" && (
+									<Table>
+										<TableHeader className="select-none hover:bg-transparent">
+											{table.getHeaderGroups().map(headerGroup => (
+												<TableRow key={headerGroup.id} className="h-6 select-none hover:bg-transparent">
+													{headerGroup.headers.map(header => (
+														<TableHead
+															key={header.id}
+															className="whitespace-nowrap select-none"
+															style={{ width: FIXED_HEADERS.has(header.id) ? `${header.getSize()}px` : undefined }}
+														>
+															{header.isPlaceholder
+																? null
+																: flexRender(header.column.columnDef.header, header.getContext())}
+														</TableHead>
+													))}
+													<TableHead className="w-[50px]" />
+												</TableRow>
+											))}
+										</TableHeader>
+										<TableBody className="select-none">
+											{rows.map(row => (
+												<FileDetailsRow key={row.id} row={row} refresh={() => void refresh()} />
+											))}
+										</TableBody>
+									</Table>
+								)}
+							</div>
+						</EmptyAreaContextMenu>
+					</DragNDropUploader>
 				)}
-				onDoubleClick={() => handleRowDoubleClick(row.original)}
-				ref={node => {
-					if (isFolder) {
-						droppableRef(node);
-					}
-					draggableRef(node);
-				}}
-			>
-				{row.getVisibleCells().map(cell => (
-					<TableCell
-						key={cell.id}
-						className="h-10 py-0 whitespace-nowrap"
-						style={{
-							width: cell.column.id === "tags" || cell.column.id === "actions" ? "50px" : undefined,
-						}}
-					>
-						{flexRender(cell.column.columnDef.cell, cell.getContext())}
-					</TableCell>
-				))}
-			</TableRow>
-		</>
+				<SharedWithMeDialog isOpen={sharedOpen} onClose={() => setSharedOpen(false)} />
+			</div>
+		</DownloadProvider>
 	);
 }
 
-export default DroppableTableRow;
+const FIXED_HEADERS = new Set(["tags", "size", "modifiedTime"]);
+
 
 /**
  * Get modern Lucide React icon for file type

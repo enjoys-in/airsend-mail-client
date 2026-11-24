@@ -91,3 +91,13 @@ export function formatBytes(bytes: number | undefined): string {
   }
   return `${v >= 100 || Number.isInteger(v) ? Math.round(v) : v.toFixed(1)} ${units[u]}`;
 }
+
+/** "Nov 25, 2026, 3:04 PM"; "—" when missing or invalid. */
+export function formatFileDate(value: string | null | undefined, withTime = true): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return withTime
+    ? d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+    : d.toLocaleDateString(undefined, { dateStyle: "medium" });
+}

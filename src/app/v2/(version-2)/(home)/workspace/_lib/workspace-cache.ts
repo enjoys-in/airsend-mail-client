@@ -692,9 +692,23 @@ export async function clearWorkspaceCache(): Promise<void> {
 const freshAt = new Map<string, number>();
 const inflight = new Map<string, Promise<void>>();
 
-export function revalidate(key: string, run: () => Promise<unknown>, ttlMs = DEFAULT_TTL_MS): Promise<void> {
+/** Coming back to a screen within this long reuses what is on screen instead of calling the API again. */
+export const ROUTE_TTL_MS = 30_000;
+/** How often an open screen refreshes on its own (live changes arrive over the WebSocket meanwhile). */
+export const AUTO_REFRESH_MS = 60_000;
+
+/**
+ * Runs `run` unless `key` was refreshed less than `ttlMs` ago (or is already running). `force` (a Refresh button)
+ * always runs it.
+ */
+export function revalidate(
+  key: string,
+  run: () => Promise<unknown>,
+  ttlMs = DEFAULT_TTL_MS,
+  force = false,
+): Promise<void> {
   const last = freshAt.get(key);
-  if (last !== undefined && Date.now() - last < ttlMs) return Promise.resolve();
+  if (!force && last !== undefined && Date.now() - last < ttlMs) return Promise.resolve();
   const running = inflight.get(key);
   if (running) return running;
   const p = Promise.resolve()

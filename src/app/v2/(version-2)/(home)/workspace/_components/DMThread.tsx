@@ -12,6 +12,7 @@ import ReplyQuote from "./ReplyQuote";
 import DeletedMessage from "./DeletedMessage";
 import SelectableMessage from "./SelectableMessage";
 import type { ChatMessage } from "../_lib/chat-types";
+import { revalidate, ROUTE_TTL_MS } from "../_lib/workspace-cache";
 
 // ---------------------------------------------------------------------------
 // DMThread — the messages of one direct-message conversation, files included.
@@ -30,11 +31,12 @@ export default function DMThread({ dmId, currentUserId }: { dmId: string; curren
 
   useEffect(() => {
     let last = Date.now();
-    const refresh = () => {
+    // Re-opening a DM within ROUTE_TTL_MS shows the cached messages without calling the API again.
+    const refresh = (force = true) => {
       last = Date.now();
-      void fetchDMMessages(dmId);
+      void revalidate(`dm-messages:${dmId}`, () => fetchDMMessages(dmId), ROUTE_TTL_MS, force);
     };
-    refresh();
+    refresh(false);
     // New messages arrive over the WebSocket (dm.message.created); the poll only catches edits and deletes made
     // elsewhere, and is a delta request that returns nothing when nothing changed. Without a live socket it runs faster.
     const timer = setInterval(() => {
@@ -44,7 +46,7 @@ export default function DMThread({ dmId, currentUserId }: { dmId: string; curren
       refresh();
     }, POLL_MS);
     const onVisible = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") refresh(false);
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {

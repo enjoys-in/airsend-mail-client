@@ -13,11 +13,40 @@ import { useAccountProvider } from "@/app/v2/(version-2)/(home)/files/_component
 import type { DriveProviderClient } from "@/app/v2/(version-2)/(home)/files/_utils/client";
 import { handleUnauthorizedError } from "@/app/v2/(version-2)/(home)/files/_utils/client";
 import { toast } from "sonner";
+import { useEffect } from "react";
+import {
+	FILES_REFRESH_MS,
+	readCachedList,
+	writeCachedList,
+} from "@/app/v2/(version-2)/(home)/files/_lib/files-list-cache";
 
+/**
+ * A folder's files: the last known list from IndexedDB shows at once, the fresh one replaces it, and an open folder
+ * is fetched again every FILES_REFRESH_MS (and on Refresh).
+ */
 export function useGetFiles({ parentId, pageSize, pageToken, returnedValues }: GetFilesSchema) {
 	const { clientPromise, providerId, accountId } = useAccountProvider();
+	const queryClient = useQueryClient();
+	const queryKey = ["files", providerId, accountId, parentId];
+	const cacheKey = `${providerId}:${accountId}:${parentId}`;
+
+	useEffect(() => {
+		if (!providerId || !accountId) return;
+		let live = true;
+		void readCachedList(cacheKey).then(cached => {
+			// Only while nothing fresher arrived; `updatedAt` keeps it stale so it is fetched again.
+			if (live && cached && !queryClient.getQueryData(queryKey)) {
+				queryClient.setQueryData(queryKey, cached.files, { updatedAt: cached.at });
+			}
+		});
+		return () => {
+			live = false;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [cacheKey]);
+
 	return useQuery({
-		queryKey: ["files", providerId, accountId, parentId],
+		queryKey,
 		queryFn: async () => {
 			const BASE_FILE_CLIENT = await getBaseFileClient(clientPromise);
 			const response = await handleUnauthorizedError(
@@ -27,10 +56,15 @@ export function useGetFiles({ parentId, pageSize, pageToken, returnedValues }: G
 					}),
 				"Failed to fetch files"
 			);
-			return await response.json();
+			const files = (await response.json()) as File[];
+			void writeCachedList(cacheKey, files);
+			return files;
 		},
 		enabled: !!providerId && !!accountId,
 		retry: 2,
+		staleTime: 30_000,
+		refetchInterval: FILES_REFRESH_MS,
+		refetchIntervalInBackground: false,
 	});
 }
 

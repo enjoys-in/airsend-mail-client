@@ -334,3 +334,116 @@ export async function getOrgStorage(): Promise<StorageAccount | null> {
   const accounts = await listStorageAccounts()
   return accounts.find((a) => a.isDefault) ?? accounts[0] ?? null
 }
+
+// ── Pins (per user, files-service file ids) ──
+
+/** The files-service ids of the workspace files the signed-in user pinned. */
+export async function listPinnedFileIds(): Promise<string[]> {
+  const res = await filesJson<unknown>("/api/workspace/pins")
+  return Array.isArray(res) ? res.map(String) : []
+}
+
+export async function setFilePinned(fileId: string, pinned: boolean): Promise<boolean> {
+  if (!FILE_ID.test(fileId)) throw new FilesApiError("Invalid file id", 400)
+  const res = await filesJson<{ pinned?: boolean } | null>(
+    `/api/workspace/files/${encodeURIComponent(fileId)}/pin`,
+    { method: pinned ? "PUT" : "DELETE" },
+  )
+  return res?.pinned ?? pinned
+}
+
+// ── Shares (public links and people in the organization) ──
+
+export type ShareKind = "workspace"
+
+export interface ShareLink {
+  id: string
+  token: string
+  kind: ShareKind
+  fileId: string
+  name: string
+  mimeType: string
+  size: number
+  createdBy: string
+  createdAt: string
+  expiresAt: string | null
+  downloadCount: number
+  /** Absolute public download link. */
+  url: string
+}
+
+export interface ShareUser {
+  id: string
+  kind: ShareKind
+  fileId: string
+  name: string
+  mimeType: string
+  size: number
+  sharedBy: string
+  sharedWith: string
+  createdAt: string
+}
+
+export type SharedWithMe = ShareUser & { providerId?: string; accountId?: string }
+
+const SHARE_ID = /^[A-Za-z0-9_-]{1,128}$/
+const jsonInit = (method: string, body: unknown): RequestInit => ({
+  method,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+})
+
+function shareQuery(fileId: string): string {
+  return new URLSearchParams({ kind: "workspace", fileId }).toString()
+}
+
+function checkId(id: string, what: string) {
+  if (!SHARE_ID.test(id)) throw new FilesApiError(`Invalid ${what}`, 400)
+}
+
+export async function listShareLinks(fileId: string): Promise<ShareLink[]> {
+  checkId(fileId, "file id")
+  const res = await filesJson<ShareLink[]>(`/api/shares/links?${shareQuery(fileId)}`)
+  return Array.isArray(res) ? res : []
+}
+
+/** `expiresInDays` null (or omitted) = never expires. */
+export async function createShareLink(fileId: string, expiresInDays: number | null): Promise<ShareLink> {
+  checkId(fileId, "file id")
+  return filesJson<ShareLink>("/api/shares/links", jsonInit("POST", { kind: "workspace", fileId, expiresInDays }))
+}
+
+export async function revokeShareLink(id: string): Promise<void> {
+  checkId(id, "link id")
+  await filesFetch(`/api/shares/links/${encodeURIComponent(id)}`, { method: "DELETE" })
+}
+
+export async function listShareUsers(fileId: string): Promise<ShareUser[]> {
+  checkId(fileId, "file id")
+  const res = await filesJson<ShareUser[]>(`/api/shares/users?${shareQuery(fileId)}`)
+  return Array.isArray(res) ? res : []
+}
+
+/** 400 (with the server's message) when an email is not in the organization. */
+export async function shareWithUsers(fileId: string, emails: string[]): Promise<ShareUser[]> {
+  checkId(fileId, "file id")
+  const res = await filesJson<ShareUser[]>("/api/shares/users", jsonInit("POST", { kind: "workspace", fileId, emails }))
+  return Array.isArray(res) ? res : []
+}
+
+export async function removeShareUser(id: string): Promise<void> {
+  checkId(id, "share id")
+  await filesFetch(`/api/shares/users/${encodeURIComponent(id)}`, { method: "DELETE" })
+}
+
+export async function listSharedWithMe(): Promise<SharedWithMe[]> {
+  const res = await filesJson<SharedWithMe[]>("/api/shares/with-me")
+  return Array.isArray(res) ? res : []
+}
+
+/** Saves a file someone shared with me. Errors are thrown so the caller can toast them. */
+export async function downloadSharedWithMe(id: string, fallbackName = "download"): Promise<void> {
+  checkId(id, "share id")
+  const res = await filesFetch(`/api/shares/with-me/${encodeURIComponent(id)}/download`)
+  saveBlob(await res.blob(), fallbackName)
+}

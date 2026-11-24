@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { useChatStore } from "../_lib/chat-store";
-import { initWorkspaceCache, resetRevalidation, revalidate } from "../_lib/workspace-cache";
+import { initWorkspaceCache, resetRevalidation, revalidate, ROUTE_TTL_MS } from "../_lib/workspace-cache";
 import { useAccessStore } from "../_lib/access-store";
 import { useDrafts } from "../_lib/drafts";
 import { hydrateTrash } from "../_lib/trash";
@@ -123,7 +123,8 @@ export default function WorkspaceInit() {
   // When activeChannelId changes, fetch messages for that channel (the cached ones show immediately)
   useEffect(() => {
     if (!email || !cacheReady || !activeChannelId || !isValidUUID(activeChannelId)) return;
-    void revalidate(`messages:${activeChannelId}`, () => fetchMessages(activeChannelId, email), 15_000);
+    // New messages arrive over the WebSocket; switching back within ROUTE_TTL_MS reuses what is loaded.
+    void revalidate(`messages:${activeChannelId}`, () => fetchMessages(activeChannelId, email), ROUTE_TTL_MS);
   }, [email, cacheReady, activeChannelId, fetchMessages]);
 
   return null; // render nothing — just side effects
